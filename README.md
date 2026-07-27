@@ -1,0 +1,130 @@
+# ClawAI Coding Agent for VS Code
+
+ClawAI Coding Agent is the secure VS Code client for a ClawAI backend. It brings
+streaming chat, backend-owned AUTO routing, manual model selection, model
+comparison and judging, project-aware code workflows, explainable context
+receipts, and preview-before-apply edits into the editor.
+
+The extension remains a thin client. Authentication, entitlements, quotas,
+thread history, provider credentials, routing, inference, and audit records stay
+in the ClawAI platform.
+
+## Highlights
+
+- Stream responses from local or hosted ClawAI deployments.
+- Use backend AUTO routing or choose an entitled model manually.
+- Compare two to five models and optionally request a judge response.
+- Ask about a selection, active file, or bounded workspace context.
+- Generate, fix, review, test, document, plan, and audit code.
+- Inspect every proposed file in VS Code diff editors before a modal approval.
+- Undo the most recent ClawAI edit made during the current extension session.
+- Keep project rules in `.clawai/` and profile-wide rules in extension storage.
+- Use the interface in 13 locales, including RTL Arabic and Persian.
+
+## Requirements
+
+- VS Code 1.98 or newer.
+- A reachable ClawAI backend and a ClawAI account.
+- Workspace Trust for workspace-wide collection or any file modification.
+
+Node.js is only required when developing or packaging the extension.
+
+## Quick start
+
+1. Install the VSIX or Marketplace release.
+2. Set `ClawAI: Backend URL` in VS Code settings:
+   - local: `http://localhost` or another loopback host;
+   - hosted: an `https://` origin, optionally with a deployment base path.
+3. Open the ClawAI activity-bar view and choose **Connect**.
+4. Enter your ClawAI email and password. The password is submitted once and is
+   never stored. Access and refresh tokens are stored only in VS Code
+   `SecretStorage`.
+5. Keep **AUTO** selected or choose an entitled model from **Model & Route**.
+6. Ask a question, compare models, or run a ClawAI command from the Command
+   Palette.
+
+Use `Ctrl+Shift+A` (`Cmd+Shift+A` on macOS) to open chat and
+`Ctrl+Shift+Enter` (`Cmd+Shift+Enter`) to ask about a selection.
+
+## Local and hosted backends
+
+The extension adds `/api/v1` to the configured backend origin. Do not include
+credentials, tokens, query strings, or fragments in the URL.
+
+Plain HTTP is accepted only for `localhost`, `127.0.0.1`, `::1`, or
+`claw.local`. Every non-local backend must use HTTPS. The extension validates
+every backend response at runtime and refreshes an expired session once before
+retrying the request.
+
+## Coding workflows
+
+Read-only workflows return analysis in chat. Edit workflows require the backend
+to return a bounded, validated edit plan. The extension rejects absolute paths,
+parent traversal, `.git`, environment files, credential-like paths, malformed
+operations, and oversized plans.
+
+For every valid plan, the extension:
+
+1. opens before/after diff previews;
+2. asks for explicit modal approval;
+3. checks Workspace Trust again;
+4. applies one atomic `WorkspaceEdit`;
+5. offers a session-scoped undo.
+
+Approval cannot be disabled by a setting.
+
+## Context and `.clawai`
+
+Workspace context is size- and file-bounded, excludes binary content, applies
+VS Code and `.clawai/ignore` patterns, and always denies common secret paths.
+The **Context** view shows exactly what was included, excluded, and truncated.
+
+Run **ClawAI: Initialize .clawai** to create the documented project structure
+without overwriting existing files. Use **Open Global Rules** and
+**Open Global Skills** for profile-wide guidance. Global guidance is read before
+project rules.
+
+See [the `.clawai` specification](docs/CLAWAI_FOLDER_SPEC.md) for the complete
+layout.
+
+## Configuration
+
+| Setting                   | Scope     | Default                                 |
+| ------------------------- | --------- | --------------------------------------- |
+| `clawAI.backendUrl`       | machine   | `http://localhost`                      |
+| `clawAI.requestTimeoutMs` | machine   | `60000`                                 |
+| `clawAI.routingMode`      | workspace | `AUTO`                                  |
+| `clawAI.selectedModel`    | workspace | empty                                   |
+| `clawAI.maxContextBytes`  | workspace | `200000`                                |
+| `clawAI.maxContextFiles`  | workspace | `40`                                    |
+| `clawAI.exclude`          | workspace | generated, build, secret, and VCS globs |
+| `clawAI.historyLimit`     | window    | `50`                                    |
+
+Secrets are deliberately not settings.
+
+## Development
+
+```bash
+npm ci --ignore-scripts
+npm run check
+npm run test:host
+npm run package
+```
+
+Press `F5` to launch the Extension Development Host. CI runs formatting, lint,
+strict typechecking, unit/integration coverage, bundling, package security
+invariants, runtime dependency audit, VSIX creation, and a real VS Code
+activation test.
+
+Architecture, API, security, test, publishing, UX, and UAT references live in
+[`docs/`](docs/).
+
+## Status
+
+Version `0.1.0` implements the first production-ready extension surface from
+the ClawAI VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
+[ROADMAP.md](docs/ROADMAP.md).
+
+## License
+
+[MIT](LICENSE)

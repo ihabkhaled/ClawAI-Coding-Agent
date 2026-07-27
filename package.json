@@ -1,0 +1,389 @@
+{
+  "name": "clawai-coding-agent",
+  "displayName": "%extension.displayName%",
+  "description": "%extension.description%",
+  "version": "0.1.0",
+  "publisher": "clawai",
+  "license": "MIT",
+  "icon": "resources/icon.png",
+  "repository": {
+    "type": "git",
+    "url": "https://github.com/ihabkhaled/ClawAI-Coding-Agent.git"
+  },
+  "bugs": {
+    "url": "https://github.com/ihabkhaled/ClawAI-Coding-Agent/issues"
+  },
+  "homepage": "https://github.com/ihabkhaled/ClawAI-Coding-Agent#readme",
+  "engines": {
+    "vscode": "^1.98.0",
+    "node": ">=22.13.0"
+  },
+  "categories": [
+    "AI",
+    "Chat",
+    "Programming Languages",
+    "Other"
+  ],
+  "keywords": [
+    "ai",
+    "coding-agent",
+    "local-first",
+    "ollama",
+    "code-review",
+    "clawai"
+  ],
+  "main": "./dist/extension.js",
+  "l10n": "./l10n",
+  "capabilities": {
+    "untrustedWorkspaces": {
+      "supported": "limited",
+      "description": "%capabilities.untrusted%"
+    },
+    "virtualWorkspaces": {
+      "supported": true
+    }
+  },
+  "activationEvents": [
+    "onStartupFinished"
+  ],
+  "contributes": {
+    "commands": [
+      {
+        "command": "clawAI.connect",
+        "title": "%command.connect%",
+        "category": "ClawAI",
+        "icon": "$(plug)"
+      },
+      {
+        "command": "clawAI.logout",
+        "title": "%command.logout%",
+        "category": "ClawAI",
+        "icon": "$(sign-out)"
+      },
+      {
+        "command": "clawAI.openChat",
+        "title": "%command.openChat%",
+        "category": "ClawAI",
+        "icon": "$(comment-discussion)"
+      },
+      {
+        "command": "clawAI.askSelection",
+        "title": "%command.askSelection%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.askFile",
+        "title": "%command.askFile%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.askWorkspace",
+        "title": "%command.askWorkspace%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.compareModels",
+        "title": "%command.compareModels%",
+        "category": "ClawAI",
+        "icon": "$(compare-changes)"
+      },
+      {
+        "command": "clawAI.judgeResponses",
+        "title": "%command.judgeResponses%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.generateCode",
+        "title": "%command.generateCode%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.fixCode",
+        "title": "%command.fixCode%",
+        "category": "ClawAI",
+        "icon": "$(wrench)"
+      },
+      {
+        "command": "clawAI.reviewCode",
+        "title": "%command.reviewCode%",
+        "category": "ClawAI",
+        "icon": "$(inspect)"
+      },
+      {
+        "command": "clawAI.generateTests",
+        "title": "%command.generateTests%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.generatePlan",
+        "title": "%command.generatePlan%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.generateDocs",
+        "title": "%command.generateDocs%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.auditWorkspace",
+        "title": "%command.auditWorkspace%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.initializeWorkspace",
+        "title": "%command.initializeWorkspace%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.openGlobalRules",
+        "title": "%command.openGlobalRules%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.openGlobalSkills",
+        "title": "%command.openGlobalSkills%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.refreshModels",
+        "title": "%command.refreshModels%",
+        "category": "ClawAI",
+        "icon": "$(refresh)"
+      },
+      {
+        "command": "clawAI.selectModel",
+        "title": "%command.selectModel%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.cancel",
+        "title": "%command.cancel%",
+        "category": "ClawAI",
+        "icon": "$(debug-stop)"
+      },
+      {
+        "command": "clawAI.undoLastEdit",
+        "title": "%command.undoLastEdit%",
+        "category": "ClawAI",
+        "icon": "$(discard)"
+      },
+      {
+        "command": "clawAI.showLogs",
+        "title": "%command.showLogs%",
+        "category": "ClawAI"
+      }
+    ],
+    "configuration": {
+      "title": "ClawAI",
+      "properties": {
+        "clawAI.backendUrl": {
+          "type": "string",
+          "default": "http://localhost",
+          "scope": "machine",
+          "description": "%config.backendUrl%"
+        },
+        "clawAI.requestTimeoutMs": {
+          "type": "number",
+          "default": 60000,
+          "minimum": 1000,
+          "maximum": 300000,
+          "scope": "machine",
+          "description": "%config.requestTimeoutMs%"
+        },
+        "clawAI.routingMode": {
+          "type": "string",
+          "enum": [
+            "AUTO",
+            "MANUAL"
+          ],
+          "default": "AUTO",
+          "scope": "resource",
+          "description": "%config.routingMode%"
+        },
+        "clawAI.selectedModel": {
+          "type": "string",
+          "default": "",
+          "scope": "resource",
+          "description": "%config.selectedModel%"
+        },
+        "clawAI.maxContextBytes": {
+          "type": "number",
+          "default": 200000,
+          "minimum": 1000,
+          "maximum": 2000000,
+          "scope": "resource",
+          "description": "%config.maxContextBytes%"
+        },
+        "clawAI.maxContextFiles": {
+          "type": "number",
+          "default": 40,
+          "minimum": 1,
+          "maximum": 200,
+          "scope": "resource",
+          "description": "%config.maxContextFiles%"
+        },
+        "clawAI.exclude": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [
+            "**/.git/**",
+            "**/node_modules/**",
+            "**/dist/**",
+            "**/build/**",
+            "**/coverage/**",
+            "**/.env*",
+            "**/*secret*",
+            "**/*credential*"
+          ],
+          "scope": "resource",
+          "description": "%config.exclude%"
+        },
+        "clawAI.historyLimit": {
+          "type": "number",
+          "default": 50,
+          "minimum": 5,
+          "maximum": 500,
+          "scope": "window",
+          "description": "%config.historyLimit%"
+        }
+      }
+    },
+    "viewsContainers": {
+      "activitybar": [
+        {
+          "id": "clawAI",
+          "title": "%view.container%",
+          "icon": "resources/claw.svg"
+        }
+      ]
+    },
+    "views": {
+      "clawAI": [
+        {
+          "id": "clawAI.chat",
+          "type": "webview",
+          "name": "%view.chat%",
+          "contextualTitle": "%view.chatTitle%"
+        },
+        {
+          "id": "clawAI.model",
+          "name": "%view.model%"
+        },
+        {
+          "id": "clawAI.context",
+          "name": "%view.context%"
+        },
+        {
+          "id": "clawAI.history",
+          "name": "%view.history%"
+        }
+      ]
+    },
+    "viewsWelcome": [
+      {
+        "view": "clawAI.model",
+        "contents": "%welcome.model%\n[Select model](command:clawAI.selectModel)"
+      },
+      {
+        "view": "clawAI.context",
+        "contents": "%welcome.context%"
+      },
+      {
+        "view": "clawAI.history",
+        "contents": "%welcome.history%\n[Open chat](command:clawAI.openChat)"
+      }
+    ],
+    "menus": {
+      "editor/context": [
+        {
+          "command": "clawAI.askSelection",
+          "group": "clawAI@1",
+          "when": "editorHasSelection"
+        },
+        {
+          "command": "clawAI.fixCode",
+          "group": "clawAI@2",
+          "when": "editorHasSelection && clawAI.workspaceTrusted"
+        },
+        {
+          "command": "clawAI.reviewCode",
+          "group": "clawAI@3",
+          "when": "editorHasSelection"
+        }
+      ],
+      "explorer/context": [
+        {
+          "command": "clawAI.askFile",
+          "group": "clawAI@1"
+        }
+      ],
+      "view/title": [
+        {
+          "command": "clawAI.refreshModels",
+          "when": "view == clawAI.model",
+          "group": "navigation"
+        }
+      ],
+      "commandPalette": [
+        {
+          "command": "clawAI.fixCode",
+          "when": "clawAI.workspaceTrusted"
+        },
+        {
+          "command": "clawAI.generateCode",
+          "when": "clawAI.workspaceTrusted"
+        }
+      ]
+    },
+    "keybindings": [
+      {
+        "command": "clawAI.openChat",
+        "key": "ctrl+shift+a",
+        "mac": "cmd+shift+a"
+      },
+      {
+        "command": "clawAI.askSelection",
+        "key": "ctrl+shift+enter",
+        "mac": "cmd+shift+enter",
+        "when": "editorTextFocus && editorHasSelection"
+      }
+    ]
+  },
+  "scripts": {
+    "build": "node esbuild.mjs",
+    "watch": "node esbuild.mjs --watch",
+    "typecheck": "tsc --noEmit",
+    "lint": "eslint . --max-warnings=0",
+    "test": "vitest run --coverage",
+    "test:unit": "vitest run tests/unit",
+    "test:integration": "vitest run tests/integration",
+    "test:host": "npm run build && node scripts/run-extension-tests.mjs",
+    "format": "prettier --write .",
+    "format:check": "prettier --check .",
+    "package:audit": "node scripts/package-audit.mjs",
+    "l10n:build": "node scripts/generate-locales.mjs",
+    "package": "npm run build && vsce package --no-dependencies",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run package:audit",
+    "prepublishOnly": "npm run check"
+  },
+  "dependencies": {
+    "zod": "^4.4.3"
+  },
+  "devDependencies": {
+    "@types/node": "^24.0.0",
+    "@types/vscode": "^1.98.0",
+    "@vitest/coverage-v8": "^4.1.10",
+    "@vscode/test-electron": "^3.1.0",
+    "@vscode/vsce": "^3.9.2",
+    "esbuild": "^0.28.1",
+    "eslint": "^9.39.4",
+    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-security": "^4.0.1",
+    "prettier": "^3.9.6",
+    "typescript": "^5.9.3",
+    "typescript-eslint": "^8.65.0",
+    "vitest": "^4.1.10"
+  }
+}
