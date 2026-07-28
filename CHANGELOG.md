@@ -2,6 +2,26 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.2.0
+
+- Made ordinary chat workspace-ready: Smart context now falls back from the
+  active selection to the active file, trusted workspace, or empty context.
+- Restored installed Ollama and ready llama.cpp discovery with backend-valid
+  provider identifiers, visible source warnings, and duplicate removal.
+- Made manual model selection durable across configuration refreshes and
+  preserved optimistic selection during state round trips.
+- Added Auto and read-only Plan agent modes.
+- Added Ask for Approval, Approve for me, and Full Access permission modes
+  while preserving Workspace Trust, secret exclusion, path validation, atomic
+  edits, and mandatory final diff review.
+- Rebuilt the editor and Activity Bar webview as a VS Code-native coding
+  workbench with workspace status, an execution timeline, prompt starters,
+  model provenance, copy/retry actions, responsive layouts, and accessible
+  light, dark, high-contrast, reduced-motion, and RTL behavior.
+- Added production-webview Playwright coverage and screenshot baselines for
+  responsive layout, theme tokens, workspace fallback, local/manual models,
+  modes, streaming, completion, and errors.
+
 ## 0.1.1
 
 - Replaced VS Code email/password prompts with browser authorization through

@@ -16,6 +16,9 @@ SECURITY.md
 src/**
 tests/**
 dist/**/*.map
+playwright-report/**
+playwright.config.ts
+test-results/**
 *.vsix
 eslint.config.mjs
 esbuild.mjs

@@ -1,0 +1,100 @@
+:root {
+  --vscode-badge-background: #2d3440;
+  --vscode-button-background: #ce5d52;
+  --vscode-button-foreground: #ffffff;
+  --vscode-button-hoverBackground: #df6b5f;
+  --vscode-button-secondaryBackground: #30343b;
+  --vscode-button-secondaryForeground: #d7dae0;
+  --vscode-button-secondaryHoverBackground: #3b414a;
+  --vscode-descriptionForeground: #9da3ad;
+  --vscode-dropdown-background: #24272d;
+  --vscode-dropdown-border: #424751;
+  --vscode-dropdown-foreground: #e7e8eb;
+  --vscode-editor-background: #191b20;
+  --vscode-editor-font-family: 'Cascadia Mono', Consolas, monospace;
+  --vscode-editor-font-size: 13px;
+  --vscode-editorWarning-foreground: #e7b75f;
+  --vscode-editorWidget-background: #202329;
+  --vscode-focusBorder: #dc7369;
+  --vscode-font-family: Inter, 'Segoe UI', sans-serif;
+  --vscode-font-size: 13px;
+  --vscode-foreground: #e7e8eb;
+  --vscode-input-background: #22252b;
+  --vscode-input-foreground: #f2f2f3;
+  --vscode-input-placeholderForeground: #7f858f;
+  --vscode-list-hoverBackground: #2a2e35;
+  --vscode-progressBar-background: #d96a60;
+  --vscode-scrollbarSlider-background: #4c515c80;
+  --vscode-sideBar-border: #333740;
+  --vscode-testing-iconFailed: #f06f6f;
+  --vscode-testing-iconPassed: #60c89b;
+  --vscode-textLink-foreground: #df7066;
+  --vscode-toolbar-hoverBackground: #343942;
+  --vscode-widget-border: #363a43;
+}
+
+body[data-theme='light'] {
+  --claw-border: #d1d2d8;
+  --claw-card: #ffffff;
+  --claw-muted: #636873;
+  --vscode-badge-background: #ececf0;
+  --vscode-button-background: #b94e45;
+  --vscode-button-foreground: #ffffff;
+  --vscode-button-hoverBackground: #a4423a;
+  --vscode-button-secondaryBackground: #e7e7eb;
+  --vscode-button-secondaryForeground: #30323a;
+  --vscode-button-secondaryHoverBackground: #dadbe1;
+  --vscode-descriptionForeground: #636873;
+  --vscode-dropdown-background: #ffffff;
+  --vscode-dropdown-border: #c7c9d0;
+  --vscode-dropdown-foreground: #252830;
+  --vscode-editor-background: #f7f7f9;
+  --vscode-editorWarning-foreground: #8b5b00;
+  --vscode-editorWidget-background: #ffffff;
+  --vscode-focusBorder: #b94e45;
+  --vscode-foreground: #24262d;
+  --vscode-input-background: #ffffff;
+  --vscode-input-foreground: #24262d;
+  --vscode-input-placeholderForeground: #777b84;
+  --vscode-list-hoverBackground: #ececf1;
+  --vscode-progressBar-background: #b94e45;
+  --vscode-sideBar-border: #d7d8de;
+  --vscode-testing-iconFailed: #b4232a;
+  --vscode-testing-iconPassed: #16784a;
+  --vscode-textLink-foreground: #a8433b;
+  --vscode-toolbar-hoverBackground: #e7e7ec;
+  --vscode-widget-border: #d1d2d8;
+}
+
+body[data-theme='hc'] {
+  --claw-border: #ffffff;
+  --claw-card: #000000;
+  --claw-muted: #ffffff;
+  --vscode-badge-background: #000000;
+  --vscode-button-background: #ffff00;
+  --vscode-button-foreground: #000000;
+  --vscode-button-hoverBackground: #ffffff;
+  --vscode-button-secondaryBackground: #000000;
+  --vscode-button-secondaryForeground: #ffffff;
+  --vscode-button-secondaryHoverBackground: #222222;
+  --vscode-descriptionForeground: #ffffff;
+  --vscode-dropdown-background: #000000;
+  --vscode-dropdown-border: #ffffff;
+  --vscode-dropdown-foreground: #ffffff;
+  --vscode-editor-background: #000000;
+  --vscode-editorWidget-background: #000000;
+  --vscode-focusBorder: #00ffff;
+  --vscode-foreground: #ffffff;
+  --vscode-input-background: #000000;
+  --vscode-input-foreground: #ffffff;
+  --vscode-list-hoverBackground: #222222;
+  --vscode-sideBar-border: #ffffff;
+  --vscode-textLink-foreground: #00ffff;
+  --vscode-widget-border: #ffffff;
+}
+
+body[data-theme='hc'] .composer-card,
+body[data-theme='hc'] .message-card,
+body[data-theme='hc'] .suggestion-card {
+  border-color: #ffffff;
+}

@@ -12,7 +12,12 @@ in the ClawAI platform.
 ## Highlights
 
 - Stream responses from local or hosted ClawAI deployments.
-- Use backend AUTO routing or choose an entitled model manually.
+- Use backend AUTO routing or reliably choose an entitled cloud, Ollama, or
+  llama.cpp model manually.
+- Chat from a workspace even when no editor tab is open.
+- Switch between Auto execution and read-only Plan mode.
+- Choose manual approvals, routine pre-approval, or Full Access while immutable
+  safety boundaries remain enforced.
 - Compare two to five models and optionally request a judge response.
 - Ask about a selection, active file, or bounded workspace context.
 - Generate, fix, review, test, document, plan, and audit code.
@@ -39,9 +44,12 @@ Node.js is only required when developing or packaging the extension.
    are entered only in the web app; the extension receives a one-time
    authorization code and stores the resulting tokens in VS Code
    `SecretStorage`.
-4. Keep **AUTO** selected or choose an entitled model from **Model & Route**.
-5. Ask a question, compare models, or run a ClawAI command from the Command
-   Palette.
+4. Keep **Automatic routing** selected or choose an entitled cloud/local model
+   in the composer.
+5. Choose **Auto** or **Plan mode**, then select the permission level appropriate
+   for this workspace.
+6. Ask a question, compare models, or run a ClawAI command from the Command
+   Palette. Smart context works with a selection, file, workspace, or no files.
 
 Use `Ctrl+Shift+A` (`Cmd+Shift+A` on macOS) to open chat and
 `Ctrl+Shift+Enter` (`Cmd+Shift+Enter`) to ask about a selection.
@@ -73,7 +81,8 @@ For every valid plan, the extension:
 4. applies one atomic `WorkspaceEdit`;
 5. offers a session-scoped undo.
 
-Approval cannot be disabled by a setting.
+Routine context/edit-generation prompts follow the selected permission mode.
+The final diff approval cannot be disabled by a setting.
 
 ## Context and `.clawai`
 
@@ -96,6 +105,8 @@ layout.
 | `clawAI.backendUrl`       | machine   | prompted on first launch                |
 | `clawAI.requestTimeoutMs` | machine   | `60000`                                 |
 | `clawAI.routingMode`      | workspace | `AUTO`                                  |
+| `clawAI.agentMode`        | workspace | `AUTO`                                  |
+| `clawAI.permissionMode`   | workspace | `MANUAL`                                |
 | `clawAI.selectedModel`    | workspace | empty                                   |
 | `clawAI.maxContextBytes`  | workspace | `200000`                                |
 | `clawAI.maxContextFiles`  | workspace | `40`                                    |
@@ -110,6 +121,7 @@ Secrets are deliberately not settings.
 npm ci --ignore-scripts
 npm run check
 npm run test:host
+npm run test:playwright
 npm run package
 ```
 
@@ -123,7 +135,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.1.1` implements the production-ready extension surface from
+Version `0.2.0` implements the production-ready extension surface from
 the ClawAI VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 

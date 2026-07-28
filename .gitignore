@@ -1,8 +1,9 @@
 node_modules/
 dist/
 coverage/
+playwright-report/
+test-results/
 .vscode-test/
 *.vsix
 *.log
 .DS_Store
-

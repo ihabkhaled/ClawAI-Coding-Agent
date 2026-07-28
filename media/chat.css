@@ -896,6 +896,10 @@ textarea:disabled {
   .send-button {
     flex: 0 0 38px !important;
   }
+
+  .actions {
+    justify-content: flex-end;
+  }
 }
 
 @media (prefers-reduced-motion: reduce) {

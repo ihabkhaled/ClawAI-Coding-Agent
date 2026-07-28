@@ -4,6 +4,7 @@ const vscode = require('vscode');
 async function run() {
   const extension = vscode.extensions.getExtension('clawai.clawai-coding-agent');
   assert.ok(extension, 'ClawAI extension is installed in the test host');
+  assert.equal(extension.packageJSON.version, '0.2.0', 'the v0.2.0 release activates');
 
   const start = Date.now();
   await extension.activate();
@@ -12,10 +13,21 @@ async function run() {
 
   const commands = await vscode.commands.getCommands(true);
   const contributed = extension.packageJSON.contributes.commands.map((entry) => entry.command);
+  const configuration = extension.packageJSON.contributes.configuration.properties;
   assert.ok(contributed.length >= 20, 'the complete coding-agent command surface is contributed');
   for (const command of contributed) {
     assert.ok(commands.includes(command), `${command} is registered`);
   }
+  assert.deepEqual(configuration['clawAI.agentMode'].enum, ['AUTO', 'PLAN']);
+  assert.deepEqual(configuration['clawAI.permissionMode'].enum, [
+    'MANUAL',
+    'EDIT_AUTOMATICALLY',
+    'BYPASS_PERMISSIONS',
+  ]);
+  assert.ok(
+    extension.packageJSON.activationEvents.includes('onUri'),
+    'browser authorization callbacks activate the extension',
+  );
 }
 
 module.exports = { run };
