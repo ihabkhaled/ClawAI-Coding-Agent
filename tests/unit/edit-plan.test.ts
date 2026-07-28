@@ -90,13 +90,26 @@ describe('edit plan validation', () => {
     'powershell -Command Get-ChildItem',
     'git reset --hard',
     'npm test\nwhoami',
-  ])('rejects unsafe or unbounded command %s', (command) => {
-    expect(() =>
+  ])('discards unsafe or unbounded command %s', (command) => {
+    expect(
       parseEditPlan({
         summary: 'Unsafe command',
         files: [{ path: 'app/a.js', operation: 'create', content: 'export {};\n' }],
         commands: [{ command, purpose: 'Unsafe' }],
-      }),
-    ).toThrow();
+      }).commands,
+    ).toEqual([]);
+  });
+
+  it('keeps safe commands when unsafe model suggestions are discarded', () => {
+    expect(
+      parseEditPlan({
+        summary: 'Create and verify',
+        files: [{ path: 'app/a.js', operation: 'create', content: 'console.log("ok");\n' }],
+        commands: [
+          { command: 'touch app/a.js', purpose: 'Redundant shell mutation' },
+          { command: 'node app/a.js', purpose: 'Run the generated file' },
+        ],
+      }).commands,
+    ).toEqual([{ command: 'node app/a.js', purpose: 'Run the generated file' }]);
   });
 });

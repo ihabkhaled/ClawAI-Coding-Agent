@@ -144,9 +144,25 @@ const editPlanSchema = z
   })
   .strict();
 
+const editPlanInputSchema = z
+  .object({
+    summary: z.string().min(1).max(2_000),
+    files: z.array(editFileSchema).min(1).max(50),
+    commands: z.array(z.unknown()).max(10).optional(),
+  })
+  .strict();
+
 export type EditPlan = z.infer<typeof editPlanSchema>;
 export type WorkspaceCommand = z.infer<typeof workspaceCommandSchema>;
 
 export function parseEditPlan(value: unknown): EditPlan {
-  return editPlanSchema.parse(value);
+  const input = editPlanInputSchema.parse(value);
+  const commands = (input.commands ?? []).flatMap((command) => {
+    const parsed = workspaceCommandSchema.safeParse(command);
+    return parsed.success ? [parsed.data] : [];
+  });
+  return editPlanSchema.parse({
+    ...input,
+    ...(input.commands === undefined ? {} : { commands }),
+  });
 }
