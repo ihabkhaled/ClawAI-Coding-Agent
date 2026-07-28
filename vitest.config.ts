@@ -18,6 +18,7 @@ export default defineConfig({
         'src/core/redaction.ts',
         'src/core/session-vault.ts',
         'src/core/sse-decoder.ts',
+        'src/core/workspace-scope.ts',
         'src/services/chat-service.ts',
         'src/services/model-service.ts',
         'src/services/safe-edit-service.ts',

@@ -9,6 +9,7 @@ export function toPublicChatState(snapshot: ExtensionSnapshot) {
     connected: snapshot.connected,
     contextReceipt: snapshot.contextReceipt,
     workspaceReadiness: snapshot.workspaceReadiness,
+    workspaceScope: snapshot.workspaceScope,
     entitlements:
       snapshot.entitlements === undefined
         ? undefined

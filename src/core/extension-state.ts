@@ -4,6 +4,7 @@ import type { ContextReceipt } from './context-collector';
 import type { WorkspaceReadiness } from './context-mode';
 import type { ModelCatalogEntry } from './model-catalog';
 import type { PermissionMode } from './permission-policy.types';
+import type { WorkspaceScopeSnapshot } from './workspace-scope.types';
 import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contracts';
 
 export type BackendStatus = 'connected' | 'disconnected' | 'error' | 'loading';
@@ -25,6 +26,7 @@ export interface ExtensionSnapshot {
   usage: Usage | undefined;
   contextReceipt: ContextReceipt | undefined;
   workspaceReadiness: WorkspaceReadiness | undefined;
+  workspaceScope: WorkspaceScopeSnapshot;
   lastError: string | undefined;
 }
 

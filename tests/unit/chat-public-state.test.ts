@@ -33,6 +33,14 @@ const snapshot: ExtensionSnapshot = {
     trusted: true,
     workspaceName: 'ClawAI',
   },
+  workspaceScope: {
+    folders: [
+      { key: 'api-key', name: 'api' },
+      { key: 'web-key', name: 'web' },
+    ],
+    selectedFolderKey: 'web-key',
+    selectedFolderName: 'web',
+  },
 };
 
 describe('toPublicChatState', () => {
@@ -47,6 +55,13 @@ describe('toPublicChatState', () => {
         hasWorkspace: true,
         trusted: true,
         workspaceName: 'ClawAI',
+      },
+      workspaceScope: {
+        folders: [
+          { key: 'api-key', name: 'api' },
+          { key: 'web-key', name: 'web' },
+        ],
+        selectedFolderKey: 'web-key',
       },
     });
     expect(toPublicChatState(snapshot)).not.toHaveProperty('history');

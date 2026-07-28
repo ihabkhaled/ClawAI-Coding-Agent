@@ -48,9 +48,14 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('selectPermissionMode'),
     mode: z.enum(['BYPASS_PERMISSIONS', 'EDIT_AUTOMATICALLY', 'MANUAL']),
   }),
+  z.object({
+    type: z.literal('selectWorkspaceFolder'),
+    folderKey: z.string().min(1).max(100),
+  }),
 ]);
 type InboundMessage = z.infer<typeof inboundMessageSchema>;
 type PromptMessage = Extract<InboundMessage, { type: 'compare' | 'send' }>;
+type ControlMessage = Exclude<InboundMessage, PromptMessage | { type: 'ready' }>;
 
 export interface ChatViewActions {
   cancel(): Promise<void>;
@@ -66,6 +71,7 @@ export interface ChatViewActions {
   selectAgentMode(mode: AgentMode): Promise<void>;
   selectModel(modelKey: string): Promise<void>;
   selectPermissionMode(mode: PermissionMode): Promise<boolean>;
+  selectWorkspaceFolder(folderKey: string): Promise<void>;
   send(input: { content: string; contextMode: ContextMode }): Promise<void>;
 }
 
@@ -149,28 +155,36 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       const request = parsed.data;
       if (request.type === 'ready') {
         await this.postState();
-      } else if (request.type === 'connect') {
-        await this.actions.connect();
-      } else if (request.type === 'logout') {
-        await this.actions.logout();
-      } else if (request.type === 'cancel') {
-        await this.actions.cancel();
-      } else if (request.type === 'openFolder') {
-        await this.actions.openFolder();
-      } else if (request.type === 'selectModel') {
-        await this.actions.selectModel(request.modelKey);
-      } else if (request.type === 'selectAgentMode') {
-        await this.actions.selectAgentMode(request.mode);
-      } else if (request.type === 'selectPermissionMode') {
-        await this.actions.selectPermissionMode(request.mode);
-        await this.postState();
-      } else {
+      } else if (request.type === 'compare' || request.type === 'send') {
         await this.handlePromptMessage(request);
+      } else {
+        await this.handleControlMessage(request);
       }
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : vscode.l10n.t('ClawAI request failed.');
       await this.postError(message);
+    }
+  }
+
+  private async handleControlMessage(request: ControlMessage): Promise<void> {
+    if (request.type === 'connect') {
+      await this.actions.connect();
+    } else if (request.type === 'logout') {
+      await this.actions.logout();
+    } else if (request.type === 'cancel') {
+      await this.actions.cancel();
+    } else if (request.type === 'openFolder') {
+      await this.actions.openFolder();
+    } else if (request.type === 'selectModel') {
+      await this.actions.selectModel(request.modelKey);
+    } else if (request.type === 'selectAgentMode') {
+      await this.actions.selectAgentMode(request.mode);
+    } else if (request.type === 'selectPermissionMode') {
+      await this.actions.selectPermissionMode(request.mode);
+      await this.postState();
+    } else {
+      await this.actions.selectWorkspaceFolder(request.folderKey);
     }
   }
 

@@ -22,7 +22,6 @@ import { ChatParticipantService } from './chat-participant-service';
 import { ChatService } from './chat-service';
 import { ClawaiInitializer } from './clawai-initializer';
 import { ConfigurationService, type RuntimeConfiguration } from './configuration-service';
-import { type GlobalContextPort } from './global-context-service';
 import { ModelService } from './model-service';
 import { confirmSafeEdits } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
@@ -33,8 +32,8 @@ import {
   parseWorkflowEditPlan,
   type WorkflowKind,
 } from './workflow-service';
-import { WorkspaceContextService } from './workspace-context-service';
 
+import type { WorkspaceContextService } from './workspace-context-service';
 import type { CollectedContext } from '../core/context-collector';
 import type { ExtensionState } from '../core/extension-state';
 import type { SessionVault } from '../core/session-vault';
@@ -46,7 +45,6 @@ export class AgentCoordinator implements vscode.Disposable {
   private backend: BackendClient;
   private readonly chat: ChatService;
   private readonly configuration = new ConfigurationService();
-  private readonly context: WorkspaceContextService;
   private readonly initializer = new ClawaiInitializer();
   private readonly modelService: ModelService;
   private readonly safeEdits: SafeEditService;
@@ -60,9 +58,8 @@ export class AgentCoordinator implements vscode.Disposable {
     private readonly logger: OutputLogger,
     private readonly editAdapter: VscodeWorkspaceEditAdapter,
     private readonly diffPreview: DiffPreviewProvider,
-    globalContext: GlobalContextPort,
+    private readonly context: WorkspaceContextService,
   ) {
-    this.context = new WorkspaceContextService(globalContext);
     this.backend = this.createBackend(this.configuration.read());
     this.browserAuthorization = new BrowserAuthorizationService(this.backend);
     this.chat = new ChatService(this.backend);
@@ -150,7 +147,13 @@ export class AgentCoordinator implements vscode.Disposable {
   refreshWorkspaceReadiness(): void {
     this.state.update({
       workspaceReadiness: this.context.readiness(),
+      workspaceScope: this.context.scopeSnapshot(),
     });
+  }
+
+  selectWorkspaceFolder(folderKey: string): void {
+    this.context.selectWorkspaceFolder(folderKey);
+    this.refreshWorkspaceReadiness();
   }
 
   async connect(): Promise<void> {

@@ -55,6 +55,11 @@ function baseState() {
       trusted: true,
       workspaceName: 'ClawAI',
     },
+    workspaceScope: {
+      folders: [{ key: 'workspace-key', name: 'ClawAI' }],
+      selectedFolderKey: 'workspace-key',
+      selectedFolderName: 'ClawAI',
+    },
   };
 }
 

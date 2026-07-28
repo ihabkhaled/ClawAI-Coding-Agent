@@ -7,6 +7,8 @@ import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-ed
 import { AgentCoordinator } from './services/agent-coordinator';
 import { ConfigurationService } from './services/configuration-service';
 import { GlobalContextService } from './services/global-context-service';
+import { WorkspaceContextService } from './services/workspace-context-service';
+import { WorkspaceScopeService } from './services/workspace-scope-service';
 import { DiffPreviewProvider } from './views/diff-preview-provider';
 import { StateTreeProvider } from './views/state-tree-provider';
 import { StatusBarController } from './views/status-bar-controller';
@@ -78,6 +80,7 @@ function registerChatParticipant(
 
 export function activate(context: vscode.ExtensionContext): void {
   const configuration = new ConfigurationService().read();
+  const workspaceScope = new WorkspaceScopeService();
   const state = new ExtensionState({
     agentMode: configuration.agentMode,
     backendUrl: configuration.backendUrl,
@@ -96,19 +99,21 @@ export function activate(context: vscode.ExtensionContext): void {
     selectedModel: configuration.selectedModel,
     usage: undefined,
     user: undefined,
+    workspaceScope: workspaceScope.snapshot(),
   });
   const logger = new OutputLogger(vscode.window.createOutputChannel('ClawAI'));
-  const editAdapter = new VscodeWorkspaceEditAdapter();
+  const editAdapter = new VscodeWorkspaceEditAdapter(workspaceScope);
   const diffPreview = new DiffPreviewProvider();
   const sessionVault = new SessionVault(context.secrets);
   const globalContext = new GlobalContextService(context.globalStorageUri);
+  const workspaceContext = new WorkspaceContextService(globalContext, workspaceScope);
   const coordinator = new AgentCoordinator(
     state,
     sessionVault,
     logger,
     editAdapter,
     diffPreview,
-    globalContext,
+    workspaceContext,
   );
   const chatView = new ChatViewProvider(context.extensionUri, state, {
     cancel: () => coordinator.cancel(),
@@ -121,6 +126,10 @@ export function activate(context: vscode.ExtensionContext): void {
     selectAgentMode: (mode) => coordinator.sessionControls.selectAgentMode(mode),
     selectModel: (modelKey) => coordinator.selectModel(modelKey),
     selectPermissionMode: (mode) => coordinator.sessionControls.selectPermissionMode(mode),
+    selectWorkspaceFolder: (folderKey) => {
+      coordinator.selectWorkspaceFolder(folderKey);
+      return Promise.resolve();
+    },
     send: (input) => coordinator.send(input),
   });
   coordinator.attachView(chatView);

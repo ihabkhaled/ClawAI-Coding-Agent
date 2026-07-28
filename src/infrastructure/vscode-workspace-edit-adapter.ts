@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import type { EditPlan } from '../core/edit-plan';
 import type { EditPreview, WorkspaceEditPort } from '../services/safe-edit-service';
+import type { WorkspaceFolderScopePort } from '../services/workspace-scope-service.types';
 
 interface EditBackup {
   plan: EditPlan;
@@ -10,6 +11,8 @@ interface EditBackup {
 
 export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
   private lastBackup: EditBackup | null = null;
+
+  constructor(private readonly scope: WorkspaceFolderScopePort) {}
 
   isTrusted(): boolean {
     return vscode.workspace.isTrusted;
@@ -85,12 +88,8 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
     return applied;
   }
 
-  private workspaceFolder(): vscode.WorkspaceFolder {
-    const folder = vscode.workspace.workspaceFolders?.[0];
-    if (folder === undefined) {
-      throw new Error(vscode.l10n.t('Open a workspace before applying ClawAI changes.'));
-    }
-    return folder;
+  private workspaceFolder(): Pick<vscode.WorkspaceFolder, 'uri'> {
+    return this.scope.selectedFolder();
   }
 
   private async readOptional(uri: vscode.Uri): Promise<string | null> {

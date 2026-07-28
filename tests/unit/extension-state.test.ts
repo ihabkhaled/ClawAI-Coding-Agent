@@ -19,6 +19,9 @@ const initialSnapshot: ExtensionSnapshot = {
   usage: undefined,
   contextReceipt: undefined,
   workspaceReadiness: undefined,
+  workspaceScope: {
+    folders: [],
+  },
   lastError: undefined,
 };
 
