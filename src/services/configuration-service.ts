@@ -6,10 +6,15 @@ import {
   type RoutingMode,
 } from '../core/configuration';
 
+import type { AgentMode } from '../core/agent-mode.types';
+import type { PermissionMode } from '../core/permission-policy.types';
+
 export interface RuntimeConfiguration extends GlobalConfiguration {
+  agentMode: AgentMode;
   backendUrl: string;
-  requestTimeoutMs: number;
   historyLimit: number;
+  permissionMode: PermissionMode;
+  requestTimeoutMs: number;
 }
 
 const DEFAULT_EXCLUDES = [
@@ -68,6 +73,7 @@ export class ConfigurationService {
   read(): RuntimeConfiguration {
     const configuration = vscode.workspace.getConfiguration('clawAI');
     return {
+      agentMode: configuration.get<AgentMode>('agentMode') ?? 'AUTO',
       backendUrl: normalizeBackendUrl(
         configuration.get<string>('backendUrl') ?? 'http://localhost',
       ),
@@ -78,7 +84,34 @@ export class ConfigurationService {
       maxContextFiles: numberSetting(configuration, 'maxContextFiles', 40),
       exclude: configuration.get<string[]>('exclude') ?? DEFAULT_EXCLUDES,
       historyLimit: numberSetting(configuration, 'historyLimit', 50),
+      permissionMode: configuration.get<PermissionMode>('permissionMode') ?? 'MANUAL',
     };
+  }
+
+  async selectAgentMode(mode: AgentMode): Promise<void> {
+    await vscode.workspace
+      .getConfiguration('clawAI')
+      .update('agentMode', mode, vscode.ConfigurationTarget.Workspace);
+  }
+
+  async selectPermissionMode(mode: PermissionMode): Promise<boolean> {
+    if (mode === 'BYPASS_PERMISSIONS' && this.read().permissionMode !== mode) {
+      const enable = vscode.l10n.t('Enable Full Access');
+      const choice = await vscode.window.showWarningMessage(
+        vscode.l10n.t(
+          'Full Access bypasses routine ClawAI permission prompts for this workspace. Workspace Trust, secret exclusions, and final diff review remain enforced.',
+        ),
+        { modal: true },
+        enable,
+      );
+      if (choice !== enable) {
+        return false;
+      }
+    }
+    await vscode.workspace
+      .getConfiguration('clawAI')
+      .update('permissionMode', mode, vscode.ConfigurationTarget.Workspace);
+    return true;
   }
 
   async selectAuto(): Promise<void> {

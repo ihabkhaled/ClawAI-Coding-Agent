@@ -3,8 +3,10 @@ import { randomBytes } from 'node:crypto';
 import * as vscode from 'vscode';
 import { z } from 'zod';
 
+import type { AgentMode } from '../core/agent-mode.types';
 import type { ContextMode } from '../core/context-mode';
 import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
+import type { PermissionMode } from '../core/permission-policy.types';
 
 const contextModeSchema: z.ZodType<ContextMode> = z.enum([
   'file',
@@ -34,6 +36,14 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('selectModel'),
     modelKey: z.string().min(1).max(500),
   }),
+  z.object({
+    type: z.literal('selectAgentMode'),
+    mode: z.enum(['AUTO', 'PLAN']),
+  }),
+  z.object({
+    type: z.literal('selectPermissionMode'),
+    mode: z.enum(['BYPASS_PERMISSIONS', 'EDIT_AUTOMATICALLY', 'MANUAL']),
+  }),
 ]);
 
 export interface ChatViewActions {
@@ -46,12 +56,15 @@ export interface ChatViewActions {
   }): Promise<void>;
   connect(): Promise<void>;
   logout(): Promise<void>;
+  selectAgentMode(mode: AgentMode): Promise<void>;
   selectModel(modelKey: string): Promise<void>;
+  selectPermissionMode(mode: PermissionMode): Promise<boolean>;
   send(input: { content: string; contextMode: ContextMode }): Promise<void>;
 }
 
 function publicState(snapshot: ExtensionSnapshot) {
   return {
+    agentMode: snapshot.agentMode,
     backendStatus: snapshot.backendStatus,
     backendUrl: snapshot.backendUrl,
     busy: snapshot.busy,
@@ -68,6 +81,7 @@ function publicState(snapshot: ExtensionSnapshot) {
           },
     lastError: snapshot.lastError,
     modelWarnings: snapshot.modelWarnings,
+    permissionMode: snapshot.permissionMode,
     models: snapshot.models,
     routingMode: snapshot.routingMode,
     selectedModel: snapshot.selectedModel,
@@ -185,6 +199,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
         await this.actions.cancel();
       } else if (request.type === 'selectModel') {
         await this.actions.selectModel(request.modelKey);
+      } else if (request.type === 'selectAgentMode') {
+        await this.actions.selectAgentMode(request.mode);
+      } else if (request.type === 'selectPermissionMode') {
+        await this.actions.selectPermissionMode(request.mode);
       } else if (request.type === 'compare') {
         await this.actions.compare(request);
       } else {
@@ -287,6 +305,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
             <option value="selection">${vscode.l10n.t('Selection')}</option>
             <option value="workspace">${vscode.l10n.t('Workspace')}</option>
             <option value="none">${vscode.l10n.t('None')}</option>
+          </select>
+        </label>
+        <label>${vscode.l10n.t('Agent')}
+          <select id="agentMode">
+            <option value="AUTO">${vscode.l10n.t('Auto')}</option>
+            <option value="PLAN">${vscode.l10n.t('Plan mode')}</option>
+          </select>
+        </label>
+        <label>${vscode.l10n.t('Permissions')}
+          <select id="permissionMode">
+            <option value="MANUAL">${vscode.l10n.t('Ask for Approval')}</option>
+            <option value="EDIT_AUTOMATICALLY">${vscode.l10n.t('Approve for me')}</option>
+            <option value="BYPASS_PERMISSIONS">${vscode.l10n.t('Full Access')}</option>
           </select>
         </label>
         <label>${vscode.l10n.t('Mode')}

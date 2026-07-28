@@ -1,12 +1,15 @@
+import type { AgentMode } from './agent-mode.types';
 import type { RoutingMode } from './configuration';
 import type { ContextReceipt } from './context-collector';
 import type { WorkspaceReadiness } from './context-mode';
 import type { ModelCatalogEntry } from './model-catalog';
+import type { PermissionMode } from './permission-policy.types';
 import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contracts';
 
 export type BackendStatus = 'connected' | 'disconnected' | 'error' | 'loading';
 
 export interface ExtensionSnapshot {
+  agentMode: AgentMode;
   backendUrl: string;
   backendStatus: BackendStatus;
   busy: boolean;
@@ -15,6 +18,7 @@ export interface ExtensionSnapshot {
   selectedModel: string;
   models: ModelCatalogEntry[];
   modelWarnings: string[];
+  permissionMode: PermissionMode;
   history: ChatThread[];
   user: AuthUser | undefined;
   entitlements: Entitlements | undefined;

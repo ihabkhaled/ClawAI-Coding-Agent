@@ -70,6 +70,24 @@ const INITIAL_FILES: readonly {
 ];
 
 export class ClawaiInitializer {
+  async promptAndInitialize(): Promise<void> {
+    const create = vscode.l10n.t('Create .clawai');
+    const choice = await vscode.window.showWarningMessage(
+      vscode.l10n.t(
+        'Create the documented .clawai rules, context, memory, skills, prompts, and ignore files in this workspace?',
+      ),
+      { modal: true },
+      create,
+    );
+    if (choice !== create) {
+      return;
+    }
+    const created = await this.initialize();
+    await vscode.window.showInformationMessage(
+      vscode.l10n.t('Created {0} .clawai files. Existing files were preserved.', created),
+    );
+  }
+
   async initialize(): Promise<number> {
     if (!vscode.workspace.isTrusted) {
       throw new Error(vscode.l10n.t('Trust this workspace before creating .clawai files.'));

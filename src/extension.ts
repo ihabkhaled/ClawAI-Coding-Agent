@@ -79,6 +79,7 @@ function registerChatParticipant(
 export function activate(context: vscode.ExtensionContext): void {
   const configuration = new ConfigurationService().read();
   const state = new ExtensionState({
+    agentMode: configuration.agentMode,
     backendUrl: configuration.backendUrl,
     backendStatus: 'loading',
     busy: false,
@@ -90,6 +91,7 @@ export function activate(context: vscode.ExtensionContext): void {
     lastError: undefined,
     modelWarnings: [],
     models: [],
+    permissionMode: configuration.permissionMode,
     routingMode: configuration.routingMode,
     selectedModel: configuration.selectedModel,
     usage: undefined,
@@ -113,7 +115,9 @@ export function activate(context: vscode.ExtensionContext): void {
     compare: (input) => coordinator.compare(input),
     connect: () => coordinator.connect(),
     logout: () => coordinator.logout(),
+    selectAgentMode: (mode) => coordinator.sessionControls.selectAgentMode(mode),
     selectModel: (modelKey) => coordinator.selectModel(modelKey),
+    selectPermissionMode: (mode) => coordinator.sessionControls.selectPermissionMode(mode),
     send: (input) => coordinator.send(input),
   });
   coordinator.attachView(chatView);

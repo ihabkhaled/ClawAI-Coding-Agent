@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 
 import { BackendClient } from '../backend/backend-client';
 import { type ContextMode } from '../core/context-mode';
-import { EMPTY_CONTEXT } from '../core/empty-context';
 import { type OutputLogger } from '../infrastructure/output-logger';
 import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-workspace-edit-adapter';
 import { type DiffPreviewProvider } from '../views/diff-preview-provider';
@@ -27,6 +26,7 @@ import { type GlobalContextPort } from './global-context-service';
 import { ModelService } from './model-service';
 import { confirmSafeEdits } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
+import { SessionControlService } from './session-control-service';
 import {
   buildAnalysisPrompt,
   buildWorkflowPrompt,
@@ -42,6 +42,7 @@ import type { SessionVault } from '../core/session-vault';
 export class AgentCoordinator implements vscode.Disposable {
   readonly browserAuthorization: BrowserAuthorizationService;
   readonly chatParticipant: ChatParticipantService;
+  readonly sessionControls: SessionControlService;
   private backend: BackendClient;
   private readonly chat: ChatService;
   private readonly configuration = new ConfigurationService();
@@ -66,12 +67,14 @@ export class AgentCoordinator implements vscode.Disposable {
     this.browserAuthorization = new BrowserAuthorizationService(this.backend);
     this.chat = new ChatService(this.backend);
     this.modelService = new ModelService(this.backend);
+    this.sessionControls = new SessionControlService(this.state, this.configuration);
     this.chatParticipant = new ChatParticipantService(
       this.state,
       this.logger,
       this.configuration,
       this.context,
       this.chat,
+      this.sessionControls,
     );
     this.safeEdits = new SafeEditService(this.editAdapter, (previews, summary) =>
       confirmSafeEdits(this.diffPreview, previews, summary),
@@ -124,7 +127,9 @@ export class AgentCoordinator implements vscode.Disposable {
     this.backend = this.createBackend(configuration);
     this.replaceBackendPorts();
     this.state.update({
+      agentMode: configuration.agentMode,
       backendUrl: configuration.backendUrl,
+      permissionMode: configuration.permissionMode,
       routingMode: configuration.routingMode,
       selectedModel: configuration.selectedModel,
     });
@@ -216,7 +221,7 @@ export class AgentCoordinator implements vscode.Disposable {
       );
       const result = await this.chat.send(
         {
-          content: input.content,
+          content: this.sessionControls.preparePrompt(input.content),
           context: collected.files,
           ...selection,
         },
@@ -246,7 +251,9 @@ export class AgentCoordinator implements vscode.Disposable {
         };
       });
       const response = await this.backend.compare({
-        content: contextualPrompt(input.content, collected.files),
+        content: this.sessionControls.preparePrompt(
+          contextualPrompt(input.content, collected.files),
+        ),
         models,
         judgeEnabled: input.judgeEnabled,
         ...(input.judgeEnabled ? { judgeModel: input.modelKeys[0] ?? null } : {}),
@@ -320,8 +327,13 @@ export class AgentCoordinator implements vscode.Disposable {
     await this.runGeneration(async (abort) => {
       const collected = await this.collect(contextMode);
       const rules = await this.context.projectRules();
-      const prompt = buildWorkflowPrompt({
-        kind,
+      const planOnly = this.sessionControls.isPlanMode();
+      if (!planOnly && !(await this.sessionControls.authorize('editGeneration'))) {
+        return;
+      }
+      const promptBuilder = planOnly ? buildAnalysisPrompt : buildWorkflowPrompt;
+      const prompt = promptBuilder({
+        kind: planOnly ? 'plan' : kind,
         request,
         context: collected.files,
         ...(rules.length === 0 ? {} : { rules }),
@@ -340,6 +352,10 @@ export class AgentCoordinator implements vscode.Disposable {
           this.activeThreadId = threadId;
         },
       );
+      if (planOnly) {
+        await this.view?.postResult(result);
+        return;
+      }
       const plan = parseWorkflowEditPlan(result.content);
       const applied = await this.safeEdits.previewAndApply(plan);
       await this.view?.postResult({
@@ -388,21 +404,7 @@ export class AgentCoordinator implements vscode.Disposable {
   }
 
   async initializeWorkspace(): Promise<void> {
-    const create = vscode.l10n.t('Create .clawai');
-    const choice = await vscode.window.showWarningMessage(
-      vscode.l10n.t(
-        'Create the documented .clawai rules, context, memory, skills, prompts, and ignore files in this workspace?',
-      ),
-      { modal: true },
-      create,
-    );
-    if (choice !== create) {
-      return;
-    }
-    const created = await this.initializer.initialize();
-    await vscode.window.showInformationMessage(
-      vscode.l10n.t('Created {0} .clawai files. Existing files were preserved.', created),
-    );
+    await this.initializer.promptAndInitialize();
   }
 
   async undoLastEdit(): Promise<void> {
@@ -430,16 +432,14 @@ export class AgentCoordinator implements vscode.Disposable {
   private async collect(mode: ContextMode): Promise<CollectedContext> {
     const configuration = this.configuration.read();
     this.refreshWorkspaceReadiness();
-    const result =
-      mode === 'none'
-        ? EMPTY_CONTEXT
-        : mode === 'smart'
-          ? await this.context.smart(configuration)
-          : mode === 'selection'
-            ? await this.context.selection(configuration)
-            : mode === 'workspace'
-              ? await this.context.workspace(configuration)
-              : await this.context.activeFile(configuration);
+    const resolvedMode = this.context.resolve(mode);
+    if (
+      resolvedMode === 'workspace' &&
+      !(await this.sessionControls.authorize('workspaceContext'))
+    ) {
+      throw new Error(vscode.l10n.t('Workspace context access was not approved.'));
+    }
+    const result = await this.context.collect(resolvedMode, configuration);
     this.state.update({ contextReceipt: result.receipt });
     return result;
   }

@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { ExtensionState, type ExtensionSnapshot } from '../../src/core/extension-state';
 
 const initialSnapshot: ExtensionSnapshot = {
+  agentMode: 'AUTO',
   backendUrl: 'https://claw.example',
   backendStatus: 'disconnected',
   busy: false,
@@ -11,6 +12,7 @@ const initialSnapshot: ExtensionSnapshot = {
   selectedModel: '',
   modelWarnings: [],
   models: [],
+  permissionMode: 'MANUAL',
   history: [],
   user: undefined,
   entitlements: undefined,

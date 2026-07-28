@@ -2,6 +2,7 @@
 
 const vscode = acquireVsCodeApi();
 const elements = {
+  agentMode: document.querySelector('#agentMode'),
   announcer: document.querySelector('#announcer'),
   backendDot: document.querySelector('#backendDot'),
   backendLabel: document.querySelector('#backendLabel'),
@@ -14,6 +15,7 @@ const elements = {
   modelSelect: document.querySelector('#modelSelect'),
   modelTray: document.querySelector('#modelTray'),
   planName: document.querySelector('#planName'),
+  permissionMode: document.querySelector('#permissionMode'),
   prompt: document.querySelector('#prompt'),
   routeModel: document.querySelector('#routeModel'),
   routeMode: document.querySelector('#routeMode'),
@@ -26,9 +28,11 @@ const elements = {
 };
 
 let currentState = {
+  agentMode: 'AUTO',
   busy: false,
   connected: false,
   models: [],
+  permissionMode: 'MANUAL',
   routingMode: 'AUTO',
   selectedModel: '',
 };
@@ -116,11 +120,15 @@ function renderState(state) {
   elements.tokenCount.textContent =
     day === undefined ? '—' : day.limit === null ? `${day.used}` : `${day.used}/${day.limit}`;
   elements.planName.textContent = state.entitlements?.plan?.name ?? '—';
+  elements.agentMode.value = state.agentMode;
+  elements.permissionMode.value = state.permissionMode;
   elements.sessionButton.textContent = state.connected ? 'Log out' : 'Connect';
   elements.sendButton.disabled = state.busy;
   elements.cancelButton.hidden = !state.busy;
   elements.prompt.disabled = state.busy;
   elements.modelSelect.disabled = state.busy || !state.connected;
+  elements.agentMode.disabled = state.busy;
+  elements.permissionMode.disabled = state.busy;
   renderModels(state.models);
   if (state.lastError) {
     elements.announcer.textContent = state.lastError;
@@ -180,6 +188,20 @@ elements.modelSelect.addEventListener('change', () => {
   vscode.postMessage({
     type: 'selectModel',
     modelKey: elements.modelSelect.value,
+  });
+});
+
+elements.agentMode.addEventListener('change', () => {
+  vscode.postMessage({
+    type: 'selectAgentMode',
+    mode: elements.agentMode.value,
+  });
+});
+
+elements.permissionMode.addEventListener('change', () => {
+  vscode.postMessage({
+    type: 'selectPermissionMode',
+    mode: elements.permissionMode.value,
   });
 });
 

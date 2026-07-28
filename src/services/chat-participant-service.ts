@@ -4,6 +4,7 @@ import { currentModelSelection } from './agent-coordinator-prompts';
 
 import type { ChatService } from './chat-service';
 import type { ConfigurationService } from './configuration-service';
+import type { SessionControlPort } from './session-control.types';
 import type { WorkspaceContextService } from './workspace-context-service';
 import type { ExtensionState } from '../core/extension-state';
 import type { OutputLogger } from '../infrastructure/output-logger';
@@ -15,6 +16,7 @@ export class ChatParticipantService {
     private readonly configuration: ConfigurationService,
     private readonly context: WorkspaceContextService,
     private readonly chat: ChatService,
+    private readonly sessionControls: SessionControlPort,
   ) {}
 
   async send(
@@ -38,11 +40,18 @@ export class ChatParticipantService {
     });
     try {
       const configuration = this.configuration.read();
+      if (
+        this.context.resolve('smart') === 'workspace' &&
+        !(await this.sessionControls.authorize('workspaceContext'))
+      ) {
+        response.markdown(vscode.l10n.t('Workspace context access was not approved.'));
+        return;
+      }
       const collected = await this.context.smart(configuration);
       this.state.update({ contextReceipt: collected.receipt });
       const result = await this.chat.send(
         {
-          content,
+          content: this.sessionControls.preparePrompt(content),
           context: collected.files,
           ...currentModelSelection(configuration, this.state.snapshot.models),
         },

@@ -200,6 +200,27 @@
           "scope": "resource",
           "description": "%config.routingMode%"
         },
+        "clawAI.agentMode": {
+          "type": "string",
+          "enum": [
+            "AUTO",
+            "PLAN"
+          ],
+          "default": "AUTO",
+          "scope": "resource",
+          "description": "%config.agentMode%"
+        },
+        "clawAI.permissionMode": {
+          "type": "string",
+          "enum": [
+            "MANUAL",
+            "EDIT_AUTOMATICALLY",
+            "BYPASS_PERMISSIONS"
+          ],
+          "default": "MANUAL",
+          "scope": "resource",
+          "description": "%config.permissionMode%"
+        },
         "clawAI.selectedModel": {
           "type": "string",
           "default": "",

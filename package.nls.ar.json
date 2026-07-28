@@ -28,6 +28,8 @@
   "config.backendUrl": "ClawAI backend origin. Tokens and credentials must not be included in this URL.",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
   "config.routingMode": "Use automatic backend routing or a manually selected model.",
+  "config.agentMode": "Choose automatic execution or read-only planning.",
+  "config.permissionMode": "Control approvals for workspace context and edit generation. Final diff review is always required.",
   "config.selectedModel": "Manual model selection encoded as provider:model.",
   "config.maxContextBytes": "Maximum total UTF-8 bytes collected as workspace context.",
   "config.maxContextFiles": "Maximum files collected as workspace context.",

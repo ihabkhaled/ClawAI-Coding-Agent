@@ -5,7 +5,11 @@ import {
   type CollectedContext,
   type ContextCandidate,
 } from '../core/context-collector';
-import { resolveSmartContext, type WorkspaceReadiness } from '../core/context-mode';
+import {
+  resolveSmartContext,
+  type ContextMode,
+  type WorkspaceReadiness,
+} from '../core/context-mode';
 import { EMPTY_CONTEXT } from '../core/empty-context';
 
 import type { RuntimeConfiguration } from './configuration-service';
@@ -66,18 +70,28 @@ export class WorkspaceContextService {
     };
   }
 
+  resolve(mode: ContextMode): Exclude<ContextMode, 'smart'> {
+    return mode === 'smart' ? resolveSmartContext(this.readiness()) : mode;
+  }
+
   smart(configuration: RuntimeConfiguration): Promise<CollectedContext> {
-    const mode = resolveSmartContext(this.readiness());
+    return this.collect(this.resolve('smart'), configuration);
+  }
+
+  collect(
+    mode: Exclude<ContextMode, 'smart'>,
+    configuration: RuntimeConfiguration,
+  ): Promise<CollectedContext> {
+    if (mode === 'none') {
+      return Promise.resolve(EMPTY_CONTEXT);
+    }
     if (mode === 'selection') {
       return this.selection(configuration);
     }
     if (mode === 'file') {
       return this.activeFile(configuration);
     }
-    if (mode === 'workspace') {
-      return this.workspace(configuration);
-    }
-    return Promise.resolve(EMPTY_CONTEXT);
+    return this.workspace(configuration);
   }
 
   selection(configuration: RuntimeConfiguration): Promise<CollectedContext> {
