@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 
 const vscodeEnvironment = vi.hoisted(() => {
   const uri = (value: string) => ({
+    fsPath: new URL(value).pathname,
     path: new URL(value).pathname,
     toString: () => value,
   });

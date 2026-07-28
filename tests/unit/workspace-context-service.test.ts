@@ -11,7 +11,7 @@ const vscodeEnvironment = vi.hoisted(() => ({
   activeTextEditor: undefined as
     | {
         document: {
-          uri: { path: string; toString(): string };
+          uri: { fsPath: string; path: string; toString(): string };
           getText(): string;
         };
         selection: { isEmpty: boolean };
@@ -20,7 +20,7 @@ const vscodeEnvironment = vi.hoisted(() => ({
   trusted: true,
   workspaceFolders: [] as {
     name: string;
-    uri: { path: string; toString(): string };
+    uri: { fsPath: string; path: string; toString(): string };
   }[],
 }));
 
@@ -31,6 +31,7 @@ vi.mock('vscode', () => ({
   },
   Uri: {
     joinPath: (base: { path: string; toString(): string }, ...parts: string[]) => ({
+      fsPath: [base.path, ...parts].join('/'),
       path: [base.path, ...parts].join('/'),
       toString: () => `${base.toString()}/${parts.join('/')}`,
     }),
@@ -90,6 +91,7 @@ describe('WorkspaceContextService smart context', () => {
       {
         name: 'claw-workspace',
         uri: {
+          fsPath: '/workspace',
           path: '/workspace',
           toString: () => 'file:///workspace',
         },
@@ -132,7 +134,11 @@ describe('WorkspaceContextService smart context', () => {
   it('falls back to workspace context when the active editor belongs elsewhere', async () => {
     vscodeEnvironment.activeTextEditor = {
       document: {
-        uri: { path: '/outside/file.ts', toString: () => 'file:///outside/file.ts' },
+        uri: {
+          fsPath: '/outside/file.ts',
+          path: '/outside/file.ts',
+          toString: () => 'file:///outside/file.ts',
+        },
         getText: () => 'outside',
       },
       selection: { isEmpty: true },
@@ -153,11 +159,19 @@ describe('WorkspaceContextService smart context', () => {
   it('collects files and project rules only from the explicitly selected multi-root folder', async () => {
     const api = {
       name: 'api',
-      uri: { path: '/workspace/api', toString: () => 'file:///workspace/api' },
+      uri: {
+        fsPath: '/workspace/api',
+        path: '/workspace/api',
+        toString: () => 'file:///workspace/api',
+      },
     };
     const web = {
       name: 'web',
-      uri: { path: '/workspace/web', toString: () => 'file:///workspace/web' },
+      uri: {
+        fsPath: '/workspace/web',
+        path: '/workspace/web',
+        toString: () => 'file:///workspace/web',
+      },
     };
     vscodeEnvironment.workspaceFolders = [api, web];
     const scope = new WorkspaceScopeService();

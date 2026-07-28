@@ -69,7 +69,7 @@ export class WorkspaceScopeService {
     if (owner?.uri.toString() !== selected.uri.toString()) {
       throw new Error(vscode.l10n.t('The file is outside the selected workspace folder.'));
     }
-    return path.posix.relative(selected.uri.path, uri.path).replaceAll('\\', '/');
+    return path.relative(selected.uri.fsPath, uri.fsPath).replaceAll('\\', '/');
   }
 
   private activeEditorFolder(): vscode.WorkspaceFolder | undefined {

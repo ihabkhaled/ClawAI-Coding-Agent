@@ -114,7 +114,10 @@ export class AgentRunService {
       plan = parseWorkflowEditPlan(response.content);
     }
     callbacks.onPhase(createAgentRunSnapshot('reviewing', plan, plan.summary));
-    const editResult = await this.edits.previewAndApply(plan);
+    const editResult =
+      plan.files.length === 0
+        ? { applied: true, previews: [] }
+        : await this.edits.previewAndApply(plan);
     const status = editResult.applied ? 'applied' : 'rejected';
     callbacks.onPhase(createAgentRunSnapshot(status, plan, plan.summary));
     let commandsExecuted: boolean | undefined;

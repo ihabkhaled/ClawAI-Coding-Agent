@@ -84,6 +84,26 @@ describe('edit plan validation', () => {
     ).toHaveLength(2);
   });
 
+  it('accepts command-only verification plans and rejects empty plans', () => {
+    expect(
+      parseEditPlan({
+        summary: 'Run the generated file',
+        files: [],
+        commands: [{ command: 'node app/loop.js', purpose: 'Verify output' }],
+      }),
+    ).toMatchObject({
+      files: [],
+      commands: [{ command: 'node app/loop.js' }],
+    });
+    expect(() =>
+      parseEditPlan({
+        summary: 'Do nothing',
+        files: [],
+        commands: [],
+      }),
+    ).toThrow(/file change or a safe workspace command/iu);
+  });
+
   it.each([
     'rm -rf .',
     'npm test && git push',

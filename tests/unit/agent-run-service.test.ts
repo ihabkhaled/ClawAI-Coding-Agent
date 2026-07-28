@@ -206,6 +206,49 @@ describe('AgentRunService', () => {
     expect(phases.at(-1)).toMatchObject({ phase: 'verified' });
   });
 
+  it('runs command-only verification plans without applying an empty workspace edit', async () => {
+    const execute = vi.fn(async () => ({ exitCode: 0 }));
+    const applyAtomically = vi.fn(async () => true);
+    const service = new AgentRunService(
+      contextPort(),
+      sessionPort(),
+      textChat(
+        JSON.stringify({
+          summary: 'Verify the generated loop',
+          files: [],
+          commands: [{ command: 'node app/for-loop.js', purpose: 'Verify the output' }],
+        }),
+      ),
+      new SafeEditService(
+        {
+          applyAtomically,
+          execute,
+          isTrusted: () => true,
+          preview: async () => [],
+        },
+        async () => true,
+      ),
+    );
+
+    await expect(
+      service.run(
+        {
+          configuration,
+          content: 'Run the generated loop',
+          contextMode: 'workspace',
+          selection: { routingMode: 'AUTO' },
+          signal: new AbortController().signal,
+        },
+        callbacks(),
+      ),
+    ).resolves.toMatchObject({ status: 'applied', commandsExecuted: true });
+    expect(applyAtomically).not.toHaveBeenCalled();
+    expect(execute).toHaveBeenCalledWith(
+      expect.objectContaining({ command: 'node app/for-loop.js' }),
+      expect.any(AbortSignal),
+    );
+  });
+
   it('does not run commands when in-panel command approval is rejected', async () => {
     const execute = vi.fn();
     const authorize = vi.fn(async (operation) => operation !== 'commandExecution');

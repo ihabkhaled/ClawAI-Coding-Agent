@@ -139,15 +139,23 @@ const workspaceCommandSchema = z
 const editPlanSchema = z
   .object({
     summary: z.string().min(1).max(2_000),
-    files: z.array(editFileSchema).min(1).max(50),
+    files: z.array(editFileSchema).max(50),
     commands: z.array(workspaceCommandSchema).max(10).optional(),
   })
-  .strict();
+  .strict()
+  .superRefine((plan, context) => {
+    if (plan.files.length === 0 && (plan.commands?.length ?? 0) === 0) {
+      context.addIssue({
+        code: 'custom',
+        message: 'An edit plan must contain a file change or a safe workspace command.',
+      });
+    }
+  });
 
 const editPlanInputSchema = z
   .object({
     summary: z.string().min(1).max(2_000),
-    files: z.array(editFileSchema).min(1).max(50),
+    files: z.array(editFileSchema).max(50),
     commands: z.array(z.unknown()).max(10).optional(),
   })
   .strict();
