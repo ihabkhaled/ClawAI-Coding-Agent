@@ -70,6 +70,20 @@ export interface ResolvedModelSelection {
   model?: string;
 }
 
+function localExecutionProvider(provider: string): string {
+  if (provider === 'OLLAMA') {
+    return 'local-ollama';
+  }
+  if (provider === 'LLAMACPP') {
+    return 'local-llamacpp';
+  }
+  return provider;
+}
+
+function routerExecutionProvider(model: RouterModelInput): string {
+  return model.isLocal ? localExecutionProvider(model.provider) : model.provider;
+}
+
 function appendLocalOllamaModels(
   entries: ModelCatalogEntry[],
   seen: Set<string>,
@@ -86,7 +100,7 @@ function appendLocalOllamaModels(
     entries.push({
       id: model.id,
       key,
-      provider: 'OLLAMA',
+      provider: 'local-ollama',
       model: fullModelName,
       displayName: `${fullModelName} (${model.family ?? 'local'})`,
       isLocal: true,
@@ -115,7 +129,7 @@ function appendLocalFrontierModels(
     entries.push({
       id: model.id,
       key,
-      provider: 'LLAMACPP',
+      provider: 'local-llamacpp',
       model: fullModelName,
       displayName: `${model.displayName} (${model.parameterCount})`,
       isLocal: true,
@@ -150,7 +164,7 @@ export function buildModelCatalog(
     entries.push({
       id: model.id,
       key,
-      provider: model.provider,
+      provider: routerExecutionProvider(model),
       model: model.modelKey,
       displayName: model.displayName,
       isLocal: model.isLocal,

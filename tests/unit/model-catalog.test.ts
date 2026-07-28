@@ -70,7 +70,7 @@ describe('model catalog', () => {
     expect(() => resolveModelSelection('MANUAL_MODEL', 'OPENAI:missing', catalog)).toThrow();
   });
 
-  it('uses backend provider keys for local models and de-duplicates routing snapshots', () => {
+  it('maps local model keys to runtime execution providers and de-duplicates snapshots', () => {
     const localCatalog = buildModelCatalog(
       [
         {
@@ -112,8 +112,13 @@ describe('model catalog', () => {
     ]);
     expect(resolveModelSelection('MANUAL_MODEL', 'OLLAMA:qwen3:coder', localCatalog)).toEqual({
       routingMode: 'MANUAL_MODEL',
-      provider: 'OLLAMA',
+      provider: 'local-ollama',
       model: 'qwen3:coder',
+    });
+    expect(resolveModelSelection('MANUAL_MODEL', 'LLAMACPP:deepseek:q4', localCatalog)).toEqual({
+      routingMode: 'MANUAL_MODEL',
+      provider: 'local-llamacpp',
+      model: 'deepseek:q4',
     });
   });
 });
