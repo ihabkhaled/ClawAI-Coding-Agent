@@ -104,6 +104,27 @@ describe('edit plan validation', () => {
     ).toThrow(/file change or a safe workspace command/iu);
   });
 
+  it('normalizes a redundant model-supplied cwd prefix to the workspace root', () => {
+    expect(
+      parseEditPlan({
+        summary: 'Run the generated file',
+        files: [],
+        commands: [
+          {
+            command: 'node app/for-loop.js',
+            cwd: 'app',
+            purpose: 'Verify output',
+          },
+        ],
+      }).commands,
+    ).toEqual([
+      {
+        command: 'node app/for-loop.js',
+        purpose: 'Verify output',
+      },
+    ]);
+  });
+
   it.each([
     'rm -rf .',
     'npm test && git push',

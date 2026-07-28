@@ -163,11 +163,37 @@ const editPlanInputSchema = z
 export type EditPlan = z.infer<typeof editPlanSchema>;
 export type WorkspaceCommand = z.infer<typeof workspaceCommandSchema>;
 
+function normalizeWorkspaceCommand(command: WorkspaceCommand): WorkspaceCommand {
+  const cwd = command.cwd
+    ?.replaceAll('\\', '/')
+    .replace(/^\.\/+/u, '')
+    .replace(/\/+$/u, '');
+  if (cwd === undefined || cwd === '' || cwd === '.') {
+    return command;
+  }
+  const repeatsWorkingDirectory = command.command
+    .split(/\s+/u)
+    .slice(1)
+    .map((part) =>
+      part
+        .replace(/^["']|["']$/gu, '')
+        .replaceAll('\\', '/')
+        .replace(/^\.\/+/u, ''),
+    )
+    .some((part) => part === cwd || part.startsWith(`${cwd}/`));
+  if (!repeatsWorkingDirectory) {
+    return command;
+  }
+  const workspaceRootCommand = { ...command };
+  delete workspaceRootCommand.cwd;
+  return workspaceRootCommand;
+}
+
 export function parseEditPlan(value: unknown): EditPlan {
   const input = editPlanInputSchema.parse(value);
   const commands = (input.commands ?? []).flatMap((command) => {
     const parsed = workspaceCommandSchema.safeParse(command);
-    return parsed.success ? [parsed.data] : [];
+    return parsed.success ? [normalizeWorkspaceCommand(parsed.data)] : [];
   });
   return editPlanSchema.parse({
     ...input,
