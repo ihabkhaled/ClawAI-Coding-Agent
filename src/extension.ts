@@ -84,6 +84,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const state = new ExtensionState({
     agentRun: undefined,
     agentMode: configuration.agentMode,
+    approvalRequest: undefined,
     backendUrl: configuration.backendUrl,
     backendStatus: 'loading',
     busy: false,
@@ -133,6 +134,11 @@ export function activate(context: vscode.ExtensionContext): void {
       coordinator.removeQueued(requestId);
       return Promise.resolve();
     },
+    resolveApproval: (requestId, approved) => {
+      coordinator.resolveApproval(requestId, approved);
+      return Promise.resolve();
+    },
+    undo: () => coordinator.undoLastEdit(),
     selectAgentMode: (mode) => coordinator.sessionControls.selectAgentMode(mode),
     selectModel: (modelKey) => coordinator.selectModel(modelKey),
     selectPermissionMode: (mode) => coordinator.sessionControls.selectPermissionMode(mode),
@@ -158,7 +164,6 @@ export function activate(context: vscode.ExtensionContext): void {
     contextTree,
     historyTree,
     statusBar,
-    vscode.window.registerUriHandler(coordinator.browserAuthorization),
     vscode.window.registerWebviewViewProvider('clawAI.chat', chatView, {
       webviewOptions: {
         retainContextWhenHidden: true,

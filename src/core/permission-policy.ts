@@ -10,7 +10,7 @@ export function decidePermission(input: PermissionInput): PermissionDecision {
   if (input.agentMode === 'PLAN' && input.operation === 'editGeneration') {
     return { outcome: 'deny', reason: 'planReadOnly' };
   }
-  if (input.operation === 'finalDiff') {
+  if (input.operation === 'finalDiff' && input.permissionMode !== 'BYPASS_PERMISSIONS') {
     return { outcome: 'ask', reason: 'finalDiffRequired' };
   }
   if (input.permissionMode === 'MANUAL') {

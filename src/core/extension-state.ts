@@ -1,5 +1,6 @@
 import type { AgentMode } from './agent-mode.types';
 import type { AgentRunSnapshot } from './agent-run';
+import type { ApprovalRequest } from './approval-broker';
 import type { RoutingMode } from './configuration';
 import type { ContextReceipt } from './context-collector';
 import type { WorkspaceReadiness } from './context-mode';
@@ -14,6 +15,7 @@ export type BackendStatus = 'connected' | 'disconnected' | 'error' | 'loading';
 export interface ExtensionSnapshot {
   agentRun: AgentRunSnapshot | undefined;
   agentMode: AgentMode;
+  approvalRequest: ApprovalRequest | undefined;
   backendUrl: string;
   backendStatus: BackendStatus;
   busy: boolean;

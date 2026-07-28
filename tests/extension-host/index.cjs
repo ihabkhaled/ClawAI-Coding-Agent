@@ -25,8 +25,8 @@ async function run() {
     'BYPASS_PERMISSIONS',
   ]);
   assert.ok(
-    extension.packageJSON.activationEvents.includes('onUri'),
-    'browser authorization callbacks activate the extension',
+    !extension.packageJSON.activationEvents.includes('onUri'),
+    'loopback browser authorization does not expose a custom URI callback',
   );
 }
 

@@ -5,6 +5,7 @@ import { ExtensionState, type ExtensionSnapshot } from '../../src/core/extension
 const initialSnapshot: ExtensionSnapshot = {
   agentRun: undefined,
   agentMode: 'AUTO',
+  approvalRequest: undefined,
   backendUrl: 'https://claw.example',
   backendStatus: 'disconnected',
   busy: false,

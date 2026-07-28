@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
 
 import { BackendClient } from '../backend/backend-client';
+import { ApprovalBroker } from '../core/approval-broker';
 import { type ContextMode } from '../core/context-mode';
 import { type OutputLogger } from '../infrastructure/output-logger';
 import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-workspace-edit-adapter';
@@ -44,6 +45,7 @@ export class AgentCoordinator implements vscode.Disposable {
   readonly chatParticipant: ChatParticipantService;
   readonly sessionControls: SessionControlService;
   private backend: BackendClient;
+  private readonly approvals: ApprovalBroker;
   private readonly agentExecutions: AgentExecutionPresenter;
   private readonly chat: ChatService;
   private readonly configuration = new ConfigurationService();
@@ -63,6 +65,7 @@ export class AgentCoordinator implements vscode.Disposable {
     private readonly context: WorkspaceContextService,
   ) {
     this.backend = this.createBackend(this.configuration.read());
+    this.approvals = new ApprovalBroker(this.state);
     this.generations = new GenerationScheduler({
       after: async () => {
         this.state.update({ usage: await this.backend.getUsage() });
@@ -82,7 +85,11 @@ export class AgentCoordinator implements vscode.Disposable {
     this.browserAuthorization = new BrowserAuthorizationService(this.backend);
     this.chat = new ChatService(this.backend);
     this.modelService = new ModelService(this.backend);
-    this.sessionControls = new SessionControlService(this.state, this.configuration);
+    this.sessionControls = new SessionControlService(
+      this.state,
+      this.configuration,
+      this.approvals,
+    );
     this.chatParticipant = new ChatParticipantService(
       this.state,
       this.logger,
@@ -92,13 +99,12 @@ export class AgentCoordinator implements vscode.Disposable {
       this.sessionControls,
     );
     this.safeEdits = new SafeEditService(this.editAdapter, (previews, summary) =>
-      confirmSafeEdits(this.diffPreview, previews, summary),
+      confirmSafeEdits(this.diffPreview, this.sessionControls, previews, summary),
     );
     this.agentExecutions = new AgentExecutionPresenter(
       new AgentRunService(this.context, this.sessionControls, this.chat, this.safeEdits),
       this.state,
       () => this.view,
-      () => this.undoLastEdit(),
       (threadId) => {
         this.activeThreadId = threadId;
       },
@@ -202,13 +208,11 @@ export class AgentCoordinator implements vscode.Disposable {
         lastError: undefined,
       });
       await this.refreshData();
-      await vscode.window.showInformationMessage(
-        vscode.l10n.t('Connected to ClawAI as {0}.', user.email),
-      );
     });
   }
 
   dispose(): void {
+    this.approvals.dispose();
     this.generations.dispose();
     this.browserAuthorization.dispose();
   }
@@ -421,18 +425,13 @@ export class AgentCoordinator implements vscode.Disposable {
   }
 
   async undoLastEdit(): Promise<void> {
-    const undo = vscode.l10n.t('Undo changes');
-    const choice = await vscode.window.showWarningMessage(
-      vscode.l10n.t('Undo the most recent ClawAI edit from this extension session?'),
-      { modal: true },
-      undo,
-    );
-    if (choice === undo && (await this.editAdapter.undoLast())) {
-      await vscode.window.showInformationMessage(vscode.l10n.t('ClawAI changes were undone.'));
+    if (await this.editAdapter.undoLast()) {
+      await this.view?.postNotice(vscode.l10n.t('ClawAI changes were undone.'));
     }
   }
 
   async cancel(): Promise<void> {
+    this.approvals.cancelCurrent();
     this.generations.cancelActive();
     if (this.activeThreadId !== null) {
       await this.backend.cancelStream(this.activeThreadId);
@@ -442,6 +441,10 @@ export class AgentCoordinator implements vscode.Disposable {
 
   removeQueued(requestId: string): void {
     this.generations.remove(requestId);
+  }
+
+  resolveApproval(requestId: string, approved: boolean): void {
+    this.approvals.resolve(requestId, approved);
   }
 
   private async collect(mode: ContextMode): Promise<CollectedContext> {
@@ -518,7 +521,6 @@ export class AgentCoordinator implements vscode.Disposable {
         lastError: message,
       });
       await this.view?.postError(message);
-      await vscode.window.showErrorMessage(message);
     } finally {
       this.state.update({ busy: false });
     }

@@ -1,7 +1,5 @@
 import * as vscode from 'vscode';
 
-import { offerSafeEditUndo } from './safe-edit-confirmation';
-
 import type { AgentRunService } from './agent-run-service';
 import type { AgentRunInput } from './agent-run-service.types';
 import type { ExtensionState } from '../core/extension-state';
@@ -12,7 +10,6 @@ export class AgentExecutionPresenter {
     private readonly runs: AgentRunService,
     private readonly state: ExtensionState,
     private readonly view: () => ChatViewProvider | null,
-    private readonly undo: () => Promise<void>,
     private readonly threadChanged: (threadId: string) => void,
   ) {}
 
@@ -59,11 +56,9 @@ export class AgentExecutionPresenter {
             ? vscode.l10n.t('Applied: {0}', result.editPlan.summary)
             : vscode.l10n.t('Rejected: {0}', result.editPlan.summary),
         editPlan: result.editPlan,
+        undoAvailable: result.status === 'applied',
       },
       requestId,
     );
-    if (result.status === 'applied') {
-      await offerSafeEditUndo(result.editPlan.files.length, this.undo);
-    }
   }
 }

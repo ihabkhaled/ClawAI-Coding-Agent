@@ -268,6 +268,87 @@ textarea:disabled {
   white-space: nowrap;
 }
 
+.approval-panel {
+  position: fixed;
+  z-index: 20;
+  display: grid;
+  inset: 0;
+  place-items: end center;
+  padding: 14px;
+  background: color-mix(in srgb, var(--vscode-editor-background) 62%, transparent);
+  backdrop-filter: blur(3px);
+}
+
+.approval-panel[hidden] {
+  display: none;
+}
+
+.approval-card {
+  width: min(620px, 100%);
+  padding: 14px;
+  border: 1px solid var(--vscode-focusBorder);
+  border-radius: calc(var(--claw-radius) + 2px);
+  background: var(--vscode-editorWidget-background, var(--vscode-editor-background));
+  box-shadow: 0 12px 42px color-mix(in srgb, #000 34%, transparent);
+}
+
+.approval-card > header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.approval-card > p {
+  margin: 10px 0;
+  color: var(--claw-muted);
+  line-height: 1.45;
+}
+
+.approval-details {
+  max-height: 180px;
+  margin: 0;
+  padding: 7px 7px 7px 26px;
+  overflow: auto;
+  border: 1px solid var(--claw-border);
+  background: var(--vscode-textCodeBlock-background);
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.76rem;
+}
+
+.approval-details:empty {
+  display: none;
+}
+
+.approval-actions {
+  display: flex;
+  justify-content: flex-end;
+  margin-block-start: 12px;
+  gap: 7px;
+}
+
+.toast-stack {
+  position: fixed;
+  z-index: 30;
+  inset-block-start: 62px;
+  inset-inline-end: 12px;
+  display: grid;
+  width: min(340px, calc(100vw - 24px));
+  gap: 7px;
+}
+
+.toast {
+  padding: 9px 11px;
+  border: 1px solid var(--claw-border);
+  border-inline-start: 3px solid var(--vscode-testing-iconPassed);
+  border-radius: var(--claw-radius);
+  background: var(--vscode-notifications-background, var(--claw-card));
+  box-shadow: 0 7px 22px color-mix(in srgb, #000 24%, transparent);
+}
+
+.receipt-undo {
+  margin-block-start: 8px;
+}
+
 .route-summary {
   display: flex;
   width: 100%;

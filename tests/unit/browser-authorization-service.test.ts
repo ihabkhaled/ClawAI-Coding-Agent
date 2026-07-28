@@ -2,23 +2,16 @@ import { vi } from 'vitest';
 
 const vscodeMocks = vi.hoisted(() => ({
   openExternal: vi.fn(),
-  showWarningMessage: vi.fn(),
 }));
 
 vi.mock('vscode', () => ({
   env: {
     openExternal: vscodeMocks.openExternal,
   },
-  l10n: {
-    t: (value: string) => value,
-  },
   Uri: {
     parse: (value: string) => ({
       toString: () => value,
     }),
-  },
-  window: {
-    showWarningMessage: vscodeMocks.showWarningMessage,
   },
 }));
 
@@ -29,13 +22,22 @@ describe('BrowserAuthorizationService', () => {
     vi.clearAllMocks();
   });
 
-  it('accepts a callback that arrives while the browser is still opening', async () => {
-    let finishOpening: ((opened: boolean) => void) | undefined;
-    vscodeMocks.openExternal.mockReturnValue(
-      new Promise<boolean>((resolve) => {
-        finishOpening = resolve;
-      }),
-    );
+  it('uses a one-shot loopback callback and exchanges the PKCE code', async () => {
+    let completeCallback: ((code: string) => void) | undefined;
+    const callback = {
+      callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      dispose: vi.fn(),
+      waitForCallback: vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            completeCallback = resolve;
+          }),
+      ),
+    };
+    const callbackFactory = {
+      open: vi.fn(async () => callback),
+    };
+    vscodeMocks.openExternal.mockResolvedValue(true);
     const backend = {
       authorizationUrl: vi.fn(() => 'https://claw.local/authorize/vscode?requestId=request-1'),
       exchangeVscodeAuthorization: vi.fn(async () => undefined),
@@ -45,41 +47,48 @@ describe('BrowserAuthorizationService', () => {
         role: 'ADMIN',
         username: 'claw-user',
       })),
-      initializeVscodeAuthorization: vi.fn(
-        async (input: { callbackUri: string; codeChallenge: string; state: string }) => {
-          void input;
-          return {
-            authorizationPath: '/authorize/vscode?requestId=request-1',
-            expiresIn: 600,
-            requestId: 'request-1',
-          };
-        },
-      ),
+      initializeVscodeAuthorization: vi.fn(async () => ({
+        authorizationPath: '/authorize/vscode?requestId=request-1',
+        expiresIn: 600,
+        requestId: 'request-1',
+      })),
     };
-    const service = new BrowserAuthorizationService(backend as never);
+    const service = new BrowserAuthorizationService(backend as never, callbackFactory);
     const signIn = service.signIn();
 
     await vi.waitFor(() => {
-      expect(backend.initializeVscodeAuthorization).toHaveBeenCalledOnce();
+      expect(backend.initializeVscodeAuthorization).toHaveBeenCalledWith(
+        expect.objectContaining({ callbackUri: callback.callbackUri }),
+      );
     });
-    const state = backend.initializeVscodeAuthorization.mock.calls[0]?.[0].state;
-    if (state === undefined) {
-      throw new Error('The authorization request state was not captured.');
-    }
-    await vi.waitFor(() => {
-      expect(vscodeMocks.openExternal).toHaveBeenCalledOnce();
-    });
-    service.handleUri({
-      toString: () =>
-        `vscode://clawai.clawai-coding-agent/auth/callback?code=authorization-code&state=${state}`,
-    } as never);
+    completeCallback?.('authorization-code');
 
-    expect(vscodeMocks.showWarningMessage).not.toHaveBeenCalled();
-    finishOpening?.(true);
     await expect(signIn).resolves.toMatchObject({ id: 'user-1' });
     expect(backend.exchangeVscodeAuthorization).toHaveBeenCalledWith(
       'authorization-code',
       expect.any(String),
     );
+    expect(callback.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('closes the callback when the browser cannot open', async () => {
+    const callback = {
+      callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      dispose: vi.fn(),
+      waitForCallback: vi.fn(() => new Promise<string>(() => undefined)),
+    };
+    vscodeMocks.openExternal.mockResolvedValue(false);
+    const service = new BrowserAuthorizationService(
+      {
+        authorizationUrl: () => 'https://claw.local/authorize/vscode?requestId=request-1',
+        initializeVscodeAuthorization: async () => ({
+          authorizationPath: '/authorize/vscode?requestId=request-1',
+        }),
+      } as never,
+      { open: vi.fn(async () => callback) },
+    );
+
+    await expect(service.signIn()).rejects.toThrow(/could not open/iu);
+    expect(callback.dispose).toHaveBeenCalledOnce();
   });
 });

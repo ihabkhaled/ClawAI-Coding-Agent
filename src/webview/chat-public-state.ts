@@ -4,6 +4,7 @@ export function toPublicChatState(snapshot: ExtensionSnapshot) {
   return {
     agentRun: snapshot.agentRun,
     agentMode: snapshot.agentMode,
+    approvalRequest: snapshot.approvalRequest,
     backendStatus: snapshot.backendStatus,
     backendUrl: snapshot.backendUrl,
     busy: snapshot.busy,

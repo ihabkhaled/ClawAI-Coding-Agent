@@ -11,6 +11,13 @@ const elements = {
   agentRunPanel: byId('agentRunPanel'),
   agentRunSteps: byId('agentRunSteps'),
   announcer: byId('announcer'),
+  approvalApprove: byId('approvalApprove'),
+  approvalDetails: byId('approvalDetails'),
+  approvalKind: byId('approvalKind'),
+  approvalMessage: byId('approvalMessage'),
+  approvalPanel: byId('approvalPanel'),
+  approvalReject: byId('approvalReject'),
+  approvalTitle: byId('approvalTitle'),
   backendDot: byId('backendDot'),
   backendLabel: byId('backendLabel'),
   cancelButton: byId('cancelButton'),
@@ -40,6 +47,7 @@ const elements = {
   sendButton: byId('sendButton'),
   sessionButton: byId('sessionButton'),
   tokenCount: byId('tokenCount'),
+  toastStack: byId('toastStack'),
   trustBadge: byId('trustBadge'),
   workspaceName: byId('workspaceName'),
   workspaceSelect: byId('workspaceSelect'),
@@ -141,7 +149,7 @@ function operationLabel(operation) {
   return labelsByOperation[operation] ?? operation;
 }
 
-function appendChangeReceipt(body, plan) {
+function appendChangeReceipt(body, plan, undoAvailable = false) {
   const receipt = document.createElement('section');
   receipt.className = 'change-receipt';
   const header = document.createElement('header');
@@ -160,6 +168,15 @@ function appendChangeReceipt(body, plan) {
     files.append(item);
   }
   receipt.append(header, files);
+  if (undoAvailable) {
+    const undo = textElement('button', 'quiet-button receipt-undo', labels.undo);
+    undo.type = 'button';
+    undo.addEventListener('click', () => {
+      vscode.postMessage({ type: 'undo' });
+      undo.disabled = true;
+    });
+    receipt.append(undo);
+  }
   body.after(receipt);
 }
 
@@ -381,6 +398,29 @@ function renderQueue(queue) {
   }
 }
 
+function renderApproval(request) {
+  elements.approvalPanel.hidden = request === undefined;
+  if (request === undefined) {
+    elements.approvalPanel.dataset.requestId = '';
+    return;
+  }
+  elements.approvalPanel.dataset.requestId = request.id;
+  elements.approvalKind.textContent = request.kind.replaceAll(/([A-Z])/gu, ' $1').trim();
+  elements.approvalTitle.textContent = request.title;
+  elements.approvalMessage.textContent = request.message;
+  elements.approvalDetails.replaceChildren();
+  for (const detail of request.details ?? []) {
+    elements.approvalDetails.append(textElement('li', '', detail));
+  }
+  elements.approvalApprove.focus();
+}
+
+function showNotice(message) {
+  const toast = textElement('div', 'toast', message);
+  elements.toastStack.append(toast);
+  window.setTimeout(() => toast.remove(), 4000);
+}
+
 function backendStatusLabel(status) {
   const statusLabels = {
     connected: labels.connected,
@@ -441,6 +481,7 @@ function renderState(state) {
   renderWorkspace(state.workspaceReadiness, state.workspaceScope);
   renderAgentRun(state.agentRun);
   renderQueue(state.generationQueue);
+  renderApproval(state.approvalRequest);
   renderContextHint();
   if (state.lastError) {
     elements.announcer.textContent = state.lastError;
@@ -526,6 +567,20 @@ elements.newChatButton.addEventListener('click', () => {
 elements.cancelButton.addEventListener('click', () => {
   vscode.postMessage({ type: 'cancel' });
 });
+
+function resolveApproval(approved) {
+  const requestId = elements.approvalPanel.dataset.requestId;
+  if (!requestId) {
+    return;
+  }
+  if (!approved) {
+    pendingPermissionMode = null;
+  }
+  vscode.postMessage({ type: 'resolveApproval', requestId, approved });
+}
+
+elements.approvalApprove.addEventListener('click', () => resolveApproval(true));
+elements.approvalReject.addEventListener('click', () => resolveApproval(false));
 
 elements.runMode.addEventListener('change', () => {
   elements.modelTray.classList.toggle(
@@ -616,7 +671,7 @@ window.addEventListener('message', (event) => {
     if (responseBody && typeof message.result?.content === 'string') {
       responseBody.textContent = message.result.content;
       if (message.result.editPlan?.files) {
-        appendChangeReceipt(responseBody, message.result.editPlan);
+        appendChangeReceipt(responseBody, message.result.editPlan, message.result.undoAvailable);
       }
       const card = responseBody.closest('.message-card');
       const meta = card?.querySelector('.message-meta');
@@ -640,6 +695,8 @@ window.addEventListener('message', (event) => {
       responseBodies.delete(message.requestId);
     }
     elements.announcer.textContent = message.message;
+  } else if (message?.type === 'notice' && typeof message.message === 'string') {
+    showNotice(message.message);
   }
 });
 

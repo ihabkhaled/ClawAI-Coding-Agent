@@ -4,7 +4,6 @@ const vscodeConfiguration = vi.hoisted(() => {
   const values = new Map<string, unknown>();
   const updates: string[] = [];
   return {
-    fullAccessChoice: undefined as string | undefined,
     updates,
     values,
     configuration: {
@@ -28,7 +27,6 @@ vi.mock('vscode', () => ({
   },
   window: {
     showInputBox: vi.fn(),
-    showWarningMessage: vi.fn(async () => vscodeConfiguration.fullAccessChoice),
   },
   workspace: {
     getConfiguration: () => vscodeConfiguration.configuration,
@@ -41,7 +39,6 @@ describe('ConfigurationService model selection', () => {
   beforeEach(() => {
     vscodeConfiguration.updates.length = 0;
     vscodeConfiguration.values.clear();
-    vscodeConfiguration.fullAccessChoice = undefined;
     vi.clearAllMocks();
   });
 
@@ -70,14 +67,10 @@ describe('ConfigurationService model selection', () => {
     expect(vscodeConfiguration.updates).toEqual(['routingMode:AUTO', 'selectedModel:']);
   });
 
-  it('persists agent mode and requires confirmation before Full Access', async () => {
+  it('persists agent and permission modes after the workbench has approved them', async () => {
     const service = new ConfigurationService();
 
     await service.selectAgentMode('PLAN');
-    await expect(service.selectPermissionMode('BYPASS_PERMISSIONS')).resolves.toBe(false);
-    expect(vscodeConfiguration.updates).toEqual(['agentMode:PLAN']);
-
-    vscodeConfiguration.fullAccessChoice = 'Enable Full Access';
     await expect(service.selectPermissionMode('BYPASS_PERMISSIONS')).resolves.toBe(true);
     expect(vscodeConfiguration.updates).toEqual([
       'agentMode:PLAN',

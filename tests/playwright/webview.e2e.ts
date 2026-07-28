@@ -35,6 +35,7 @@ function baseState() {
   return {
     agentRun: undefined,
     agentMode: 'AUTO',
+    approvalRequest: undefined,
     backendStatus: 'connected',
     backendUrl: 'https://claw.local',
     busy: false,
@@ -161,6 +162,35 @@ test('keeps controls interactive and queues follow-up requests while an agent ru
       requestId: expect.any(String),
     });
   await expect(page.locator('.message-assistant').last()).toContainText('Queued');
+});
+
+test('handles Full Access and file approvals inside the workbench', async ({ page }) => {
+  await page.locator('#permissionMode').selectOption('BYPASS_PERMISSIONS');
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({ type: 'selectPermissionMode', mode: 'BYPASS_PERMISSIONS' });
+
+  await sendState(page, {
+    approvalRequest: {
+      id: '8d4f6eb8-5382-4d50-b005-12320b088673',
+      kind: 'enableFullAccess',
+      title: 'Enable Full Access',
+      message: 'Apply safe workspace edits without repeated approval.',
+      details: ['Workspace Trust stays enforced'],
+    },
+  });
+
+  await expect(page.locator('#approvalPanel')).toBeVisible();
+  await expect(page.locator('#approvalTitle')).toHaveText('Enable Full Access');
+  await expect(page.locator('#approvalDetails')).toContainText('Workspace Trust stays enforced');
+  await page.locator('#approvalApprove').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({
+      type: 'resolveApproval',
+      requestId: '8d4f6eb8-5382-4d50-b005-12320b088673',
+      approved: true,
+    });
 });
 
 test('shows the owned folder and live coding-agent execution state', async ({ page }) => {

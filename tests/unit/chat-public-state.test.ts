@@ -11,6 +11,7 @@ const snapshot: ExtensionSnapshot = {
     summary: 'Update the app',
   },
   agentMode: 'PLAN',
+  approvalRequest: undefined,
   backendStatus: 'connected',
   backendUrl: 'https://claw.local',
   busy: false,

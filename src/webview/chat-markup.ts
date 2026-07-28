@@ -181,6 +181,21 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     </form>
     <p id="announcer" class="sr-only" aria-live="assertive"></p>
   </main>
+  <div id="toastStack" class="toast-stack" role="status" aria-live="polite"></div>
+  <section id="approvalPanel" class="approval-panel" role="dialog" aria-modal="true" aria-labelledby="approvalTitle" hidden>
+    <div class="approval-card">
+      <header>
+        <span id="approvalKind" class="badge accent-badge">${translated('Approval required')}</span>
+        <strong id="approvalTitle">${translated('Approval required')}</strong>
+      </header>
+      <p id="approvalMessage"></p>
+      <ul id="approvalDetails" class="approval-details"></ul>
+      <div class="approval-actions">
+        <button id="approvalReject" class="quiet-button" type="button">${translated('Reject')}</button>
+        <button id="approvalApprove" class="send-button" type="button">${translated('Approve')}</button>
+      </div>
+    </div>
+  </section>
   <div id="i18n" hidden
     data-auto="${translated('Auto')}"
     data-agent="${translated('Agent')}"
@@ -191,6 +206,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-agent-reading="${translated('Reading workspace')}"
     data-agent-rejected="${translated('Changes rejected')}"
     data-agent-reviewing="${translated('Reviewing file changes')}"
+    data-approval-required="${translated('Approval required')}"
+    data-approve="${translated('Approve')}"
     data-assistant="${translated('CLAWAI')}"
     data-automatic-routing="${translated('Automatic routing')}"
     data-choose-models="${translated('Choose between 2 and 5 models.')}"
@@ -222,11 +239,13 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-queue="${translated('Queue')}"
     data-queued="${translated('Queued')}"
     data-ready="${translated('Ready')}"
+    data-reject="${translated('Reject')}"
     data-remove="${translated('Remove')}"
     data-retry="${translated('Retry')}"
     data-running="${translated('Running')}"
     data-send="${translated('Send')}"
     data-trusted="${translated('Trusted')}"
+    data-undo="${translated('Undo')}"
     data-untrusted="${translated('Restricted')}"
     data-you="${translated('YOU')}"></div>
   <script nonce="${escapeHtml(input.nonce)}" src="${escapeHtml(input.scriptUri)}"></script>

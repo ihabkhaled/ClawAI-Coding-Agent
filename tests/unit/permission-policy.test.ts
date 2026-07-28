@@ -33,7 +33,7 @@ describe('permission policy', () => {
     ).toEqual({ outcome: 'allow', reason: 'fullAccess' });
   });
 
-  it('keeps Plan mode read-only and final diff review mandatory', () => {
+  it('keeps Plan mode read-only and only bypasses final review in Full Access', () => {
     expect(
       decidePermission({
         agentMode: 'PLAN',
@@ -48,6 +48,15 @@ describe('permission policy', () => {
         agentMode: 'AUTO',
         operation: 'finalDiff',
         permissionMode: 'BYPASS_PERMISSIONS',
+        sensitive: false,
+        trusted: true,
+      }),
+    ).toEqual({ outcome: 'allow', reason: 'fullAccess' });
+    expect(
+      decidePermission({
+        agentMode: 'AUTO',
+        operation: 'finalDiff',
+        permissionMode: 'EDIT_AUTOMATICALLY',
         sensitive: false,
         trusted: true,
       }),

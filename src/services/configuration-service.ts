@@ -95,19 +95,6 @@ export class ConfigurationService {
   }
 
   async selectPermissionMode(mode: PermissionMode): Promise<boolean> {
-    if (mode === 'BYPASS_PERMISSIONS' && this.read().permissionMode !== mode) {
-      const enable = vscode.l10n.t('Enable Full Access');
-      const choice = await vscode.window.showWarningMessage(
-        vscode.l10n.t(
-          'Full Access bypasses routine ClawAI permission prompts for this workspace. Workspace Trust, secret exclusions, and final diff review remain enforced.',
-        ),
-        { modal: true },
-        enable,
-      );
-      if (choice !== enable) {
-        return false;
-      }
-    }
     await vscode.workspace
       .getConfiguration('clawAI')
       .update('permissionMode', mode, vscode.ConfigurationTarget.Workspace);

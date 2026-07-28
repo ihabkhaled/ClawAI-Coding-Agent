@@ -23,10 +23,16 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('connect') }),
   z.object({ type: z.literal('logout') }),
   z.object({ type: z.literal('cancel') }),
+  z.object({ type: z.literal('undo') }),
   z.object({ type: z.literal('openFolder') }),
   z.object({
     type: z.literal('removeQueued'),
     requestId: z.string().min(1).max(100),
+  }),
+  z.object({
+    type: z.literal('resolveApproval'),
+    requestId: z.uuid(),
+    approved: z.boolean(),
   }),
   z.object({
     type: z.literal('agent'),
@@ -83,11 +89,13 @@ export interface ChatViewActions {
   logout(): Promise<void>;
   openFolder(): Promise<void>;
   removeQueued(requestId: string): Promise<void>;
+  resolveApproval(requestId: string, approved: boolean): Promise<void>;
   selectAgentMode(mode: AgentMode): Promise<void>;
   selectModel(modelKey: string): Promise<void>;
   selectPermissionMode(mode: PermissionMode): Promise<boolean>;
   selectWorkspaceFolder(folderKey: string): Promise<void>;
   send(input: { content: string; contextMode: ContextMode; requestId: string }): Promise<void>;
+  undo(): Promise<void>;
 }
 
 export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
@@ -165,6 +173,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     });
   }
 
+  async postNotice(message: string): Promise<void> {
+    await this.post({ type: 'notice', message });
+  }
+
   dispose(): void {
     this.unsubscribe();
     this.panel?.dispose();
@@ -205,10 +217,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.actions.logout();
     } else if (request.type === 'cancel') {
       await this.actions.cancel();
+    } else if (request.type === 'undo') {
+      await this.actions.undo();
     } else if (request.type === 'openFolder') {
       await this.actions.openFolder();
     } else if (request.type === 'removeQueued') {
       await this.actions.removeQueued(request.requestId);
+    } else if (request.type === 'resolveApproval') {
+      await this.actions.resolveApproval(request.requestId, request.approved);
     } else if (request.type === 'selectModel') {
       await this.actions.selectModel(request.modelKey);
     } else if (request.type === 'selectAgentMode') {

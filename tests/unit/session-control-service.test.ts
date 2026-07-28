@@ -1,15 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
-const vscodeWindow = vi.hoisted(() => ({
-  choice: undefined as string | undefined,
-  showWarningMessage: vi.fn(async () => vscodeWindow.choice),
-}));
-
 vi.mock('vscode', () => ({
   l10n: {
     t: (message: string) => message,
   },
-  window: vscodeWindow,
   workspace: {
     isTrusted: true,
   },
@@ -44,8 +38,6 @@ describe('SessionControlService', () => {
     configuration.selectAgentMode.mockReset();
     configuration.selectPermissionMode.mockReset();
     patches.length = 0;
-    vscodeWindow.choice = undefined;
-    vscodeWindow.showWarningMessage.mockClear();
   });
 
   it('updates session-visible agent and permission modes after persistence', async () => {
@@ -58,7 +50,9 @@ describe('SessionControlService', () => {
         return true;
       },
     );
-    const service = new SessionControlService(state, configuration);
+    const service = new SessionControlService(state, configuration, {
+      request: vi.fn(async () => true),
+    });
 
     await service.selectAgentMode('PLAN');
     await service.selectPermissionMode('EDIT_AUTOMATICALLY');
@@ -68,14 +62,36 @@ describe('SessionControlService', () => {
   });
 
   it('asks for Manual operations and skips routine prompts in approved modes', async () => {
-    const service = new SessionControlService(state, configuration);
+    const approvals = {
+      request: vi.fn(async () => true),
+    };
+    const service = new SessionControlService(state, configuration, approvals);
 
-    vscodeWindow.choice = 'Allow once';
     await expect(service.authorize('workspaceContext')).resolves.toBe(true);
-    expect(vscodeWindow.showWarningMessage).toHaveBeenCalledOnce();
+    expect(approvals.request).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'workspaceContext' }),
+    );
 
     configuration.permissionMode = 'EDIT_AUTOMATICALLY';
     await expect(service.authorize('editGeneration')).resolves.toBe(true);
-    expect(vscodeWindow.showWarningMessage).toHaveBeenCalledOnce();
+    expect(approvals.request).toHaveBeenCalledOnce();
+  });
+
+  it('confirms Full Access inside the workbench once and then persists it', async () => {
+    const approvals = {
+      request: vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true),
+    };
+    configuration.selectPermissionMode.mockImplementation(async (mode: PermissionMode) => {
+      configuration.permissionMode = mode;
+      return true;
+    });
+    const service = new SessionControlService(state, configuration, approvals);
+
+    await expect(service.selectPermissionMode('BYPASS_PERMISSIONS')).resolves.toBe(false);
+    expect(configuration.selectPermissionMode).not.toHaveBeenCalled();
+
+    await expect(service.selectPermissionMode('BYPASS_PERMISSIONS')).resolves.toBe(true);
+    expect(configuration.selectPermissionMode).toHaveBeenCalledWith('BYPASS_PERMISSIONS');
+    expect(approvals.request).toHaveBeenCalledTimes(2);
   });
 });
