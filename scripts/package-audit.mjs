@@ -11,7 +11,7 @@ const webviewMarkup = readFileSync(join(root, 'src', 'webview', 'chat-markup.ts'
 const commands = manifest.contributes.commands.map((command) => command.command);
 const uniqueCommands = new Set(commands);
 
-assert.equal(manifest.version, '0.2.0', 'release version must be 0.2.0');
+assert.equal(manifest.version, '0.3.0', 'release version must be 0.3.0');
 assert.equal(uniqueCommands.size, commands.length, 'command IDs must be unique');
 for (const command of commands) {
   assert.match(

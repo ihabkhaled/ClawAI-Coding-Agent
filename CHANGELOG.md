@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.3.0
+
+- Made Agent the default workbench run mode: natural-language coding requests
+  now generate a strict edit plan, open diff previews, require final approval,
+  and atomically apply files inside the selected trusted workspace folder.
+- Fixed manual model requests to use the backend-supported `MANUAL_MODEL`
+  routing contract while migrating legacy `MANUAL` settings automatically.
+- Added explicit multi-root folder scope selection shared by context collection,
+  project rules, diff preview, apply, and undo, without requiring an open file.
+- Added a visible read, generate, review, and apply activity rail plus structured
+  changed-file receipts in the editor-tab chat.
+- Added one same-thread repair pass for malformed local-model edit plans while
+  retaining schema validation, secret exclusions, safe relative paths,
+  Workspace Trust, and fail-closed behavior.
+- Added exact-prompt acceptance coverage for creating `app/for-loop.js`,
+  workspace-scope tests, Playwright scope/activity flows, and a v0.3 visual
+  baseline.
+
 ## 0.2.0
 
 - Made ordinary chat workspace-ready: Smart context now falls back from the

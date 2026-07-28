@@ -4,7 +4,7 @@ const vscode = require('vscode');
 async function run() {
   const extension = vscode.extensions.getExtension('clawai.clawai-coding-agent');
   assert.ok(extension, 'ClawAI extension is installed in the test host');
-  assert.equal(extension.packageJSON.version, '0.2.0', 'the v0.2.0 release activates');
+  assert.equal(extension.packageJSON.version, '0.3.0', 'the v0.3.0 release activates');
 
   const start = Date.now();
   await extension.activate();
