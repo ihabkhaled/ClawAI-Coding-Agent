@@ -1,4 +1,5 @@
 import type { AgentMode } from './agent-mode.types';
+import type { AgentRunSnapshot } from './agent-run';
 import type { RoutingMode } from './configuration';
 import type { ContextReceipt } from './context-collector';
 import type { WorkspaceReadiness } from './context-mode';
@@ -10,6 +11,7 @@ import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contr
 export type BackendStatus = 'connected' | 'disconnected' | 'error' | 'loading';
 
 export interface ExtensionSnapshot {
+  agentRun: AgentRunSnapshot | undefined;
   agentMode: AgentMode;
   backendUrl: string;
   backendStatus: BackendStatus;

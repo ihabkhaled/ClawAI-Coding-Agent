@@ -300,9 +300,9 @@ function submitPrompt() {
   appendMessage('user', content);
   streamingMessage = appendMessage('assistant', '', labels.connecting);
   const mode = elements.runMode.value;
-  if (mode === 'chat') {
+  if (mode === 'agent' || mode === 'chat') {
     vscode.postMessage({
-      type: 'send',
+      type: mode === 'agent' ? 'agent' : 'send',
       content,
       contextMode: elements.contextMode.value,
     });
@@ -350,7 +350,10 @@ elements.cancelButton.addEventListener('click', () => {
 });
 
 elements.runMode.addEventListener('change', () => {
-  elements.modelTray.classList.toggle('visible', elements.runMode.value !== 'chat');
+  elements.modelTray.classList.toggle(
+    'visible',
+    elements.runMode.value === 'compare' || elements.runMode.value === 'judge',
+  );
 });
 
 elements.modelSelect.addEventListener('change', () => {

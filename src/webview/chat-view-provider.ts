@@ -25,6 +25,11 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('cancel') }),
   z.object({ type: z.literal('openFolder') }),
   z.object({
+    type: z.literal('agent'),
+    content: z.string().min(1).max(20_000),
+    contextMode: contextModeSchema,
+  }),
+  z.object({
     type: z.literal('send'),
     content: z.string().min(1).max(20_000),
     contextMode: contextModeSchema,
@@ -54,10 +59,11 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
   }),
 ]);
 type InboundMessage = z.infer<typeof inboundMessageSchema>;
-type PromptMessage = Extract<InboundMessage, { type: 'compare' | 'send' }>;
+type PromptMessage = Extract<InboundMessage, { type: 'agent' | 'compare' | 'send' }>;
 type ControlMessage = Exclude<InboundMessage, PromptMessage | { type: 'ready' }>;
 
 export interface ChatViewActions {
+  agent(input: { content: string; contextMode: ContextMode }): Promise<void>;
   cancel(): Promise<void>;
   compare(input: {
     content: string;
@@ -155,7 +161,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       const request = parsed.data;
       if (request.type === 'ready') {
         await this.postState();
-      } else if (request.type === 'compare' || request.type === 'send') {
+      } else if (
+        request.type === 'agent' ||
+        request.type === 'compare' ||
+        request.type === 'send'
+      ) {
         await this.handlePromptMessage(request);
       } else {
         await this.handleControlMessage(request);
@@ -191,6 +201,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   private async handlePromptMessage(request: PromptMessage): Promise<void> {
     if (request.type === 'compare') {
       await this.actions.compare(request);
+    } else if (request.type === 'agent') {
+      await this.actions.agent(request);
     } else {
       await this.actions.send(request);
     }

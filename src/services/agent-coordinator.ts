@@ -16,22 +16,18 @@ import {
   promptQuestion,
   promptWorkflowRequest,
 } from './agent-coordinator-prompts';
-import { type CompareInput } from './agent-coordinator.types';
+import { type AgentWorkflowInput, type CompareInput } from './agent-coordinator.types';
+import { AgentRunService } from './agent-run-service';
 import { BrowserAuthorizationService } from './browser-authorization-service';
 import { ChatParticipantService } from './chat-participant-service';
 import { ChatService } from './chat-service';
 import { ClawaiInitializer } from './clawai-initializer';
 import { ConfigurationService, type RuntimeConfiguration } from './configuration-service';
 import { ModelService } from './model-service';
-import { confirmSafeEdits } from './safe-edit-confirmation';
+import { confirmSafeEdits, offerSafeEditUndo } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
 import { SessionControlService } from './session-control-service';
-import {
-  buildAnalysisPrompt,
-  buildWorkflowPrompt,
-  parseWorkflowEditPlan,
-  type WorkflowKind,
-} from './workflow-service';
+import { buildAnalysisPrompt, type WorkflowKind } from './workflow-service';
 
 import type { WorkspaceContextService } from './workspace-context-service';
 import type { CollectedContext } from '../core/context-collector';
@@ -43,6 +39,7 @@ export class AgentCoordinator implements vscode.Disposable {
   readonly chatParticipant: ChatParticipantService;
   readonly sessionControls: SessionControlService;
   private backend: BackendClient;
+  private readonly agentRuns: AgentRunService;
   private readonly chat: ChatService;
   private readonly configuration = new ConfigurationService();
   private readonly initializer = new ClawaiInitializer();
@@ -75,6 +72,12 @@ export class AgentCoordinator implements vscode.Disposable {
     );
     this.safeEdits = new SafeEditService(this.editAdapter, (previews, summary) =>
       confirmSafeEdits(this.diffPreview, previews, summary),
+    );
+    this.agentRuns = new AgentRunService(
+      this.context,
+      this.sessionControls,
+      this.chat,
+      this.safeEdits,
     );
   }
 
@@ -122,7 +125,9 @@ export class AgentCoordinator implements vscode.Disposable {
   async configurationChanged(): Promise<void> {
     const configuration = this.configuration.read();
     this.backend = this.createBackend(configuration);
-    this.replaceBackendPorts();
+    this.browserAuthorization.setBackend(this.backend);
+    this.chat.setBackend(this.backend);
+    this.modelService.setBackend(this.backend);
     this.state.update({
       agentMode: configuration.agentMode,
       backendUrl: configuration.backendUrl,
@@ -240,6 +245,12 @@ export class AgentCoordinator implements vscode.Disposable {
     });
   }
 
+  async runAgent(input: { content: string; contextMode: ContextMode }): Promise<void> {
+    await this.runGeneration((abort) =>
+      this.executeAgentRun({ ...input, kind: 'generate' }, abort),
+    );
+  }
+
   async compare(input: CompareInput): Promise<void> {
     await this.runGeneration(async () => {
       const collected = await this.collect(input.contextMode);
@@ -327,57 +338,9 @@ export class AgentCoordinator implements vscode.Disposable {
     if (request === null) {
       return;
     }
-    await this.runGeneration(async (abort) => {
-      const collected = await this.collect(contextMode);
-      const rules = await this.context.projectRules();
-      const planOnly = this.sessionControls.isPlanMode();
-      if (!planOnly && !(await this.sessionControls.authorize('editGeneration'))) {
-        return;
-      }
-      const promptBuilder = planOnly ? buildAnalysisPrompt : buildWorkflowPrompt;
-      const prompt = promptBuilder({
-        kind: planOnly ? 'plan' : kind,
-        request,
-        context: collected.files,
-        ...(rules.length === 0 ? {} : { rules }),
-      });
-      const result = await this.chat.send(
-        {
-          content: prompt,
-          context: [],
-          ...currentModelSelection(this.configuration.read(), this.state.snapshot.models),
-        },
-        (event) => {
-          void this.view?.postEvent(event);
-        },
-        abort.signal,
-        (threadId) => {
-          this.activeThreadId = threadId;
-        },
-      );
-      if (planOnly) {
-        await this.view?.postResult(result);
-        return;
-      }
-      const plan = parseWorkflowEditPlan(result.content);
-      const applied = await this.safeEdits.previewAndApply(plan);
-      await this.view?.postResult({
-        content: applied.applied
-          ? vscode.l10n.t('Applied: {0}', plan.summary)
-          : vscode.l10n.t('Rejected: {0}', plan.summary),
-        editPlan: plan,
-      });
-      if (applied.applied) {
-        const undo = vscode.l10n.t('Undo ClawAI changes');
-        const choice = await vscode.window.showInformationMessage(
-          vscode.l10n.t('ClawAI applied {0} file changes.', plan.files.length),
-          undo,
-        );
-        if (choice === undo) {
-          await this.undoLastEdit();
-        }
-      }
-    });
+    await this.runGeneration((abort) =>
+      this.executeAgentRun({ content: request, contextMode, kind }, abort),
+    );
   }
 
   async selectModel(modelKey?: string): Promise<void> {
@@ -445,6 +408,49 @@ export class AgentCoordinator implements vscode.Disposable {
     const result = await this.context.collect(resolvedMode, configuration);
     this.state.update({ contextReceipt: result.receipt });
     return result;
+  }
+
+  private async executeAgentRun(input: AgentWorkflowInput, abort: AbortController): Promise<void> {
+    const result = await this.agentRuns.run(
+      {
+        ...input,
+        configuration: this.configuration.read(),
+        selection: currentModelSelection(this.configuration.read(), this.state.snapshot.models),
+        signal: abort.signal,
+      },
+      {
+        onEvent: (event) => {
+          void this.view?.postEvent(event);
+        },
+        onPhase: (agentRun) => {
+          this.state.update({ agentRun });
+        },
+        onThread: (threadId) => {
+          this.activeThreadId = threadId;
+        },
+      },
+    );
+    this.state.update({ contextReceipt: result.context.receipt });
+    if (result.status === 'planned') {
+      await this.view?.postResult({ content: result.content });
+      return;
+    }
+    if (result.editPlan === undefined) {
+      await this.view?.postResult({
+        content: vscode.l10n.t('Rejected: no files were changed.'),
+      });
+      return;
+    }
+    await this.view?.postResult({
+      content:
+        result.status === 'applied'
+          ? vscode.l10n.t('Applied: {0}', result.editPlan.summary)
+          : vscode.l10n.t('Rejected: {0}', result.editPlan.summary),
+      editPlan: result.editPlan,
+    });
+    if (result.status === 'applied') {
+      await offerSafeEditUndo(result.editPlan.files.length, () => this.undoLastEdit());
+    }
   }
 
   private async refreshData(): Promise<void> {
@@ -522,11 +528,5 @@ export class AgentCoordinator implements vscode.Disposable {
       timeoutMs: configuration.requestTimeoutMs,
       sessionVault: this.sessionVault,
     });
-  }
-
-  private replaceBackendPorts(): void {
-    this.browserAuthorization.setBackend(this.backend);
-    this.chat.setBackend(this.backend);
-    this.modelService.setBackend(this.backend);
   }
 }

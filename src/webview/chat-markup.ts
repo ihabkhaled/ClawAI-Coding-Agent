@@ -148,6 +148,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
           </label>
           <label class="compact-control"><span>${translated('Run')}</span>
             <select id="runMode">
+              <option value="agent">${translated('Agent')}</option>
               <option value="chat">${translated('Chat')}</option>
               <option value="compare">${translated('Compare')}</option>
               <option value="judge">${translated('Compare + Judge')}</option>
@@ -165,6 +166,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
   </main>
   <div id="i18n" hidden
     data-auto="${translated('Auto')}"
+    data-agent="${translated('Agent')}"
     data-assistant="${translated('CLAWAI')}"
     data-automatic-routing="${translated('Automatic routing')}"
     data-choose-models="${translated('Choose between 2 and 5 models.')}"

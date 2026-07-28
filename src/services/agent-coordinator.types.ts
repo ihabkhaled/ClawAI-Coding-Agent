@@ -1,3 +1,4 @@
+import type { WorkflowKind } from './workflow-service';
 import type { ContextMode } from '../core/context-mode';
 
 export interface CompareInput {
@@ -5,4 +6,10 @@ export interface CompareInput {
   contextMode: ContextMode;
   modelKeys: string[];
   judgeEnabled: boolean;
+}
+
+export interface AgentWorkflowInput {
+  content: string;
+  contextMode: ContextMode;
+  kind: WorkflowKind;
 }

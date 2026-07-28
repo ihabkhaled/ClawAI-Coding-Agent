@@ -33,6 +33,7 @@ const browserIssues = new WeakMap<Page, string[]>();
 
 function baseState() {
   return {
+    agentRun: undefined,
     agentMode: 'AUTO',
     backendStatus: 'connected',
     backendUrl: 'https://claw.local',
@@ -101,8 +102,24 @@ test('renders the workspace-ready editor workbench without an active file', asyn
   await expect(page.locator('#workspaceName')).toHaveText('ClawAI');
   await expect(page.locator('#contextHintText')).toHaveText('Using the trusted workspace');
   await expect(page.locator('#modelSelect')).toContainText('Qwen 2.5 Coder 7B');
+  await expect(page.locator('#runMode')).toHaveValue('agent');
   await expect(page.locator('#emptyState')).toBeVisible();
   await expectWindowsScreenshot(page, 'workbench-dark.png');
+});
+
+test('submits coding prompts to the agent execution path by default', async ({ page }) => {
+  await page.locator('#prompt').fill('write for loop from 1 to 10 in file .js inside folder app');
+  await page.locator('#composer').evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
+
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({
+      type: 'agent',
+      content: 'write for loop from 1 to 10 in file .js inside folder app',
+      contextMode: 'smart',
+    });
 });
 
 test('keeps manual model and mode selections stable through state round trips', async ({

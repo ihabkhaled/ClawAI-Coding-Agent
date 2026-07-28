@@ -82,6 +82,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const configuration = new ConfigurationService().read();
   const workspaceScope = new WorkspaceScopeService();
   const state = new ExtensionState({
+    agentRun: undefined,
     agentMode: configuration.agentMode,
     backendUrl: configuration.backendUrl,
     backendStatus: 'loading',
@@ -116,6 +117,7 @@ export function activate(context: vscode.ExtensionContext): void {
     workspaceContext,
   );
   const chatView = new ChatViewProvider(context.extensionUri, state, {
+    agent: (input) => coordinator.runAgent(input),
     cancel: () => coordinator.cancel(),
     compare: (input) => coordinator.compare(input),
     connect: () => coordinator.connect(),

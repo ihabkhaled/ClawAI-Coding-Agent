@@ -20,6 +20,7 @@ export default defineConfig({
         'src/core/sse-decoder.ts',
         'src/core/workspace-scope.ts',
         'src/services/chat-service.ts',
+        'src/services/agent-run-service.ts',
         'src/services/model-service.ts',
         'src/services/safe-edit-service.ts',
         'src/services/workflow-service.ts',

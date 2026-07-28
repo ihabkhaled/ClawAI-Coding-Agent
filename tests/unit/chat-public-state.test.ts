@@ -5,6 +5,11 @@ import { toPublicChatState } from '../../src/webview/chat-public-state';
 import type { ExtensionSnapshot } from '../../src/core/extension-state';
 
 const snapshot: ExtensionSnapshot = {
+  agentRun: {
+    files: [{ operation: 'update', path: 'src/app.ts' }],
+    phase: 'reviewing',
+    summary: 'Update the app',
+  },
   agentMode: 'PLAN',
   backendStatus: 'connected',
   backendUrl: 'https://claw.local',
@@ -46,6 +51,10 @@ const snapshot: ExtensionSnapshot = {
 describe('toPublicChatState', () => {
   it('exposes the workbench state needed by the webview without conversation history', () => {
     expect(toPublicChatState(snapshot)).toMatchObject({
+      agentRun: {
+        files: [{ operation: 'update', path: 'src/app.ts' }],
+        phase: 'reviewing',
+      },
       agentMode: 'PLAN',
       backendStatus: 'connected',
       modelWarnings: ['Ollama is unavailable'],

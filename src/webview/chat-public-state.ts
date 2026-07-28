@@ -2,6 +2,7 @@ import type { ExtensionSnapshot } from '../core/extension-state';
 
 export function toPublicChatState(snapshot: ExtensionSnapshot) {
   return {
+    agentRun: snapshot.agentRun,
     agentMode: snapshot.agentMode,
     backendStatus: snapshot.backendStatus,
     backendUrl: snapshot.backendUrl,

@@ -23,3 +23,17 @@ export async function confirmSafeEdits(
   );
   return choice === apply;
 }
+
+export async function offerSafeEditUndo(
+  fileCount: number,
+  undoEdit: () => Promise<void>,
+): Promise<void> {
+  const undo = vscode.l10n.t('Undo ClawAI changes');
+  const choice = await vscode.window.showInformationMessage(
+    vscode.l10n.t('ClawAI applied {0} file changes.', fileCount),
+    undo,
+  );
+  if (choice === undo) {
+    await undoEdit();
+  }
+}
