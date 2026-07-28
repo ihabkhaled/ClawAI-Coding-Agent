@@ -2,7 +2,11 @@ import { z } from 'zod';
 
 const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]', '::1', 'claw.local']);
 
-const routingModeSchema = z.enum(['AUTO', 'MANUAL']);
+const routingModeSchema = z.enum(['AUTO', 'MANUAL_MODEL']);
+const storedRoutingModeSchema = z.preprocess(
+  (value) => (value === 'MANUAL' ? 'MANUAL_MODEL' : value),
+  routingModeSchema,
+);
 const workspaceContextSchema = z
   .object({
     maxBytes: z.number().int().min(1_000).max(2_000_000).optional(),
@@ -12,7 +16,7 @@ const workspaceContextSchema = z
   .strict();
 const workspaceConfigurationSchema = z
   .object({
-    routingMode: routingModeSchema.optional(),
+    routingMode: storedRoutingModeSchema.optional(),
     selectedModel: z.string().max(500).optional(),
     systemPrompt: z.string().max(10_000).optional(),
     context: workspaceContextSchema.optional(),
@@ -29,6 +33,10 @@ export interface GlobalConfiguration {
   maxContextFiles: number;
   exclude: string[];
   systemPrompt?: string;
+}
+
+export function normalizeRoutingMode(value: unknown): RoutingMode {
+  return storedRoutingModeSchema.parse(value);
 }
 
 export function normalizeBackendUrl(value: string): string {

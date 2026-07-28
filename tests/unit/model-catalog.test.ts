@@ -62,12 +62,12 @@ describe('model catalog', () => {
     expect(resolveModelSelection('AUTO', '', catalog)).toEqual({
       routingMode: 'AUTO',
     });
-    expect(resolveModelSelection('MANUAL', 'OPENAI:gpt-5', catalog)).toMatchObject({
+    expect(resolveModelSelection('MANUAL_MODEL', 'OPENAI:gpt-5', catalog)).toMatchObject({
       model: 'gpt-5',
       provider: 'OPENAI',
-      routingMode: 'MANUAL',
+      routingMode: 'MANUAL_MODEL',
     });
-    expect(() => resolveModelSelection('MANUAL', 'OPENAI:missing', catalog)).toThrow();
+    expect(() => resolveModelSelection('MANUAL_MODEL', 'OPENAI:missing', catalog)).toThrow();
   });
 
   it('uses backend provider keys for local models and de-duplicates routing snapshots', () => {
@@ -110,8 +110,8 @@ describe('model catalog', () => {
       'OLLAMA:qwen3:coder',
       'LLAMACPP:deepseek:q4',
     ]);
-    expect(resolveModelSelection('MANUAL', 'OLLAMA:qwen3:coder', localCatalog)).toEqual({
-      routingMode: 'MANUAL',
+    expect(resolveModelSelection('MANUAL_MODEL', 'OLLAMA:qwen3:coder', localCatalog)).toEqual({
+      routingMode: 'MANUAL_MODEL',
       provider: 'OLLAMA',
       model: 'qwen3:coder',
     });

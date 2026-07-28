@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 
 import {
   normalizeBackendUrl,
+  normalizeRoutingMode,
   type GlobalConfiguration,
-  type RoutingMode,
 } from '../core/configuration';
 
 import type { AgentMode } from '../core/agent-mode.types';
@@ -78,7 +78,7 @@ export class ConfigurationService {
         configuration.get<string>('backendUrl') ?? 'http://localhost',
       ),
       requestTimeoutMs: numberSetting(configuration, 'requestTimeoutMs', 60_000),
-      routingMode: configuration.get<RoutingMode>('routingMode') ?? 'AUTO',
+      routingMode: normalizeRoutingMode(configuration.get<unknown>('routingMode') ?? 'AUTO'),
       selectedModel: configuration.get<string>('selectedModel') ?? '',
       maxContextBytes: numberSetting(configuration, 'maxContextBytes', 200_000),
       maxContextFiles: numberSetting(configuration, 'maxContextFiles', 40),
@@ -123,6 +123,6 @@ export class ConfigurationService {
   async selectManual(modelKey: string): Promise<void> {
     const configuration = vscode.workspace.getConfiguration('clawAI');
     await configuration.update('selectedModel', modelKey, vscode.ConfigurationTarget.Workspace);
-    await configuration.update('routingMode', 'MANUAL', vscode.ConfigurationTarget.Workspace);
+    await configuration.update('routingMode', 'MANUAL_MODEL', vscode.ConfigurationTarget.Workspace);
   }
 }

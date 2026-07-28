@@ -454,7 +454,7 @@ export class AgentCoordinator implements vscode.Disposable {
     const selectedExists = models.catalog.some(
       (model) => model.key === configuration.selectedModel,
     );
-    if (configuration.routingMode === 'MANUAL' && !selectedExists) {
+    if (configuration.routingMode === 'MANUAL_MODEL' && !selectedExists) {
       await this.configuration.selectAuto();
     }
     const current = this.configuration.read();

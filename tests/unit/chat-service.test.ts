@@ -99,7 +99,7 @@ describe('ChatService', () => {
     expect(new TextEncoder().encode(request?.content ?? '').byteLength).toBeLessThanOrEqual(95_000);
   });
 
-  it('reuses a thread, sends manual model provenance, and accepts streaming snapshots', async () => {
+  it('reuses a thread, sends the MANUAL_MODEL backend contract, and accepts snapshots', async () => {
     const backend: ChatBackendPort = {
       createThread: vi.fn(async () => ({ id: 'unused' })),
       openStream: vi.fn(async () =>
@@ -123,7 +123,7 @@ describe('ChatService', () => {
         {
           content: 'Explain',
           context: [],
-          routingMode: 'MANUAL',
+          routingMode: 'MANUAL_MODEL',
           provider: 'OPENAI',
           model: 'gpt-5',
           modelDisplayName: 'GPT-5',
@@ -142,6 +142,7 @@ describe('ChatService', () => {
     expect(backend.createThread).not.toHaveBeenCalled();
     expect(backend.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
+        routingMode: 'MANUAL_MODEL',
         provider: 'OPENAI',
         model: 'gpt-5',
         modelDisplayName: 'GPT-5',

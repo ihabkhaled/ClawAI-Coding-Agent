@@ -302,6 +302,43 @@ describe('BackendClient', () => {
     await expect(client.cancelStream('thread-1')).resolves.toBeUndefined();
   });
 
+  it('sends the canonical manual routing value in thread and message request bodies', async () => {
+    const requestBodies: unknown[] = [];
+    const fetcher = vi.fn<typeof fetch>(async (_input, init) => {
+      requestBodies.push(JSON.parse(init?.body?.toString() ?? '{}'));
+      return requestBodies.length === 1 ? Response.json(thread) : Response.json(message);
+    });
+    const { client } = await authenticatedClient(fetcher);
+
+    await client.createThread({
+      routingMode: 'MANUAL_MODEL',
+      preferredProvider: 'OLLAMA',
+      preferredModel: 'qwen2.5-coder:0.5b',
+    });
+    await client.sendMessage({
+      threadId: 'thread-1',
+      content: 'Write the file',
+      routingMode: 'MANUAL_MODEL',
+      provider: 'OLLAMA',
+      model: 'qwen2.5-coder:0.5b',
+    });
+
+    expect(requestBodies).toEqual([
+      {
+        routingMode: 'MANUAL_MODEL',
+        preferredProvider: 'OLLAMA',
+        preferredModel: 'qwen2.5-coder:0.5b',
+      },
+      {
+        threadId: 'thread-1',
+        content: 'Write the file',
+        routingMode: 'MANUAL_MODEL',
+        provider: 'OLLAMA',
+        model: 'qwen2.5-coder:0.5b',
+      },
+    ]);
+  });
+
   it('opens an event stream with the SSE accept header', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
       new Response('data: {"type":"DONE"}\n\n', {

@@ -195,7 +195,7 @@
           "type": "string",
           "enum": [
             "AUTO",
-            "MANUAL"
+            "MANUAL_MODEL"
           ],
           "default": "AUTO",
           "scope": "resource",

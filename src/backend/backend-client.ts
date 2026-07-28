@@ -44,7 +44,7 @@ export interface BackendClientOptions {
 export interface MessageRequest {
   threadId: string;
   content: string;
-  routingMode: 'AUTO' | 'MANUAL';
+  routingMode: 'AUTO' | 'MANUAL_MODEL';
   provider?: string;
   model?: string;
   modelDisplayName?: string;
@@ -187,7 +187,7 @@ export class BackendClient {
 
   async createThread(input: {
     title?: string;
-    routingMode: 'AUTO' | 'MANUAL';
+    routingMode: 'AUTO' | 'MANUAL_MODEL';
     preferredProvider?: string;
     preferredModel?: string;
   }): Promise<ChatThread> {

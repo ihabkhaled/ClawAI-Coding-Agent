@@ -45,13 +45,23 @@ describe('ConfigurationService model selection', () => {
     vi.clearAllMocks();
   });
 
-  it('stores the selected model before exposing MANUAL routing to observers', async () => {
+  it('stores the selected model before exposing MANUAL_MODEL routing to observers', async () => {
     await new ConfigurationService().selectManual('OLLAMA:qwen3:coder');
 
     expect(vscodeConfiguration.updates).toEqual([
       'selectedModel:OLLAMA:qwen3:coder',
-      'routingMode:MANUAL',
+      'routingMode:MANUAL_MODEL',
     ]);
+  });
+
+  it('normalizes a legacy MANUAL workspace value when reading configuration', () => {
+    vscodeConfiguration.values.set('routingMode', 'MANUAL');
+    vscodeConfiguration.values.set('selectedModel', 'OLLAMA:qwen3:coder');
+
+    expect(new ConfigurationService().read()).toMatchObject({
+      routingMode: 'MANUAL_MODEL',
+      selectedModel: 'OLLAMA:qwen3:coder',
+    });
   });
 
   it('switches to AUTO before clearing the old manual model', async () => {

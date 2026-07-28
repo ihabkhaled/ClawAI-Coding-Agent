@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   mergeConfiguration,
   normalizeBackendUrl,
+  normalizeRoutingMode,
   parseWorkspaceConfiguration,
 } from '../../src/core/configuration';
 
@@ -26,6 +27,12 @@ describe('backend URL normalization', () => {
 });
 
 describe('.clawai configuration', () => {
+  it('migrates the legacy manual value to the backend MANUAL_MODEL contract', () => {
+    expect(normalizeRoutingMode('MANUAL')).toBe('MANUAL_MODEL');
+    expect(normalizeRoutingMode('MANUAL_MODEL')).toBe('MANUAL_MODEL');
+    expect(normalizeRoutingMode('AUTO')).toBe('AUTO');
+  });
+
   it('accepts only documented keys and lets workspace values override global defaults', () => {
     const workspace = parseWorkspaceConfiguration({
       routingMode: 'MANUAL',
@@ -49,7 +56,7 @@ describe('.clawai configuration', () => {
         workspace,
       ),
     ).toMatchObject({
-      routingMode: 'MANUAL',
+      routingMode: 'MANUAL_MODEL',
       selectedModel: 'OLLAMA:qwen3-coder',
       maxContextBytes: 120_000,
       maxContextFiles: 20,

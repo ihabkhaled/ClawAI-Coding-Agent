@@ -110,7 +110,7 @@ test('keeps manual model and mode selections stable through state round trips', 
 
   await sendState(page, { routingMode: 'AUTO', selectedModel: localModel.key });
   await expect(page.locator('#modelSelect')).toHaveValue(localModel.key);
-  await sendState(page, { routingMode: 'MANUAL', selectedModel: localModel.key });
+  await sendState(page, { routingMode: 'MANUAL_MODEL', selectedModel: localModel.key });
   await expect(page.locator('#modelSelect')).toHaveValue(localModel.key);
 
   await page.locator('#agentMode').selectOption('PLAN');

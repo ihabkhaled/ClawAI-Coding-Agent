@@ -240,7 +240,7 @@ function reconcilePending(state) {
     pendingModel = null;
   } else if (
     pendingModel !== null &&
-    state.routingMode === 'MANUAL' &&
+    state.routingMode === 'MANUAL_MODEL' &&
     state.selectedModel === pendingModel
   ) {
     pendingModel = null;
