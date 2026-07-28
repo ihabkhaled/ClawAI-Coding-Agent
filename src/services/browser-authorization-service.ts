@@ -46,13 +46,18 @@ export class BrowserAuthorizationService implements vscode.Disposable {
         state: request.state,
       });
       const codePromise = callback.waitForCallback();
-      const opened = await vscode.env.openExternal(
+      const opened = vscode.env.openExternal(
         vscode.Uri.parse(this.backend.authorizationUrl(initialized.authorizationPath)),
       );
-      if (!opened) {
-        throw new Error('VS Code could not open the ClawAI authorization page.');
-      }
-      const code = await codePromise;
+      const code = await Promise.race([
+        codePromise,
+        opened.then((didOpen) => {
+          if (!didOpen) {
+            throw new Error('VS Code could not open the ClawAI authorization page.');
+          }
+          return codePromise;
+        }),
+      ]);
       await this.backend.exchangeVscodeAuthorization(code, request.codeVerifier);
       return await this.backend.getProfile();
     } finally {

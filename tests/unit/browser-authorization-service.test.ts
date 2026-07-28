@@ -71,6 +71,46 @@ describe('BrowserAuthorizationService', () => {
     expect(callback.dispose).toHaveBeenCalledOnce();
   });
 
+  it('does not block the callback exchange when the OS browser opener stays pending', async () => {
+    let completeCallback: ((code: string) => void) | undefined;
+    const callback = {
+      callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      dispose: vi.fn(),
+      waitForCallback: vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            completeCallback = resolve;
+          }),
+      ),
+    };
+    vscodeMocks.openExternal.mockReturnValue(new Promise<boolean>(() => undefined));
+    const backend = {
+      authorizationUrl: () => 'https://claw.local/authorize/vscode?requestId=request-1',
+      exchangeVscodeAuthorization: vi.fn(async () => undefined),
+      getProfile: vi.fn(async () => ({
+        email: 'user@claw.local',
+        id: 'user-1',
+        role: 'ADMIN',
+        username: 'claw-user',
+      })),
+      initializeVscodeAuthorization: vi.fn(async () => ({
+        authorizationPath: '/authorize/vscode?requestId=request-1',
+      })),
+    };
+    const service = new BrowserAuthorizationService(backend as never, {
+      open: vi.fn(async () => callback),
+    });
+    const signIn = service.signIn();
+
+    await vi.waitFor(() => {
+      expect(vscodeMocks.openExternal).toHaveBeenCalledOnce();
+    });
+    completeCallback?.('authorization-code');
+
+    await expect(signIn).resolves.toMatchObject({ id: 'user-1' });
+    expect(backend.exchangeVscodeAuthorization).toHaveBeenCalledOnce();
+  });
+
   it('closes the callback when the browser cannot open', async () => {
     const callback = {
       callbackUri: 'http://127.0.0.1:49152/auth/callback',
