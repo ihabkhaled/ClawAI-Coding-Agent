@@ -110,12 +110,7 @@ export class AgentRunService {
     try {
       plan = parseWorkflowEditPlan(response.content);
     } catch {
-      response = await this.send(
-        input,
-        buildEditPlanRepairPrompt(response.content),
-        callbacks,
-        response.threadId,
-      );
+      response = await this.send(input, buildEditPlanRepairPrompt(response.content), callbacks);
       plan = parseWorkflowEditPlan(response.content);
     }
     callbacks.onPhase(createAgentRunSnapshot('reviewing', plan, plan.summary));

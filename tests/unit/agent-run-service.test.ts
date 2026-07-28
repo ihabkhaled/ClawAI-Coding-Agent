@@ -331,7 +331,7 @@ describe('AgentRunService', () => {
     expect(files.size).toBe(0);
   });
 
-  it('repairs one malformed local-model response in the same thread', async () => {
+  it('repairs one malformed local-model response in a fresh stream thread', async () => {
     const files = new Map<string, string>();
     const send = vi
       .fn<AgentRunChatPort['send']>()
@@ -340,7 +340,7 @@ describe('AgentRunService', () => {
         content: 'Here is the JavaScript file you requested.',
       })
       .mockResolvedValueOnce({
-        threadId: 'thread-1',
+        threadId: 'thread-2',
         content: JSON.stringify({
           summary: 'Create the loop',
           files: [
@@ -374,12 +374,12 @@ describe('AgentRunService', () => {
         },
         callbacks(),
       ),
-    ).resolves.toMatchObject({ status: 'applied', threadId: 'thread-1' });
+    ).resolves.toMatchObject({ status: 'applied', threadId: 'thread-2' });
     expect(send).toHaveBeenCalledTimes(2);
     expect(send.mock.calls[1]?.[0]).toMatchObject({
-      threadId: 'thread-1',
       routingMode: 'MANUAL_MODEL',
     });
+    expect(send.mock.calls[1]?.[0]).not.toHaveProperty('threadId');
     expect(files.has('app/for-loop.js')).toBe(true);
   });
 
