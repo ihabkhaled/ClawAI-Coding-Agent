@@ -7,6 +7,7 @@ const root = cwd();
 const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const extensionSource = readFileSync(join(root, 'src', 'extension.ts'), 'utf8');
 const webviewSource = readFileSync(join(root, 'src', 'webview', 'chat-view-provider.ts'), 'utf8');
+const webviewMarkup = readFileSync(join(root, 'src', 'webview', 'chat-markup.ts'), 'utf8');
 const commands = manifest.contributes.commands.map((command) => command.command);
 const uniqueCommands = new Set(commands);
 
@@ -31,7 +32,7 @@ assert.doesNotMatch(
   /(?:access.?token|refresh.?token|password|api.?key)/iu,
   'secrets must not be contributed as settings',
 );
-assert.match(webviewSource, /default-src 'none'/u, 'webview CSP must deny by default');
+assert.match(webviewMarkup, /default-src 'none'/u, 'webview CSP must deny by default');
 assert.match(webviewSource, /randomBytes/u, 'webview scripts must use a fresh nonce');
 assert.doesNotMatch(
   readFileSync(join(root, 'media', 'chat.js'), 'utf8'),

@@ -115,6 +115,9 @@ export function activate(context: vscode.ExtensionContext): void {
     compare: (input) => coordinator.compare(input),
     connect: () => coordinator.connect(),
     logout: () => coordinator.logout(),
+    openFolder: async () => {
+      await vscode.commands.executeCommand('workbench.action.files.openFolder');
+    },
     selectAgentMode: (mode) => coordinator.sessionControls.selectAgentMode(mode),
     selectModel: (modelKey) => coordinator.selectModel(modelKey),
     selectPermissionMode: (mode) => coordinator.sessionControls.selectPermissionMode(mode),

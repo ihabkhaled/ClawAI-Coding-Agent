@@ -571,12 +571,17 @@ function sourceFiles(directory) {
 
 function runtimeMessages() {
   const messages = new Set();
-  const expression = /vscode\.l10n\.t\(\s*(['"])((?:\\.|(?!\1)[\s\S])*?)\1/gu;
+  const expressions = [
+    /vscode\.l10n\.t\(\s*(['"])((?:\\.|(?!\1)[\s\S])*?)\1/gu,
+    /translated\(\s*(['"])((?:\\.|(?!\1)[\s\S])*?)\1/gu,
+  ];
   for (const file of sourceFiles(join(root, 'src')).filter((path) => path.endsWith('.ts'))) {
     const source = readFileSync(file, 'utf8');
-    for (const match of source.matchAll(expression)) {
-      if (match[2] !== undefined) {
-        messages.add(match[2].replaceAll("\\'", "'").replaceAll('\\"', '"'));
+    for (const expression of expressions) {
+      for (const match of source.matchAll(expression)) {
+        if (match[2] !== undefined) {
+          messages.add(match[2].replaceAll("\\'", "'").replaceAll('\\"', '"'));
+        }
       }
     }
   }

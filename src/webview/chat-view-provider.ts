@@ -3,9 +3,12 @@ import { randomBytes } from 'node:crypto';
 import * as vscode from 'vscode';
 import { z } from 'zod';
 
+import { renderChatMarkup } from './chat-markup';
+import { toPublicChatState } from './chat-public-state';
+
 import type { AgentMode } from '../core/agent-mode.types';
 import type { ContextMode } from '../core/context-mode';
-import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
+import type { ExtensionState } from '../core/extension-state';
 import type { PermissionMode } from '../core/permission-policy.types';
 
 const contextModeSchema: z.ZodType<ContextMode> = z.enum([
@@ -20,6 +23,7 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('connect') }),
   z.object({ type: z.literal('logout') }),
   z.object({ type: z.literal('cancel') }),
+  z.object({ type: z.literal('openFolder') }),
   z.object({
     type: z.literal('send'),
     content: z.string().min(1).max(20_000),
@@ -45,6 +49,8 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
     mode: z.enum(['BYPASS_PERMISSIONS', 'EDIT_AUTOMATICALLY', 'MANUAL']),
   }),
 ]);
+type InboundMessage = z.infer<typeof inboundMessageSchema>;
+type PromptMessage = Extract<InboundMessage, { type: 'compare' | 'send' }>;
 
 export interface ChatViewActions {
   cancel(): Promise<void>;
@@ -56,38 +62,11 @@ export interface ChatViewActions {
   }): Promise<void>;
   connect(): Promise<void>;
   logout(): Promise<void>;
+  openFolder(): Promise<void>;
   selectAgentMode(mode: AgentMode): Promise<void>;
   selectModel(modelKey: string): Promise<void>;
   selectPermissionMode(mode: PermissionMode): Promise<boolean>;
   send(input: { content: string; contextMode: ContextMode }): Promise<void>;
-}
-
-function publicState(snapshot: ExtensionSnapshot) {
-  return {
-    agentMode: snapshot.agentMode,
-    backendStatus: snapshot.backendStatus,
-    backendUrl: snapshot.backendUrl,
-    busy: snapshot.busy,
-    connected: snapshot.connected,
-    contextReceipt: snapshot.contextReceipt,
-    workspaceReadiness: snapshot.workspaceReadiness,
-    entitlements:
-      snapshot.entitlements === undefined
-        ? undefined
-        : {
-            isAdmin: snapshot.entitlements.isAdmin,
-            plan: snapshot.entitlements.plan,
-            quota: snapshot.entitlements.quota,
-          },
-    lastError: snapshot.lastError,
-    modelWarnings: snapshot.modelWarnings,
-    permissionMode: snapshot.permissionMode,
-    models: snapshot.models,
-    routingMode: snapshot.routingMode,
-    selectedModel: snapshot.selectedModel,
-    usage: snapshot.usage,
-    user: snapshot.user,
-  };
 }
 
 export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
@@ -103,7 +82,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     this.unsubscribe = state.subscribe((snapshot) => {
       void this.post({
         type: 'state',
-        state: publicState(snapshot),
+        state: toPublicChatState(snapshot),
       });
     });
   }
@@ -114,10 +93,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     view.onDidDispose(() => {
       this.view = null;
     });
-    void this.post({
-      type: 'state',
-      state: publicState(this.state.snapshot),
-    });
+    void this.postState();
   }
 
   async reveal(): Promise<void> {
@@ -131,10 +107,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
-        localResourceRoots: [
-          vscode.Uri.joinPath(this.extensionUri, 'media'),
-          vscode.Uri.joinPath(this.extensionUri, 'resources'),
-        ],
+        localResourceRoots: this.localResourceRoots(),
         retainContextWhenHidden: true,
       },
     );
@@ -144,31 +117,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     panel.onDidDispose(() => {
       this.panel = null;
     });
-    await this.post({
-      type: 'state',
-      state: publicState(this.state.snapshot),
-    });
+    await this.postState();
   }
 
   async postEvent(event: Record<string, unknown>): Promise<void> {
-    await this.post({
-      type: 'streamEvent',
-      event,
-    });
+    await this.post({ type: 'streamEvent', event });
   }
 
   async postResult(result: unknown): Promise<void> {
-    await this.post({
-      type: 'result',
-      result,
-    });
+    await this.post({ type: 'result', result });
   }
 
   async postError(message: string): Promise<void> {
-    await this.post({
-      type: 'error',
-      message,
-    });
+    await this.post({ type: 'error', message });
   }
 
   dispose(): void {
@@ -187,31 +148,37 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     try {
       const request = parsed.data;
       if (request.type === 'ready') {
-        await this.post({
-          type: 'state',
-          state: publicState(this.state.snapshot),
-        });
+        await this.postState();
       } else if (request.type === 'connect') {
         await this.actions.connect();
       } else if (request.type === 'logout') {
         await this.actions.logout();
       } else if (request.type === 'cancel') {
         await this.actions.cancel();
+      } else if (request.type === 'openFolder') {
+        await this.actions.openFolder();
       } else if (request.type === 'selectModel') {
         await this.actions.selectModel(request.modelKey);
       } else if (request.type === 'selectAgentMode') {
         await this.actions.selectAgentMode(request.mode);
       } else if (request.type === 'selectPermissionMode') {
         await this.actions.selectPermissionMode(request.mode);
-      } else if (request.type === 'compare') {
-        await this.actions.compare(request);
+        await this.postState();
       } else {
-        await this.actions.send(request);
+        await this.handlePromptMessage(request);
       }
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : vscode.l10n.t('ClawAI request failed.');
       await this.postError(message);
+    }
+  }
+
+  private async handlePromptMessage(request: PromptMessage): Promise<void> {
+    if (request.type === 'compare') {
+      await this.actions.compare(request);
+    } else {
+      await this.actions.send(request);
     }
   }
 
@@ -222,13 +189,17 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     ]);
   }
 
+  private async postState(): Promise<void> {
+    await this.post({
+      type: 'state',
+      state: toPublicChatState(this.state.snapshot),
+    });
+  }
+
   private configureWebview(webview: vscode.Webview): void {
     webview.options = {
       enableScripts: true,
-      localResourceRoots: [
-        vscode.Uri.joinPath(this.extensionUri, 'media'),
-        vscode.Uri.joinPath(this.extensionUri, 'resources'),
-      ],
+      localResourceRoots: this.localResourceRoots(),
     };
     webview.html = this.html(webview);
     webview.onDidReceiveMessage((message: unknown) => {
@@ -244,99 +215,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, 'media', 'chat.css'),
     );
-    const csp = [
-      "default-src 'none'",
-      `img-src ${webview.cspSource} data:`,
-      `font-src ${webview.cspSource}`,
-      `style-src ${webview.cspSource}`,
-      `script-src 'nonce-${nonce}'`,
-    ].join('; ');
+    return renderChatMarkup({
+      cspSource: webview.cspSource,
+      language: vscode.env.language,
+      nonce,
+      scriptUri: scriptUri.toString(),
+      styleUri: styleUri.toString(),
+      translate: (message) => vscode.l10n.t(message),
+    });
+  }
 
-    return `<!doctype html>
-<html lang="${vscode.env.language}">
-<head>
-  <meta charset="UTF-8">
-  <meta http-equiv="Content-Security-Policy" content="${csp}">
-  <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <link href="${styleUri.toString()}" rel="stylesheet">
-  <title>${vscode.l10n.t('ClawAI Coding Agent')}</title>
-</head>
-<body>
-  <a class="skip-link" href="#composer">${vscode.l10n.t('Skip to composer')}</a>
-  <main class="shell">
-    <header class="topbar">
-      <div>
-        <p class="eyebrow">CLAWAI</p>
-        <h1>${vscode.l10n.t('Coding Agent')}</h1>
-      </div>
-      <button id="sessionButton" class="quiet-button" type="button">${vscode.l10n.t('Connect')}</button>
-    </header>
-    <section class="route-strip" aria-label="${vscode.l10n.t('Active route')}">
-      <button id="routeToggle" class="route-summary" type="button" aria-expanded="true">
-        <span id="routeModel">AUTO</span>
-        <span id="backendDot" class="status-dot"></span>
-        <span id="backendLabel">${vscode.l10n.t('Disconnected')}</span>
-      </button>
-      <dl id="routeRail" class="route-rail">
-        <div><dt>${vscode.l10n.t('Route')}</dt><dd id="routeMode">AUTO</dd></div>
-        <div><dt>${vscode.l10n.t('Context')}</dt><dd id="contextCount">0</dd></div>
-        <div><dt>${vscode.l10n.t('Tokens')}</dt><dd id="tokenCount">—</dd></div>
-        <div><dt>${vscode.l10n.t('Plan')}</dt><dd id="planName">—</dd></div>
-      </dl>
-    </section>
-    <section id="conversation" class="conversation" aria-live="polite" aria-label="${vscode.l10n.t('Conversation')}"></section>
-    <section id="modelTray" class="model-tray" aria-label="${vscode.l10n.t('Compare models')}">
-      <p>${vscode.l10n.t('Choose 2–5 models for compare or judge mode.')}</p>
-      <div id="modelChecks" class="model-checks"></div>
-    </section>
-    <form id="composer" class="composer">
-      <label class="sr-only" for="prompt">${vscode.l10n.t('Ask ClawAI')}</label>
-      <textarea id="prompt" rows="4" maxlength="20000" placeholder="${vscode.l10n.t('Ask ClawAI about your code…')}" required></textarea>
-      <div class="composer-controls">
-        <label>${vscode.l10n.t('Model')}
-          <select id="modelSelect" aria-label="${vscode.l10n.t('Model')}">
-            <option value="AUTO">${vscode.l10n.t('Automatic routing')}</option>
-          </select>
-        </label>
-        <label>${vscode.l10n.t('Context')}
-          <select id="contextMode">
-            <option value="smart">${vscode.l10n.t('Smart context')}</option>
-            <option value="file">${vscode.l10n.t('Active file')}</option>
-            <option value="selection">${vscode.l10n.t('Selection')}</option>
-            <option value="workspace">${vscode.l10n.t('Workspace')}</option>
-            <option value="none">${vscode.l10n.t('None')}</option>
-          </select>
-        </label>
-        <label>${vscode.l10n.t('Agent')}
-          <select id="agentMode">
-            <option value="AUTO">${vscode.l10n.t('Auto')}</option>
-            <option value="PLAN">${vscode.l10n.t('Plan mode')}</option>
-          </select>
-        </label>
-        <label>${vscode.l10n.t('Permissions')}
-          <select id="permissionMode">
-            <option value="MANUAL">${vscode.l10n.t('Ask for Approval')}</option>
-            <option value="EDIT_AUTOMATICALLY">${vscode.l10n.t('Approve for me')}</option>
-            <option value="BYPASS_PERMISSIONS">${vscode.l10n.t('Full Access')}</option>
-          </select>
-        </label>
-        <label>${vscode.l10n.t('Mode')}
-          <select id="runMode">
-            <option value="chat">${vscode.l10n.t('Chat')}</option>
-            <option value="compare">${vscode.l10n.t('Compare')}</option>
-            <option value="judge">${vscode.l10n.t('Compare + Judge')}</option>
-          </select>
-        </label>
-        <div class="actions">
-          <button id="cancelButton" class="quiet-button" type="button" hidden>${vscode.l10n.t('Cancel')}</button>
-          <button id="sendButton" class="primary-button" type="submit">${vscode.l10n.t('Send')}</button>
-        </div>
-      </div>
-    </form>
-    <p id="announcer" class="sr-only" aria-live="assertive"></p>
-  </main>
-  <script nonce="${nonce}" src="${scriptUri.toString()}"></script>
-</body>
-</html>`;
+  private localResourceRoots(): vscode.Uri[] {
+    return [
+      vscode.Uri.joinPath(this.extensionUri, 'media'),
+      vscode.Uri.joinPath(this.extensionUri, 'resources'),
+    ];
   }
 }
