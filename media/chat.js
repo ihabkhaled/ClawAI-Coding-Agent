@@ -40,6 +40,7 @@ const elements = {
   queueCount: byId('queueCount'),
   queueList: byId('queueList'),
   queuePanel: byId('queuePanel'),
+  refreshModelsButton: byId('refreshModelsButton'),
   routeModel: byId('routeModel'),
   routeMode: byId('routeMode'),
   routeRail: byId('routeRail'),
@@ -184,7 +185,13 @@ function appendChangeReceipt(body, plan, undoAvailable = false) {
 function renderWarnings(warnings) {
   elements.modelWarnings.replaceChildren();
   for (const warning of warnings) {
-    const item = textElement('div', 'warning-card', warning);
+    const message =
+      warning === 'ollama'
+        ? labels.warningOllama
+        : warning === 'llamacpp'
+          ? labels.warningLlamacpp
+          : warning;
+    const item = textElement('div', 'warning-card', message);
     item.prepend(textElement('span', 'warning-shape', '!'));
     elements.modelWarnings.append(item);
   }
@@ -491,7 +498,7 @@ function renderState(state) {
   elements.sendButton.querySelector('span').textContent = state.busy ? labels.queue : labels.send;
   elements.cancelButton.hidden = state.generationQueue?.active === undefined;
   elements.prompt.disabled = false;
-  elements.modelSelect.disabled = !state.connected;
+  elements.modelSelect.disabled = false;
   elements.agentMode.disabled = false;
   elements.permissionMode.disabled = false;
   elements.workspaceSelect.disabled = state.busy;
@@ -519,16 +526,16 @@ function submitPrompt() {
     return;
   }
   const requestId = window.crypto.randomUUID();
+  const mode = elements.runMode.value;
   lastUserPrompt = content;
   appendMessage('user', content, '', requestId);
   const responseBody = appendMessage(
     'assistant',
-    currentState.busy ? labels.queued : labels.connecting,
+    currentState.busy ? labels.queued : mode === 'agent' ? labels.agentReading : labels.connecting,
     currentState.busy ? labels.queued : labels.running,
     requestId,
   );
   responseBodies.set(requestId, responseBody);
-  const mode = elements.runMode.value;
   if (mode === 'agent' || mode === 'chat') {
     vscode.postMessage({
       type: mode === 'agent' ? 'agent' : 'send',
@@ -568,6 +575,10 @@ elements.sessionButton.addEventListener('click', () => {
 
 elements.openFolderButton.addEventListener('click', () => {
   vscode.postMessage({ type: 'openFolder' });
+});
+
+elements.refreshModelsButton.addEventListener('click', () => {
+  vscode.postMessage({ type: 'refreshModels' });
 });
 
 elements.workspaceSelect.addEventListener('change', () => {
@@ -664,7 +675,9 @@ window.addEventListener('message', (event) => {
     if (responseBody && stream.type === 'CONTENT_DELTA' && typeof stream.delta === 'string') {
       if (
         responseBody.textContent === labels.connecting ||
-        responseBody.textContent === labels.queued
+        responseBody.textContent === labels.queued ||
+        responseBody.textContent === labels.agentReading ||
+        responseBody.textContent === labels.agentGenerating
       ) {
         responseBody.textContent = '';
       }
@@ -680,7 +693,10 @@ window.addEventListener('message', (event) => {
       responseBody &&
       typeof stream.label === 'string' &&
       responseBody.textContent !== '' &&
-      (responseBody.textContent === labels.connecting || responseBody.textContent === labels.queued)
+      (responseBody.textContent === labels.connecting ||
+        responseBody.textContent === labels.queued ||
+        responseBody.textContent === labels.agentReading ||
+        responseBody.textContent === labels.agentGenerating)
     ) {
       responseBody.textContent =
         typeof stream.description === 'string' && stream.description.length > 0

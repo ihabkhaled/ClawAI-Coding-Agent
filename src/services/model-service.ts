@@ -36,7 +36,9 @@ function applyModelAccess(
   );
   const providers = new Set(entitlements.allowedProviders);
   return catalog.filter(
-    (model) => allowed.has(model.key) && (providers.size === 0 || providers.has(model.provider)),
+    (model) =>
+      model.isLocal ||
+      (allowed.has(model.key) && (providers.size === 0 || providers.has(model.provider))),
   );
 }
 

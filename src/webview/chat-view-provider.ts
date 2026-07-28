@@ -25,6 +25,7 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('cancel') }),
   z.object({ type: z.literal('undo') }),
   z.object({ type: z.literal('openFolder') }),
+  z.object({ type: z.literal('refreshModels') }),
   z.object({
     type: z.literal('removeQueued'),
     requestId: z.string().min(1).max(100),
@@ -88,6 +89,7 @@ export interface ChatViewActions {
   connect(): Promise<void>;
   logout(): Promise<void>;
   openFolder(): Promise<void>;
+  refreshModels(): Promise<void>;
   removeQueued(requestId: string): Promise<void>;
   resolveApproval(requestId: string, approved: boolean): Promise<void>;
   selectAgentMode(mode: AgentMode): Promise<void>;
@@ -221,6 +223,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.actions.undo();
     } else if (request.type === 'openFolder') {
       await this.actions.openFolder();
+    } else if (request.type === 'refreshModels') {
+      await this.actions.refreshModels();
     } else if (request.type === 'removeQueued') {
       await this.actions.removeQueued(request.requestId);
     } else if (request.type === 'resolveApproval') {
@@ -280,9 +284,13 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     const styleUri = webview.asWebviewUri(
       vscode.Uri.joinPath(this.extensionUri, 'media', 'chat.css'),
     );
+    const logoUri = webview.asWebviewUri(
+      vscode.Uri.joinPath(this.extensionUri, 'resources', 'icon.png'),
+    );
     return renderChatMarkup({
       cspSource: webview.cspSource,
       language: vscode.env.language,
+      logoUri: logoUri.toString(),
       nonce,
       scriptUri: scriptUri.toString(),
       styleUri: styleUri.toString(),

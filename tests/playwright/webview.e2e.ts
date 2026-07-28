@@ -109,7 +109,21 @@ test('renders the workspace-ready editor workbench without an active file', asyn
   await expect(page.locator('#modelSelect')).toContainText('Qwen 2.5 Coder 7B');
   await expect(page.locator('#runMode')).toHaveValue('agent');
   await expect(page.locator('#emptyState')).toBeVisible();
+  await page.locator('#refreshModelsButton').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({ type: 'refreshModels' });
   await expectWindowsScreenshot(page, 'workbench-dark.png');
+});
+
+test('keeps model routing available while the account reconnects', async ({ page }) => {
+  await sendState(page, {
+    backendStatus: 'loading',
+    connected: false,
+  });
+
+  await expect(page.locator('#modelSelect')).toBeEnabled();
+  await expect(page.locator('#modelSelect')).toHaveValue('AUTO');
 });
 
 test('submits coding prompts to the agent execution path by default', async ({ page }) => {

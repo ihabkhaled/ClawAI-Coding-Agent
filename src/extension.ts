@@ -130,6 +130,7 @@ export function activate(context: vscode.ExtensionContext): void {
     openFolder: async () => {
       await vscode.commands.executeCommand('workbench.action.files.openFolder');
     },
+    refreshModels: () => coordinator.refreshModels(),
     removeQueued: (requestId) => {
       coordinator.removeQueued(requestId);
       return Promise.resolve();

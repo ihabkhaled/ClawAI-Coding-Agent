@@ -2,6 +2,7 @@ export interface ChatMarkupInput {
   cspSource: string;
   language: string;
   nonce: string;
+  logoUri: string;
   scriptUri: string;
   styleUri: string;
   translate(message: string): string;
@@ -40,7 +41,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
   <a class="skip-link" href="#prompt">${translated('Skip to composer')}</a>
   <main class="shell">
     <header id="workspaceBar" class="workspace-bar">
-      <div class="brand-mark" aria-hidden="true"><span></span><span></span><span></span></div>
+      <img class="brand-logo" src="${escapeHtml(input.logoUri)}" alt="">
       <div class="workspace-identity">
         <p class="utility-label">${translated('ClawAI Coding Agent')}</p>
         <div class="workspace-line">
@@ -51,6 +52,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       </div>
       <div class="workspace-actions">
         <button id="openFolderButton" class="quiet-button" type="button" hidden>${translated('Open folder')}</button>
+        <button id="refreshModelsButton" class="icon-button" type="button" title="${translated('Refresh models')}" aria-label="${translated('Refresh models')}">↻</button>
         <button id="newChatButton" class="icon-button" type="button" title="${translated('New conversation')}" aria-label="${translated('New conversation')}">＋</button>
         <button id="sessionButton" class="quiet-button" type="button">${translated('Connect')}</button>
       </div>
@@ -94,7 +96,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
 
     <section class="workbench" aria-label="${translated('Conversation workbench')}">
       <section id="emptyState" class="empty-state">
-        <div class="empty-glyph" aria-hidden="true"><span></span><span></span><span></span></div>
+        <img class="empty-logo" src="${escapeHtml(input.logoUri)}" alt="">
         <p class="utility-label">${translated('WORKSPACE-READY AGENT')}</p>
         <h1>${translated('What should we build?')}</h1>
         <p>${translated('Ask a question, inspect the workspace, or start with a focused task.')}</p>
@@ -243,6 +245,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-queue="${translated('Queue')}"
     data-queued="${translated('Queued')}"
     data-ready="${translated('Ready')}"
+    data-warning-llamacpp="${translated('Local llama.cpp models could not be loaded. Refresh to retry.')}"
+    data-warning-ollama="${translated('Local Ollama models could not be loaded. Refresh to retry.')}"
     data-reject="${translated('Reject')}"
     data-remove="${translated('Remove')}"
     data-retry="${translated('Retry')}"

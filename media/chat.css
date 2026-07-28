@@ -89,39 +89,15 @@ textarea:disabled {
   background: color-mix(in srgb, var(--vscode-editor-background) 92%, transparent);
 }
 
-.brand-mark {
-  position: relative;
-  width: 27px;
-  height: 27px;
+.brand-logo {
+  width: 34px;
+  height: 34px;
   flex: 0 0 auto;
   border: 1px solid color-mix(in srgb, var(--claw-accent) 55%, var(--claw-border));
-  border-radius: 7px;
+  border-radius: 9px;
   background: color-mix(in srgb, var(--claw-accent) 10%, transparent);
-}
-
-.brand-mark span,
-.empty-glyph span {
-  position: absolute;
-  display: block;
-  width: 3px;
-  border-radius: 2px;
-  background: var(--claw-accent);
-  transform: rotate(24deg);
-}
-
-.brand-mark span:nth-child(1) {
-  height: 9px;
-  inset: 6px auto auto 8px;
-}
-
-.brand-mark span:nth-child(2) {
-  height: 13px;
-  inset: 7px auto auto 13px;
-}
-
-.brand-mark span:nth-child(3) {
-  height: 7px;
-  inset: 12px auto auto 18px;
+  box-shadow: 0 4px 18px color-mix(in srgb, var(--claw-accent) 14%, transparent);
+  object-fit: cover;
 }
 
 .workspace-identity {
@@ -596,56 +572,17 @@ textarea:disabled {
   text-align: center;
 }
 
+.empty-logo {
+  width: 68px;
+  height: 68px;
+  margin-block-end: 10px;
+  border: 1px solid color-mix(in srgb, var(--claw-accent) 55%, var(--claw-border));
+  border-radius: 18px;
+  box-shadow: 0 10px 32px color-mix(in srgb, var(--claw-accent) 16%, transparent);
+}
+
 .empty-state[hidden] {
   display: none;
-}
-
-.empty-glyph {
-  position: relative;
-  width: 62px;
-  height: 54px;
-  margin-block-end: 13px;
-  border-block-end: 1px solid color-mix(in srgb, var(--claw-accent) 35%, transparent);
-}
-
-.empty-glyph::before,
-.empty-glyph::after {
-  position: absolute;
-  content: '';
-  border: 1px solid color-mix(in srgb, var(--claw-accent) 28%, transparent);
-  transform: rotate(45deg);
-}
-
-.empty-glyph::before {
-  width: 35px;
-  height: 35px;
-  inset: 8px auto auto 13px;
-}
-
-.empty-glyph::after {
-  width: 21px;
-  height: 21px;
-  inset: 15px auto auto 20px;
-}
-
-.empty-glyph span {
-  z-index: 1;
-  width: 4px;
-}
-
-.empty-glyph span:nth-child(1) {
-  height: 17px;
-  inset: 19px auto auto 24px;
-}
-
-.empty-glyph span:nth-child(2) {
-  height: 25px;
-  inset: 13px auto auto 31px;
-}
-
-.empty-glyph span:nth-child(3) {
-  height: 14px;
-  inset: 22px auto auto 38px;
 }
 
 .empty-state h1 {
@@ -1198,8 +1135,9 @@ textarea:disabled {
     text-align: start;
   }
 
-  .empty-glyph {
-    display: none;
+  .empty-logo {
+    width: 52px;
+    height: 52px;
   }
 
   .suggestion-card small {

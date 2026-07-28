@@ -33,6 +33,7 @@ window.acquireVsCodeApi = () => ({
 const baseHtml = markupModule.renderChatMarkup({
   cspSource: "'self'",
   language: 'en',
+  logoUri: '/resources/icon.png',
   nonce,
   scriptUri: '/media/chat.js',
   styleUri: '/media/chat.css',
@@ -47,6 +48,13 @@ const html = baseHtml
   );
 const assets = new Map([
   ['/', { body: html, type: 'text/html; charset=utf-8' }],
+  [
+    '/resources/icon.png',
+    {
+      body: readFileSync(join(root, 'resources', 'icon.png')),
+      type: 'image/png',
+    },
+  ],
   [
     '/media/chat.css',
     {

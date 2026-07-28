@@ -89,7 +89,53 @@ describe('ModelService', () => {
     service.setBackend(
       backendFor(entitlement({ allowedModels: [allowedModel], allowedProviders: ['OPENAI'] })),
     );
-    await expect(service.refresh()).resolves.toMatchObject({ catalog: [] });
+    await expect(service.refresh()).resolves.toMatchObject({
+      catalog: [{ key: 'OLLAMA:qwen3-coder' }],
+    });
+  });
+
+  it('keeps every installed local Ollama model visible regardless of cloud-plan grants', async () => {
+    const backend = backendFor(
+      entitlement({
+        allowedModels: [
+          {
+            provider: 'OPENAI',
+            model: 'gpt-5',
+            isAllowed: true,
+            allowAsPrimary: true,
+            allowAsFallback: true,
+            allowAsJudge: true,
+            allowInCompare: true,
+            dailyTokenLimitOverride: null,
+          },
+        ],
+        allowedProviders: ['OPENAI'],
+      }),
+    );
+    backend.getLocalOllamaModels = vi.fn(async () => [
+      {
+        id: 'ollama-1',
+        name: 'qwen2.5-coder',
+        tag: '7b',
+        family: 'qwen',
+        isInstalled: true,
+      },
+      {
+        id: 'ollama-2',
+        name: 'smollm',
+        tag: 'latest',
+        family: 'llama',
+        isInstalled: true,
+      },
+    ]);
+
+    await expect(new ModelService(backend).refresh()).resolves.toMatchObject({
+      catalog: [
+        { key: 'OLLAMA:qwen2.5-coder:7b', source: 'ollama' },
+        { key: 'OLLAMA:smollm', source: 'ollama' },
+        { key: 'OLLAMA:qwen3-coder', source: 'routing' },
+      ],
+    });
   });
 
   it('loads installed Ollama and ready llama.cpp models before cloud models', async () => {

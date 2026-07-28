@@ -64,7 +64,10 @@
         "command": "clawAI.openChat",
         "title": "%command.openChat%",
         "category": "ClawAI",
-        "icon": "$(comment-discussion)"
+        "icon": {
+          "light": "resources/claw.svg",
+          "dark": "resources/claw.svg"
+        }
       },
       {
         "command": "clawAI.askSelection",
