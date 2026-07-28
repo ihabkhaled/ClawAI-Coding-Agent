@@ -122,6 +122,73 @@ test('submits coding prompts to the agent execution path by default', async ({ p
     });
 });
 
+test('shows the owned folder and live coding-agent execution state', async ({ page }) => {
+  await sendState(page, {
+    agentRun: {
+      phase: 'reviewing',
+      summary: 'Create the JavaScript loop',
+      files: [{ operation: 'create', path: 'app/for-loop.js' }],
+    },
+    workspaceReadiness: {
+      hasActiveFile: false,
+      hasSelection: false,
+      hasWorkspace: true,
+      trusted: true,
+      workspaceName: 'web',
+    },
+    workspaceScope: {
+      folders: [
+        { key: 'api-key', name: 'api' },
+        { key: 'web-key', name: 'web' },
+      ],
+      selectedFolderKey: 'web-key',
+      selectedFolderName: 'web',
+    },
+  });
+
+  await expect(page.locator('#workspaceSelect')).toBeVisible();
+  await expect(page.locator('#workspaceSelect')).toHaveValue('web-key');
+  await expect(page.locator('#agentRunPanel')).toBeVisible();
+  await expect(page.locator('#agentRunPanel')).toContainText('Reviewing file changes');
+  await expect(page.locator('#agentRunPanel')).toContainText('app/for-loop.js');
+  await expect(page.locator('[data-agent-step="reading"]')).toHaveAttribute(
+    'data-status',
+    'complete',
+  );
+  await expect(page.locator('[data-agent-step="reviewing"]')).toHaveAttribute(
+    'data-status',
+    'active',
+  );
+  await expectWindowsScreenshot(page, 'workbench-agent-run.png');
+
+  await page.locator('#workspaceSelect').selectOption('api-key');
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({ type: 'selectWorkspaceFolder', folderKey: 'api-key' });
+});
+
+test('renders a structured file-change receipt after an agent run', async ({ page }) => {
+  await page.locator('#prompt').fill('Create a loop');
+  await page.locator('#composer').evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
+  await page.evaluate(() => {
+    window.__clawMock.send({
+      type: 'result',
+      result: {
+        content: 'Applied: Create the JavaScript loop',
+        editPlan: {
+          summary: 'Create the JavaScript loop',
+          files: [{ path: 'app/for-loop.js', operation: 'create', content: 'for (;;) {}' }],
+        },
+      },
+    });
+  });
+
+  await expect(page.locator('.change-receipt')).toContainText('app/for-loop.js');
+  await expect(page.locator('.change-operation')).toHaveText('Create');
+});
+
 test('keeps manual model and mode selections stable through state round trips', async ({
   page,
 }) => {

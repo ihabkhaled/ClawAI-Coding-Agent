@@ -153,6 +153,21 @@ textarea:disabled {
   white-space: nowrap;
 }
 
+.workspace-select {
+  width: min(220px, 44vw);
+  min-width: 90px;
+  height: 24px;
+  padding-inline: 6px 22px;
+  overflow: hidden;
+  border: 1px solid var(--claw-border);
+  border-radius: 5px;
+  color: var(--vscode-dropdown-foreground);
+  background: var(--vscode-dropdown-background);
+  font-size: 0.8rem;
+  font-weight: 650;
+  text-overflow: ellipsis;
+}
+
 .workspace-actions {
   display: flex;
   align-items: center;
@@ -306,6 +321,117 @@ textarea:disabled {
 
 .warning-shape {
   font-weight: 800;
+}
+
+.agent-run-panel {
+  margin-block-start: 7px;
+  padding: 9px 10px;
+  border: 1px solid color-mix(in srgb, var(--claw-accent) 30%, var(--claw-border));
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--claw-accent) 5%, var(--claw-card));
+}
+
+.agent-run-header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.78rem;
+}
+
+.agent-run-header .badge {
+  margin-inline-start: auto;
+}
+
+.agent-run-mark {
+  width: 9px;
+  height: 9px;
+  flex: 0 0 auto;
+  border: 1px solid var(--claw-accent);
+  background: var(--claw-accent);
+  transform: rotate(45deg);
+}
+
+.agent-run-panel[data-phase='reading'] .agent-run-mark,
+.agent-run-panel[data-phase='generating'] .agent-run-mark {
+  animation: status-pulse 800ms ease-in-out infinite alternate;
+}
+
+.agent-run-panel[data-phase='failed'] .agent-run-mark,
+.agent-run-panel[data-phase='rejected'] .agent-run-mark {
+  border-color: var(--vscode-testing-iconFailed);
+  background: var(--vscode-testing-iconFailed);
+}
+
+.agent-run-steps {
+  display: grid;
+  margin-block-start: 9px;
+  grid-template-columns: repeat(4, minmax(0, 1fr));
+  gap: 5px;
+}
+
+.agent-run-step {
+  position: relative;
+  min-width: 0;
+  padding-block-start: 9px;
+  overflow: hidden;
+  color: var(--claw-muted);
+  font-size: 0.65rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.agent-run-step::before {
+  position: absolute;
+  height: 2px;
+  content: '';
+  inset: 1px 0 auto;
+  background: var(--claw-border);
+}
+
+.agent-run-step[data-status='active'],
+.agent-run-step[data-status='complete'] {
+  color: var(--vscode-foreground);
+}
+
+.agent-run-step[data-status='active']::before,
+.agent-run-step[data-status='complete']::before {
+  background: var(--claw-accent);
+}
+
+.agent-run-step[data-status='error'] {
+  color: var(--vscode-testing-iconFailed);
+}
+
+.agent-run-step[data-status='error']::before {
+  background: var(--vscode-testing-iconFailed);
+}
+
+.agent-run-files {
+  display: grid;
+  max-height: 74px;
+  margin: 8px 0 0;
+  padding: 0;
+  overflow: auto;
+  gap: 3px;
+  list-style: none;
+}
+
+.agent-run-files li,
+.change-file {
+  display: grid;
+  min-width: 0;
+  grid-template-columns: auto minmax(0, 1fr);
+  align-items: center;
+  gap: 7px;
+}
+
+.agent-run-files code,
+.change-file code {
+  overflow: hidden;
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.7rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
 }
 
 .workbench {
@@ -543,6 +669,44 @@ textarea:disabled {
   margin-block-start: 9px;
   padding-block-start: 7px;
   border-block-start: 1px solid color-mix(in srgb, var(--claw-border) 55%, transparent);
+}
+
+.change-receipt {
+  margin-block-start: 10px;
+  padding-block-start: 9px;
+  border-block-start: 1px solid color-mix(in srgb, var(--claw-border) 65%, transparent);
+}
+
+.change-receipt header {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+  font-size: 0.75rem;
+}
+
+.change-receipt header .badge {
+  margin-inline-start: auto;
+}
+
+.change-receipt ul {
+  display: grid;
+  margin: 7px 0 0;
+  padding: 0;
+  gap: 4px;
+  list-style: none;
+}
+
+.change-operation {
+  min-width: 47px;
+  padding: 1px 5px;
+  border: 1px solid color-mix(in srgb, var(--claw-accent) 36%, var(--claw-border));
+  border-radius: 999px;
+  color: var(--claw-accent);
+  background: color-mix(in srgb, var(--claw-accent) 7%, transparent);
+  font-size: 0.61rem;
+  font-weight: 700;
+  text-align: center;
+  text-transform: uppercase;
 }
 
 .message-action {
@@ -822,6 +986,10 @@ textarea:disabled {
     grid-template-columns: repeat(2, minmax(0, 1fr));
   }
 
+  .agent-run-steps {
+    grid-template-columns: repeat(2, minmax(0, 1fr));
+  }
+
   .suggestion-grid {
     grid-template-columns: 1fr;
   }
@@ -871,6 +1039,10 @@ textarea:disabled {
     gap: 2px;
   }
 
+  .workspace-select {
+    width: min(150px, 52vw);
+  }
+
   .workspace-line .badge {
     justify-self: start;
   }
@@ -916,6 +1088,8 @@ textarea:disabled {
 @media (forced-colors: active) {
   .brand-mark,
   .message-card,
+  .agent-run-panel,
+  .change-operation,
   .composer-card,
   .suggestion-card,
   .badge,

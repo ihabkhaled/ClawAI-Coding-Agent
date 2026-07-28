@@ -5,6 +5,11 @@ const byId = (id) => document.querySelector(`#${id}`);
 const elements = {
   activeModeBadge: byId('activeModeBadge'),
   agentMode: byId('agentMode'),
+  agentRunFileCount: byId('agentRunFileCount'),
+  agentRunFiles: byId('agentRunFiles'),
+  agentRunLabel: byId('agentRunLabel'),
+  agentRunPanel: byId('agentRunPanel'),
+  agentRunSteps: byId('agentRunSteps'),
   announcer: byId('announcer'),
   backendDot: byId('backendDot'),
   backendLabel: byId('backendLabel'),
@@ -34,6 +39,7 @@ const elements = {
   tokenCount: byId('tokenCount'),
   trustBadge: byId('trustBadge'),
   workspaceName: byId('workspaceName'),
+  workspaceSelect: byId('workspaceSelect'),
 };
 const labels = byId('i18n').dataset;
 
@@ -118,6 +124,37 @@ function appendMessage(role, content, meta = '') {
   setConversationVisibility();
   article.scrollIntoView({ block: 'end', behavior: 'smooth' });
   return body;
+}
+
+function operationLabel(operation) {
+  const labelsByOperation = {
+    create: labels.operationCreate,
+    delete: labels.operationDelete,
+    update: labels.operationUpdate,
+  };
+  return labelsByOperation[operation] ?? operation;
+}
+
+function appendChangeReceipt(body, plan) {
+  const receipt = document.createElement('section');
+  receipt.className = 'change-receipt';
+  const header = document.createElement('header');
+  header.append(
+    textElement('strong', '', labels.fileChanges),
+    textElement('span', 'badge', `${plan.files.length} ${labels.files}`),
+  );
+  const files = document.createElement('ul');
+  for (const file of plan.files) {
+    const item = document.createElement('li');
+    item.className = 'change-file';
+    item.append(
+      textElement('span', 'change-operation', operationLabel(file.operation)),
+      textElement('code', '', file.path),
+    );
+    files.append(item);
+  }
+  receipt.append(header, files);
+  body.after(receipt);
 }
 
 function renderWarnings(warnings) {
@@ -209,9 +246,24 @@ function renderContextHint() {
   elements.contextHintText.textContent = hints[mode] ?? labels.contextEmpty;
 }
 
-function renderWorkspace(readiness) {
+function renderWorkspace(readiness, scope) {
   const hasWorkspace = readiness?.hasWorkspace === true;
-  elements.workspaceName.textContent = readiness?.workspaceName ?? labels.noWorkspace;
+  const folders = scope?.folders ?? [];
+  elements.workspaceSelect.replaceChildren();
+  for (const folder of folders) {
+    const option = document.createElement('option');
+    option.value = folder.key;
+    option.textContent = folder.name;
+    elements.workspaceSelect.append(option);
+  }
+  if (scope?.selectedFolderKey) {
+    elements.workspaceSelect.value = scope.selectedFolderKey;
+  }
+  const hasFolderChoice = folders.length > 1;
+  elements.workspaceSelect.hidden = !hasFolderChoice;
+  elements.workspaceName.hidden = hasFolderChoice;
+  elements.workspaceName.textContent =
+    scope?.selectedFolderName ?? readiness?.workspaceName ?? labels.noWorkspace;
   elements.trustBadge.textContent = hasWorkspace
     ? readiness.trusted
       ? labels.trusted
@@ -223,6 +275,70 @@ function renderWorkspace(readiness) {
       : 'untrusted'
     : 'empty';
   elements.openFolderButton.hidden = hasWorkspace;
+}
+
+function agentPhaseIndex(run) {
+  const indexes = {
+    applied: 3,
+    generating: 1,
+    planned: 1,
+    reading: 0,
+    rejected: run.files.length > 0 ? 2 : 1,
+    reviewing: 2,
+  };
+  return indexes[run.phase] ?? (run.files.length > 0 ? 2 : 1);
+}
+
+function agentStepStatus(run, index, activeIndex) {
+  if (run.phase === 'applied' || run.phase === 'planned') {
+    return index <= activeIndex ? 'complete' : 'pending';
+  }
+  if (run.phase === 'failed' || run.phase === 'rejected') {
+    return index < activeIndex ? 'complete' : index === activeIndex ? 'error' : 'pending';
+  }
+  return index < activeIndex ? 'complete' : index === activeIndex ? 'active' : 'pending';
+}
+
+function renderAgentRun(run) {
+  elements.agentRunPanel.hidden = run === undefined;
+  if (run === undefined) {
+    return;
+  }
+  const phaseLabels = {
+    applied: labels.agentApplied,
+    failed: labels.agentFailed,
+    generating: labels.agentGenerating,
+    planned: labels.agentPlanned,
+    reading: labels.agentReading,
+    rejected: labels.agentRejected,
+    reviewing: labels.agentReviewing,
+  };
+  const steps = [
+    ['reading', labels.agentReading],
+    ['generating', labels.agentGenerating],
+    ['reviewing', labels.agentReviewing],
+    ['applied', labels.agentApplied],
+  ];
+  const activeIndex = agentPhaseIndex(run);
+  elements.agentRunPanel.dataset.phase = run.phase;
+  elements.agentRunLabel.textContent = phaseLabels[run.phase] ?? run.phase;
+  elements.agentRunFileCount.textContent = `${run.files.length} ${labels.files}`;
+  elements.agentRunSteps.replaceChildren();
+  for (const [index, step] of steps.entries()) {
+    const item = textElement('span', 'agent-run-step', step[1]);
+    item.dataset.agentStep = step[0];
+    item.dataset.status = agentStepStatus(run, index, activeIndex);
+    elements.agentRunSteps.append(item);
+  }
+  elements.agentRunFiles.replaceChildren();
+  for (const file of run.files) {
+    const item = document.createElement('li');
+    item.append(
+      textElement('span', 'change-operation', operationLabel(file.operation)),
+      textElement('code', '', file.path),
+    );
+    elements.agentRunFiles.append(item);
+  }
 }
 
 function backendStatusLabel(status) {
@@ -276,11 +392,13 @@ function renderState(state) {
   elements.modelSelect.disabled = state.busy || !state.connected;
   elements.agentMode.disabled = state.busy;
   elements.permissionMode.disabled = state.busy;
+  elements.workspaceSelect.disabled = state.busy;
   elements.agentMode.value = pendingAgentMode ?? state.agentMode;
   elements.permissionMode.value = pendingPermissionMode ?? state.permissionMode;
   renderModels(state.models);
   renderWarnings(state.modelWarnings ?? []);
-  renderWorkspace(state.workspaceReadiness);
+  renderWorkspace(state.workspaceReadiness, state.workspaceScope);
+  renderAgentRun(state.agentRun);
   renderContextHint();
   if (state.lastError) {
     elements.announcer.textContent = state.lastError;
@@ -335,6 +453,13 @@ elements.sessionButton.addEventListener('click', () => {
 
 elements.openFolderButton.addEventListener('click', () => {
   vscode.postMessage({ type: 'openFolder' });
+});
+
+elements.workspaceSelect.addEventListener('change', () => {
+  vscode.postMessage({
+    type: 'selectWorkspaceFolder',
+    folderKey: elements.workspaceSelect.value,
+  });
 });
 
 elements.newChatButton.addEventListener('click', () => {
@@ -419,6 +544,9 @@ window.addEventListener('message', (event) => {
   } else if (message?.type === 'result') {
     if (streamingMessage && typeof message.result?.content === 'string') {
       streamingMessage.textContent = message.result.content;
+      if (message.result.editPlan?.files) {
+        appendChangeReceipt(streamingMessage, message.result.editPlan);
+      }
       const card = streamingMessage.closest('.message-card');
       const meta = card?.querySelector('.message-meta');
       if (meta) {

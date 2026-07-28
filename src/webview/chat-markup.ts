@@ -45,6 +45,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         <p class="utility-label">${translated('ClawAI Coding Agent')}</p>
         <div class="workspace-line">
           <strong id="workspaceName">${translated('No workspace')}</strong>
+          <select id="workspaceSelect" class="workspace-select" aria-label="${translated('Agent workspace folder')}" hidden></select>
           <span id="trustBadge" class="badge">${translated('No folder')}</span>
         </div>
       </div>
@@ -72,6 +73,15 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         <div><dt>${translated('Plan')}</dt><dd id="planName">—</dd></div>
       </dl>
       <div id="modelWarnings" class="warning-stack" role="status"></div>
+      <section id="agentRunPanel" class="agent-run-panel" aria-label="${translated('Coding agent activity')}" hidden>
+        <header class="agent-run-header">
+          <span class="agent-run-mark" aria-hidden="true"></span>
+          <strong id="agentRunLabel">${translated('Reading workspace')}</strong>
+          <span id="agentRunFileCount" class="badge">${translated('0 files')}</span>
+        </header>
+        <div id="agentRunSteps" class="agent-run-steps"></div>
+        <ul id="agentRunFiles" class="agent-run-files"></ul>
+      </section>
     </section>
 
     <section class="workbench" aria-label="${translated('Conversation workbench')}">
@@ -167,6 +177,13 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
   <div id="i18n" hidden
     data-auto="${translated('Auto')}"
     data-agent="${translated('Agent')}"
+    data-agent-applied="${translated('Applied file changes')}"
+    data-agent-failed="${translated('Coding run failed')}"
+    data-agent-generating="${translated('Generating edit plan')}"
+    data-agent-planned="${translated('Plan ready')}"
+    data-agent-reading="${translated('Reading workspace')}"
+    data-agent-rejected="${translated('Changes rejected')}"
+    data-agent-reviewing="${translated('Reviewing file changes')}"
     data-assistant="${translated('CLAWAI')}"
     data-automatic-routing="${translated('Automatic routing')}"
     data-choose-models="${translated('Choose between 2 and 5 models.')}"
@@ -180,6 +197,11 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-copy="${translated('Copy response')}"
     data-copied="${translated('Copied')}"
     data-error="${translated('Error')}"
+    data-file-changes="${translated('File changes')}"
+    data-files="${translated('files')}"
+    data-operation-create="${translated('Create')}"
+    data-operation-delete="${translated('Delete')}"
+    data-operation-update="${translated('Update')}"
     data-local="${translated('local')}"
     data-logout="${translated('Log out')}"
     data-no-folder="${translated('No folder')}"
