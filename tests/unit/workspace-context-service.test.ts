@@ -129,6 +129,27 @@ describe('WorkspaceContextService smart context', () => {
     });
   });
 
+  it('falls back to workspace context when the active editor belongs elsewhere', async () => {
+    vscodeEnvironment.activeTextEditor = {
+      document: {
+        uri: { path: '/outside/file.ts', toString: () => 'file:///outside/file.ts' },
+        getText: () => 'outside',
+      },
+      selection: { isEmpty: true },
+    };
+    const service = new WorkspaceContextService();
+
+    await expect(service.smart(configuration)).resolves.toMatchObject({
+      files: [],
+      receipt: { included: [] },
+    });
+    expect(service.readiness()).toMatchObject({
+      hasActiveFile: false,
+      hasWorkspace: true,
+    });
+    expect(vscode.workspace.findFiles).toHaveBeenCalledOnce();
+  });
+
   it('collects files and project rules only from the explicitly selected multi-root folder', async () => {
     const api = {
       name: 'api',

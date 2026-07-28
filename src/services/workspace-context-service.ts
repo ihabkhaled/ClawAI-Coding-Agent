@@ -55,9 +55,11 @@ export class WorkspaceContextService {
   readiness(): WorkspaceReadiness {
     const editor = vscode.window.activeTextEditor;
     const workspace = this.scope.refresh();
+    const hasActiveFile = editor !== undefined && this.scope.owns(editor.document.uri);
+    const hasSelection = editor === undefined ? false : hasActiveFile && !editor.selection.isEmpty;
     return {
-      hasActiveFile: editor !== undefined,
-      hasSelection: editor !== undefined && !editor.selection.isEmpty,
+      hasActiveFile,
+      hasSelection,
       hasWorkspace: workspace.selectedFolderKey !== undefined,
       trusted: vscode.workspace.isTrusted,
       ...(workspace.selectedFolderName === undefined

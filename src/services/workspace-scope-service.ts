@@ -54,6 +54,15 @@ export class WorkspaceScopeService {
     return folder;
   }
 
+  owns(uri: vscode.Uri): boolean {
+    try {
+      const selected = this.selectedFolder();
+      return vscode.workspace.getWorkspaceFolder(uri)?.uri.toString() === selected.uri.toString();
+    } catch {
+      return false;
+    }
+  }
+
   relativePath(uri: vscode.Uri): string {
     const selected = this.selectedFolder();
     const owner = vscode.workspace.getWorkspaceFolder(uri);
