@@ -245,6 +245,58 @@ describe('AgentRunService', () => {
     expect(files.size).toBe(0);
   });
 
+  it('repairs one malformed local-model response in the same thread', async () => {
+    const files = new Map<string, string>();
+    const send = vi
+      .fn<AgentRunChatPort['send']>()
+      .mockResolvedValueOnce({
+        threadId: 'thread-1',
+        content: 'Here is the JavaScript file you requested.',
+      })
+      .mockResolvedValueOnce({
+        threadId: 'thread-1',
+        content: JSON.stringify({
+          summary: 'Create the loop',
+          files: [
+            {
+              path: 'app/for-loop.js',
+              operation: 'create',
+              content: 'for (let i = 1; i <= 10; i += 1) {}\n',
+            },
+          ],
+        }),
+      });
+    const service = new AgentRunService(
+      contextPort(),
+      sessionPort(),
+      { send },
+      new SafeEditService(inMemoryWorkspace(files), async () => true),
+    );
+
+    await expect(
+      service.run(
+        {
+          configuration,
+          content: 'Create a JavaScript loop',
+          contextMode: 'workspace',
+          selection: {
+            model: 'qwen2.5-coder',
+            provider: 'OLLAMA',
+            routingMode: 'MANUAL_MODEL',
+          },
+          signal: new AbortController().signal,
+        },
+        callbacks(),
+      ),
+    ).resolves.toMatchObject({ status: 'applied', threadId: 'thread-1' });
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1]?.[0]).toMatchObject({
+      threadId: 'thread-1',
+      routingMode: 'MANUAL_MODEL',
+    });
+    expect(files.has('app/for-loop.js')).toBe(true);
+  });
+
   it('rejects unsafe model output and reports a failed phase', async () => {
     const phases: AgentRunSnapshot[] = [];
     const service = new AgentRunService(

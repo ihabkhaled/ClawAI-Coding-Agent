@@ -2,6 +2,7 @@ import { createAgentRunSnapshot } from '../core/agent-run';
 
 import {
   buildAnalysisPrompt,
+  buildEditPlanRepairPrompt,
   buildWorkflowPrompt,
   parseWorkflowEditPlan,
 } from './workflow-service';
@@ -16,6 +17,7 @@ import type {
   AgentRunSessionPort,
 } from './agent-run-service.types';
 import type { CollectedContext } from '../core/context-collector';
+import type { EditPlan } from '../core/edit-plan';
 
 async function collectContext(
   input: AgentRunInput,
@@ -94,7 +96,7 @@ export class AgentRunService {
     callbacks: AgentRunCallbacks,
   ): Promise<AgentRunResult> {
     callbacks.onPhase(createAgentRunSnapshot('generating'));
-    const response = await this.send(
+    let response = await this.send(
       input,
       buildWorkflowPrompt({
         context: context.files,
@@ -104,7 +106,18 @@ export class AgentRunService {
       }),
       callbacks,
     );
-    const plan = parseWorkflowEditPlan(response.content);
+    let plan: EditPlan;
+    try {
+      plan = parseWorkflowEditPlan(response.content);
+    } catch {
+      response = await this.send(
+        input,
+        buildEditPlanRepairPrompt(response.content),
+        callbacks,
+        response.threadId,
+      );
+      plan = parseWorkflowEditPlan(response.content);
+    }
     callbacks.onPhase(createAgentRunSnapshot('reviewing', plan, plan.summary));
     const editResult = await this.edits.previewAndApply(plan);
     const status = editResult.applied ? 'applied' : 'rejected';
@@ -122,12 +135,14 @@ export class AgentRunService {
     input: AgentRunInput,
     content: string,
     callbacks: AgentRunCallbacks,
+    threadId?: string,
   ): ReturnType<AgentRunChatPort['send']> {
     return this.chat.send(
       {
         content: this.session.preparePrompt(content),
         context: [],
         ...input.selection,
+        ...(threadId === undefined ? {} : { threadId }),
       },
       (event) => {
         callbacks.onEvent(event);
