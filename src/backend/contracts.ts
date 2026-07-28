@@ -24,6 +24,12 @@ export const refreshResultSchema = z.object({
   tokens: tokenPairSchema,
 });
 
+export const vscodeAuthorizationInitResultSchema = z.object({
+  authorizationPath: z.string().startsWith('/'),
+  expiresIn: z.number().int().positive(),
+  requestId: z.string().min(32),
+});
+
 export const userProfileSchema = z
   .object({
     id: z.string(),
@@ -71,6 +77,34 @@ export const connectorModelSchema = z
     maxContextTokens: z.number().int().nullable(),
   })
   .loose();
+
+export const localOllamaModelSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    tag: z.string(),
+    family: z.string().nullable(),
+    isInstalled: z.boolean(),
+  })
+  .loose();
+
+export const localFrontierModelSchema = z
+  .object({
+    id: z.string(),
+    name: z.string(),
+    tag: z.string(),
+    displayName: z.string(),
+    parameterCount: z.string(),
+    contextLength: z.number().int().positive(),
+    downloadStatus: z.string(),
+  })
+  .loose();
+
+export const localFrontierListSchema = z.object({
+  data: z.array(localFrontierModelSchema),
+  total: z.number().int().nonnegative(),
+  nextCursor: z.string().nullable(),
+});
 
 export const paginationMetaSchema = z.object({
   total: z.number().int().nonnegative(),
@@ -216,6 +250,8 @@ export type AuthUser = z.infer<typeof authUserSchema>;
 export type LoginResult = z.infer<typeof loginResultSchema>;
 export type RouterModel = z.infer<typeof routerModelSchema>;
 export type ConnectorModel = z.infer<typeof connectorModelSchema>;
+export type LocalOllamaModel = z.infer<typeof localOllamaModelSchema>;
+export type LocalFrontierModel = z.infer<typeof localFrontierModelSchema>;
 export type ChatThread = z.infer<typeof threadSchema>;
 export type ChatMessage = z.infer<typeof messageSchema>;
 export type ParallelResponse = z.infer<typeof parallelResponseSchema>;

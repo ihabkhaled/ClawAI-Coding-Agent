@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { BackendClient } from '../backend/backend-client';
+import { EMPTY_CONTEXT } from '../core/empty-context';
 import { type OutputLogger } from '../infrastructure/output-logger';
 import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-workspace-edit-adapter';
 import { type DiffPreviewProvider } from '../views/diff-preview-provider';
@@ -15,11 +16,14 @@ import {
   promptQuestion,
   promptWorkflowRequest,
 } from './agent-coordinator-prompts';
+import { BrowserAuthorizationService } from './browser-authorization-service';
+import { ChatParticipantService } from './chat-participant-service';
 import { ChatService } from './chat-service';
 import { ClawaiInitializer } from './clawai-initializer';
 import { ConfigurationService, type RuntimeConfiguration } from './configuration-service';
 import { type GlobalContextPort } from './global-context-service';
 import { ModelService } from './model-service';
+import { confirmSafeEdits } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
 import {
   buildAnalysisPrompt,
@@ -33,17 +37,9 @@ import type { CollectedContext } from '../core/context-collector';
 import type { ExtensionState } from '../core/extension-state';
 import type { SessionVault } from '../core/session-vault';
 
-const EMPTY_CONTEXT: CollectedContext = {
-  files: [],
-  receipt: {
-    included: [],
-    excluded: [],
-    totalBytes: 0,
-    truncated: false,
-  },
-};
-
-export class AgentCoordinator {
+export class AgentCoordinator implements vscode.Disposable {
+  readonly browserAuthorization: BrowserAuthorizationService;
+  readonly chatParticipant: ChatParticipantService;
   private backend: BackendClient;
   private readonly chat: ChatService;
   private readonly configuration = new ConfigurationService();
@@ -65,24 +61,19 @@ export class AgentCoordinator {
   ) {
     this.context = new WorkspaceContextService(globalContext);
     this.backend = this.createBackend(this.configuration.read());
+    this.browserAuthorization = new BrowserAuthorizationService(this.backend);
     this.chat = new ChatService(this.backend);
     this.modelService = new ModelService(this.backend);
-    this.safeEdits = new SafeEditService(this.editAdapter, async (previews, summary) => {
-      await this.diffPreview.show(previews);
-      const apply = vscode.l10n.t('Apply changes');
-      const reject = vscode.l10n.t('Reject');
-      const choice = await vscode.window.showWarningMessage(
-        vscode.l10n.t(
-          'Review the ClawAI diff previews. Apply {0} proposed file changes for “{1}”?',
-          previews.length,
-          summary,
-        ),
-        { modal: true },
-        apply,
-        reject,
-      );
-      return choice === apply;
-    });
+    this.chatParticipant = new ChatParticipantService(
+      this.state,
+      this.logger,
+      this.configuration,
+      this.context,
+      this.chat,
+    );
+    this.safeEdits = new SafeEditService(this.editAdapter, (previews, summary) =>
+      confirmSafeEdits(this.diffPreview, previews, summary),
+    );
   }
 
   attachView(view: ChatViewProvider): void {
@@ -95,6 +86,17 @@ export class AgentCoordinator {
       'clawAI.workspaceTrusted',
       vscode.workspace.isTrusted,
     );
+    if (!this.configuration.hasConfiguredBackendUrl()) {
+      const configured = await this.configuration.promptForBackendUrl();
+      if (configured === null) {
+        this.state.update({
+          backendStatus: 'disconnected',
+          connected: false,
+        });
+        return;
+      }
+      await this.configurationChanged();
+    }
     const tokens = await this.sessionVault.load();
     if (tokens === null) {
       this.state.update({
@@ -137,41 +139,30 @@ export class AgentCoordinator {
   }
 
   async connect(): Promise<void> {
-    const email = await vscode.window.showInputBox({
-      title: vscode.l10n.t('Connect to ClawAI'),
-      prompt: vscode.l10n.t('ClawAI account email'),
-      ignoreFocusOut: true,
-      validateInput: (value) =>
-        /^[^\s@]+@[^\s@]+\.[^\s@]+$/u.test(value)
-          ? undefined
-          : vscode.l10n.t('Enter a valid email address.'),
-    });
-    if (email === undefined) {
-      return;
+    if (!this.configuration.hasConfiguredBackendUrl()) {
+      const configured = await this.configuration.promptForBackendUrl();
+      if (configured === null) {
+        return;
+      }
+      await this.configurationChanged();
     }
-    const password = await vscode.window.showInputBox({
-      title: vscode.l10n.t('Connect to ClawAI'),
-      prompt: vscode.l10n.t('Password (never stored)'),
-      password: true,
-      ignoreFocusOut: true,
-    });
-    if (password === undefined) {
-      return;
-    }
-
     await this.runOperation(async () => {
-      const result = await this.backend.login(email, password);
+      const user = await this.browserAuthorization.signIn();
       this.state.update({
         backendStatus: 'connected',
         connected: true,
-        user: result.user,
+        user,
         lastError: undefined,
       });
       await this.refreshData();
       await vscode.window.showInformationMessage(
-        vscode.l10n.t('Connected to ClawAI as {0}.', result.user.email),
+        vscode.l10n.t('Connected to ClawAI as {0}.', user.email),
       );
     });
+  }
+
+  dispose(): void {
+    this.browserAuthorization.dispose();
   }
 
   async logout(): Promise<void> {
@@ -521,6 +512,7 @@ export class AgentCoordinator {
   }
 
   private replaceBackendPorts(): void {
+    this.browserAuthorization.setBackend(this.backend);
     this.chat.setBackend(this.backend);
     this.modelService.setBackend(this.backend);
   }

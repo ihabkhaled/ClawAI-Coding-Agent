@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.1.0",
+  "version": "0.1.1",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -295,6 +295,15 @@
         "contents": "%welcome.history%\n[Open chat](command:clawAI.openChat)"
       }
     ],
+    "chatParticipants": [
+      {
+        "id": "clawai.coding-agent",
+        "name": "clawai",
+        "fullName": "ClawAI Coding Agent",
+        "description": "Chat with ClawAI using your configured cloud and local models.",
+        "isSticky": true
+      }
+    ],
     "menus": {
       "editor/context": [
         {
@@ -324,6 +333,12 @@
           "command": "clawAI.refreshModels",
           "when": "view == clawAI.model",
           "group": "navigation"
+        }
+      ],
+      "editor/title": [
+        {
+          "command": "clawAI.openChat",
+          "group": "navigation@50"
         }
       ],
       "commandPalette": [

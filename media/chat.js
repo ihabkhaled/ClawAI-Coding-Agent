@@ -11,6 +11,7 @@ const elements = {
   conversation: document.querySelector('#conversation'),
   form: document.querySelector('#composer'),
   modelChecks: document.querySelector('#modelChecks'),
+  modelSelect: document.querySelector('#modelSelect'),
   modelTray: document.querySelector('#modelTray'),
   planName: document.querySelector('#planName'),
   prompt: document.querySelector('#prompt'),
@@ -59,6 +60,29 @@ function renderModels(models) {
     [...elements.modelChecks.querySelectorAll('input:checked')].map((input) => input.value),
   );
   elements.modelChecks.replaceChildren();
+  const options = new Map();
+  for (const model of models) {
+    const groupName = model.isLocal ? 'Local models' : model.provider;
+    const group = options.get(groupName) ?? [];
+    group.push(model);
+    options.set(groupName, group);
+  }
+  elements.modelSelect.replaceChildren();
+  const auto = document.createElement('option');
+  auto.value = 'AUTO';
+  auto.textContent = 'Automatic routing';
+  elements.modelSelect.append(auto);
+  for (const [groupName, groupModels] of options) {
+    const group = document.createElement('optgroup');
+    group.label = groupName;
+    for (const model of groupModels) {
+      const option = document.createElement('option');
+      option.value = model.key;
+      option.textContent = model.displayName;
+      group.append(option);
+    }
+    elements.modelSelect.append(group);
+  }
   for (const model of models) {
     const label = document.createElement('label');
     label.className = 'model-option';
@@ -75,6 +99,8 @@ function renderModels(models) {
     label.append(input, name, provider);
     elements.modelChecks.append(label);
   }
+  elements.modelSelect.value =
+    currentState.routingMode === 'AUTO' ? 'AUTO' : currentState.selectedModel;
 }
 
 function renderState(state) {
@@ -94,6 +120,7 @@ function renderState(state) {
   elements.sendButton.disabled = state.busy;
   elements.cancelButton.hidden = !state.busy;
   elements.prompt.disabled = state.busy;
+  elements.modelSelect.disabled = state.busy || !state.connected;
   renderModels(state.models);
   if (state.lastError) {
     elements.announcer.textContent = state.lastError;
@@ -147,6 +174,13 @@ elements.cancelButton.addEventListener('click', () => {
 
 elements.runMode.addEventListener('change', () => {
   elements.modelTray.classList.toggle('visible', elements.runMode.value !== 'chat');
+});
+
+elements.modelSelect.addEventListener('change', () => {
+  vscode.postMessage({
+    type: 'selectModel',
+    modelKey: elements.modelSelect.value,
+  });
 });
 
 elements.routeToggle.addEventListener('click', () => {

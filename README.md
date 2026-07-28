@@ -32,23 +32,25 @@ Node.js is only required when developing or packaging the extension.
 ## Quick start
 
 1. Install the VSIX or Marketplace release.
-2. Set `ClawAI: Backend URL` in VS Code settings:
-   - local: `http://localhost` or another loopback host;
-   - hosted: an `https://` origin, optionally with a deployment base path.
-3. Open the ClawAI activity-bar view and choose **Connect**.
-4. Enter your ClawAI email and password. The password is submitted once and is
-   never stored. Access and refresh tokens are stored only in VS Code
+2. On first launch, enter the ClawAI app origin, such as
+   `https://claw.local` or `https://localhost`. The extension adds `/api/v1`
+   automatically.
+3. Choose **Connect**, then approve VS Code in the ClawAI web app. Credentials
+   are entered only in the web app; the extension receives a one-time
+   authorization code and stores the resulting tokens in VS Code
    `SecretStorage`.
-5. Keep **AUTO** selected or choose an entitled model from **Model & Route**.
-6. Ask a question, compare models, or run a ClawAI command from the Command
+4. Keep **AUTO** selected or choose an entitled model from **Model & Route**.
+5. Ask a question, compare models, or run a ClawAI command from the Command
    Palette.
 
 Use `Ctrl+Shift+A` (`Cmd+Shift+A` on macOS) to open chat and
 `Ctrl+Shift+Enter` (`Cmd+Shift+Enter`) to ask about a selection.
+You can also open VS Code Chat and address the stable `@clawai` participant.
 
 ## Local and hosted backends
 
-The extension adds `/api/v1` to the configured backend origin. Do not include
+The extension adds `/api/v1` to the configured backend origin. A pasted
+trailing `/api/v1` is removed automatically. Do not include
 credentials, tokens, query strings, or fragments in the URL.
 
 Plain HTTP is accepted only for `localhost`, `127.0.0.1`, `::1`, or
@@ -91,7 +93,7 @@ layout.
 
 | Setting                   | Scope     | Default                                 |
 | ------------------------- | --------- | --------------------------------------- |
-| `clawAI.backendUrl`       | machine   | `http://localhost`                      |
+| `clawAI.backendUrl`       | machine   | prompted on first launch                |
 | `clawAI.requestTimeoutMs` | machine   | `60000`                                 |
 | `clawAI.routingMode`      | workspace | `AUTO`                                  |
 | `clawAI.selectedModel`    | workspace | empty                                   |
@@ -121,7 +123,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.1.0` implements the first production-ready extension surface from
+Version `0.1.1` implements the production-ready extension surface from
 the ClawAI VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 

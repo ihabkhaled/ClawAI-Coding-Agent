@@ -10,6 +10,8 @@ describe('backend URL normalization', () => {
   it('normalizes a local origin without losing a configured base path', () => {
     expect(normalizeBackendUrl('http://localhost:8080/claw/')).toBe('http://localhost:8080/claw');
     expect(normalizeBackendUrl('http://claw.local')).toBe('http://claw.local');
+    expect(normalizeBackendUrl('https://claw.local/api/v1')).toBe('https://claw.local');
+    expect(normalizeBackendUrl('https://claw.local/api/v1/')).toBe('https://claw.local');
   });
 
   it.each([

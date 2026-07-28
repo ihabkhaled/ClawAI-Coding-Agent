@@ -49,6 +49,8 @@ function backendFor(entitlements: ReturnType<typeof entitlement>): ModelBackendP
   return {
     getRouterModels: vi.fn(async () => [routerModel]),
     getConnectorModels: vi.fn(async () => []),
+    getLocalOllamaModels: vi.fn(async () => []),
+    getLocalFrontierModels: vi.fn(async () => []),
     getEntitlements: vi.fn(async () => entitlements),
   };
 }
@@ -88,5 +90,37 @@ describe('ModelService', () => {
       backendFor(entitlement({ allowedModels: [allowedModel], allowedProviders: ['OPENAI'] })),
     );
     await expect(service.refresh()).resolves.toMatchObject({ catalog: [] });
+  });
+
+  it('loads installed Ollama and ready llama.cpp models before cloud models', async () => {
+    const backend = backendFor(entitlement({ isAdmin: true }));
+    backend.getLocalOllamaModels = vi.fn(async () => [
+      {
+        id: 'ollama-1',
+        name: 'qwen3',
+        tag: 'coder',
+        family: 'qwen',
+        isInstalled: true,
+      },
+    ]);
+    backend.getLocalFrontierModels = vi.fn(async () => [
+      {
+        id: 'frontier-1',
+        name: 'deepseek',
+        tag: 'q4',
+        displayName: 'DeepSeek Coder',
+        parameterCount: '16B',
+        contextLength: 32_768,
+        downloadStatus: 'READY',
+      },
+    ]);
+
+    await expect(new ModelService(backend).refresh()).resolves.toMatchObject({
+      catalog: [
+        { key: 'local-ollama:qwen3:coder', source: 'ollama' },
+        { key: 'local-llamacpp:deepseek:q4', source: 'llamacpp' },
+        { key: 'OLLAMA:qwen3-coder' },
+      ],
+    });
   });
 });

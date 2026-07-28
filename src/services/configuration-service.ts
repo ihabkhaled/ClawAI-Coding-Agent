@@ -32,6 +32,39 @@ function numberSetting(
 }
 
 export class ConfigurationService {
+  hasConfiguredBackendUrl(): boolean {
+    const inspected = vscode.workspace.getConfiguration('clawAI').inspect<string>('backendUrl');
+    return inspected?.globalValue !== undefined;
+  }
+
+  async promptForBackendUrl(): Promise<string | null> {
+    const value = await vscode.window.showInputBox({
+      title: vscode.l10n.t('Connect ClawAI'),
+      prompt: vscode.l10n.t(
+        'Enter the ClawAI app address. The extension adds /api/v1 automatically.',
+      ),
+      placeHolder: 'https://claw.local or https://localhost',
+      value: 'https://claw.local',
+      ignoreFocusOut: true,
+      validateInput: (candidate) => {
+        try {
+          normalizeBackendUrl(candidate);
+          return undefined;
+        } catch (error: unknown) {
+          return error instanceof Error ? error.message : vscode.l10n.t('Invalid ClawAI URL.');
+        }
+      },
+    });
+    if (value === undefined) {
+      return null;
+    }
+    const normalized = normalizeBackendUrl(value);
+    await vscode.workspace
+      .getConfiguration('clawAI')
+      .update('backendUrl', normalized, vscode.ConfigurationTarget.Global);
+    return normalized;
+  }
+
   read(): RuntimeConfiguration {
     const configuration = vscode.workspace.getConfiguration('clawAI');
     return {

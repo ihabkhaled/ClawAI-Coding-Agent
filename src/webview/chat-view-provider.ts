@@ -70,6 +70,7 @@ function publicState(snapshot: ExtensionSnapshot) {
 }
 
 export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
+  private panel: vscode.WebviewPanel | null = null;
   private view: vscode.WebviewView | null = null;
   private readonly unsubscribe: () => void;
 
@@ -88,17 +89,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
-    view.webview.options = {
-      enableScripts: true,
-      localResourceRoots: [
-        vscode.Uri.joinPath(this.extensionUri, 'media'),
-        vscode.Uri.joinPath(this.extensionUri, 'resources'),
-      ],
-    };
-    view.webview.html = this.html(view.webview);
-    view.webview.onDidReceiveMessage((message: unknown) => {
-      void this.handleMessage(message);
-    });
+    this.configureWebview(view.webview);
     view.onDidDispose(() => {
       this.view = null;
     });
@@ -109,8 +100,33 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   }
 
   async reveal(): Promise<void> {
-    await vscode.commands.executeCommand('workbench.view.extension.clawAI');
-    this.view?.show(true);
+    if (this.panel !== null) {
+      this.panel.reveal(vscode.ViewColumn.Active, false);
+      return;
+    }
+    const panel = vscode.window.createWebviewPanel(
+      'clawAI.chatEditor',
+      vscode.l10n.t('ClawAI Coding Agent'),
+      vscode.ViewColumn.Active,
+      {
+        enableScripts: true,
+        localResourceRoots: [
+          vscode.Uri.joinPath(this.extensionUri, 'media'),
+          vscode.Uri.joinPath(this.extensionUri, 'resources'),
+        ],
+        retainContextWhenHidden: true,
+      },
+    );
+    this.panel = panel;
+    panel.iconPath = vscode.Uri.joinPath(this.extensionUri, 'resources', 'icon.png');
+    this.configureWebview(panel.webview);
+    panel.onDidDispose(() => {
+      this.panel = null;
+    });
+    await this.post({
+      type: 'state',
+      state: publicState(this.state.snapshot),
+    });
   }
 
   async postEvent(event: Record<string, unknown>): Promise<void> {
@@ -136,6 +152,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
 
   dispose(): void {
     this.unsubscribe();
+    this.panel?.dispose();
+    this.panel = null;
     this.view = null;
   }
 
@@ -173,7 +191,24 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   }
 
   private async post(message: unknown): Promise<void> {
-    await this.view?.webview.postMessage(message);
+    await Promise.all([
+      this.view?.webview.postMessage(message),
+      this.panel?.webview.postMessage(message),
+    ]);
+  }
+
+  private configureWebview(webview: vscode.Webview): void {
+    webview.options = {
+      enableScripts: true,
+      localResourceRoots: [
+        vscode.Uri.joinPath(this.extensionUri, 'media'),
+        vscode.Uri.joinPath(this.extensionUri, 'resources'),
+      ],
+    };
+    webview.html = this.html(webview);
+    webview.onDidReceiveMessage((message: unknown) => {
+      void this.handleMessage(message);
+    });
   }
 
   private html(webview: vscode.Webview): string {
@@ -233,6 +268,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       <label class="sr-only" for="prompt">${vscode.l10n.t('Ask ClawAI')}</label>
       <textarea id="prompt" rows="4" maxlength="20000" placeholder="${vscode.l10n.t('Ask ClawAI about your code…')}" required></textarea>
       <div class="composer-controls">
+        <label>${vscode.l10n.t('Model')}
+          <select id="modelSelect" aria-label="${vscode.l10n.t('Model')}">
+            <option value="AUTO">${vscode.l10n.t('Automatic routing')}</option>
+          </select>
+        </label>
         <label>${vscode.l10n.t('Context')}
           <select id="contextMode">
             <option value="file">${vscode.l10n.t('Active file')}</option>

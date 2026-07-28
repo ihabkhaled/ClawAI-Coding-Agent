@@ -1,10 +1,18 @@
 import { buildModelCatalog, type ModelCatalogEntry } from '../core/model-catalog';
 
-import type { ConnectorModel, Entitlements, RouterModel } from '../backend/contracts';
+import type {
+  ConnectorModel,
+  Entitlements,
+  LocalFrontierModel,
+  LocalOllamaModel,
+  RouterModel,
+} from '../backend/contracts';
 
 export interface ModelBackendPort {
   getConnectorModels(): Promise<ConnectorModel[]>;
   getEntitlements(): Promise<Entitlements>;
+  getLocalFrontierModels(): Promise<LocalFrontierModel[]>;
+  getLocalOllamaModels(): Promise<LocalOllamaModel[]>;
   getRouterModels(): Promise<RouterModel[]>;
 }
 
@@ -39,12 +47,20 @@ export class ModelService {
   }
 
   async refresh(): Promise<ModelRefreshResult> {
-    const [routerModels, connectorModels, entitlements] = await Promise.all([
-      this.backend.getRouterModels(),
-      this.backend.getConnectorModels(),
-      this.backend.getEntitlements(),
-    ]);
-    const catalog = buildModelCatalog(routerModels, connectorModels);
+    const [routerModels, connectorModels, localOllamaModels, localFrontierModels, entitlements] =
+      await Promise.all([
+        this.backend.getRouterModels(),
+        this.backend.getConnectorModels(),
+        this.backend.getLocalOllamaModels().catch(() => []),
+        this.backend.getLocalFrontierModels().catch(() => []),
+        this.backend.getEntitlements(),
+      ]);
+    const catalog = buildModelCatalog(
+      routerModels,
+      connectorModels,
+      localOllamaModels,
+      localFrontierModels,
+    );
     return {
       catalog: applyModelAccess(catalog, entitlements),
       entitlements,

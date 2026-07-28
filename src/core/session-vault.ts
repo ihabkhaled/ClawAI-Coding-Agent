@@ -5,13 +5,14 @@ export const tokenPairSchema = z
   .object({
     accessToken: z.string().min(1),
     refreshToken: z.string().min(1),
-    expiresIn: z.number().int().positive(),
-    refreshExpiresIn: z.number().int().positive(),
-    tokenType: z.literal('Bearer'),
+    expiresIn: z.number().int().positive().optional().default(900),
+    refreshExpiresIn: z.number().int().positive().optional().default(2_592_000),
+    tokenType: z.literal('Bearer').optional().default('Bearer'),
   })
-  .strict();
+  .loose();
 
-export type TokenPair = z.infer<typeof tokenPairSchema>;
+export type TokenPair = z.output<typeof tokenPairSchema>;
+export type TokenPairInput = z.input<typeof tokenPairSchema>;
 
 export interface SecretStoragePort {
   get(key: string): Thenable<string | undefined>;
@@ -22,7 +23,7 @@ export interface SecretStoragePort {
 export class SessionVault {
   constructor(private readonly storage: SecretStoragePort) {}
 
-  async save(tokens: TokenPair): Promise<void> {
+  async save(tokens: TokenPairInput): Promise<void> {
     const validated = tokenPairSchema.parse(tokens);
     await this.storage.store(SESSION_KEY, JSON.stringify(validated));
   }

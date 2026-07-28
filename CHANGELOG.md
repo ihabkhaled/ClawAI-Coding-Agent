@@ -2,6 +2,19 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.1.1
+
+- Replaced VS Code email/password prompts with browser authorization through
+  the ClawAI web app using a one-time authorization code and PKCE.
+- Added first-run backend-origin onboarding and accepted origins pasted with a
+  trailing `/api/v1`.
+- Added compatibility with older ClawAI token responses that omit expiry
+  metadata and token type.
+- Added editor-tab chat, the stable `@clawai` VS Code Chat participant, and an
+  editor-title shortcut.
+- Added an always-visible manual model selector with connector, installed
+  Ollama, and ready llama.cpp models matching web-chat discovery.
+
 ## 0.1.0
 
 - Added secure ClawAI account login with VS Code session provenance and

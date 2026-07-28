@@ -62,6 +62,20 @@ function registerCommands(
   );
 }
 
+function registerChatParticipant(
+  context: vscode.ExtensionContext,
+  coordinator: AgentCoordinator,
+): void {
+  const participant = vscode.chat.createChatParticipant(
+    'clawai.coding-agent',
+    async (request, _chatContext, response, token) => {
+      await coordinator.chatParticipant.send(request.prompt, response, token);
+    },
+  );
+  participant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'resources', 'icon.png');
+  context.subscriptions.push(participant);
+}
+
 export function activate(context: vscode.ExtensionContext): void {
   const configuration = new ConfigurationService().read();
   const state = new ExtensionState({
@@ -108,6 +122,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const statusBar = new StatusBarController(state);
 
   context.subscriptions.push(
+    coordinator,
     logger,
     diffPreview,
     chatView,
@@ -115,6 +130,7 @@ export function activate(context: vscode.ExtensionContext): void {
     contextTree,
     historyTree,
     statusBar,
+    vscode.window.registerUriHandler(coordinator.browserAuthorization),
     vscode.window.registerWebviewViewProvider('clawAI.chat', chatView, {
       webviewOptions: {
         retainContextWhenHidden: true,
@@ -133,6 +149,7 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
   registerCommands(context, coordinator, logger, globalContext);
+  registerChatParticipant(context, coordinator);
   void coordinator.initialize();
 }
 

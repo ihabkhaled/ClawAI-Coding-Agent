@@ -9,7 +9,7 @@
 body {
   margin: 0;
   color: var(--vscode-foreground);
-  background: var(--vscode-sideBar-background);
+  background: var(--vscode-editor-background);
   font-family: var(--vscode-font-family);
   font-size: var(--vscode-font-size);
 }
@@ -201,7 +201,7 @@ input:focus-visible {
 .composer {
   padding: 10px 12px 12px;
   border-block-start: 1px solid var(--vscode-sideBar-border);
-  background: var(--vscode-sideBar-background);
+  background: var(--vscode-editor-background);
 }
 
 .composer textarea {

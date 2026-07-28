@@ -46,7 +46,7 @@ export function normalizeBackendUrl(value: string): string {
     throw new Error('Non-local ClawAI backends must use HTTPS.');
   }
 
-  const path = url.pathname.replace(/\/+$/u, '');
+  const path = url.pathname.replace(/\/+$/u, '').replace(/\/api\/v1$/u, '');
   return `${url.origin}${path === '/' ? '' : path}`;
 }
 

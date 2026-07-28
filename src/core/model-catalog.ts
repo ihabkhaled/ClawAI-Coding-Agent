@@ -31,6 +31,24 @@ export interface ConnectorModelInput {
   maxContextTokens: number | null;
 }
 
+export interface LocalOllamaModelInput {
+  id: string;
+  name: string;
+  tag: string;
+  family: string | null;
+  isInstalled: boolean;
+}
+
+export interface LocalFrontierModelInput {
+  id: string;
+  name: string;
+  tag: string;
+  displayName: string;
+  parameterCount: string;
+  contextLength: number;
+  downloadStatus: string;
+}
+
 export interface ModelCatalogEntry {
   id: string;
   key: string;
@@ -38,7 +56,7 @@ export interface ModelCatalogEntry {
   model: string;
   displayName: string;
   isLocal: boolean;
-  source: 'connector' | 'routing';
+  source: 'connector' | 'llamacpp' | 'ollama' | 'routing';
   supportsStreaming: boolean;
   supportsTools: boolean;
   supportsVision: boolean;
@@ -52,12 +70,76 @@ export interface ResolvedModelSelection {
   model?: string;
 }
 
+function appendLocalOllamaModels(
+  entries: ModelCatalogEntry[],
+  seen: Set<string>,
+  models: LocalOllamaModelInput[],
+): void {
+  for (const model of models) {
+    if (!model.isInstalled) {
+      continue;
+    }
+    const fullModelName =
+      model.tag.length > 0 && model.tag !== 'latest' ? `${model.name}:${model.tag}` : model.name;
+    const key = `local-ollama:${fullModelName}`;
+    seen.add(key);
+    entries.push({
+      id: model.id,
+      key,
+      provider: 'local-ollama',
+      model: fullModelName,
+      displayName: `${fullModelName} (${model.family ?? 'local'})`,
+      isLocal: true,
+      source: 'ollama',
+      supportsStreaming: true,
+      supportsTools: false,
+      supportsVision: false,
+      supportsStructuredOutput: false,
+      contextTokens: null,
+    });
+  }
+}
+
+function appendLocalFrontierModels(
+  entries: ModelCatalogEntry[],
+  seen: Set<string>,
+  models: LocalFrontierModelInput[],
+): void {
+  for (const model of models) {
+    if (model.downloadStatus !== 'READY') {
+      continue;
+    }
+    const fullModelName = `${model.name}:${model.tag}`;
+    const key = `local-llamacpp:${fullModelName}`;
+    seen.add(key);
+    entries.push({
+      id: model.id,
+      key,
+      provider: 'local-llamacpp',
+      model: fullModelName,
+      displayName: `${model.displayName} (${model.parameterCount})`,
+      isLocal: true,
+      source: 'llamacpp',
+      supportsStreaming: true,
+      supportsTools: false,
+      supportsVision: false,
+      supportsStructuredOutput: false,
+      contextTokens: model.contextLength,
+    });
+  }
+}
+
 export function buildModelCatalog(
   routerModels: RouterModelInput[],
   connectorModels: ConnectorModelInput[],
+  localOllamaModels: LocalOllamaModelInput[] = [],
+  localFrontierModels: LocalFrontierModelInput[] = [],
 ): ModelCatalogEntry[] {
   const entries: ModelCatalogEntry[] = [];
   const seen = new Set<string>();
+
+  appendLocalOllamaModels(entries, seen, localOllamaModels);
+  appendLocalFrontierModels(entries, seen, localFrontierModels);
 
   for (const model of routerModels) {
     const key = `${model.provider}:${model.modelKey}`;

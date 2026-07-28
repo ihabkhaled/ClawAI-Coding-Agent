@@ -48,4 +48,22 @@ describe('SessionVault', () => {
     await expect(vault.load()).resolves.toBeNull();
     expect(storage.values.size).toBe(0);
   });
+
+  it('normalizes legacy auth responses that omit expiry metadata and token type', async () => {
+    const storage = new MemorySecretStorage();
+    const vault = new SessionVault(storage);
+
+    await vault.save({
+      accessToken: 'legacy-access',
+      refreshToken: 'legacy-refresh',
+    });
+
+    await expect(vault.load()).resolves.toEqual({
+      accessToken: 'legacy-access',
+      refreshToken: 'legacy-refresh',
+      expiresIn: 900,
+      refreshExpiresIn: 2_592_000,
+      tokenType: 'Bearer',
+    });
+  });
 });

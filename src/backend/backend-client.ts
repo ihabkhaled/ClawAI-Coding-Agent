@@ -7,6 +7,8 @@ import { type SessionVault } from '../core/session-vault';
 import {
   connectorModelSchema,
   entitlementsSchema,
+  localFrontierListSchema,
+  localOllamaModelSchema,
   loginResultSchema,
   messageSchema,
   paginatedSchema,
@@ -16,11 +18,14 @@ import {
   threadSchema,
   usageSchema,
   userProfileSchema,
+  vscodeAuthorizationInitResultSchema,
   type ChatMessage,
   type ChatThread,
   type ConnectorModel,
   type Entitlements,
   type LoginResult,
+  type LocalFrontierModel,
+  type LocalOllamaModel,
   type ParallelResponse,
   type RouterModel,
   type Usage,
@@ -99,6 +104,32 @@ export class BackendClient {
     return result;
   }
 
+  async initializeVscodeAuthorization(input: {
+    callbackUri: string;
+    state: string;
+    codeChallenge: string;
+  }): Promise<z.infer<typeof vscodeAuthorizationInitResultSchema>> {
+    const response = await this.send('/auth/vscode/authorize/init', {
+      auth: false,
+      body: {
+        ...input,
+        clientName: this.clientName,
+      },
+      method: 'POST',
+    });
+    return this.parse(response, vscodeAuthorizationInitResultSchema);
+  }
+
+  async exchangeVscodeAuthorization(code: string, codeVerifier: string): Promise<void> {
+    const response = await this.send('/auth/vscode/authorize/exchange', {
+      auth: false,
+      body: { code, codeVerifier },
+      method: 'POST',
+    });
+    const result = await this.parse(response, refreshResultSchema);
+    await this.sessionVault.save(result.tokens);
+  }
+
   async logout(): Promise<void> {
     try {
       const response = await this.send('/auth/logout', {
@@ -135,6 +166,23 @@ export class BackendClient {
 
   async getConnectorModels(): Promise<ConnectorModel[]> {
     return this.request('/connectors/available-models', z.array(connectorModelSchema));
+  }
+
+  async getLocalOllamaModels(): Promise<LocalOllamaModel[]> {
+    const result = await this.request(
+      '/ollama/models?limit=200',
+      paginatedSchema(localOllamaModelSchema),
+    );
+    return result.data;
+  }
+
+  async getLocalFrontierModels(): Promise<LocalFrontierModel[]> {
+    const result = await this.request('/llamacpp/catalog?limit=100', localFrontierListSchema);
+    return result.data;
+  }
+
+  authorizationUrl(path: string): string {
+    return `${this.backendUrl}${path}`;
   }
 
   async createThread(input: {

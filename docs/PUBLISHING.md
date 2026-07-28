@@ -28,6 +28,18 @@ Install the artifact into a clean VS Code profile and complete UAT. Tag the
 exact verified commit. CI uploads its independently built VSIX; compare the
 artifact identity and contents before Marketplace publication.
 
-The repository can publish with `npx vsce publish` once publisher credentials
-are configured outside the repository. Never store a Personal Access Token in
-settings, files, workflow logs, or commits.
+For Visual Studio Marketplace:
+
+1. Create or use the `clawai` Marketplace publisher.
+2. Create an Azure DevOps Personal Access Token with Marketplace **Manage**
+   permission.
+3. Authenticate locally with `npx vsce login clawai`; paste the token only into
+   the interactive prompt.
+4. Publish the already-verified version with
+   `npx vsce publish --packagePath clawai-coding-agent-0.1.1.vsix`.
+5. Verify the Marketplace listing and install that public build into a clean
+   VS Code profile.
+
+Never store the Personal Access Token in settings, files, workflow logs, shell
+history, or commits. Increment the package version before every later release;
+Marketplace versions are immutable.
