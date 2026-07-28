@@ -41,8 +41,11 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
     for (const file of plan.files) {
       const uri = vscode.Uri.joinPath(folder.uri, ...file.path.replaceAll('\\', '/').split('/'));
       if (file.operation === 'create') {
-        edit.createFile(uri, { ignoreIfExists: false, overwrite: false });
-        edit.insert(uri, new vscode.Position(0, 0), file.content ?? '');
+        edit.createFile(uri, {
+          contents: new TextEncoder().encode(file.content ?? ''),
+          ignoreIfExists: false,
+          overwrite: false,
+        });
       } else if (file.operation === 'delete') {
         edit.deleteFile(uri, { ignoreIfNotExists: false, recursive: false });
       } else {

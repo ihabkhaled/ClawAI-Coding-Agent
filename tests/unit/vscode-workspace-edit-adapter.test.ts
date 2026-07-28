@@ -4,8 +4,8 @@ import * as vscode from 'vscode';
 const vscodeEnvironment = vi.hoisted(() => ({
   appliedEdit: undefined as
     | {
-        creates: string[];
-        inserts: { path: string; content: string }[];
+        creates: { path: string; content: string }[];
+        insertCount: number;
       }
     | undefined,
 }));
@@ -15,13 +15,16 @@ vi.mock('vscode', () => {
     code = 'FileNotFound';
   }
   class WorkspaceEdit {
-    readonly creates: string[] = [];
-    readonly inserts: { path: string; content: string }[] = [];
-    createFile(uri: { path: string }): void {
-      this.creates.push(uri.path);
+    readonly creates: { path: string; content: string }[] = [];
+    insertCount = 0;
+    createFile(uri: { path: string }, options?: { contents?: Uint8Array }): void {
+      this.creates.push({
+        path: uri.path,
+        content: options?.contents === undefined ? '' : new TextDecoder().decode(options.contents),
+      });
     }
-    insert(uri: { path: string }, _position: unknown, content: string): void {
-      this.inserts.push({ path: uri.path, content });
+    insert(): void {
+      this.insertCount += 1;
     }
   }
   return {
@@ -82,13 +85,13 @@ describe('VscodeWorkspaceEditAdapter workspace scope', () => {
     ).resolves.toBe(true);
     expect(vscodeEnvironment.appliedEdit).toEqual(
       expect.objectContaining({
-        creates: ['/workspace/web/app/for-loop.js'],
-        inserts: [
+        creates: [
           {
             path: '/workspace/web/app/for-loop.js',
             content: 'for (let i = 1; i <= 10; i += 1) {}\n',
           },
         ],
+        insertCount: 0,
       }),
     );
   });
