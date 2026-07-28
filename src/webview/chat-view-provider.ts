@@ -3,9 +3,16 @@ import { randomBytes } from 'node:crypto';
 import * as vscode from 'vscode';
 import { z } from 'zod';
 
+import type { ContextMode } from '../core/context-mode';
 import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
 
-const contextModeSchema = z.enum(['file', 'none', 'selection', 'workspace']);
+const contextModeSchema: z.ZodType<ContextMode> = z.enum([
+  'file',
+  'none',
+  'selection',
+  'smart',
+  'workspace',
+]);
 const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ready') }),
   z.object({ type: z.literal('connect') }),
@@ -29,8 +36,6 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
   }),
 ]);
 
-export type ContextMode = z.infer<typeof contextModeSchema>;
-
 export interface ChatViewActions {
   cancel(): Promise<void>;
   compare(input: {
@@ -52,6 +57,7 @@ function publicState(snapshot: ExtensionSnapshot) {
     busy: snapshot.busy,
     connected: snapshot.connected,
     contextReceipt: snapshot.contextReceipt,
+    workspaceReadiness: snapshot.workspaceReadiness,
     entitlements:
       snapshot.entitlements === undefined
         ? undefined
@@ -275,6 +281,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
         </label>
         <label>${vscode.l10n.t('Context')}
           <select id="contextMode">
+            <option value="smart">${vscode.l10n.t('Smart context')}</option>
             <option value="file">${vscode.l10n.t('Active file')}</option>
             <option value="selection">${vscode.l10n.t('Selection')}</option>
             <option value="workspace">${vscode.l10n.t('Workspace')}</option>

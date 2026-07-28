@@ -1,5 +1,6 @@
 import type { RoutingMode } from './configuration';
 import type { ContextReceipt } from './context-collector';
+import type { WorkspaceReadiness } from './context-mode';
 import type { ModelCatalogEntry } from './model-catalog';
 import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contracts';
 
@@ -18,6 +19,7 @@ export interface ExtensionSnapshot {
   entitlements: Entitlements | undefined;
   usage: Usage | undefined;
   contextReceipt: ContextReceipt | undefined;
+  workspaceReadiness: WorkspaceReadiness | undefined;
   lastError: string | undefined;
 }
 

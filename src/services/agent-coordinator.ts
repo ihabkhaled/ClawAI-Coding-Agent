@@ -1,11 +1,12 @@
 import * as vscode from 'vscode';
 
 import { BackendClient } from '../backend/backend-client';
+import { type ContextMode } from '../core/context-mode';
 import { EMPTY_CONTEXT } from '../core/empty-context';
 import { type OutputLogger } from '../infrastructure/output-logger';
 import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-workspace-edit-adapter';
 import { type DiffPreviewProvider } from '../views/diff-preview-provider';
-import { type ChatViewProvider, type ContextMode } from '../webview/chat-view-provider';
+import { type ChatViewProvider } from '../webview/chat-view-provider';
 
 import {
   contextualPrompt,
@@ -81,6 +82,7 @@ export class AgentCoordinator implements vscode.Disposable {
   }
 
   async initialize(): Promise<void> {
+    this.refreshWorkspaceReadiness();
     await vscode.commands.executeCommand(
       'setContext',
       'clawAI.workspaceTrusted',
@@ -131,11 +133,18 @@ export class AgentCoordinator implements vscode.Disposable {
   }
 
   async trustChanged(): Promise<void> {
+    this.refreshWorkspaceReadiness();
     await vscode.commands.executeCommand(
       'setContext',
       'clawAI.workspaceTrusted',
       vscode.workspace.isTrusted,
     );
+  }
+
+  refreshWorkspaceReadiness(): void {
+    this.state.update({
+      workspaceReadiness: this.context.readiness(),
+    });
   }
 
   async connect(): Promise<void> {
@@ -423,14 +432,17 @@ export class AgentCoordinator implements vscode.Disposable {
 
   private async collect(mode: ContextMode): Promise<CollectedContext> {
     const configuration = this.configuration.read();
+    this.refreshWorkspaceReadiness();
     const result =
       mode === 'none'
         ? EMPTY_CONTEXT
-        : mode === 'selection'
-          ? await this.context.selection(configuration)
-          : mode === 'workspace'
-            ? await this.context.workspace(configuration)
-            : await this.context.activeFile(configuration);
+        : mode === 'smart'
+          ? await this.context.smart(configuration)
+          : mode === 'selection'
+            ? await this.context.selection(configuration)
+            : mode === 'workspace'
+              ? await this.context.workspace(configuration)
+              : await this.context.activeFile(configuration);
     this.state.update({ contextReceipt: result.receipt });
     return result;
   }

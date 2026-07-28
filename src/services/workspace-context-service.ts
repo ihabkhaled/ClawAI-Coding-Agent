@@ -5,6 +5,8 @@ import {
   type CollectedContext,
   type ContextCandidate,
 } from '../core/context-collector';
+import { resolveSmartContext, type WorkspaceReadiness } from '../core/context-mode';
+import { EMPTY_CONTEXT } from '../core/empty-context';
 
 import type { RuntimeConfiguration } from './configuration-service';
 import type { GlobalContextPort } from './global-context-service';
@@ -51,6 +53,32 @@ function requireWorkspaceFolder(): vscode.WorkspaceFolder {
 
 export class WorkspaceContextService {
   constructor(private readonly globalContext?: GlobalContextPort) {}
+
+  readiness(): WorkspaceReadiness {
+    const editor = vscode.window.activeTextEditor;
+    const workspace = vscode.workspace.workspaceFolders?.[0];
+    return {
+      hasActiveFile: editor !== undefined,
+      hasSelection: editor !== undefined && !editor.selection.isEmpty,
+      hasWorkspace: workspace !== undefined,
+      trusted: vscode.workspace.isTrusted,
+      ...(workspace === undefined ? {} : { workspaceName: workspace.name }),
+    };
+  }
+
+  smart(configuration: RuntimeConfiguration): Promise<CollectedContext> {
+    const mode = resolveSmartContext(this.readiness());
+    if (mode === 'selection') {
+      return this.selection(configuration);
+    }
+    if (mode === 'file') {
+      return this.activeFile(configuration);
+    }
+    if (mode === 'workspace') {
+      return this.workspace(configuration);
+    }
+    return Promise.resolve(EMPTY_CONTEXT);
+  }
 
   selection(configuration: RuntimeConfiguration): Promise<CollectedContext> {
     const editor = vscode.window.activeTextEditor;

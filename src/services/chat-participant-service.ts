@@ -38,7 +38,7 @@ export class ChatParticipantService {
     });
     try {
       const configuration = this.configuration.read();
-      const collected = await this.context.activeFile(configuration);
+      const collected = await this.context.smart(configuration);
       this.state.update({ contextReceipt: collected.receipt });
       const result = await this.chat.send(
         {

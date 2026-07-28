@@ -84,6 +84,7 @@ export function activate(context: vscode.ExtensionContext): void {
     busy: false,
     connected: false,
     contextReceipt: undefined,
+    workspaceReadiness: undefined,
     entitlements: undefined,
     history: [],
     lastError: undefined,
@@ -146,6 +147,15 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.workspace.onDidGrantWorkspaceTrust(() => {
       void coordinator.trustChanged();
+    }),
+    vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      coordinator.refreshWorkspaceReadiness();
+    }),
+    vscode.window.onDidChangeActiveTextEditor(() => {
+      coordinator.refreshWorkspaceReadiness();
+    }),
+    vscode.window.onDidChangeTextEditorSelection(() => {
+      coordinator.refreshWorkspaceReadiness();
     }),
   );
   registerCommands(context, coordinator, logger, globalContext);

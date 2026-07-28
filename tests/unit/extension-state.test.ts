@@ -15,6 +15,7 @@ const initialSnapshot: ExtensionSnapshot = {
   entitlements: undefined,
   usage: undefined,
   contextReceipt: undefined,
+  workspaceReadiness: undefined,
   lastError: undefined,
 };
 
