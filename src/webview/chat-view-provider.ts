@@ -67,6 +67,7 @@ function publicState(snapshot: ExtensionSnapshot) {
             quota: snapshot.entitlements.quota,
           },
     lastError: snapshot.lastError,
+    modelWarnings: snapshot.modelWarnings,
     models: snapshot.models,
     routingMode: snapshot.routingMode,
     selectedModel: snapshot.selectedModel,

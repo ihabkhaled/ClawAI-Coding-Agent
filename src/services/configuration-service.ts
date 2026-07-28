@@ -83,17 +83,13 @@ export class ConfigurationService {
 
   async selectAuto(): Promise<void> {
     const configuration = vscode.workspace.getConfiguration('clawAI');
-    await Promise.all([
-      configuration.update('routingMode', 'AUTO', vscode.ConfigurationTarget.Workspace),
-      configuration.update('selectedModel', '', vscode.ConfigurationTarget.Workspace),
-    ]);
+    await configuration.update('routingMode', 'AUTO', vscode.ConfigurationTarget.Workspace);
+    await configuration.update('selectedModel', '', vscode.ConfigurationTarget.Workspace);
   }
 
   async selectManual(modelKey: string): Promise<void> {
     const configuration = vscode.workspace.getConfiguration('clawAI');
-    await Promise.all([
-      configuration.update('routingMode', 'MANUAL', vscode.ConfigurationTarget.Workspace),
-      configuration.update('selectedModel', modelKey, vscode.ConfigurationTarget.Workspace),
-    ]);
+    await configuration.update('selectedModel', modelKey, vscode.ConfigurationTarget.Workspace);
+    await configuration.update('routingMode', 'MANUAL', vscode.ConfigurationTarget.Workspace);
   }
 }

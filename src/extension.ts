@@ -88,6 +88,7 @@ export function activate(context: vscode.ExtensionContext): void {
     entitlements: undefined,
     history: [],
     lastError: undefined,
+    modelWarnings: [],
     models: [],
     routingMode: configuration.routingMode,
     selectedModel: configuration.selectedModel,

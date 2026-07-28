@@ -9,6 +9,7 @@ const initialSnapshot: ExtensionSnapshot = {
   connected: false,
   routingMode: 'AUTO',
   selectedModel: '',
+  modelWarnings: [],
   models: [],
   history: [],
   user: undefined,

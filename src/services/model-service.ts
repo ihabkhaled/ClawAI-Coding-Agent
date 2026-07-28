@@ -19,6 +19,7 @@ export interface ModelBackendPort {
 export interface ModelRefreshResult {
   catalog: ModelCatalogEntry[];
   entitlements: Entitlements;
+  warnings: string[];
 }
 
 function applyModelAccess(
@@ -47,14 +48,24 @@ export class ModelService {
   }
 
   async refresh(): Promise<ModelRefreshResult> {
-    const [routerModels, connectorModels, localOllamaModels, localFrontierModels, entitlements] =
-      await Promise.all([
-        this.backend.getRouterModels(),
-        this.backend.getConnectorModels(),
-        this.backend.getLocalOllamaModels().catch(() => []),
-        this.backend.getLocalFrontierModels().catch(() => []),
-        this.backend.getEntitlements(),
-      ]);
+    const [routerModels, connectorModels, entitlements, localResults] = await Promise.all([
+      this.backend.getRouterModels(),
+      this.backend.getConnectorModels(),
+      this.backend.getEntitlements(),
+      Promise.allSettled([
+        this.backend.getLocalOllamaModels(),
+        this.backend.getLocalFrontierModels(),
+      ]),
+    ]);
+    const [localOllamaResult, localFrontierResult] = localResults;
+    const localOllamaModels =
+      localOllamaResult.status === 'fulfilled' ? localOllamaResult.value : [];
+    const localFrontierModels =
+      localFrontierResult.status === 'fulfilled' ? localFrontierResult.value : [];
+    const warnings = [
+      ...(localOllamaResult.status === 'rejected' ? ['ollama'] : []),
+      ...(localFrontierResult.status === 'rejected' ? ['llamacpp'] : []),
+    ];
     const catalog = buildModelCatalog(
       routerModels,
       connectorModels,
@@ -64,6 +75,7 @@ export class ModelService {
     return {
       catalog: applyModelAccess(catalog, entitlements),
       entitlements,
+      warnings,
     };
   }
 }

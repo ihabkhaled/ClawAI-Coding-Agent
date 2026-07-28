@@ -170,7 +170,7 @@ export class BackendClient {
 
   async getLocalOllamaModels(): Promise<LocalOllamaModel[]> {
     const result = await this.request(
-      '/ollama/models?limit=200',
+      '/ollama/models?limit=100&runtime=OLLAMA&isInstalled=true',
       paginatedSchema(localOllamaModelSchema),
     );
     return result.data;

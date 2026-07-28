@@ -17,6 +17,7 @@ import {
   promptQuestion,
   promptWorkflowRequest,
 } from './agent-coordinator-prompts';
+import { type CompareInput } from './agent-coordinator.types';
 import { BrowserAuthorizationService } from './browser-authorization-service';
 import { ChatParticipantService } from './chat-participant-service';
 import { ChatService } from './chat-service';
@@ -181,6 +182,7 @@ export class AgentCoordinator implements vscode.Disposable {
         backendStatus: 'disconnected',
         connected: false,
         history: [],
+        modelWarnings: [],
         models: [],
         selectedModel: '',
         user: undefined,
@@ -230,12 +232,7 @@ export class AgentCoordinator implements vscode.Disposable {
     });
   }
 
-  async compare(input: {
-    content: string;
-    contextMode: ContextMode;
-    modelKeys: string[];
-    judgeEnabled: boolean;
-  }): Promise<void> {
+  async compare(input: CompareInput): Promise<void> {
     await this.runGeneration(async () => {
       const collected = await this.collect(input.contextMode);
       const models = input.modelKeys.map((key) => {
@@ -466,6 +463,7 @@ export class AgentCoordinator implements vscode.Disposable {
       connected: true,
       entitlements: models.entitlements,
       history,
+      modelWarnings: models.warnings,
       models: models.catalog,
       routingMode: current.routingMode,
       selectedModel: current.selectedModel,

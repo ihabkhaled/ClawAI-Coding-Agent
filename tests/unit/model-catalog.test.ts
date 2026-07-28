@@ -69,4 +69,51 @@ describe('model catalog', () => {
     });
     expect(() => resolveModelSelection('MANUAL', 'OPENAI:missing', catalog)).toThrow();
   });
+
+  it('uses backend provider keys for local models and de-duplicates routing snapshots', () => {
+    const localCatalog = buildModelCatalog(
+      [
+        {
+          id: 'router-local',
+          provider: 'OLLAMA',
+          modelKey: 'qwen3:coder',
+          displayName: 'Qwen 3 Coder',
+          isLocal: true,
+          isExecutionCapable: true,
+          lifecycle: 'ACTIVE',
+        },
+      ],
+      [],
+      [
+        {
+          id: 'ollama-local',
+          name: 'qwen3',
+          tag: 'coder',
+          family: 'qwen',
+          isInstalled: true,
+        },
+      ],
+      [
+        {
+          id: 'llamacpp-local',
+          name: 'deepseek',
+          tag: 'q4',
+          displayName: 'DeepSeek Coder',
+          parameterCount: '16B',
+          contextLength: 32_768,
+          downloadStatus: 'READY',
+        },
+      ],
+    );
+
+    expect(localCatalog.map((model) => model.key)).toEqual([
+      'OLLAMA:qwen3:coder',
+      'LLAMACPP:deepseek:q4',
+    ]);
+    expect(resolveModelSelection('MANUAL', 'OLLAMA:qwen3:coder', localCatalog)).toEqual({
+      routingMode: 'MANUAL',
+      provider: 'OLLAMA',
+      model: 'qwen3:coder',
+    });
+  });
 });

@@ -117,10 +117,25 @@ describe('ModelService', () => {
 
     await expect(new ModelService(backend).refresh()).resolves.toMatchObject({
       catalog: [
-        { key: 'local-ollama:qwen3:coder', source: 'ollama' },
-        { key: 'local-llamacpp:deepseek:q4', source: 'llamacpp' },
+        { key: 'OLLAMA:qwen3:coder', source: 'ollama' },
+        { key: 'LLAMACPP:deepseek:q4', source: 'llamacpp' },
         { key: 'OLLAMA:qwen3-coder' },
       ],
+    });
+  });
+
+  it('reports unavailable local sources without hiding the usable catalog', async () => {
+    const backend = backendFor(entitlement({ isAdmin: true }));
+    backend.getLocalOllamaModels = vi.fn(async () => {
+      throw new Error('ollama unavailable');
+    });
+    backend.getLocalFrontierModels = vi.fn(async () => {
+      throw new Error('llama.cpp unavailable');
+    });
+
+    await expect(new ModelService(backend).refresh()).resolves.toMatchObject({
+      catalog: [{ key: 'OLLAMA:qwen3-coder' }],
+      warnings: ['ollama', 'llamacpp'],
     });
   });
 });

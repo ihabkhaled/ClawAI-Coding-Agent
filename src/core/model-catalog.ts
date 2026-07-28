@@ -81,12 +81,12 @@ function appendLocalOllamaModels(
     }
     const fullModelName =
       model.tag.length > 0 && model.tag !== 'latest' ? `${model.name}:${model.tag}` : model.name;
-    const key = `local-ollama:${fullModelName}`;
+    const key = `OLLAMA:${fullModelName}`;
     seen.add(key);
     entries.push({
       id: model.id,
       key,
-      provider: 'local-ollama',
+      provider: 'OLLAMA',
       model: fullModelName,
       displayName: `${fullModelName} (${model.family ?? 'local'})`,
       isLocal: true,
@@ -110,12 +110,12 @@ function appendLocalFrontierModels(
       continue;
     }
     const fullModelName = `${model.name}:${model.tag}`;
-    const key = `local-llamacpp:${fullModelName}`;
+    const key = `LLAMACPP:${fullModelName}`;
     seen.add(key);
     entries.push({
       id: model.id,
       key,
-      provider: 'local-llamacpp',
+      provider: 'LLAMACPP',
       model: fullModelName,
       displayName: `${model.displayName} (${model.parameterCount})`,
       isLocal: true,

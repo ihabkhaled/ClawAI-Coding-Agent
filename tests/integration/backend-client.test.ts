@@ -316,6 +316,31 @@ describe('BackendClient', () => {
     });
   });
 
+  it('requests only installed Ollama runtime models within the backend page limit', async () => {
+    const fetcher = vi.fn<typeof fetch>(async (input) => {
+      const url = new URL(input.toString());
+      expect(url.pathname).toBe('/api/v1/ollama/models');
+      expect(url.searchParams.get('limit')).toBe('100');
+      expect(url.searchParams.get('runtime')).toBe('OLLAMA');
+      expect(url.searchParams.get('isInstalled')).toBe('true');
+      return Response.json({
+        data: [
+          {
+            id: 'ollama-1',
+            name: 'qwen3',
+            tag: 'coder',
+            family: 'qwen',
+            isInstalled: true,
+          },
+        ],
+        meta,
+      });
+    });
+    const { client } = await authenticatedClient(fetcher);
+
+    await expect(client.getLocalOllamaModels()).resolves.toHaveLength(1);
+  });
+
   it('logs out remotely and clears local tokens even when the backend rejects logout', async () => {
     const fetcher = vi.fn<typeof fetch>().mockResolvedValue(new Response('busy', { status: 503 }));
     const { client, vault } = await authenticatedClient(fetcher);

@@ -14,6 +14,7 @@ export interface ExtensionSnapshot {
   routingMode: RoutingMode;
   selectedModel: string;
   models: ModelCatalogEntry[];
+  modelWarnings: string[];
   history: ChatThread[];
   user: AuthUser | undefined;
   entitlements: Entitlements | undefined;
