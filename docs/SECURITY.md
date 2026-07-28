@@ -12,9 +12,11 @@
 
 ### Credential disclosure
 
-Passwords are transient. Tokens use `SecretStorage`. URLs reject embedded
-credentials. Non-local HTTP is rejected. Logger and backend errors redact
-bearers, query parameters, secret keys, and assignment syntax.
+Passwords stay in the ClawAI web app. Browser authorization uses PKCE, exact
+state validation, and a one-shot `127.0.0.1` callback. Tokens use
+`SecretStorage`. URLs reject embedded credentials. Non-local HTTP is rejected.
+Logger and backend errors redact bearers, query parameters, secret keys, and
+assignment syntax.
 
 ### Prompt injection and context exfiltration
 
@@ -27,8 +29,17 @@ add exclusions but cannot remove built-in denials.
 
 The edit plan is strict and bounded to 50 files and one megabyte per file.
 Absolute paths, traversal, VCS metadata, environment files, and credential-like
-targets are rejected. Users inspect diffs and approve modally. Trust is checked
-both before preview and immediately before atomic apply.
+targets are rejected. Approvals are rendered inside the workbench. Trust is
+checked both before preview and immediately before atomic apply.
+
+### Malicious model commands
+
+Command plans are optional, bounded, and executed only after approved file
+changes. Executables use a development-tool allowlist. Shell chaining,
+redirection, substitution, environment expansion, privilege tools, destructive
+utilities, and mutating Git commands are rejected. Working directories must be
+safe relative workspace paths. Commands run in a visible VS Code task terminal
+and are cancellable.
 
 ### Webview injection
 
@@ -40,8 +51,9 @@ extension-local assets. Dynamic content is rendered with DOM text nodes and
 ### Backend compromise or drift
 
 Every response is parsed through a narrow runtime schema. Error bodies are
-bounded and redacted. Requests have timeouts and cancellation. The client does
-not execute backend-provided shell commands.
+bounded and redacted. Requests have timeouts and cancellation. Proposed
+commands are treated as untrusted until strict local validation and the active
+permission policy allow them.
 
 ## Residual risks
 

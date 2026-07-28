@@ -7,6 +7,8 @@
 - [ ] Confirm non-loopback HTTP and credential-bearing URLs are rejected.
 - [ ] Confirm Connect opens the ClawAI web app and no password is collected by
       the extension.
+- [ ] Close/reopen the editor tab, create another VS Code window, reload, and
+      restart VS Code; confirm the same SecretStorage session remains connected.
 - [ ] Expire access token and confirm one refresh/retry.
 - [ ] Log out while online and offline; local session clears in both cases.
 
@@ -38,14 +40,17 @@
 - [ ] Plan mode returns a read-only implementation plan and never applies files.
 - [ ] Ask for Approval prompts before workspace context and edit generation.
 - [ ] Approve for me and Full Access skip their documented routine prompts.
-- [ ] Full Access requires its one-time warning; final diff review remains
-      mandatory in every mode.
+- [ ] Full Access requires one in-workbench confirmation, then skips repeated
+      context, generation, and final-apply prompts.
 - [ ] Generate/fix/tests/docs produce a strict plan.
 - [ ] Invalid, absolute, traversal, secret, or oversized targets are rejected.
 - [ ] Every file opens a before/after diff.
 - [ ] Reject applies nothing.
 - [ ] Approve applies all changes atomically.
 - [ ] Session undo restores create/update/delete before-state.
+- [ ] Safe requested commands appear in the activity timeline, run in a visible
+      task terminal, report non-zero exits, and stop on cancellation.
+- [ ] Chained, destructive, privileged, or mutating Git commands are rejected.
 
 ## Accessibility and presentation
 

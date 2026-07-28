@@ -1,17 +1,23 @@
 # Authentication
 
-The extension uses the existing ClawAI email/password login endpoint because
-the platform does not currently expose an end-user OAuth or device-code flow.
-The request identifies the session as `VSCODE` and supplies the client name
-`ClawAI for VS Code`.
+The extension delegates login and consent to the configured ClawAI web app. It
+never asks for or receives the account password.
 
-The password exists only in the masked input value and outbound login request.
-It is never stored in settings, extension state, SecretStorage, logs, telemetry,
-or diagnostics.
+Connect creates a PKCE verifier and a one-shot HTTP callback bound to
+`127.0.0.1` on a random unprivileged port. The backend authorization request
+contains that exact callback, a cryptographic state value, and the PKCE
+challenge. After the user approves the request in ClawAI, the browser redirects
+the short-lived authorization code to the loopback callback. The extension
+validates the state, exchanges the code with the verifier, and immediately
+closes the listener.
+
+The callback rejects non-loopback hosts, wrong paths, query-bearing callback
+registrations, mismatched state, duplicate callbacks, and timeouts. The success
+page has a restrictive CSP and contains no token or authorization code.
 
 After runtime validation, access and refresh tokens are stored as one strict
-token pair in VS Code `SecretStorage`. Corrupt stored data is deleted and
-treated as disconnected.
+token pair in VS Code `SecretStorage`. They survive tabs, windows, reloads, and
+VS Code restarts. Corrupt stored data is deleted and treated as disconnected.
 
 For an authenticated 401, the client:
 
@@ -21,8 +27,5 @@ For an authenticated 401, the client:
 4. retries the original request exactly once.
 
 Logout calls the backend and clears local tokens in `finally`, including when
-the backend is unavailable. The extension does not expose tokens in settings or
-logs.
-
-Future OAuth/device authorization can replace the login UI without changing
-the session vault or downstream authenticated client.
+the backend is unavailable. Tokens are never exposed in settings, URLs, logs,
+telemetry, or diagnostics.

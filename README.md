@@ -21,7 +21,10 @@ in the ClawAI platform.
 - Compare two to five models and optionally request a judge response.
 - Ask about a selection, active file, or bounded workspace context.
 - Generate, fix, review, test, document, plan, and audit code.
-- Inspect every proposed file in VS Code diff editors before a modal approval.
+- Inspect proposed files in VS Code diff editors and approve changes inside the
+  ClawAI workbench when the selected permission mode requires it.
+- Run bounded development commands in visible VS Code task terminals after
+  approved edits.
 - Undo the most recent ClawAI edit made during the current extension session.
 - Keep project rules in `.clawai/` and profile-wide rules in extension storage.
 - Use the interface in 13 locales, including RTL Arabic and Persian.
@@ -76,13 +79,15 @@ operations, and oversized plans.
 For every valid plan, the extension:
 
 1. opens before/after diff previews;
-2. asks for explicit modal approval;
+2. requests approval inside the ClawAI workbench when required;
 3. checks Workspace Trust again;
 4. applies one atomic `WorkspaceEdit`;
-5. offers a session-scoped undo.
+5. runs validated development commands in a visible, cancellable task terminal;
+6. offers a session-scoped undo.
 
 Routine context/edit-generation prompts follow the selected permission mode.
-The final diff approval cannot be disabled by a setting.
+Full Access skips repeated routine and final-apply prompts, but never bypasses
+Workspace Trust, secret/path exclusions, command validation, or cancellation.
 
 ## Context and `.clawai`
 
@@ -135,7 +140,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.3.0` implements the production-ready extension surface from
+Version `0.4.0` implements the production-ready extension surface from
 the ClawAI VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 

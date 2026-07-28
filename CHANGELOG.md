@@ -2,6 +2,25 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.4.0
+
+- Fixed streaming completion by normalizing backend SSE event names and added a
+  serial, steerable request queue that keeps the composer and controls usable.
+- Replaced repeated native permission dialogs with accessible approvals,
+  Full Access confirmation, final apply, rejection, undo, and notices inside
+  the ClawAI workbench.
+- Replaced the custom URI callback with a state-validated one-shot loopback
+  authorization callback and retained tokens in VS Code SecretStorage across
+  tabs, windows, reloads, and restarts.
+- Added strict safe-command plans and visible, cancellable VS Code task
+  execution after file edits, with in-panel approval outside automatic modes.
+- Kept all installed Ollama and ready local models available independently of
+  cloud-plan grants, added model refresh and actionable source warnings, and
+  kept manual selection interactive through generation and reconnects.
+- Added the ClawAI cat identity to the workbench, editor title, Activity Bar,
+  panel, and Chat participant with refreshed dark, light, narrow, and
+  high-contrast Playwright baselines.
+
 ## 0.3.0
 
 - Made Agent the default workbench run mode: natural-language coding requests

@@ -38,7 +38,7 @@ For Visual Studio Marketplace:
 3. Authenticate locally with `npx vsce login clawai`; paste the token only into
    the interactive prompt.
 4. Publish the already-verified version with
-   `npx vsce publish --packagePath clawai-coding-agent-0.3.0.vsix`.
+   `npx vsce publish --packagePath clawai-coding-agent-0.4.0.vsix`.
 5. Verify the Marketplace listing and install that public build into a clean
    VS Code profile.
 
