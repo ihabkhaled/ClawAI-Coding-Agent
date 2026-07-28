@@ -22,6 +22,9 @@ function approvalMessage(operation: PermissionOperation): string {
       'Allow ClawAI to generate proposed edits for this request? You will review the final diff before anything changes.',
     );
   }
+  if (operation === 'commandExecution') {
+    return vscode.l10n.t('Allow ClawAI to run these safe development commands in this workspace?');
+  }
   return vscode.l10n.t('Allow ClawAI to apply the reviewed file changes?');
 }
 
@@ -31,6 +34,9 @@ function approvalTitle(operation: PermissionOperation): string {
   }
   if (operation === 'editGeneration') {
     return vscode.l10n.t('Generate proposed edits');
+  }
+  if (operation === 'commandExecution') {
+    return vscode.l10n.t('Run development commands');
   }
   return vscode.l10n.t('Apply file changes');
 }

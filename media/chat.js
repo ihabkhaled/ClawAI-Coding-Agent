@@ -5,6 +5,7 @@ const byId = (id) => document.querySelector(`#${id}`);
 const elements = {
   activeModeBadge: byId('activeModeBadge'),
   agentMode: byId('agentMode'),
+  agentRunCommands: byId('agentRunCommands'),
   agentRunFileCount: byId('agentRunFileCount'),
   agentRunFiles: byId('agentRunFiles'),
   agentRunLabel: byId('agentRunLabel'),
@@ -303,17 +304,19 @@ function renderWorkspace(readiness, scope) {
 function agentPhaseIndex(run) {
   const indexes = {
     applied: 3,
+    executing: 4,
     generating: 1,
     planned: 1,
     reading: 0,
     rejected: run.files.length > 0 ? 2 : 1,
     reviewing: 2,
+    verified: 4,
   };
   return indexes[run.phase] ?? (run.files.length > 0 ? 2 : 1);
 }
 
 function agentStepStatus(run, index, activeIndex) {
-  if (run.phase === 'applied' || run.phase === 'planned') {
+  if (run.phase === 'applied' || run.phase === 'planned' || run.phase === 'verified') {
     return index <= activeIndex ? 'complete' : 'pending';
   }
   if (run.phase === 'failed' || run.phase === 'rejected') {
@@ -329,23 +332,30 @@ function renderAgentRun(run) {
   }
   const phaseLabels = {
     applied: labels.agentApplied,
+    executing: labels.agentExecuting,
     failed: labels.agentFailed,
     generating: labels.agentGenerating,
     planned: labels.agentPlanned,
     reading: labels.agentReading,
     rejected: labels.agentRejected,
     reviewing: labels.agentReviewing,
+    verified: labels.agentVerified,
   };
+  const commands = run.commands ?? [];
   const steps = [
     ['reading', labels.agentReading],
     ['generating', labels.agentGenerating],
     ['reviewing', labels.agentReviewing],
     ['applied', labels.agentApplied],
+    ...(commands.length === 0 ? [] : [['executing', labels.agentExecuting]]),
   ];
   const activeIndex = agentPhaseIndex(run);
   elements.agentRunPanel.dataset.phase = run.phase;
   elements.agentRunLabel.textContent = phaseLabels[run.phase] ?? run.phase;
-  elements.agentRunFileCount.textContent = `${run.files.length} ${labels.files}`;
+  elements.agentRunFileCount.textContent =
+    commands.length === 0
+      ? `${run.files.length} ${labels.files}`
+      : `${run.files.length} ${labels.files} · ${commands.length} ${labels.commands}`;
   elements.agentRunSteps.replaceChildren();
   for (const [index, step] of steps.entries()) {
     const item = textElement('span', 'agent-run-step', step[1]);
@@ -361,6 +371,17 @@ function renderAgentRun(run) {
       textElement('code', '', file.path),
     );
     elements.agentRunFiles.append(item);
+  }
+  elements.agentRunCommands.replaceChildren();
+  elements.agentRunCommands.hidden = commands.length === 0;
+  for (const command of commands) {
+    const item = document.createElement('li');
+    item.append(
+      textElement('span', 'change-operation command-operation', '›'),
+      textElement('code', '', command.command),
+      textElement('small', '', command.purpose),
+    );
+    elements.agentRunCommands.append(item);
   }
 }
 

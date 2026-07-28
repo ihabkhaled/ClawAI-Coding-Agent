@@ -238,6 +238,30 @@ test('shows the owned folder and live coding-agent execution state', async ({ pa
     .toEqual({ type: 'selectWorkspaceFolder', folderKey: 'api-key' });
 });
 
+test('shows safe development commands while the coding agent executes them', async ({ page }) => {
+  await sendState(page, {
+    agentRun: {
+      phase: 'executing',
+      summary: 'Verify the generated loop',
+      files: [{ operation: 'create', path: 'app/for-loop.js' }],
+      commands: [
+        {
+          command: 'node app/for-loop.js',
+          purpose: 'Run the generated program',
+        },
+      ],
+    },
+  });
+
+  await expect(page.locator('#agentRunPanel')).toContainText('Running development commands');
+  await expect(page.locator('#agentRunCommands')).toContainText('node app/for-loop.js');
+  await expect(page.locator('#agentRunCommands')).toContainText('Run the generated program');
+  await expect(page.locator('[data-agent-step="executing"]')).toHaveAttribute(
+    'data-status',
+    'active',
+  );
+});
+
 test('renders a structured file-change receipt after an agent run', async ({ page }) => {
   await page.locator('#prompt').fill('Create a loop');
   await page.locator('#composer').evaluate((form: HTMLFormElement) => {

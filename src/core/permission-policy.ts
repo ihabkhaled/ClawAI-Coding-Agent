@@ -7,7 +7,10 @@ export function decidePermission(input: PermissionInput): PermissionDecision {
   if (!input.trusted && input.operation !== 'workspaceContext') {
     return { outcome: 'deny', reason: 'workspaceUntrusted' };
   }
-  if (input.agentMode === 'PLAN' && input.operation === 'editGeneration') {
+  if (
+    input.agentMode === 'PLAN' &&
+    (input.operation === 'commandExecution' || input.operation === 'editGeneration')
+  ) {
     return { outcome: 'deny', reason: 'planReadOnly' };
   }
   if (input.operation === 'finalDiff' && input.permissionMode !== 'BYPASS_PERMISSIONS') {

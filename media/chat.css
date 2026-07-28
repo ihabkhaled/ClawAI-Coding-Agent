@@ -556,6 +556,10 @@ textarea:disabled {
   list-style: none;
 }
 
+.agent-run-files[hidden] {
+  display: none;
+}
+
 .agent-run-files li,
 .change-file {
   display: grid;
@@ -566,6 +570,7 @@ textarea:disabled {
 }
 
 .agent-run-files code,
+.agent-run-commands small,
 .change-file code {
   overflow: hidden;
   font-family: var(--vscode-editor-font-family);

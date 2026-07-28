@@ -1,4 +1,4 @@
-import type { EditPlan } from '../core/edit-plan';
+import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
 
 export interface EditPreview {
   path: string;
@@ -7,6 +7,10 @@ export interface EditPreview {
 }
 
 export interface WorkspaceEditPort {
+  execute?(
+    command: WorkspaceCommand,
+    signal: AbortSignal,
+  ): Promise<{ exitCode: number | undefined }>;
   isTrusted(): boolean;
   preview(plan: EditPlan): Promise<EditPreview[]>;
   applyAtomically(plan: EditPlan): Promise<boolean>;
@@ -43,5 +47,15 @@ export class SafeEditService {
       applied,
       previews,
     };
+  }
+
+  execute(
+    command: WorkspaceCommand,
+    signal: AbortSignal,
+  ): Promise<{ exitCode: number | undefined }> {
+    if (this.workspace.execute === undefined) {
+      throw new Error('ClawAI command execution is unavailable.');
+    }
+    return this.workspace.execute(command, signal);
   }
 }

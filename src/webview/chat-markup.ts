@@ -81,6 +81,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         </header>
         <div id="agentRunSteps" class="agent-run-steps"></div>
         <ul id="agentRunFiles" class="agent-run-files"></ul>
+        <ul id="agentRunCommands" class="agent-run-files agent-run-commands" hidden></ul>
       </section>
       <section id="queuePanel" class="queue-panel" aria-label="${translated('Request queue')}" hidden>
         <header class="queue-header">
@@ -200,12 +201,14 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-auto="${translated('Auto')}"
     data-agent="${translated('Agent')}"
     data-agent-applied="${translated('Applied file changes')}"
+    data-agent-executing="${translated('Running development commands')}"
     data-agent-failed="${translated('Coding run failed')}"
     data-agent-generating="${translated('Generating edit plan')}"
     data-agent-planned="${translated('Plan ready')}"
     data-agent-reading="${translated('Reading workspace')}"
     data-agent-rejected="${translated('Changes rejected')}"
     data-agent-reviewing="${translated('Reviewing file changes')}"
+    data-agent-verified="${translated('Verified workspace changes')}"
     data-approval-required="${translated('Approval required')}"
     data-approve="${translated('Approve')}"
     data-assistant="${translated('CLAWAI')}"
@@ -224,6 +227,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-error="${translated('Error')}"
     data-file-changes="${translated('File changes')}"
     data-files="${translated('files')}"
+    data-commands="${translated('commands')}"
     data-operation-create="${translated('Create')}"
     data-operation-delete="${translated('Delete')}"
     data-operation-update="${translated('Update')}"

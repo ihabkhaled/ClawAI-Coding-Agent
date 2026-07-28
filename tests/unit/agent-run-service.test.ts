@@ -151,6 +151,92 @@ describe('AgentRunService', () => {
     ]);
   });
 
+  it('runs approved verification commands after applying workspace edits', async () => {
+    const files = new Map<string, string>();
+    const executed: string[] = [];
+    const service = new AgentRunService(
+      contextPort(),
+      sessionPort(),
+      textChat(
+        JSON.stringify({
+          summary: 'Create and verify a loop',
+          files: [
+            {
+              path: 'app/for-loop.js',
+              operation: 'create',
+              content: 'for (let index = 1; index <= 10; index += 1) {}\n',
+            },
+          ],
+          commands: [
+            {
+              command: 'node app/for-loop.js',
+              purpose: 'Run the generated program',
+            },
+          ],
+        }),
+      ),
+      new SafeEditService(
+        {
+          ...inMemoryWorkspace(files),
+          execute: async (command) => {
+            executed.push(command.command);
+            return { exitCode: 0 };
+          },
+        },
+        async () => true,
+      ),
+    );
+    const phases: AgentRunSnapshot[] = [];
+
+    await expect(
+      service.run(
+        {
+          configuration,
+          content: 'Create and run a JavaScript loop',
+          contextMode: 'workspace',
+          selection: { routingMode: 'AUTO' },
+          signal: new AbortController().signal,
+        },
+        callbacks(phases),
+      ),
+    ).resolves.toMatchObject({ status: 'applied' });
+
+    expect(executed).toEqual(['node app/for-loop.js']);
+    expect(phases.map((phase) => phase.phase)).toContain('executing');
+    expect(phases.at(-1)).toMatchObject({ phase: 'verified' });
+  });
+
+  it('does not run commands when in-panel command approval is rejected', async () => {
+    const execute = vi.fn();
+    const authorize = vi.fn(async (operation) => operation !== 'commandExecution');
+    const service = new AgentRunService(
+      contextPort(),
+      sessionPort({ authorize }),
+      textChat(
+        JSON.stringify({
+          summary: 'Create and verify a file',
+          files: [{ path: 'app/a.js', operation: 'create', content: 'export {};\n' }],
+          commands: [{ command: 'npm test', purpose: 'Run tests' }],
+        }),
+      ),
+      new SafeEditService({ ...inMemoryWorkspace(new Map()), execute }, async () => true),
+    );
+
+    await expect(
+      service.run(
+        {
+          configuration,
+          content: 'Create and test a file',
+          contextMode: 'workspace',
+          selection: { routingMode: 'AUTO' },
+          signal: new AbortController().signal,
+        },
+        callbacks(),
+      ),
+    ).resolves.toMatchObject({ status: 'applied', commandsExecuted: false });
+    expect(execute).not.toHaveBeenCalled();
+  });
+
   it('returns analysis without proposing or applying edits in plan mode', async () => {
     const files = new Map<string, string>();
     const chat = textChat('1. Inspect the app folder.\n2. Add the JavaScript file.');

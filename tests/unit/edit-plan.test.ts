@@ -56,4 +56,47 @@ describe('edit plan validation', () => {
       }),
     ).toThrow();
   });
+
+  it('accepts bounded development commands with safe workspace directories', () => {
+    expect(
+      parseEditPlan({
+        summary: 'Create and verify the loop',
+        files: [
+          {
+            path: 'app/loop.js',
+            operation: 'create',
+            content: 'console.log("ready");\n',
+          },
+        ],
+        commands: [
+          {
+            command: 'node app/loop.js',
+            cwd: '.',
+            purpose: 'Run the generated file',
+          },
+          {
+            command: 'npm test -- --runInBand',
+            cwd: 'app',
+            purpose: 'Verify the workspace tests',
+          },
+        ],
+      }).commands,
+    ).toHaveLength(2);
+  });
+
+  it.each([
+    'rm -rf .',
+    'npm test && git push',
+    'powershell -Command Get-ChildItem',
+    'git reset --hard',
+    'npm test\nwhoami',
+  ])('rejects unsafe or unbounded command %s', (command) => {
+    expect(() =>
+      parseEditPlan({
+        summary: 'Unsafe command',
+        files: [{ path: 'app/a.js', operation: 'create', content: 'export {};\n' }],
+        commands: [{ command, purpose: 'Unsafe' }],
+      }),
+    ).toThrow();
+  });
 });

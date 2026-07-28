@@ -1,7 +1,15 @@
 import type { EditPlan } from './edit-plan';
 
 export type AgentRunPhase =
-  'applied' | 'failed' | 'generating' | 'planned' | 'reading' | 'rejected' | 'reviewing';
+  | 'applied'
+  | 'executing'
+  | 'failed'
+  | 'generating'
+  | 'planned'
+  | 'reading'
+  | 'rejected'
+  | 'reviewing'
+  | 'verified';
 
 export interface AgentRunFile {
   operation: EditPlan['files'][number]['operation'];
@@ -9,6 +17,10 @@ export interface AgentRunFile {
 }
 
 export interface AgentRunSnapshot {
+  commands?: {
+    command: string;
+    purpose: string;
+  }[];
   phase: AgentRunPhase;
   files: AgentRunFile[];
   summary?: string;
@@ -20,6 +32,11 @@ export function createAgentRunSnapshot(
   summary?: string,
 ): AgentRunSnapshot {
   return {
+    commands:
+      plan?.commands?.map((command) => ({
+        command: command.command,
+        purpose: command.purpose,
+      })) ?? [],
     phase,
     files:
       plan?.files.map((file) => ({

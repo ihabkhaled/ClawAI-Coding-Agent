@@ -5,7 +5,7 @@ import type { WorkflowKind } from './workflow-service';
 import type { AgentRunSnapshot } from '../core/agent-run';
 import type { CollectedContext } from '../core/context-collector';
 import type { ContextMode } from '../core/context-mode';
-import type { EditPlan } from '../core/edit-plan';
+import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
 import type { ResolvedModelSelection } from '../core/model-catalog';
 import type { PermissionOperation } from '../core/permission-policy.types';
 
@@ -19,7 +19,7 @@ export interface AgentRunContextPort {
 }
 
 export interface AgentRunSessionPort {
-  authorize(operation: PermissionOperation): Promise<boolean>;
+  authorize(operation: PermissionOperation, details?: string[]): Promise<boolean>;
   isPlanMode(): boolean;
   preparePrompt(content: string): string;
 }
@@ -33,7 +33,14 @@ export interface AgentRunChatPort {
   ): Promise<ChatResult>;
 }
 
-export interface AgentRunEditPort {
+export interface AgentRunCommandPort {
+  execute(
+    command: WorkspaceCommand,
+    signal: AbortSignal,
+  ): Promise<{ exitCode: number | undefined }>;
+}
+
+export interface AgentRunEditPort extends AgentRunCommandPort {
   previewAndApply(plan: EditPlan): Promise<SafeEditResult>;
 }
 
@@ -57,6 +64,7 @@ export interface AgentRunResult {
   content: string;
   context: CollectedContext;
   editPlan?: EditPlan;
+  commandsExecuted?: boolean;
   threadId?: string;
 }
 

@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import type { EditPlan } from '../core/edit-plan';
+import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
 import type { EditPreview, WorkspaceEditPort } from '../services/safe-edit-service';
 import type { WorkspaceFolderScopePort } from '../services/workspace-scope-service.types';
 
@@ -86,6 +86,55 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
       this.lastBackup = null;
     }
     return applied;
+  }
+
+  async execute(
+    command: WorkspaceCommand,
+    signal: AbortSignal,
+  ): Promise<{ exitCode: number | undefined }> {
+    if (signal.aborted) {
+      throw new Error('ClawAI command execution was cancelled.');
+    }
+    const folder = this.workspaceFolder();
+    const cwd =
+      command.cwd === undefined || command.cwd === '.'
+        ? folder.uri.fsPath
+        : vscode.Uri.joinPath(folder.uri, ...command.cwd.replaceAll('\\', '/').split('/')).fsPath;
+    const task = new vscode.Task(
+      { type: 'clawai', command: command.command },
+      vscode.TaskScope.Workspace,
+      `ClawAI: ${command.purpose}`,
+      'ClawAI',
+      new vscode.ShellExecution(command.command, { cwd }),
+    );
+    task.presentationOptions = {
+      clear: false,
+      echo: true,
+      focus: false,
+      panel: vscode.TaskPanelKind.Dedicated,
+      reveal: vscode.TaskRevealKind.Always,
+      showReuseMessage: true,
+    };
+    const execution = await vscode.tasks.executeTask(task);
+    return new Promise((resolve, reject) => {
+      const ended = vscode.tasks.onDidEndTaskProcess((event) => {
+        if (event.execution !== execution) {
+          return;
+        }
+        cleanup();
+        resolve({ exitCode: event.exitCode });
+      });
+      const aborted = (): void => {
+        execution.terminate();
+        cleanup();
+        reject(new Error('ClawAI command execution was cancelled.'));
+      };
+      const cleanup = (): void => {
+        ended.dispose();
+        signal.removeEventListener('abort', aborted);
+      };
+      signal.addEventListener('abort', aborted, { once: true });
+    });
   }
 
   private workspaceFolder(): Pick<vscode.WorkspaceFolder, 'uri'> {

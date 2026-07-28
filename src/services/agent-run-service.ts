@@ -122,13 +122,44 @@ export class AgentRunService {
     const editResult = await this.edits.previewAndApply(plan);
     const status = editResult.applied ? 'applied' : 'rejected';
     callbacks.onPhase(createAgentRunSnapshot(status, plan, plan.summary));
+    let commandsExecuted: boolean | undefined;
+    if (editResult.applied && (plan.commands?.length ?? 0) > 0) {
+      commandsExecuted = await this.runCommands(plan, input.signal, callbacks);
+    }
     return {
       status,
       content: response.content,
       context,
       editPlan: plan,
+      ...(commandsExecuted === undefined ? {} : { commandsExecuted }),
       threadId: response.threadId,
     };
+  }
+
+  private async runCommands(
+    plan: EditPlan,
+    signal: AbortSignal,
+    callbacks: AgentRunCallbacks,
+  ): Promise<boolean> {
+    const commands = plan.commands ?? [];
+    const approved = await this.session.authorize(
+      'commandExecution',
+      commands.map((entry) => `${entry.purpose}: ${entry.command}`),
+    );
+    if (!approved) {
+      return false;
+    }
+    callbacks.onPhase(createAgentRunSnapshot('executing', plan, plan.summary));
+    for (const command of commands) {
+      const result = await this.edits.execute(command, signal);
+      if (result.exitCode !== 0) {
+        throw new Error(
+          `Command failed with exit code ${String(result.exitCode ?? 'unknown')}: ${command.command}`,
+        );
+      }
+    }
+    callbacks.onPhase(createAgentRunSnapshot('verified', plan, plan.summary));
+    return true;
   }
 
   private send(
