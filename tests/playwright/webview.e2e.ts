@@ -41,6 +41,10 @@ function baseState() {
     connected: true,
     contextReceipt: undefined,
     entitlements: undefined,
+    generationQueue: {
+      active: undefined,
+      pending: [],
+    },
     lastError: undefined,
     models: [localModel],
     modelWarnings: [],
@@ -119,7 +123,44 @@ test('submits coding prompts to the agent execution path by default', async ({ p
       type: 'agent',
       content: 'write for loop from 1 to 10 in file .js inside folder app',
       contextMode: 'smart',
+      requestId: expect.any(String),
     });
+});
+
+test('keeps controls interactive and queues follow-up requests while an agent runs', async ({
+  page,
+}) => {
+  await sendState(page, {
+    busy: true,
+    generationQueue: {
+      active: { id: 'request-active', kind: 'agent', prompt: 'Implement the feature' },
+      pending: [{ id: 'request-pending', kind: 'chat', prompt: 'Explain the tests' }],
+    },
+  });
+
+  await expect(page.locator('#prompt')).toBeEnabled();
+  await expect(page.locator('#modelSelect')).toBeEnabled();
+  await expect(page.locator('#agentMode')).toBeEnabled();
+  await expect(page.locator('#permissionMode')).toBeEnabled();
+  await expect(page.locator('#sendButton')).toContainText('Queue');
+  await expect(page.locator('#queuePanel')).toContainText('Implement the feature');
+  await expect(page.locator('#queuePanel')).toContainText('Explain the tests');
+
+  await page.locator('#modelSelect').selectOption(localModel.key);
+  await page.locator('#prompt').fill('Run the focused tests next');
+  await page.locator('#composer').evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
+
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({
+      type: 'agent',
+      content: 'Run the focused tests next',
+      contextMode: 'smart',
+      requestId: expect.any(String),
+    });
+  await expect(page.locator('.message-assistant').last()).toContainText('Queued');
 });
 
 test('shows the owned folder and live coding-agent execution state', async ({ page }) => {
@@ -172,9 +213,12 @@ test('renders a structured file-change receipt after an agent run', async ({ pag
   await page.locator('#composer').evaluate((form: HTMLFormElement) => {
     form.requestSubmit();
   });
-  await page.evaluate(() => {
+  const request = await page.evaluate(() => window.__clawMock.messages.at(-1));
+  const requestId = (request as { requestId: string }).requestId;
+  await page.evaluate((activeRequestId) => {
     window.__clawMock.send({
       type: 'result',
+      requestId: activeRequestId,
       result: {
         content: 'Applied: Create the JavaScript loop',
         editPlan: {
@@ -183,7 +227,7 @@ test('renders a structured file-change receipt after an agent run', async ({ pag
         },
       },
     });
-  });
+  }, requestId);
 
   await expect(page.locator('.change-receipt')).toContainText('app/for-loop.js');
   await expect(page.locator('.change-operation')).toHaveText('Create');
@@ -218,16 +262,20 @@ test('supports narrow responsive use, suggestions, streaming, success, and error
 
   await page.locator('#prompt').fill('Say hi');
   await page.locator('#prompt').press('Control+Enter');
-  await page.evaluate(() => {
+  const helloRequest = await page.evaluate(() => window.__clawMock.messages.at(-1));
+  const helloRequestId = (helloRequest as { requestId: string }).requestId;
+  await page.evaluate((activeRequestId) => {
     window.__clawMock.send({
       type: 'streamEvent',
+      requestId: activeRequestId,
       event: { type: 'CONTENT_DELTA', delta: 'Hello' },
     });
     window.__clawMock.send({
       type: 'result',
+      requestId: activeRequestId,
       result: { content: 'Hello from ClawAI', model: 'qwen2.5-coder:7b', provider: 'OLLAMA' },
     });
-  });
+  }, helloRequestId);
   await expect(page.locator('.message-assistant .message-body')).toHaveText('Hello from ClawAI');
   await expect(page.locator('.message-meta')).toHaveText('OLLAMA · qwen2.5-coder:7b');
 
@@ -235,9 +283,15 @@ test('supports narrow responsive use, suggestions, streaming, success, and error
   await page.locator('#composer').evaluate((form: HTMLFormElement) => {
     form.requestSubmit();
   });
-  await page.evaluate(() => {
-    window.__clawMock.send({ type: 'error', message: 'Backend unavailable' });
-  });
+  const failedRequest = await page.evaluate(() => window.__clawMock.messages.at(-1));
+  const failedRequestId = (failedRequest as { requestId: string }).requestId;
+  await page.evaluate((activeRequestId) => {
+    window.__clawMock.send({
+      type: 'error',
+      requestId: activeRequestId,
+      message: 'Backend unavailable',
+    });
+  }, failedRequestId);
   await expect(page.locator('.message-error')).toContainText('Backend unavailable');
   await expectWindowsScreenshot(page, 'workbench-narrow.png');
 });

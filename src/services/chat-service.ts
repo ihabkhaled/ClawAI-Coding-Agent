@@ -101,6 +101,16 @@ function messageRequest(input: ChatSendInput, threadId: string) {
   };
 }
 
+export function normalizeStreamEvent(event: Record<string, unknown>): Record<string, unknown> {
+  if (typeof event.type !== 'string') {
+    return event;
+  }
+  return {
+    ...event,
+    type: event.type.replaceAll('-', '_').toUpperCase(),
+  };
+}
+
 function applyStreamEvent(event: Record<string, unknown>, accumulator: StreamAccumulator): boolean {
   if (event.type === 'CONTENT_DELTA' && typeof event.delta === 'string') {
     accumulator.content += event.delta;
@@ -138,8 +148,9 @@ async function consumeStream(
       }
       const events = sseDecoder.push(textDecoder.decode(read.value, { stream: true }));
       for (const event of events) {
-        onEvent(event);
-        finished = applyStreamEvent(event, accumulator) || finished;
+        const normalized = normalizeStreamEvent(event);
+        onEvent(normalized);
+        finished = applyStreamEvent(normalized, accumulator) || finished;
       }
     }
   } finally {

@@ -9,6 +9,7 @@ export function toPublicChatState(snapshot: ExtensionSnapshot) {
     busy: snapshot.busy,
     connected: snapshot.connected,
     contextReceipt: snapshot.contextReceipt,
+    generationQueue: snapshot.generationQueue,
     workspaceReadiness: snapshot.workspaceReadiness,
     workspaceScope: snapshot.workspaceScope,
     entitlements:

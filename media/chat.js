@@ -29,6 +29,9 @@ const elements = {
   permissionMode: byId('permissionMode'),
   planName: byId('planName'),
   prompt: byId('prompt'),
+  queueCount: byId('queueCount'),
+  queueList: byId('queueList'),
+  queuePanel: byId('queuePanel'),
   routeModel: byId('routeModel'),
   routeMode: byId('routeMode'),
   routeRail: byId('routeRail'),
@@ -58,7 +61,7 @@ let lastUserPrompt = '';
 let pendingAgentMode = null;
 let pendingModel = null;
 let pendingPermissionMode = null;
-let streamingMessage = null;
+const responseBodies = new Map();
 
 function textElement(tag, className, text) {
   const element = document.createElement(tag);
@@ -97,9 +100,12 @@ function retryButton() {
   return button;
 }
 
-function appendMessage(role, content, meta = '') {
+function appendMessage(role, content, meta = '', requestId = '') {
   const article = document.createElement('article');
   article.className = `message timeline-item message-${role}`;
+  if (requestId.length > 0) {
+    article.dataset.requestId = requestId;
+  }
   article.append(textElement('span', 'timeline-marker', ''));
   const card = document.createElement('div');
   card.className = 'message-card';
@@ -341,6 +347,40 @@ function renderAgentRun(run) {
   }
 }
 
+function renderQueue(queue) {
+  const active = queue?.active;
+  const pending = queue?.pending ?? [];
+  elements.queuePanel.hidden = active === undefined && pending.length === 0;
+  elements.queueCount.textContent = `${pending.length} ${labels.queued.toLowerCase()}`;
+  elements.queueList.replaceChildren();
+  const requests = [
+    ...(active === undefined ? [] : [{ ...active, status: labels.running }]),
+    ...pending.map((request) => ({ ...request, status: labels.queued })),
+  ];
+  for (const request of requests) {
+    const item = document.createElement('li');
+    item.className = 'queue-item';
+    item.dataset.status = request.id === active?.id ? 'active' : 'queued';
+    const copy = document.createElement('span');
+    copy.append(
+      textElement('strong', '', request.status),
+      textElement('small', '', request.prompt),
+    );
+    item.append(copy);
+    if (request.id !== active?.id) {
+      const remove = textElement('button', 'message-action', labels.remove);
+      remove.type = 'button';
+      remove.addEventListener('click', () => {
+        vscode.postMessage({ type: 'removeQueued', requestId: request.id });
+        responseBodies.get(request.id)?.closest('.timeline-item')?.remove();
+        responseBodies.delete(request.id);
+      });
+      item.append(remove);
+    }
+    elements.queueList.append(item);
+  }
+}
+
 function backendStatusLabel(status) {
   const statusLabels = {
     connected: labels.connected,
@@ -386,12 +426,13 @@ function renderState(state) {
     day === undefined ? '—' : day.limit === null ? `${day.used}` : `${day.used}/${day.limit}`;
   elements.planName.textContent = state.entitlements?.plan?.name ?? '—';
   elements.sessionButton.textContent = state.connected ? labels.logout : labels.connect;
-  elements.sendButton.disabled = state.busy || !state.connected;
-  elements.cancelButton.hidden = !state.busy;
-  elements.prompt.disabled = state.busy;
-  elements.modelSelect.disabled = state.busy || !state.connected;
-  elements.agentMode.disabled = state.busy;
-  elements.permissionMode.disabled = state.busy;
+  elements.sendButton.disabled = !state.connected;
+  elements.sendButton.querySelector('span').textContent = state.busy ? labels.queue : labels.send;
+  elements.cancelButton.hidden = state.generationQueue?.active === undefined;
+  elements.prompt.disabled = false;
+  elements.modelSelect.disabled = !state.connected;
+  elements.agentMode.disabled = false;
+  elements.permissionMode.disabled = false;
   elements.workspaceSelect.disabled = state.busy;
   elements.agentMode.value = pendingAgentMode ?? state.agentMode;
   elements.permissionMode.value = pendingPermissionMode ?? state.permissionMode;
@@ -399,6 +440,7 @@ function renderState(state) {
   renderWarnings(state.modelWarnings ?? []);
   renderWorkspace(state.workspaceReadiness, state.workspaceScope);
   renderAgentRun(state.agentRun);
+  renderQueue(state.generationQueue);
   renderContextHint();
   if (state.lastError) {
     elements.announcer.textContent = state.lastError;
@@ -414,21 +456,31 @@ function submitPrompt() {
   if (content.length === 0) {
     return;
   }
+  const requestId = window.crypto.randomUUID();
   lastUserPrompt = content;
-  appendMessage('user', content);
-  streamingMessage = appendMessage('assistant', '', labels.connecting);
+  appendMessage('user', content, '', requestId);
+  const responseBody = appendMessage(
+    'assistant',
+    currentState.busy ? labels.queued : labels.connecting,
+    currentState.busy ? labels.queued : labels.running,
+    requestId,
+  );
+  responseBodies.set(requestId, responseBody);
   const mode = elements.runMode.value;
   if (mode === 'agent' || mode === 'chat') {
     vscode.postMessage({
       type: mode === 'agent' ? 'agent' : 'send',
       content,
       contextMode: elements.contextMode.value,
+      requestId,
     });
   } else {
     const modelKeys = selectedModels();
     if (modelKeys.length < 2 || modelKeys.length > 5) {
       elements.announcer.textContent = labels.chooseModels;
-      streamingMessage.textContent = labels.chooseModels;
+      responseBody.textContent = labels.chooseModels;
+      responseBody.closest('.timeline-item')?.classList.add('message-error');
+      responseBodies.delete(requestId);
       return;
     }
     vscode.postMessage({
@@ -437,6 +489,7 @@ function submitPrompt() {
       contextMode: elements.contextMode.value,
       modelKeys,
       judgeEnabled: mode === 'judge',
+      requestId,
     });
   }
   elements.prompt.value = '';
@@ -465,7 +518,7 @@ elements.workspaceSelect.addEventListener('change', () => {
 elements.newChatButton.addEventListener('click', () => {
   elements.conversation.replaceChildren();
   lastUserPrompt = '';
-  streamingMessage = null;
+  responseBodies.clear();
   setConversationVisibility();
   elements.prompt.focus();
 });
@@ -531,36 +584,60 @@ window.addEventListener('message', (event) => {
     renderState(message.state);
   } else if (message?.type === 'streamEvent') {
     const stream = message.event;
-    if (streamingMessage && stream.type === 'CONTENT_DELTA' && typeof stream.delta === 'string') {
-      streamingMessage.textContent += stream.delta;
+    const responseBody = responseBodies.get(message.requestId);
+    if (responseBody && stream.type === 'CONTENT_DELTA' && typeof stream.delta === 'string') {
+      if (
+        responseBody.textContent === labels.connecting ||
+        responseBody.textContent === labels.queued
+      ) {
+        responseBody.textContent = '';
+      }
+      responseBody.textContent += stream.delta;
     }
     if (
-      streamingMessage &&
+      responseBody &&
       stream.type === 'RESPONSE_STREAMING' &&
       typeof stream.content === 'string'
     ) {
-      streamingMessage.textContent = stream.content;
+      responseBody.textContent = stream.content;
+    } else if (
+      responseBody &&
+      typeof stream.label === 'string' &&
+      responseBody.textContent !== '' &&
+      (responseBody.textContent === labels.connecting || responseBody.textContent === labels.queued)
+    ) {
+      responseBody.textContent =
+        typeof stream.description === 'string' && stream.description.length > 0
+          ? `${stream.label}\n${stream.description}`
+          : stream.label;
     }
   } else if (message?.type === 'result') {
-    if (streamingMessage && typeof message.result?.content === 'string') {
-      streamingMessage.textContent = message.result.content;
+    const responseBody = responseBodies.get(message.requestId);
+    if (responseBody && typeof message.result?.content === 'string') {
+      responseBody.textContent = message.result.content;
       if (message.result.editPlan?.files) {
-        appendChangeReceipt(streamingMessage, message.result.editPlan);
+        appendChangeReceipt(responseBody, message.result.editPlan);
       }
-      const card = streamingMessage.closest('.message-card');
+      const card = responseBody.closest('.message-card');
       const meta = card?.querySelector('.message-meta');
       if (meta) {
-        meta.textContent = [message.result.provider, message.result.model]
-          .filter(Boolean)
-          .join(' · ');
+        meta.textContent =
+          [message.result.provider, message.result.model].filter(Boolean).join(' · ') ||
+          labels.completed;
       }
     }
-    streamingMessage = null;
+    responseBodies.delete(message.requestId);
   } else if (message?.type === 'error') {
-    if (streamingMessage) {
-      streamingMessage.textContent = message.message;
-      streamingMessage.closest('.timeline-item')?.classList.add('message-error');
-      streamingMessage = null;
+    const responseBody = responseBodies.get(message.requestId);
+    if (responseBody) {
+      responseBody.textContent = message.message;
+      const timeline = responseBody.closest('.timeline-item');
+      timeline?.classList.add('message-error');
+      const meta = timeline?.querySelector('.message-meta');
+      if (meta) {
+        meta.textContent = labels.error;
+      }
+      responseBodies.delete(message.requestId);
     }
     elements.announcer.textContent = message.message;
   }

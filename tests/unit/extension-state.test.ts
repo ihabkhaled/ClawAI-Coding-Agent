@@ -9,6 +9,10 @@ const initialSnapshot: ExtensionSnapshot = {
   backendStatus: 'disconnected',
   busy: false,
   connected: false,
+  generationQueue: {
+    active: undefined,
+    pending: [],
+  },
   routingMode: 'AUTO',
   selectedModel: '',
   modelWarnings: [],

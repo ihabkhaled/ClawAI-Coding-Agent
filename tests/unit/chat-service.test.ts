@@ -15,7 +15,7 @@ function streamResponse(events: Record<string, unknown>[]): Response {
 }
 
 describe('ChatService', () => {
-  it('opens the authenticated stream before sending and emits attributed deltas', async () => {
+  it('normalizes the backend lowercase stream protocol and terminates on done', async () => {
     const calls: string[] = [];
     const backend: ChatBackendPort = {
       createThread: vi.fn(async () => {
@@ -26,16 +26,16 @@ describe('ChatService', () => {
         calls.push('stream');
         return streamResponse([
           {
-            type: 'PROVIDER_SELECTED',
+            type: 'provider_selected',
             provider: 'OLLAMA',
             model: 'qwen3-coder',
           },
           {
-            type: 'CONTENT_DELTA',
+            type: 'content_delta',
             delta: 'hello',
           },
           {
-            type: 'DONE',
+            type: 'done',
           },
         ]);
       }),
@@ -105,12 +105,12 @@ describe('ChatService', () => {
       openStream: vi.fn(async () =>
         streamResponse([
           {
-            type: 'RESPONSE_STREAMING',
+            type: 'response_streaming',
             content: 'complete snapshot',
             provider: 'OPENAI',
             model: 'gpt-5',
           },
-          { type: 'DONE' },
+          { type: 'done' },
         ]),
       ),
       sendMessage: vi.fn(async () => ({ id: 'message-1' })),
@@ -154,7 +154,7 @@ describe('ChatService', () => {
   it('falls back to the latest attributed assistant message after an empty stream', async () => {
     const backend: ChatBackendPort = {
       createThread: vi.fn(async () => ({ id: 'thread-1' })),
-      openStream: vi.fn(async () => streamResponse([{ type: 'DONE' }])),
+      openStream: vi.fn(async () => streamResponse([{ type: 'done' }])),
       sendMessage: vi.fn(async () => ({ id: 'message-1' })),
       listMessages: vi.fn(async () => [
         { role: 'ASSISTANT', content: 'older' },
@@ -196,7 +196,7 @@ describe('ChatService', () => {
     const errorBackend: ChatBackendPort = {
       createThread: vi.fn(async () => ({ id: 'thread-1' })),
       openStream: vi.fn(async () =>
-        streamResponse([{ type: 'ERROR', error: 'Provider unavailable' }]),
+        streamResponse([{ type: 'error', error: 'Provider unavailable' }]),
       ),
       sendMessage: vi.fn(async () => ({ id: 'message-1' })),
     };

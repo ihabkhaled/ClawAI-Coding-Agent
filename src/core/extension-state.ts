@@ -3,6 +3,7 @@ import type { AgentRunSnapshot } from './agent-run';
 import type { RoutingMode } from './configuration';
 import type { ContextReceipt } from './context-collector';
 import type { WorkspaceReadiness } from './context-mode';
+import type { GenerationQueueSnapshot } from './generation-queue';
 import type { ModelCatalogEntry } from './model-catalog';
 import type { PermissionMode } from './permission-policy.types';
 import type { WorkspaceScopeSnapshot } from './workspace-scope.types';
@@ -17,6 +18,7 @@ export interface ExtensionSnapshot {
   backendStatus: BackendStatus;
   busy: boolean;
   connected: boolean;
+  generationQueue: GenerationQueueSnapshot;
   routingMode: RoutingMode;
   selectedModel: string;
   models: ModelCatalogEntry[];

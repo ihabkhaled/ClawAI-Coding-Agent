@@ -89,6 +89,10 @@ export function activate(context: vscode.ExtensionContext): void {
     busy: false,
     connected: false,
     contextReceipt: undefined,
+    generationQueue: {
+      active: undefined,
+      pending: [],
+    },
     workspaceReadiness: undefined,
     entitlements: undefined,
     history: [],
@@ -124,6 +128,10 @@ export function activate(context: vscode.ExtensionContext): void {
     logout: () => coordinator.logout(),
     openFolder: async () => {
       await vscode.commands.executeCommand('workbench.action.files.openFolder');
+    },
+    removeQueued: (requestId) => {
+      coordinator.removeQueued(requestId);
+      return Promise.resolve();
     },
     selectAgentMode: (mode) => coordinator.sessionControls.selectAgentMode(mode),
     selectModel: (modelKey) => coordinator.selectModel(modelKey),

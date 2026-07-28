@@ -25,14 +25,20 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('cancel') }),
   z.object({ type: z.literal('openFolder') }),
   z.object({
+    type: z.literal('removeQueued'),
+    requestId: z.string().min(1).max(100),
+  }),
+  z.object({
     type: z.literal('agent'),
     content: z.string().min(1).max(20_000),
     contextMode: contextModeSchema,
+    requestId: z.string().min(1).max(100),
   }),
   z.object({
     type: z.literal('send'),
     content: z.string().min(1).max(20_000),
     contextMode: contextModeSchema,
+    requestId: z.string().min(1).max(100),
   }),
   z.object({
     type: z.literal('compare'),
@@ -40,6 +46,7 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
     contextMode: contextModeSchema,
     modelKeys: z.array(z.string()).min(2).max(5),
     judgeEnabled: z.boolean(),
+    requestId: z.string().min(1).max(100),
   }),
   z.object({
     type: z.literal('selectModel'),
@@ -63,22 +70,24 @@ type PromptMessage = Extract<InboundMessage, { type: 'agent' | 'compare' | 'send
 type ControlMessage = Exclude<InboundMessage, PromptMessage | { type: 'ready' }>;
 
 export interface ChatViewActions {
-  agent(input: { content: string; contextMode: ContextMode }): Promise<void>;
+  agent(input: { content: string; contextMode: ContextMode; requestId: string }): Promise<void>;
   cancel(): Promise<void>;
   compare(input: {
     content: string;
     contextMode: ContextMode;
     modelKeys: string[];
     judgeEnabled: boolean;
+    requestId: string;
   }): Promise<void>;
   connect(): Promise<void>;
   logout(): Promise<void>;
   openFolder(): Promise<void>;
+  removeQueued(requestId: string): Promise<void>;
   selectAgentMode(mode: AgentMode): Promise<void>;
   selectModel(modelKey: string): Promise<void>;
   selectPermissionMode(mode: PermissionMode): Promise<boolean>;
   selectWorkspaceFolder(folderKey: string): Promise<void>;
-  send(input: { content: string; contextMode: ContextMode }): Promise<void>;
+  send(input: { content: string; contextMode: ContextMode; requestId: string }): Promise<void>;
 }
 
 export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
@@ -132,16 +141,28 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     await this.postState();
   }
 
-  async postEvent(event: Record<string, unknown>): Promise<void> {
-    await this.post({ type: 'streamEvent', event });
+  async postEvent(event: Record<string, unknown>, requestId?: string): Promise<void> {
+    await this.post({
+      type: 'streamEvent',
+      event,
+      ...(requestId === undefined ? {} : { requestId }),
+    });
   }
 
-  async postResult(result: unknown): Promise<void> {
-    await this.post({ type: 'result', result });
+  async postResult(result: unknown, requestId?: string): Promise<void> {
+    await this.post({
+      type: 'result',
+      result,
+      ...(requestId === undefined ? {} : { requestId }),
+    });
   }
 
-  async postError(message: string): Promise<void> {
-    await this.post({ type: 'error', message });
+  async postError(message: string, requestId?: string): Promise<void> {
+    await this.post({
+      type: 'error',
+      message,
+      ...(requestId === undefined ? {} : { requestId }),
+    });
   }
 
   dispose(): void {
@@ -186,6 +207,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.actions.cancel();
     } else if (request.type === 'openFolder') {
       await this.actions.openFolder();
+    } else if (request.type === 'removeQueued') {
+      await this.actions.removeQueued(request.requestId);
     } else if (request.type === 'selectModel') {
       await this.actions.selectModel(request.modelKey);
     } else if (request.type === 'selectAgentMode') {

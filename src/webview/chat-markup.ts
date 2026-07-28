@@ -82,6 +82,13 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         <div id="agentRunSteps" class="agent-run-steps"></div>
         <ul id="agentRunFiles" class="agent-run-files"></ul>
       </section>
+      <section id="queuePanel" class="queue-panel" aria-label="${translated('Request queue')}" hidden>
+        <header class="queue-header">
+          <strong>${translated('Request queue')}</strong>
+          <span id="queueCount" class="badge">${translated('0 queued')}</span>
+        </header>
+        <ol id="queueList" class="queue-list"></ol>
+      </section>
     </section>
 
     <section class="workbench" aria-label="${translated('Conversation workbench')}">
@@ -190,6 +197,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-connect="${translated('Connect')}"
     data-connected="${translated('Connected')}"
     data-connecting="${translated('Connecting')}"
+    data-completed="${translated('Completed')}"
     data-context-empty="${translated('No workspace context attached')}"
     data-context-file="${translated('Using the active file')}"
     data-context-selection="${translated('Using the active selection')}"
@@ -211,8 +219,13 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-prompt-review="${translated('Review this workspace for correctness, security, and maintainability risks.')}"
     data-prompt-test="${translated('Find the most important missing tests and propose meaningful edge cases.')}"
     data-plan-mode="${translated('Plan mode')}"
+    data-queue="${translated('Queue')}"
+    data-queued="${translated('Queued')}"
     data-ready="${translated('Ready')}"
+    data-remove="${translated('Remove')}"
     data-retry="${translated('Retry')}"
+    data-running="${translated('Running')}"
+    data-send="${translated('Send')}"
     data-trusted="${translated('Trusted')}"
     data-untrusted="${translated('Restricted')}"
     data-you="${translated('YOU')}"></div>

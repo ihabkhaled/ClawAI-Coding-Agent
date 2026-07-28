@@ -15,6 +15,10 @@ const snapshot: ExtensionSnapshot = {
   backendUrl: 'https://claw.local',
   busy: false,
   connected: true,
+  generationQueue: {
+    active: { id: 'request-1', kind: 'agent', prompt: 'Create a file' },
+    pending: [{ id: 'request-2', kind: 'chat', prompt: 'Explain the result' }],
+  },
   contextReceipt: {
     excluded: [{ path: '.env', reason: 'sensitive' }],
     included: ['src/app.ts'],

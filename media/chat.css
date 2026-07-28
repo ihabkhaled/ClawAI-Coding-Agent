@@ -209,6 +209,65 @@ textarea:disabled {
   background: var(--claw-card);
 }
 
+.queue-panel {
+  margin-block-start: 6px;
+  padding: 8px;
+  border: 1px solid color-mix(in srgb, var(--claw-accent) 36%, var(--claw-border));
+  border-radius: var(--claw-radius);
+  background: color-mix(in srgb, var(--claw-accent) 5%, var(--claw-card));
+}
+
+.queue-header,
+.queue-item {
+  display: flex;
+  align-items: center;
+  gap: 8px;
+}
+
+.queue-header {
+  justify-content: space-between;
+  font-size: 0.78rem;
+}
+
+.queue-list {
+  display: grid;
+  margin: 7px 0 0;
+  padding: 0;
+  gap: 4px;
+  list-style: none;
+}
+
+.queue-item {
+  min-height: 32px;
+  padding: 5px 7px;
+  border-inline-start: 2px solid var(--claw-border);
+  background: color-mix(in srgb, var(--vscode-editor-background) 80%, transparent);
+}
+
+.queue-item[data-status='active'] {
+  border-inline-start-color: var(--claw-accent);
+}
+
+.queue-item > span {
+  display: grid;
+  min-width: 0;
+  flex: 1;
+}
+
+.queue-item strong {
+  color: var(--claw-muted);
+  font-size: 0.68rem;
+  letter-spacing: 0.07em;
+  text-transform: uppercase;
+}
+
+.queue-item small {
+  overflow: hidden;
+  font-size: 0.76rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
 .route-summary {
   display: flex;
   width: 100%;

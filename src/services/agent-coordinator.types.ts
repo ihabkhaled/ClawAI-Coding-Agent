@@ -6,6 +6,7 @@ export interface CompareInput {
   contextMode: ContextMode;
   modelKeys: string[];
   judgeEnabled: boolean;
+  requestId?: string;
 }
 
 export interface AgentWorkflowInput {
