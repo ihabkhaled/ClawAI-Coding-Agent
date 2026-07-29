@@ -77,6 +77,33 @@ describe('SessionControlService', () => {
     expect(approvals.request).toHaveBeenCalledOnce();
   });
 
+  it('remembers one approved routine-access request for the current workspace', async () => {
+    let routineAccessRemembered = false;
+    const approvals = {
+      request: vi.fn(async () => true),
+    };
+    const approvalMemory = {
+      hasRoutineAccess: vi.fn(() => routineAccessRemembered),
+      rememberRoutineAccess: vi.fn(async () => {
+        routineAccessRemembered = true;
+      }),
+    };
+    const service = new SessionControlService(state, configuration, approvals, approvalMemory);
+
+    await expect(service.authorize('workspaceContext')).resolves.toBe(true);
+    await expect(service.authorize('editGeneration')).resolves.toBe(true);
+    await expect(service.authorize('workspaceContext')).resolves.toBe(true);
+
+    expect(approvals.request).toHaveBeenCalledOnce();
+    expect(approvals.request).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'workspaceContext' }),
+    );
+    expect(approvalMemory.rememberRoutineAccess).toHaveBeenCalledOnce();
+
+    await expect(service.authorize('finalDiff')).resolves.toBe(true);
+    expect(approvals.request).toHaveBeenCalledTimes(2);
+  });
+
   it('confirms Full Access inside the workbench once and then persists it', async () => {
     const approvals = {
       request: vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true),

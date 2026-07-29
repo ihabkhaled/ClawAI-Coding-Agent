@@ -2,6 +2,20 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.4.1
+
+- Remembered the first approved routine workspace-access request in
+  workspace-scoped VS Code state, so Manual mode no longer asks to read context
+  and generate a proposal on every prompt. Final file and command approvals
+  remain explicit.
+- Accepted the common local-model `contents` edit-field alias and normalized it
+  to the canonical `content` contract before strict validation.
+- Treated valid zero-action edit plans as conversational replies, so greetings
+  and questions no longer fail Agent mode when no file or command is needed.
+- Increased the matching chat transport envelope in the ClawAI app so escaped
+  workspace context reaches the validated API contract instead of failing as a
+  misleading server error.
+
 ## 0.4.0
 
 - Fixed streaming completion by normalizing backend SSE event names and added a

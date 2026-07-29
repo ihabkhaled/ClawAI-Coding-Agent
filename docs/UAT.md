@@ -38,11 +38,17 @@
 ## Edits
 
 - [ ] Plan mode returns a read-only implementation plan and never applies files.
-- [ ] Ask for Approval prompts before workspace context and edit generation.
+- [ ] In Ask for Approval, approve the combined routine workspace-access card
+      once; confirm later prompts and a VS Code reload do not show it again.
+- [ ] Confirm final file changes and commands still require their own approval
+      in Ask for Approval mode.
 - [ ] Approve for me and Full Access skip their documented routine prompts.
 - [ ] Full Access requires one in-workbench confirmation, then skips repeated
       context, generation, and final-apply prompts.
 - [ ] Generate/fix/tests/docs produce a strict plan.
+- [ ] Send `say hi` in Agent mode and receive a normal reply with no edit error.
+- [ ] Confirm a model response using `contents` creates or updates the intended
+      file after normal validation and final approval.
 - [ ] Invalid, absolute, traversal, secret, or oversized targets are rejected.
 - [ ] Every file opens a before/after diff.
 - [ ] Reject applies nothing.

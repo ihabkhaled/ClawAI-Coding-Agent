@@ -91,6 +91,32 @@ const editFileSchema = z
     }
   });
 
+const editFileInputSchema = z
+  .object({
+    path: z.string().min(1).max(1_000),
+    operation: z.enum(['create', 'update', 'delete']),
+    content: z.string().max(1_000_000).optional(),
+    contents: z.string().max(1_000_000).optional(),
+  })
+  .strict()
+  .superRefine((file, context) => {
+    if (file.content !== undefined && file.contents !== undefined) {
+      context.addIssue({
+        code: 'custom',
+        path: ['contents'],
+        message: 'Edit operations must not provide both content and contents.',
+      });
+    }
+  })
+  .transform((file) => ({
+    path: file.path,
+    operation: file.operation,
+    ...(file.content === undefined && file.contents === undefined
+      ? {}
+      : { content: file.content ?? file.contents }),
+  }))
+  .pipe(editFileSchema);
+
 const workspaceCommandSchema = z
   .object({
     command: z.string().trim().min(1).max(500),
@@ -142,20 +168,12 @@ const editPlanSchema = z
     files: z.array(editFileSchema).max(50),
     commands: z.array(workspaceCommandSchema).max(10).optional(),
   })
-  .strict()
-  .superRefine((plan, context) => {
-    if (plan.files.length === 0 && (plan.commands?.length ?? 0) === 0) {
-      context.addIssue({
-        code: 'custom',
-        message: 'An edit plan must contain a file change or a safe workspace command.',
-      });
-    }
-  });
+  .strict();
 
 const editPlanInputSchema = z
   .object({
     summary: z.string().min(1).max(2_000),
-    files: z.array(editFileSchema).max(50),
+    files: z.array(editFileInputSchema).max(50),
     commands: z.array(z.unknown()).max(10).optional(),
   })
   .strict();

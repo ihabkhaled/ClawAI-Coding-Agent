@@ -312,6 +312,48 @@ describe('AgentRunService', () => {
     expect(phases.map((phase) => phase.phase)).toEqual(['reading', 'generating', 'planned']);
   });
 
+  it('returns a conversational no-op plan as an assistant reply without editing files', async () => {
+    const applyAtomically = vi.fn(async () => true);
+    const service = new AgentRunService(
+      contextPort(),
+      sessionPort(),
+      textChat(
+        JSON.stringify({
+          summary: 'Hi! How can I help with your code?',
+          files: [],
+          commands: [],
+        }),
+      ),
+      new SafeEditService(
+        {
+          applyAtomically,
+          isTrusted: () => true,
+          preview: async () => [],
+        },
+        async () => true,
+      ),
+    );
+    const phases: AgentRunSnapshot[] = [];
+
+    await expect(
+      service.run(
+        {
+          configuration,
+          content: 'say hi',
+          contextMode: 'smart',
+          selection: { routingMode: 'AUTO' },
+          signal: new AbortController().signal,
+        },
+        callbacks(phases),
+      ),
+    ).resolves.toMatchObject({
+      status: 'planned',
+      content: 'Hi! How can I help with your code?',
+    });
+    expect(applyAtomically).not.toHaveBeenCalled();
+    expect(phases.map((phase) => phase.phase)).toEqual(['reading', 'generating', 'planned']);
+  });
+
   it('stops before generation when edit permission is rejected', async () => {
     const chat = textChat('not reached');
     const service = new AgentRunService(

@@ -19,6 +19,10 @@ import type {
 import type { CollectedContext } from '../core/context-collector';
 import type { EditPlan } from '../core/edit-plan';
 
+function hasNoPlannedActions(plan: EditPlan): boolean {
+  return plan.files.length === 0 && (plan.commands?.length ?? 0) === 0;
+}
+
 async function collectContext(
   input: AgentRunInput,
   context: AgentRunContextPort,
@@ -113,6 +117,33 @@ export class AgentRunService {
       response = await this.send(input, buildEditPlanRepairPrompt(response.content), callbacks);
       plan = parseWorkflowEditPlan(response.content);
     }
+    return this.completeEditPlan(
+      plan,
+      response.content,
+      response.threadId,
+      context,
+      input.signal,
+      callbacks,
+    );
+  }
+
+  private async completeEditPlan(
+    plan: EditPlan,
+    content: string,
+    threadId: string | undefined,
+    context: CollectedContext,
+    signal: AbortSignal,
+    callbacks: AgentRunCallbacks,
+  ): Promise<AgentRunResult> {
+    if (hasNoPlannedActions(plan)) {
+      callbacks.onPhase(createAgentRunSnapshot('planned'));
+      return {
+        status: 'planned',
+        content: plan.summary,
+        context,
+        ...(threadId === undefined ? {} : { threadId }),
+      };
+    }
     callbacks.onPhase(createAgentRunSnapshot('reviewing', plan, plan.summary));
     const editResult =
       plan.files.length === 0
@@ -122,15 +153,15 @@ export class AgentRunService {
     callbacks.onPhase(createAgentRunSnapshot(status, plan, plan.summary));
     let commandsExecuted: boolean | undefined;
     if (editResult.applied && (plan.commands?.length ?? 0) > 0) {
-      commandsExecuted = await this.runCommands(plan, input.signal, callbacks);
+      commandsExecuted = await this.runCommands(plan, signal, callbacks);
     }
     return {
       status,
-      content: response.content,
+      content,
       context,
       editPlan: plan,
       ...(commandsExecuted === undefined ? {} : { commandsExecuted }),
-      threadId: response.threadId,
+      ...(threadId === undefined ? {} : { threadId }),
     };
   }
 

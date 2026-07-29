@@ -562,6 +562,69 @@ const exactTranslations = {
   },
 };
 
+const routineApprovalTranslations = {
+  ar: {
+    'Enable routine workspace access': 'تفعيل الوصول الروتيني إلى مساحة العمل',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      'هل تسمح لـ ClawAI بقراءة ملفات مساحة العمل غير الحساسة وإنشاء تعديلات مقترحة هنا دون السؤال مرة أخرى؟ تظل تغييرات الملفات النهائية والأوامر بحاجة إلى المراجعة.',
+  },
+  de: {
+    'Enable routine workspace access': 'Routinemäßigen Arbeitsbereichszugriff aktivieren',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      'ClawAI erlauben, nicht vertrauliche Arbeitsbereichsdateien zu lesen und hier Änderungsvorschläge zu erstellen, ohne erneut zu fragen? Endgültige Dateiänderungen und Befehle müssen weiterhin geprüft werden.',
+  },
+  es: {
+    'Enable routine workspace access': 'Activar acceso rutinario al espacio de trabajo',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      '¿Permitir que ClawAI lea archivos no confidenciales del espacio de trabajo y genere cambios propuestos aquí sin volver a preguntar? Los cambios finales de archivos y los comandos aún requieren revisión.',
+  },
+  fa: {
+    'Enable routine workspace access': 'فعال‌سازی دسترسی معمول به فضای کاری',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      'به ClawAI اجازه می‌دهید فایل‌های غیرحساس فضای کاری را بخواند و بدون پرسش دوباره ویرایش‌های پیشنهادی ایجاد کند؟ تغییرات نهایی فایل‌ها و فرمان‌ها همچنان نیاز به بازبینی دارند.',
+  },
+  fr: {
+    'Enable routine workspace access': 'Activer l’accès courant à l’espace de travail',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      'Autoriser ClawAI à lire les fichiers non sensibles de cet espace de travail et à proposer des modifications sans redemander ? Les modifications finales et les commandes doivent toujours être vérifiées.',
+  },
+  hi: {
+    'Enable routine workspace access': 'नियमित कार्यस्थान पहुँच सक्षम करें',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      'क्या ClawAI को गैर-संवेदनशील कार्यस्थान फ़ाइलें पढ़ने और दोबारा पूछे बिना प्रस्तावित बदलाव बनाने की अनुमति दें? अंतिम फ़ाइल बदलावों और कमांड की समीक्षा अभी भी आवश्यक है।',
+  },
+  it: {
+    'Enable routine workspace access': 'Abilita l’accesso ordinario all’area di lavoro',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      'Consentire a ClawAI di leggere i file non sensibili dell’area di lavoro e generare modifiche proposte senza chiedere di nuovo? Le modifiche finali ai file e i comandi richiedono ancora una revisione.',
+  },
+  ja: {
+    'Enable routine workspace access': '通常のワークスペースアクセスを有効にする',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      'ClawAI が機密ではないワークスペースファイルを読み取り、今後確認せずに編集案を生成することを許可しますか？最終的なファイル変更とコマンドは引き続き確認が必要です。',
+  },
+  pt: {
+    'Enable routine workspace access': 'Ativar acesso rotineiro ao espaço de trabalho',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      'Permitir que o ClawAI leia arquivos não confidenciais do espaço de trabalho e gere alterações propostas sem perguntar novamente? Alterações finais de arquivos e comandos ainda exigem revisão.',
+  },
+  ru: {
+    'Enable routine workspace access': 'Включить обычный доступ к рабочей области',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      'Разрешить ClawAI читать неконфиденциальные файлы рабочей области и предлагать изменения без повторного запроса? Окончательные изменения файлов и команды по-прежнему требуют проверки.',
+  },
+  th: {
+    'Enable routine workspace access': 'เปิดใช้การเข้าถึงพื้นที่ทำงานตามปกติ',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      'อนุญาตให้ ClawAI อ่านไฟล์ที่ไม่ละเอียดอ่อนในพื้นที่ทำงานและสร้างการแก้ไขที่เสนอโดยไม่ถามอีกหรือไม่ การเปลี่ยนแปลงไฟล์ขั้นสุดท้ายและคำสั่งยังคงต้องได้รับการตรวจสอบ',
+  },
+  zh: {
+    'Enable routine workspace access': '启用常规工作区访问',
+    'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.':
+      '允许 ClawAI 读取工作区中的非敏感文件并在此生成建议修改，之后不再重复询问？最终文件更改和命令仍需审核。',
+  },
+};
+
 function sourceFiles(directory) {
   return readdirSync(directory).flatMap((name) => {
     const path = join(directory, name);
@@ -589,7 +652,12 @@ function runtimeMessages() {
 }
 
 function translate(locale, message) {
-  return exactTranslations[locale][message] ?? sharedTranslations[locale][message] ?? message;
+  return (
+    routineApprovalTranslations[locale][message] ??
+    exactTranslations[locale][message] ??
+    sharedTranslations[locale][message] ??
+    message
+  );
 }
 
 function writeJson(path, value) {

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { ExtensionState } from './core/extension-state';
 import { SessionVault } from './core/session-vault';
+import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
 import { OutputLogger } from './infrastructure/output-logger';
 import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-edit-adapter';
 import { AgentCoordinator } from './services/agent-coordinator';
@@ -111,6 +112,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const editAdapter = new VscodeWorkspaceEditAdapter(workspaceScope);
   const diffPreview = new DiffPreviewProvider();
   const sessionVault = new SessionVault(context.secrets);
+  const approvalMemory = new WorkspaceApprovalMemory(context.workspaceState);
   const globalContext = new GlobalContextService(context.globalStorageUri);
   const workspaceContext = new WorkspaceContextService(globalContext, workspaceScope);
   const coordinator = new AgentCoordinator(
@@ -120,6 +122,7 @@ export function activate(context: vscode.ExtensionContext): void {
     editAdapter,
     diffPreview,
     workspaceContext,
+    approvalMemory,
   );
   const chatView = new ChatViewProvider(context.extensionUri, state, {
     agent: (input) => coordinator.runAgent(input),

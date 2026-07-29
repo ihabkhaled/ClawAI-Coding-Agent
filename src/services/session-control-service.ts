@@ -4,6 +4,7 @@ import { applyAgentModeToPrompt } from '../core/agent-mode';
 import { decidePermission } from '../core/permission-policy';
 
 import type {
+  SessionApprovalMemoryPort,
   SessionApprovalPort,
   SessionConfigurationPort,
   SessionStatePort,
@@ -12,14 +13,9 @@ import type { AgentMode } from '../core/agent-mode.types';
 import type { PermissionMode, PermissionOperation } from '../core/permission-policy.types';
 
 function approvalMessage(operation: PermissionOperation): string {
-  if (operation === 'workspaceContext') {
+  if (operation === 'workspaceContext' || operation === 'editGeneration') {
     return vscode.l10n.t(
-      'Allow ClawAI to read non-sensitive files from this workspace for this request?',
-    );
-  }
-  if (operation === 'editGeneration') {
-    return vscode.l10n.t(
-      'Allow ClawAI to generate proposed edits for this request? You will review the final diff before anything changes.',
+      'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.',
     );
   }
   if (operation === 'commandExecution') {
@@ -29,11 +25,8 @@ function approvalMessage(operation: PermissionOperation): string {
 }
 
 function approvalTitle(operation: PermissionOperation): string {
-  if (operation === 'workspaceContext') {
-    return vscode.l10n.t('Workspace access');
-  }
-  if (operation === 'editGeneration') {
-    return vscode.l10n.t('Generate proposed edits');
+  if (operation === 'workspaceContext' || operation === 'editGeneration') {
+    return vscode.l10n.t('Enable routine workspace access');
   }
   if (operation === 'commandExecution') {
     return vscode.l10n.t('Run development commands');
@@ -46,6 +39,7 @@ export class SessionControlService {
     private readonly state: SessionStatePort,
     private readonly configuration: SessionConfigurationPort,
     private readonly approvals: SessionApprovalPort,
+    private readonly approvalMemory?: SessionApprovalMemoryPort,
   ) {}
 
   async authorize(operation: PermissionOperation, details?: string[]): Promise<boolean> {
@@ -63,12 +57,20 @@ export class SessionControlService {
     if (decision.outcome === 'deny') {
       return false;
     }
-    return this.approvals.request({
+    const routineOperation = operation === 'workspaceContext' || operation === 'editGeneration';
+    if (routineOperation && this.approvalMemory?.hasRoutineAccess() === true) {
+      return true;
+    }
+    const approved = await this.approvals.request({
       ...(details === undefined ? {} : { details }),
       kind: operation,
       message: approvalMessage(operation),
       title: approvalTitle(operation),
     });
+    if (approved && routineOperation) {
+      await this.approvalMemory?.rememberRoutineAccess();
+    }
+    return approved;
   }
 
   isPlanMode(): boolean {

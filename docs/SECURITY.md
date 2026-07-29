@@ -32,6 +32,12 @@ Absolute paths, traversal, VCS metadata, environment files, and credential-like
 targets are rejected. Approvals are rendered inside the workbench. Trust is
 checked both before preview and immediately before atomic apply.
 
+In Manual mode, approving routine workspace access once stores only a boolean
+grant in VS Code's workspace-scoped state. It covers non-sensitive context
+collection and proposal generation for that workspace across reloads. It does
+not authorize final file changes or commands, and it never weakens Workspace
+Trust, secret exclusions, path validation, command validation, or atomic apply.
+
 ### Malicious model commands
 
 Command plans are optional, bounded, and executed only after approved file

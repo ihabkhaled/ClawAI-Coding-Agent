@@ -57,6 +57,41 @@ describe('edit plan validation', () => {
     ).toThrow();
   });
 
+  it('normalizes the common model-supplied contents alias without weakening validation', () => {
+    expect(
+      parseEditPlan({
+        summary: 'Create a greeting',
+        files: [
+          {
+            path: 'app/greeting.js',
+            operation: 'create',
+            contents: 'console.log("hello");\n',
+          },
+        ],
+      }).files,
+    ).toEqual([
+      {
+        path: 'app/greeting.js',
+        operation: 'create',
+        content: 'console.log("hello");\n',
+      },
+    ]);
+
+    expect(() =>
+      parseEditPlan({
+        summary: 'Ambiguous greeting',
+        files: [
+          {
+            path: 'app/greeting.js',
+            operation: 'create',
+            content: 'console.log("one");\n',
+            contents: 'console.log("two");\n',
+          },
+        ],
+      }),
+    ).toThrow();
+  });
+
   it('accepts bounded development commands with safe workspace directories', () => {
     expect(
       parseEditPlan({
@@ -84,7 +119,7 @@ describe('edit plan validation', () => {
     ).toHaveLength(2);
   });
 
-  it('accepts command-only verification plans and rejects empty plans', () => {
+  it('accepts command-only verification plans and conversational no-op plans', () => {
     expect(
       parseEditPlan({
         summary: 'Run the generated file',
@@ -95,13 +130,17 @@ describe('edit plan validation', () => {
       files: [],
       commands: [{ command: 'node app/loop.js' }],
     });
-    expect(() =>
+    expect(
       parseEditPlan({
-        summary: 'Do nothing',
+        summary: 'Hi! How can I help with this workspace?',
         files: [],
         commands: [],
       }),
-    ).toThrow(/file change or a safe workspace command/iu);
+    ).toEqual({
+      summary: 'Hi! How can I help with this workspace?',
+      files: [],
+      commands: [],
+    });
   });
 
   it('normalizes a redundant model-supplied cwd prefix to the workspace root', () => {

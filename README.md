@@ -140,7 +140,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.4.0` implements the production-ready extension surface from
+Version `0.4.1` implements the production-ready extension surface from
 the ClawAI VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 

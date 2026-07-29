@@ -26,3 +26,8 @@ export interface SessionControlPort {
 export interface SessionApprovalPort {
   request(input: ApprovalRequestInput): Promise<boolean>;
 }
+
+export interface SessionApprovalMemoryPort {
+  hasRoutineAccess(): boolean;
+  rememberRoutineAccess(): Promise<void>;
+}

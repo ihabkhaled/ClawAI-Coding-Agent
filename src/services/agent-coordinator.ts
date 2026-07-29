@@ -39,6 +39,7 @@ import type { WorkspaceContextService } from './workspace-context-service';
 import type { CollectedContext } from '../core/context-collector';
 import type { ExtensionState } from '../core/extension-state';
 import type { SessionVault } from '../core/session-vault';
+import type { WorkspaceApprovalMemory } from '../core/workspace-approval-memory';
 
 export class AgentCoordinator implements vscode.Disposable {
   readonly browserAuthorization: BrowserAuthorizationService;
@@ -63,6 +64,7 @@ export class AgentCoordinator implements vscode.Disposable {
     private readonly editAdapter: VscodeWorkspaceEditAdapter,
     private readonly diffPreview: DiffPreviewProvider,
     private readonly context: WorkspaceContextService,
+    approvalMemory: WorkspaceApprovalMemory,
   ) {
     this.backend = this.createBackend(this.configuration.read());
     this.approvals = new ApprovalBroker(this.state);
@@ -89,6 +91,7 @@ export class AgentCoordinator implements vscode.Disposable {
       this.state,
       this.configuration,
       this.approvals,
+      approvalMemory,
     );
     this.chatParticipant = new ChatParticipantService(
       this.state,
@@ -439,13 +442,10 @@ export class AgentCoordinator implements vscode.Disposable {
     this.activeThreadId = null;
   }
 
-  removeQueued(requestId: string): void {
-    this.generations.remove(requestId);
-  }
+  removeQueued = (requestId: string): void => void this.generations.remove(requestId);
 
-  resolveApproval(requestId: string, approved: boolean): void {
-    this.approvals.resolve(requestId, approved);
-  }
+  resolveApproval = (requestId: string, approved: boolean): void =>
+    void this.approvals.resolve(requestId, approved);
 
   private async collect(mode: ContextMode): Promise<CollectedContext> {
     const configuration = this.configuration.read();
