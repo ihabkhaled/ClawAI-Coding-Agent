@@ -2,6 +2,12 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.6.1
+
+- Fixed CI artifact publishing after the VSIX archive moved into `builds/`.
+  The package audit now prevents the workflow from regressing to a root-level
+  artifact glob.
+
 ## 0.6.0
 
 - Added durable, independently titled editor-tab conversations. The top ClawAI

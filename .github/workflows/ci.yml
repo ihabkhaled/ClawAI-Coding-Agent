@@ -61,7 +61,7 @@ jobs:
       - uses: actions/upload-artifact@v4
         with:
           name: clawai-coding-agent-vsix
-          path: '*.vsix'
+          path: 'builds/*.vsix'
           if-no-files-found: error
 
   extension-host:

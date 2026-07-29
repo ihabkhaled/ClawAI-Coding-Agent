@@ -12,12 +12,13 @@ const webviewMarkup = readFileSync(join(root, 'src', 'webview', 'chat-markup.ts'
 const clawIcon = readFileSync(join(root, 'resources', 'claw.svg'), 'utf8');
 const darkClawIconPath = join(root, 'resources', 'claw-dark.svg');
 const lightClawIconPath = join(root, 'resources', 'claw-light.svg');
+const ciWorkflowPath = join(root, '.github', 'workflows', 'ci.yml');
 const releaseWorkflowPath = join(root, '.github', 'workflows', 'release.yml');
 const commands = manifest.contributes.commands.map((command) => command.command);
 const uniqueCommands = new Set(commands);
 const rootVsix = readdirSync(root).filter((entry) => entry.endsWith('.vsix'));
 
-assert.equal(manifest.version, '0.6.0', 'release version must be 0.6.0');
+assert.equal(manifest.version, '0.6.1', 'release version must be 0.6.1');
 assert.deepEqual(rootVsix, [], 'VSIX artifacts must live under builds/, never the repository root');
 assert.equal(uniqueCommands.size, commands.length, 'command IDs must be unique');
 for (const command of commands) {
@@ -66,6 +67,13 @@ assert.equal(
   'Light themes must receive three dark scratches',
 );
 assert.doesNotMatch(clawIcon, /<(?:image|text)\b/iu, 'Activity icon must be a pure vector mark');
+assert.equal(existsSync(ciWorkflowPath), true, 'CI workflow is missing');
+const ciWorkflow = readFileSync(ciWorkflowPath, 'utf8');
+assert.match(
+  ciWorkflow,
+  /path:\s*['"]?builds\/\*\.vsix['"]?/u,
+  'CI must upload packaged VSIX artifacts from builds/',
+);
 assert.equal(existsSync(releaseWorkflowPath), true, 'main-branch release workflow is missing');
 const releaseWorkflow = readFileSync(releaseWorkflowPath, 'utf8');
 assert.match(releaseWorkflow, /contents:\s*write/u, 'release workflow needs contents write only');
