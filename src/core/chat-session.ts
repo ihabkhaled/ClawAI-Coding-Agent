@@ -5,14 +5,7 @@ const MAX_SUBJECT_LENGTH = 48;
 const LOCATION_WORDS = new Set(['at', 'in', 'inside', 'under']);
 
 export type TranscriptEntryKind =
-  | 'approval'
-  | 'assistant'
-  | 'command'
-  | 'error'
-  | 'file'
-  | 'progress'
-  | 'summary'
-  | 'user';
+  'approval' | 'assistant' | 'command' | 'error' | 'file' | 'progress' | 'summary' | 'user';
 
 export type TranscriptEntryStatus = 'completed' | 'failed' | 'pending' | 'running';
 

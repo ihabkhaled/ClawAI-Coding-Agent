@@ -9,9 +9,7 @@ export interface RegisteredChatSession<TTarget extends ChatSessionTarget = ChatS
   target: TTarget;
 }
 
-type SessionUpdate = Partial<
-  Pick<ChatSessionDescriptor, 'subject' | 'threadId' | 'updatedAt'>
->;
+type SessionUpdate = Partial<Pick<ChatSessionDescriptor, 'subject' | 'threadId' | 'updatedAt'>>;
 
 export class ChatSessionRegistry<TTarget extends ChatSessionTarget = ChatSessionTarget> {
   private readonly requests = new Map<string, string>();
@@ -60,6 +58,10 @@ export class ChatSessionRegistry<TTarget extends ChatSessionTarget = ChatSession
     return sessionId === undefined ? undefined : this.sessions.get(sessionId);
   }
 
+  releaseRequest(requestId: string): void {
+    this.requests.delete(requestId);
+  }
+
   update(sessionId: string, patch: SessionUpdate): RegisteredChatSession<TTarget> | undefined {
     const session = this.sessions.get(sessionId);
     if (session === undefined) {
@@ -72,4 +74,3 @@ export class ChatSessionRegistry<TTarget extends ChatSessionTarget = ChatSession
     return session;
   }
 }
-

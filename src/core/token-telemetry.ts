@@ -52,4 +52,3 @@ export function addTokenReceipts(left: TokenReceipt, right: TokenReceipt): Token
     total: input + output,
   };
 }
-

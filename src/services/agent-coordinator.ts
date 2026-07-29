@@ -92,6 +92,7 @@ export class AgentCoordinator implements vscode.Disposable {
       settled: (requestId) => {
         this.activeThreadId = null;
         this.conversations.forgetRequest(requestId);
+        this.view?.releaseRequest(requestId);
       },
     });
     this.browserAuthorization = new BrowserAuthorizationService(this.backend);

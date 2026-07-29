@@ -18,6 +18,7 @@ const elements = {
   approvalMessage: byId('approvalMessage'),
   approvalPanel: byId('approvalPanel'),
   approvalReject: byId('approvalReject'),
+  approvalReview: byId('approvalReview'),
   approvalTitle: byId('approvalTitle'),
   backendDot: byId('backendDot'),
   backendLabel: byId('backendLabel'),
@@ -76,6 +77,109 @@ let pendingModel = null;
 let pendingPermissionMode = null;
 const responseBodies = new Map();
 const streamStates = new Map();
+const activityLists = new Map();
+const requestTokens = new Map();
+let historyTokenTotal = 0;
+let historyTokensReported = false;
+
+function estimateTokens(value) {
+  if (typeof value !== 'string' || value.length === 0) {
+    return 0;
+  }
+  return Math.max(1, Math.ceil(new window.TextEncoder().encode(value).length / 4));
+}
+
+function tokenLabel(receipt) {
+  return `${receipt.total} ${labels.tokens} · ${labels[receipt.source]}`;
+}
+
+function renderConversationTokenCount() {
+  const receipts = [...requestTokens.values()];
+  const activeTotal = receipts.reduce((total, receipt) => total + receipt.total, 0);
+  const total = historyTokenTotal + activeTotal;
+  if (total === 0) {
+    elements.tokenCount.textContent = '—';
+    return;
+  }
+  const allReported =
+    (historyTokenTotal === 0 || historyTokensReported) &&
+    receipts.every((receipt) => receipt.source === 'reported');
+  elements.tokenCount.textContent = `${total} ${labels.tokens} · ${
+    allReported ? labels.reported : labels.estimated
+  }`;
+}
+
+function updateRequestMeta(requestId) {
+  const receipt = requestTokens.get(requestId);
+  const streamState = streamStates.get(requestId);
+  const body = responseBodies.get(requestId);
+  const meta = body?.closest('.message-card')?.querySelector('.message-meta');
+  if (!receipt || !meta) {
+    return;
+  }
+  meta.textContent = [streamState?.provider, streamState?.model, tokenLabel(receipt)]
+    .filter(Boolean)
+    .join(' · ');
+}
+
+function setRequestTokens(requestId, receipt) {
+  if (
+    typeof receipt?.input !== 'number' ||
+    typeof receipt?.output !== 'number' ||
+    typeof receipt?.total !== 'number'
+  ) {
+    return;
+  }
+  requestTokens.set(requestId, {
+    input: Math.max(0, receipt.input),
+    output: Math.max(0, receipt.output),
+    source: receipt.source === 'reported' ? 'reported' : 'estimated',
+    total: Math.max(0, receipt.total),
+  });
+  updateRequestMeta(requestId);
+  renderConversationTokenCount();
+}
+
+function appendActivity(requestId, key, title, description = '', tokens = 0) {
+  const list = activityLists.get(requestId);
+  const streamState = streamStates.get(requestId);
+  if (!list || !streamState || streamState.activityKeys.has(key)) {
+    return;
+  }
+  streamState.activityKeys.add(key);
+  list.hidden = false;
+  const item = document.createElement('li');
+  streamState.activityItems.set(key, item);
+  item.className = 'activity-item';
+  const marker = textElement('span', 'activity-marker', '');
+  const copy = document.createElement('span');
+  copy.className = 'activity-copy';
+  copy.append(textElement('strong', '', title));
+  if (description.length > 0) {
+    copy.append(textElement('small', '', description));
+  }
+  item.append(marker, copy);
+  if (tokens > 0) {
+    item.append(
+      textElement('span', 'activity-token', `${tokens} ${labels.tokens} · ${labels.estimated}`),
+    );
+  }
+  list.append(item);
+}
+
+function updateActivityTokens(requestId, key, tokens) {
+  const streamState = streamStates.get(requestId);
+  const item = streamState?.activityItems.get(key);
+  if (!item) {
+    return;
+  }
+  let counter = item.querySelector('.activity-token');
+  if (!counter) {
+    counter = textElement('span', 'activity-token', '');
+    item.append(counter);
+  }
+  counter.textContent = `${tokens} ${labels.tokens} · ${labels.estimated}`;
+}
 
 function textElement(tag, className, text) {
   const element = document.createElement(tag);
@@ -128,14 +232,23 @@ function appendMessage(role, content, meta = '', requestId = '') {
   header.append(
     textElement('span', 'message-role', role === 'user' ? labels.you : labels.assistant),
   );
-  if (meta.length > 0) {
+  if (meta.length > 0 || (role === 'assistant' && requestId.length > 0)) {
     header.append(textElement('span', 'message-meta', meta));
   }
   const body = textElement('pre', 'message-body', content);
   if (role === 'assistant') {
     body.dataset.streamPlaceholder = 'true';
   }
-  card.append(header, body);
+  card.append(header);
+  if (role === 'assistant' && requestId.length > 0) {
+    const activity = document.createElement('ol');
+    activity.className = 'request-activity';
+    activity.setAttribute('aria-label', labels.activity);
+    activity.hidden = true;
+    activityLists.set(requestId, activity);
+    card.append(activity);
+  }
+  card.append(body);
   if (role === 'assistant') {
     const actions = document.createElement('div');
     actions.className = 'message-actions';
@@ -174,8 +287,15 @@ function renderHistoryMessages(messages) {
   elements.conversation.replaceChildren();
   responseBodies.clear();
   streamStates.clear();
+  activityLists.clear();
+  requestTokens.clear();
+  historyTokenTotal = 0;
+  historyTokensReported = false;
   for (const message of messages) {
     const role = message.role === 'USER' ? 'user' : 'assistant';
+    const messageTokens = (message.inputTokens ?? 0) + (message.outputTokens ?? 0);
+    historyTokenTotal += messageTokens;
+    historyTokensReported ||= messageTokens > 0;
     const body = appendMessage(
       role,
       displayHistoryContent(message),
@@ -185,6 +305,7 @@ function renderHistoryMessages(messages) {
     body.dataset.streamPlaceholder = 'false';
   }
   setConversationVisibility();
+  renderConversationTokenCount();
 }
 
 function operationLabel(operation) {
@@ -196,7 +317,7 @@ function operationLabel(operation) {
   return labelsByOperation[operation] ?? operation;
 }
 
-function appendChangeReceipt(body, plan, undoAvailable = false) {
+function appendChangeReceipt(body, plan, undoAvailable = false, previewId = '') {
   const receipt = document.createElement('section');
   receipt.className = 'change-receipt';
   const header = document.createElement('header');
@@ -208,13 +329,25 @@ function appendChangeReceipt(body, plan, undoAvailable = false) {
   for (const file of plan.files) {
     const item = document.createElement('li');
     item.className = 'change-file';
+    const fileTokens = estimateTokens(`${file.path}\n${file.content ?? ''}`);
     item.append(
       textElement('span', 'change-operation', operationLabel(file.operation)),
       textElement('code', '', file.path),
+      textElement('span', 'change-token', `${fileTokens} ${labels.tokens} · ${labels.estimated}`),
     );
     files.append(item);
   }
   receipt.append(header, files);
+  const actions = document.createElement('div');
+  actions.className = 'receipt-actions';
+  if (previewId.length > 0) {
+    const review = textElement('button', 'quiet-button receipt-review', labels.reviewChanges);
+    review.type = 'button';
+    review.addEventListener('click', () => {
+      vscode.postMessage({ type: 'reviewChanges', previewId });
+    });
+    actions.append(review);
+  }
   if (undoAvailable) {
     const undo = textElement('button', 'quiet-button receipt-undo', labels.undo);
     undo.type = 'button';
@@ -222,8 +355,9 @@ function appendChangeReceipt(body, plan, undoAvailable = false) {
       vscode.postMessage({ type: 'undo' });
       undo.disabled = true;
     });
-    receipt.append(undo);
+    actions.append(undo);
   }
+  receipt.append(actions);
   body.after(receipt);
 }
 
@@ -388,8 +522,10 @@ function renderAgentRun(run) {
     verified: labels.agentVerified,
   };
   const commands = run.commands ?? [];
+  const requestId = currentState.generationQueue?.active?.id;
+  const phaseLabel = phaseLabels[run.phase] ?? run.phase;
   elements.agentRunPanel.dataset.phase = run.phase;
-  elements.agentRunLabel.textContent = phaseLabels[run.phase] ?? run.phase;
+  elements.agentRunLabel.textContent = phaseLabel;
   elements.agentRunFileCount.textContent =
     commands.length === 0
       ? `${run.files.length} ${labels.files}`
@@ -414,6 +550,33 @@ function renderAgentRun(run) {
       textElement('small', '', command.purpose),
     );
     elements.agentRunCommands.append(item);
+  }
+  if (requestId) {
+    appendActivity(
+      requestId,
+      `phase:${run.phase}`,
+      phaseLabel,
+      run.summary ?? '',
+      estimateTokens(`${phaseLabel} ${run.summary ?? ''}`),
+    );
+    for (const file of run.files) {
+      appendActivity(
+        requestId,
+        `file:${file.operation}:${file.path}`,
+        `${operationLabel(file.operation)} ${file.path}`,
+        labels.workspaceFileActivity,
+        estimateTokens(file.path),
+      );
+    }
+    for (const command of commands) {
+      appendActivity(
+        requestId,
+        `command:${command.command}`,
+        labels.commandActivity,
+        command.purpose,
+        estimateTokens(`${command.command} ${command.purpose}`),
+      );
+    }
   }
 }
 
@@ -445,6 +608,9 @@ function renderQueue(queue) {
         responseBodies.get(request.id)?.closest('.timeline-item')?.remove();
         responseBodies.delete(request.id);
         streamStates.delete(request.id);
+        activityLists.delete(request.id);
+        requestTokens.delete(request.id);
+        renderConversationTokenCount();
       });
       item.append(remove);
     }
@@ -457,6 +623,7 @@ function renderApproval(request) {
   if (request === undefined) {
     elements.approvalPanel.dataset.requestId = '';
     elements.approvalApprove.textContent = labels.approve;
+    elements.approvalReview.hidden = true;
     return;
   }
   elements.approvalPanel.dataset.requestId = request.id;
@@ -464,6 +631,7 @@ function renderApproval(request) {
     request.kind === 'workspaceContext' || request.kind === 'editGeneration'
       ? labels.alwaysAllow
       : labels.approve;
+  elements.approvalReview.hidden = request.kind !== 'finalDiff';
   elements.approvalKind.textContent = request.kind.replaceAll(/([A-Z])/gu, ' $1').trim();
   elements.approvalTitle.textContent = request.title;
   elements.approvalMessage.textContent = request.message;
@@ -520,9 +688,7 @@ function renderState(state) {
   elements.activeModeBadge.textContent =
     (pendingAgentMode ?? state.agentMode) === 'PLAN' ? labels.planMode : labels.auto;
   elements.contextCount.textContent = String(state.contextReceipt?.included?.length ?? 0);
-  const day = state.usage?.day;
-  elements.tokenCount.textContent =
-    day === undefined ? '—' : day.limit === null ? `${day.used}` : `${day.used}/${day.limit}`;
+  renderConversationTokenCount();
   elements.planName.textContent = state.entitlements?.plan?.name ?? '—';
   elements.sessionButton.textContent = state.connected ? labels.logout : labels.connect;
   elements.sendButton.disabled = !state.connected;
@@ -559,16 +725,42 @@ function submitPrompt() {
   }
   const requestId = window.crypto.randomUUID();
   const mode = elements.runMode.value;
+  const promptTokens = estimateTokens(content);
   lastUserPrompt = content;
-  appendMessage('user', content, '', requestId);
+  appendMessage(
+    'user',
+    content,
+    `${promptTokens} ${labels.tokens} · ${labels.estimated}`,
+    requestId,
+  );
   const responseBody = appendMessage(
     'assistant',
     currentState.busy ? labels.queued : mode === 'agent' ? labels.agentReading : labels.connecting,
-    currentState.busy ? labels.queued : labels.running,
+    '',
     requestId,
   );
   responseBodies.set(requestId, responseBody);
-  streamStates.set(requestId, { lastProgressKey: '' });
+  streamStates.set(requestId, {
+    activityItems: new Map(),
+    activityKeys: new Set(),
+    lastProgressKey: '',
+    model: '',
+    provider: '',
+    reasoningTokens: 0,
+  });
+  setRequestTokens(requestId, {
+    input: promptTokens,
+    output: 0,
+    source: 'estimated',
+    total: promptTokens,
+  });
+  appendActivity(
+    requestId,
+    'request-accepted',
+    currentState.busy ? labels.queued : labels.requestAccepted,
+    currentState.busy ? labels.waitingTurn : labels.preparingRun,
+    promptTokens,
+  );
   if (mode === 'agent' || mode === 'chat') {
     vscode.postMessage({
       type: mode === 'agent' ? 'agent' : 'send',
@@ -583,6 +775,7 @@ function submitPrompt() {
       responseBody.textContent = labels.chooseModels;
       responseBody.closest('.timeline-item')?.classList.add('message-error');
       responseBodies.delete(requestId);
+      activityLists.delete(requestId);
       return;
     }
     vscode.postMessage({
@@ -651,6 +844,9 @@ function resolveApproval(approved) {
 
 elements.approvalApprove.addEventListener('click', () => resolveApproval(true));
 elements.approvalReject.addEventListener('click', () => resolveApproval(false));
+elements.approvalReview.addEventListener('click', () => {
+  vscode.postMessage({ type: 'reviewChanges' });
+});
 
 elements.runMode.addEventListener('change', () => {
   elements.modelTray.classList.toggle(
@@ -703,6 +899,76 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
+function updateEstimatedOutput(requestId, content) {
+  const existing = requestTokens.get(requestId);
+  if (!existing || existing.source === 'reported') {
+    return;
+  }
+  const output = estimateTokens(content);
+  setRequestTokens(requestId, {
+    input: existing.input,
+    output,
+    source: 'estimated',
+    total: existing.input + output,
+  });
+}
+
+function reconcileStreamUsage(requestId, stream) {
+  const usage = stream.usage;
+  if (typeof usage?.promptTokens !== 'number' || typeof usage?.completionTokens !== 'number') {
+    return false;
+  }
+  setRequestTokens(requestId, {
+    input: usage.promptTokens,
+    output: usage.completionTokens,
+    source: 'reported',
+    total:
+      typeof usage.totalTokens === 'number'
+        ? usage.totalTokens
+        : usage.promptTokens + usage.completionTokens,
+  });
+  return true;
+}
+
+function appendStreamActivity(requestId, stream) {
+  if (stream.type === 'REASONING_DELTA' && typeof stream.delta === 'string') {
+    const streamState = streamStates.get(requestId);
+    if (!streamState) {
+      return;
+    }
+    streamState.reasoningTokens += estimateTokens(stream.delta);
+    appendActivity(
+      requestId,
+      'reasoning',
+      labels.reasoning,
+      labels.reasoningProgress,
+      streamState.reasoningTokens,
+    );
+    updateActivityTokens(requestId, 'reasoning', streamState.reasoningTokens);
+    return;
+  }
+  if (
+    typeof stream.label !== 'string' ||
+    stream.type === 'CONTENT_DELTA' ||
+    stream.type === 'RESPONSE_STREAMING' ||
+    stream.type === 'USAGE'
+  ) {
+    return;
+  }
+  const description =
+    typeof stream.description === 'string' && stream.description.length > 0
+      ? stream.description
+      : '';
+  const key = `${String(stream.type)}\u0000${stream.label}\u0000${description}`;
+  appendActivity(
+    requestId,
+    key,
+    stream.label,
+    description,
+    estimateTokens(`${stream.label} ${description}`),
+  );
+}
+
 window.addEventListener('message', (event) => {
   const message = event.data;
   if (message?.type === 'state') {
@@ -717,6 +983,10 @@ window.addEventListener('message', (event) => {
     const stream = message.event;
     const responseBody = responseBodies.get(message.requestId);
     const streamState = streamStates.get(message.requestId);
+    if (stream.type === 'USAGE' && reconcileStreamUsage(message.requestId, stream)) {
+      return;
+    }
+    appendStreamActivity(message.requestId, stream);
     if (responseBody && stream.type === 'AGENT_DRAFT_RESET') {
       responseBody.textContent = labels.agentRepairing;
       responseBody.dataset.streamPlaceholder = 'true';
@@ -733,6 +1003,7 @@ window.addEventListener('message', (event) => {
       }
       responseBody.textContent += stream.delta;
       responseBody.dataset.streamPlaceholder = 'false';
+      updateEstimatedOutput(message.requestId, responseBody.textContent);
     } else if (
       responseBody &&
       stream.type === 'RESPONSE_STREAMING' &&
@@ -740,41 +1011,35 @@ window.addEventListener('message', (event) => {
     ) {
       responseBody.textContent = stream.content;
       responseBody.dataset.streamPlaceholder = 'false';
-    } else if (
-      responseBody &&
-      typeof stream.label === 'string' &&
-      responseBody.dataset.streamPlaceholder === 'true'
-    ) {
-      const description =
-        typeof stream.description === 'string' && stream.description.length > 0
-          ? stream.description
-          : '';
-      const progressKey = `${String(stream.type)}\u0000${stream.label}\u0000${description}`;
-      if (streamState?.lastProgressKey !== progressKey) {
-        responseBody.textContent =
-          description.length > 0 ? `${stream.label}\n${description}` : stream.label;
-        if (streamState) {
-          streamState.lastProgressKey = progressKey;
-        }
-      }
+      updateEstimatedOutput(message.requestId, responseBody.textContent);
     }
   } else if (message?.type === 'result') {
     const responseBody = responseBodies.get(message.requestId);
+    const streamState = streamStates.get(message.requestId);
+    if (streamState) {
+      streamState.provider =
+        typeof message.result?.provider === 'string' ? message.result.provider : '';
+      streamState.model = typeof message.result?.model === 'string' ? message.result.model : '';
+    }
+    if (message.result?.tokens) {
+      setRequestTokens(message.requestId, message.result.tokens);
+    }
     if (responseBody && typeof message.result?.content === 'string') {
       responseBody.textContent = message.result.content;
+      responseBody.dataset.streamPlaceholder = 'false';
       if (message.result.editPlan?.files) {
-        appendChangeReceipt(responseBody, message.result.editPlan, message.result.undoAvailable);
+        appendChangeReceipt(
+          responseBody,
+          message.result.editPlan,
+          message.result.undoAvailable,
+          message.result.previewId,
+        );
       }
-      const card = responseBody.closest('.message-card');
-      const meta = card?.querySelector('.message-meta');
-      if (meta) {
-        meta.textContent =
-          [message.result.provider, message.result.model].filter(Boolean).join(' · ') ||
-          labels.completed;
-      }
+      updateRequestMeta(message.requestId);
     }
     responseBodies.delete(message.requestId);
     streamStates.delete(message.requestId);
+    activityLists.delete(message.requestId);
   } else if (message?.type === 'error') {
     const responseBody = responseBodies.get(message.requestId);
     if (responseBody) {
@@ -787,6 +1052,7 @@ window.addEventListener('message', (event) => {
       }
       responseBodies.delete(message.requestId);
       streamStates.delete(message.requestId);
+      activityLists.delete(message.requestId);
     }
     elements.announcer.textContent = message.message;
   } else if (message?.type === 'notice' && typeof message.message === 'string') {

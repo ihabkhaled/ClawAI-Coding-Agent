@@ -37,6 +37,10 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('openFolder') }),
   z.object({ type: z.literal('refreshModels') }),
   z.object({
+    type: z.literal('reviewChanges'),
+    previewId: z.uuid().optional(),
+  }),
+  z.object({
     type: z.literal('selectHistory'),
     threadId: z.string().min(1).max(100),
   }),
@@ -113,6 +117,7 @@ export interface ChatViewActions {
   openFolder(): Promise<void>;
   openThread(input: SessionInput & { threadId: string }): Promise<void>;
   refreshModels(): Promise<void>;
+  reviewChanges(previewId?: string): Promise<void>;
   removeQueued(requestId: string): Promise<void>;
   resolveApproval(requestId: string, approved: boolean): Promise<void>;
   selectAgentMode(mode: AgentMode): Promise<void>;
@@ -136,6 +141,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     private readonly actions: ChatViewActions,
   ) {
     this.unsubscribe = state.subscribe((snapshot) => {
+      this.syncSessionTitles(snapshot.history);
       void this.broadcast({
         type: 'state',
         state: toPublicChatState(snapshot),
@@ -164,6 +170,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
 
   bindRequest(requestId: string, sessionId: string): void {
     this.sessions.bindRequest(requestId, sessionId);
+  }
+
+  releaseRequest(requestId: string): void {
+    this.sessions.releaseRequest(requestId);
   }
 
   async titleSessionFromPrompt(sessionId: string, prompt: string): Promise<void> {
@@ -344,6 +354,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.actions.openFolder();
     } else if (request.type === 'refreshModels') {
       await this.actions.refreshModels();
+    } else if (request.type === 'reviewChanges') {
+      await this.actions.reviewChanges(request.previewId);
     } else if (request.type === 'selectHistory') {
       await this.selectHistory(sourceSessionId, request.threadId);
     } else if (request.type === 'removeQueued') {
@@ -404,6 +416,27 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       threadId,
     });
     await this.actions.openThread({ sessionId: sourceSessionId, threadId });
+  }
+
+  private syncSessionTitles(history: ExtensionState['snapshot']['history']): void {
+    for (const session of this.sessions.list()) {
+      const thread = history.find((entry) => entry.id === session.descriptor.threadId);
+      const title = thread?.title?.trim();
+      if (title === undefined || title.length === 0 || title === session.descriptor.subject) {
+        continue;
+      }
+      const updated = this.sessions.update(session.descriptor.sessionId, {
+        subject: title,
+        updatedAt: Date.now(),
+      });
+      if (updated !== undefined) {
+        updated.target.title = title;
+        void updated.target.webview.postMessage({
+          type: 'session',
+          session: updated.descriptor,
+        });
+      }
+    }
   }
 
   private async broadcast(message: unknown): Promise<void> {

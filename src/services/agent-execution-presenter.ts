@@ -37,7 +37,13 @@ export class AgentExecutionPresenter {
     );
     this.state.update({ contextReceipt: result.context.receipt });
     if (result.status === 'planned') {
-      await this.view()?.postResult({ content: result.content }, requestId);
+      await this.view()?.postResult(
+        {
+          content: result.content,
+          ...(result.tokens === undefined ? {} : { tokens: result.tokens }),
+        },
+        requestId,
+      );
       return;
     }
     if (result.editPlan === undefined) {
@@ -56,6 +62,8 @@ export class AgentExecutionPresenter {
             ? vscode.l10n.t('Applied: {0}', result.editPlan.summary)
             : vscode.l10n.t('Rejected: {0}', result.editPlan.summary),
         editPlan: result.editPlan,
+        ...(result.previewId === undefined ? {} : { previewId: result.previewId }),
+        ...(result.tokens === undefined ? {} : { tokens: result.tokens }),
         undoAvailable: result.status === 'applied',
       },
       requestId,

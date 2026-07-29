@@ -27,6 +27,7 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('id="historySelect"');
     expect(html).toContain('id="conversationTitle"');
     expect(html).toContain('aria-label="Conversation history"');
+    expect(html).toContain('id="approvalReview"');
   });
 
   it('keeps accessible landmarks and a strict nonce-based CSP without inline handlers', () => {

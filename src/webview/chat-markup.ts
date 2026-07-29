@@ -205,6 +205,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       <ul id="approvalDetails" class="approval-details"></ul>
       <div class="approval-actions">
         <button id="approvalReject" class="quiet-button" type="button">${translated('Reject')}</button>
+        <button id="approvalReview" class="quiet-button" type="button" hidden>${translated('Review changes')}</button>
         <button id="approvalApprove" class="send-button" type="button">${translated('Approve')}</button>
       </div>
     </div>
@@ -223,6 +224,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-agent-reviewing="${translated('Reviewing file changes')}"
     data-agent-validating="${translated('Validating edit plan')}"
     data-agent-verified="${translated('Verified workspace changes')}"
+    data-activity="${translated('Coding agent activity')}"
     data-always-allow="${translated('Always allow in this workspace')}"
     data-approval-required="${translated('Approval required')}"
     data-approve="${translated('Approve')}"
@@ -243,6 +245,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-file-changes="${translated('File changes')}"
     data-files="${translated('files')}"
     data-commands="${translated('commands')}"
+    data-command-activity="${translated('Workspace command')}"
     data-operation-create="${translated('Create')}"
     data-operation-delete="${translated('Delete')}"
     data-operation-update="${translated('Update')}"
@@ -259,11 +262,18 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-queued="${translated('Queued')}"
     data-ready="${translated('Ready')}"
     data-recent-conversations="${translated('Recent conversations')}"
+    data-reasoning="${translated('Reasoning')}"
+    data-reasoning-progress="${translated('Working through the request')}"
+    data-request-accepted="${translated('Request accepted')}"
+    data-preparing-run="${translated('ClawAI is preparing the run.')}"
+    data-waiting-turn="${translated('Waiting for the active run to finish.')}"
     data-reported="${translated('reported')}"
+    data-review-changes="${translated('Review changes')}"
     data-estimated="${translated('estimated')}"
     data-tokens="${translated('tokens')}"
     data-warning-llamacpp="${translated('Local llama.cpp models could not be loaded. Refresh to retry.')}"
     data-warning-ollama="${translated('Local Ollama models could not be loaded. Refresh to retry.')}"
+    data-workspace-file-activity="${translated('Workspace file change')}"
     data-reject="${translated('Reject')}"
     data-remove="${translated('Remove')}"
     data-retry="${translated('Retry')}"

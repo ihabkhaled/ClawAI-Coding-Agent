@@ -18,13 +18,22 @@ export interface WorkspaceEditPort {
 
 export interface SafeEditResult {
   applied: boolean;
+  previewId?: string;
   previews: EditPreview[];
+}
+
+export interface EditConfirmation {
+  approved: boolean;
+  previewId: string;
 }
 
 export class SafeEditService {
   constructor(
     private readonly workspace: WorkspaceEditPort,
-    private readonly confirm: (previews: EditPreview[], summary: string) => Promise<boolean>,
+    private readonly confirm: (
+      previews: EditPreview[],
+      summary: string,
+    ) => Promise<boolean | EditConfirmation>,
   ) {}
 
   async previewAndApply(plan: EditPlan): Promise<SafeEditResult> {
@@ -32,10 +41,13 @@ export class SafeEditService {
       throw new Error('Trust this workspace before applying ClawAI changes.');
     }
     const previews = await this.workspace.preview(plan);
-    const approved = await this.confirm(previews, plan.summary);
+    const confirmation = await this.confirm(previews, plan.summary);
+    const approved = typeof confirmation === 'boolean' ? confirmation : confirmation.approved;
+    const previewId = typeof confirmation === 'boolean' ? undefined : confirmation.previewId;
     if (!approved) {
       return {
         applied: false,
+        ...(previewId === undefined ? {} : { previewId }),
         previews,
       };
     }
@@ -45,6 +57,7 @@ export class SafeEditService {
     const applied = await this.workspace.applyAtomically(plan);
     return {
       applied,
+      ...(previewId === undefined ? {} : { previewId }),
       previews,
     };
   }

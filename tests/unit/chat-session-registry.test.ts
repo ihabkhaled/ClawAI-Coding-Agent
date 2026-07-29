@@ -32,6 +32,8 @@ describe('ChatSessionRegistry', () => {
 
     expect(registry.requestOwner('request-2')?.descriptor.sessionId).toBe('session-2');
     expect(registry.get('session-1')?.descriptor.subject).toBe('First');
+    registry.releaseRequest('request-2');
+    expect(registry.requestOwner('request-2')).toBeUndefined();
 
     registry.remove('session-1');
     expect(firstDisposed).not.toHaveBeenCalled();
@@ -71,4 +73,3 @@ describe('ChatSessionRegistry', () => {
     });
   });
 });
-

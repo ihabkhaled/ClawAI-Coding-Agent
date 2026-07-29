@@ -24,6 +24,16 @@ function hasNoPlannedActions(plan: EditPlan): boolean {
   return plan.files.length === 0 && (plan.commands?.length ?? 0) === 0;
 }
 
+function runMetadata(
+  threadId: string | undefined,
+  tokens: AgentRunResult['tokens'],
+): Partial<Pick<AgentRunResult, 'threadId' | 'tokens'>> {
+  return {
+    ...(threadId === undefined ? {} : { threadId }),
+    ...(tokens === undefined ? {} : { tokens }),
+  };
+}
+
 function isConversationalRequest(content: string): boolean {
   return /^(?:(?:please\s+)?say\s+(?:hi|hello|hey)(?:\s+(?:back|to\s+me))?|(?:hi|hello|hey)(?:\s+(?:clawai|there))?|good\s+(?:morning|afternoon|evening)|thanks|thank\s+you)[!,.?\s]*$/iu.test(
     content.trim(),
@@ -89,6 +99,7 @@ export class AgentRunService {
       content: response.content,
       context: EMPTY_CONTEXT,
       threadId: response.threadId,
+      tokens: response.tokens,
     };
   }
 
@@ -115,6 +126,7 @@ export class AgentRunService {
       content: response.content,
       context,
       threadId: response.threadId,
+      tokens: response.tokens,
     };
   }
 
@@ -154,6 +166,7 @@ export class AgentRunService {
       plan,
       response.content,
       response.threadId,
+      response.tokens,
       context,
       input.signal,
       callbacks,
@@ -164,6 +177,7 @@ export class AgentRunService {
     plan: EditPlan,
     content: string,
     threadId: string | undefined,
+    tokens: AgentRunResult['tokens'],
     context: CollectedContext,
     signal: AbortSignal,
     callbacks: AgentRunCallbacks,
@@ -174,7 +188,7 @@ export class AgentRunService {
         status: 'planned',
         content: plan.summary,
         context,
-        ...(threadId === undefined ? {} : { threadId }),
+        ...runMetadata(threadId, tokens),
       };
     }
     callbacks.onPhase(createAgentRunSnapshot('reviewing', plan, plan.summary));
@@ -193,8 +207,9 @@ export class AgentRunService {
       content,
       context,
       editPlan: plan,
+      ...(editResult.previewId === undefined ? {} : { previewId: editResult.previewId }),
       ...(commandsExecuted === undefined ? {} : { commandsExecuted }),
-      ...(threadId === undefined ? {} : { threadId }),
+      ...runMetadata(threadId, tokens),
     };
   }
 

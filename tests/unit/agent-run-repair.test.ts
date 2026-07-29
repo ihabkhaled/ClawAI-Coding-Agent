@@ -31,6 +31,7 @@ describe('AgentRunService malformed model repair', () => {
       .fn<AgentRunChatPort['send']>()
       .mockResolvedValueOnce({
         threadId: 'thread-1',
+        tokens: { input: 1, output: 1, source: 'estimated', total: 2 },
         content: JSON.stringify({
           summary: 'Production-ready code',
           files: [
@@ -44,6 +45,7 @@ describe('AgentRunService malformed model repair', () => {
       })
       .mockResolvedValueOnce({
         threadId: 'thread-2',
+        tokens: { input: 1, output: 1, source: 'estimated', total: 2 },
         content: JSON.stringify({
           summary: 'Create the loop',
           files: [

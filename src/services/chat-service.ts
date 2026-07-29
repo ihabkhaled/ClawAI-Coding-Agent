@@ -1,7 +1,9 @@
 import { SseDecoder } from '../core/sse-decoder';
+import { addTokenReceipts, estimateTokens, reconcileTokenReceipt } from '../core/token-telemetry';
 
 import type { RoutingMode } from '../core/configuration';
 import type { ContextCandidate } from '../core/context-collector';
+import type { ReportedTokenUsage, TokenReceipt } from '../core/token-telemetry';
 
 const MAX_MESSAGE_BYTES = 95_000;
 
@@ -49,12 +51,14 @@ export interface ChatResult {
   content: string;
   provider?: string;
   model?: string;
+  tokens: TokenReceipt;
 }
 
 interface StreamAccumulator {
   content: string;
   provider?: string;
   model?: string;
+  usage?: ReportedTokenUsage;
 }
 
 function truncateUtf8(value: string, maxBytes: number): string {
@@ -123,11 +127,46 @@ function applyStreamEvent(event: Record<string, unknown>, accumulator: StreamAcc
   if (typeof event.model === 'string') {
     accumulator.model = event.model;
   }
+  const usage = streamUsage(event);
+  if (usage !== undefined) {
+    accumulator.usage = usage;
+  }
   if (event.type === 'ERROR') {
     const message = typeof event.error === 'string' ? event.error : 'ClawAI generation failed.';
     throw new Error(message);
   }
   return event.type === 'DONE';
+}
+
+function numericValue(value: unknown): number | undefined {
+  return typeof value === 'number' && Number.isFinite(value) ? value : undefined;
+}
+
+function streamUsage(event: Record<string, unknown>): ReportedTokenUsage | undefined {
+  if (event.type !== 'USAGE' || typeof event.usage !== 'object' || event.usage === null) {
+    return undefined;
+  }
+  const usage = event.usage as Record<string, unknown>;
+  const prompt = numericValue(usage.promptTokens);
+  const completion = numericValue(usage.completionTokens);
+  const reasoning = numericValue(usage.reasoningTokens) ?? 0;
+  const total = numericValue(usage.totalTokens);
+  return {
+    ...(prompt === undefined ? {} : { input: prompt }),
+    ...(completion === undefined ? {} : { output: completion + reasoning }),
+    ...(total === undefined ? {} : { total }),
+  };
+}
+
+function estimatedUsage(prompt: string, response: string): TokenReceipt {
+  const input = estimateTokens(prompt);
+  const outputEstimate = estimateTokens(response).input;
+  return addTokenReceipts(input, {
+    input: 0,
+    output: outputEstimate,
+    source: 'estimated',
+    total: outputEstimate,
+  });
 }
 
 async function consumeStream(
@@ -167,6 +206,28 @@ async function resolveThreadId(backend: ChatBackendPort, input: ChatSendInput): 
   return (await backend.createThread(threadRequest(input))).id;
 }
 
+async function hydrateEmptyStream(
+  backend: ChatBackendPort,
+  threadId: string,
+  result: StreamAccumulator,
+): Promise<void> {
+  if (result.content.length > 0 || backend.listMessages === undefined) {
+    return;
+  }
+  const messages = await backend.listMessages(threadId, 10);
+  const assistant = [...messages].reverse().find((message) => message.role === 'ASSISTANT');
+  if (assistant === undefined) {
+    return;
+  }
+  result.content = assistant.content;
+  if (assistant.provider !== undefined && assistant.provider !== null) {
+    result.provider = assistant.provider;
+  }
+  if (assistant.model !== undefined && assistant.model !== null) {
+    result.model = assistant.model;
+  }
+}
+
 export class ChatService {
   constructor(private backend: ChatBackendPort) {}
 
@@ -184,7 +245,8 @@ export class ChatService {
     onThread?.(threadId);
 
     const response = await this.backend.openStream(threadId, signal);
-    await this.backend.sendMessage(messageRequest(input, threadId));
+    const request = messageRequest(input, threadId);
+    await this.backend.sendMessage(request);
 
     const body = response.body;
     if (body === null) {
@@ -192,23 +254,14 @@ export class ChatService {
     }
 
     const result = await consumeStream(body, onEvent);
-    if (result.content.length === 0 && this.backend.listMessages !== undefined) {
-      const messages = await this.backend.listMessages(threadId, 10);
-      const assistant = [...messages].reverse().find((message) => message.role === 'ASSISTANT');
-      if (assistant !== undefined) {
-        result.content = assistant.content;
-        if (assistant.provider !== undefined && assistant.provider !== null) {
-          result.provider = assistant.provider;
-        }
-        if (assistant.model !== undefined && assistant.model !== null) {
-          result.model = assistant.model;
-        }
-      }
-    }
+    await hydrateEmptyStream(this.backend, threadId, result);
 
+    const estimated = estimatedUsage(request.content, result.content);
     return {
       threadId,
       content: result.content,
+      tokens:
+        result.usage === undefined ? estimated : reconcileTokenReceipt(estimated, result.usage),
       ...(result.provider === undefined ? {} : { provider: result.provider }),
       ...(result.model === undefined ? {} : { model: result.model }),
     };

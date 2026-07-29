@@ -25,6 +25,7 @@ describe('AgentRunService conversational requests', () => {
     const send = vi.fn(async () => ({
       threadId: 'thread-greeting',
       content: 'Hi! How can I help?',
+      tokens: { input: 1, output: 1, source: 'estimated' as const, total: 2 },
     }));
     const service = new AgentRunService(
       {

@@ -1,13 +1,8 @@
-import { platform } from 'node:process';
-
 import { expect, test } from '@playwright/test';
 
-import type { Page } from '@playwright/test';
+import { expectWindowsScreenshot, localModel, type MockBridge } from './fixtures';
 
-interface MockBridge {
-  messages: unknown[];
-  send(message: unknown): void;
-}
+import type { Page } from '@playwright/test';
 
 declare global {
   interface Window {
@@ -15,20 +10,6 @@ declare global {
   }
 }
 
-const localModel = {
-  contextTokens: 8192,
-  displayName: 'Qwen 2.5 Coder 7B',
-  id: 'ollama-qwen',
-  isLocal: true,
-  key: 'OLLAMA:qwen2.5-coder:7b',
-  model: 'qwen2.5-coder:7b',
-  provider: 'OLLAMA',
-  source: 'ollama',
-  supportsStreaming: true,
-  supportsStructuredOutput: true,
-  supportsTools: true,
-  supportsVision: false,
-};
 const browserIssues = new WeakMap<Page, string[]>();
 
 function baseState() {
@@ -46,6 +27,7 @@ function baseState() {
       active: undefined,
       pending: [],
     },
+    history: [],
     lastError: undefined,
     models: [localModel],
     modelWarnings: [],
@@ -76,12 +58,6 @@ async function sendState(page: Page, patch: Record<string, unknown> = {}): Promi
     },
     Object.assign(baseState(), patch),
   );
-}
-
-async function expectWindowsScreenshot(page: Page, name: string): Promise<void> {
-  if (platform === 'win32') {
-    await expect(page).toHaveScreenshot(name);
-  }
 }
 
 test.beforeEach(async ({ page }) => {
@@ -205,6 +181,16 @@ test('handles Full Access and file approvals inside the workbench', async ({ pag
       requestId: '8d4f6eb8-5382-4d50-b005-12320b088673',
       approved: true,
     });
+
+  await sendState(page, {
+    approvalRequest: {
+      id: 'add71d2e-9f96-476b-aeb4-5d570ea670ce',
+      kind: 'finalDiff',
+      title: 'Apply file changes',
+      message: 'Review the staged changes before applying.',
+    },
+  });
+  await expect(page.locator('#approvalReview')).toBeVisible();
 });
 
 test('labels routine workspace consent as a persistent workspace decision', async ({ page }) => {
@@ -339,6 +325,116 @@ test('coalesces transport progress and resets a malformed agent draft before rep
   await expect(body).not.toContainText('Request acceptedRequest accepted');
 });
 
+test('keeps ordered streaming activity and reconciles visible token telemetry', async ({
+  page,
+}) => {
+  await page.locator('#prompt').fill('Create app/for-loop.js');
+  await page.locator('#composer').evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
+  const request = await page.evaluate(() => window.__clawMock.messages.at(-1));
+  const requestId = (request as { requestId: string }).requestId;
+
+  await page.evaluate((activeRequestId) => {
+    window.__clawMock.send({
+      type: 'streamEvent',
+      requestId: activeRequestId,
+      event: {
+        type: 'LIFECYCLE',
+        label: 'Reading workspace',
+        description: 'Inspecting project files',
+      },
+    });
+    window.__clawMock.send({
+      type: 'streamEvent',
+      requestId: activeRequestId,
+      event: {
+        type: 'TOOL_COMPLETED',
+        label: 'Workspace read complete',
+        description: '12 files inspected',
+      },
+    });
+    window.__clawMock.send({
+      type: 'streamEvent',
+      requestId: activeRequestId,
+      event: {
+        type: 'USAGE',
+        usage: { promptTokens: 120, completionTokens: 30, totalTokens: 150 },
+      },
+    });
+    window.__clawMock.send({
+      type: 'result',
+      requestId: activeRequestId,
+      result: {
+        content: 'Created the loop file.',
+        tokens: { input: 120, output: 30, source: 'reported', total: 150 },
+      },
+    });
+  }, requestId);
+
+  const assistant = page.locator(`.message-assistant[data-request-id="${requestId}"]`);
+  await expect(assistant.locator('.activity-item')).toHaveCount(3);
+  await expect(assistant).toContainText('Reading workspace');
+  await expect(assistant).toContainText('Workspace read complete');
+  await expect(assistant).toContainText('150 tokens');
+  await expect(page.locator('#tokenCount')).toContainText('150');
+  await expect(page.locator('#tokenCount')).toContainText('reported');
+});
+
+test('switches backend conversation history inside the current chat tab', async ({ page }) => {
+  await sendState(page, {
+    history: [
+      {
+        id: 'thread-1',
+        messageCount: 2,
+        title: 'Create loop file',
+        updatedAt: '2026-07-29T10:00:00.000Z',
+      },
+    ],
+  });
+
+  await page.locator('#historySelect').selectOption('thread-1');
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({ type: 'selectHistory', threadId: 'thread-1' });
+
+  await page.evaluate(() => {
+    window.__clawMock.send({
+      type: 'session',
+      session: {
+        createdAt: 1,
+        sessionId: 'session-1',
+        subject: 'Create loop file',
+        threadId: 'thread-1',
+        updatedAt: 2,
+      },
+    });
+    window.__clawMock.send({
+      type: 'historyLoaded',
+      messages: [
+        {
+          id: 'message-1',
+          role: 'USER',
+          content: 'Create the loop file',
+          inputTokens: 8,
+          outputTokens: 0,
+        },
+        {
+          id: 'message-2',
+          role: 'ASSISTANT',
+          content: 'Created app/for-loop.js',
+          inputTokens: 8,
+          outputTokens: 12,
+        },
+      ],
+    });
+  });
+
+  await expect(page.locator('#conversationTitle')).toHaveText('Create loop file');
+  await expect(page.locator('.message-user')).toContainText('Create the loop file');
+  await expect(page.locator('.message-assistant')).toContainText('Created app/for-loop.js');
+});
+
 test('renders a structured file-change receipt after an agent run', async ({ page }) => {
   await page.locator('#prompt').fill('Create a loop');
   await page.locator('#composer').evaluate((form: HTMLFormElement) => {
@@ -352,6 +448,7 @@ test('renders a structured file-change receipt after an agent run', async ({ pag
       requestId: activeRequestId,
       result: {
         content: 'Applied: Create the JavaScript loop',
+        previewId: '3f6e4b63-3259-4bfe-9306-7916d2a8fd68',
         editPlan: {
           summary: 'Create the JavaScript loop',
           files: [{ path: 'app/for-loop.js', operation: 'create', content: 'for (;;) {}' }],
@@ -362,6 +459,14 @@ test('renders a structured file-change receipt after an agent run', async ({ pag
 
   await expect(page.locator('.change-receipt')).toContainText('app/for-loop.js');
   await expect(page.locator('.change-operation')).toHaveText('Create');
+  await expect(page.locator('.change-token')).toContainText('estimated');
+  await page.locator('.receipt-review').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({
+      type: 'reviewChanges',
+      previewId: '3f6e4b63-3259-4bfe-9306-7916d2a8fd68',
+    });
 });
 
 test('keeps manual model and mode selections stable through state round trips', async ({
@@ -408,7 +513,9 @@ test('supports narrow responsive use, suggestions, streaming, success, and error
     });
   }, helloRequestId);
   await expect(page.locator('.message-assistant .message-body')).toHaveText('Hello from ClawAI');
-  await expect(page.locator('.message-meta')).toHaveText('OLLAMA · qwen2.5-coder:7b');
+  await expect(page.locator('.message-assistant .message-meta')).toContainText(
+    /OLLAMA · qwen2\.5-coder:7b · \d+ tokens · estimated/u,
+  );
 
   await page.locator('#prompt').fill('Fail safely');
   await page.locator('#composer').evaluate((form: HTMLFormElement) => {

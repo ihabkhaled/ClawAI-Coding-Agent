@@ -8,6 +8,7 @@ import type { ContextMode } from '../core/context-mode';
 import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
 import type { ResolvedModelSelection } from '../core/model-catalog';
 import type { PermissionOperation } from '../core/permission-policy.types';
+import type { TokenReceipt } from '../core/token-telemetry';
 
 export interface AgentRunContextPort {
   resolve(mode: ContextMode): Exclude<ContextMode, 'smart'>;
@@ -65,8 +66,10 @@ export interface AgentRunResult {
   content: string;
   context: CollectedContext;
   editPlan?: EditPlan;
+  previewId?: string;
   commandsExecuted?: boolean;
   threadId?: string;
+  tokens?: TokenReceipt;
 }
 
 export type { AgentRunSnapshot } from '../core/agent-run';

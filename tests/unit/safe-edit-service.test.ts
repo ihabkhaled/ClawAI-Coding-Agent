@@ -58,4 +58,17 @@ describe('SafeEditService', () => {
     });
     expect(rejected.applyAtomically).not.toHaveBeenCalled();
   });
+
+  it('keeps the exact staged preview identity with the edit result', async () => {
+    const workspace = workspacePort(true);
+    const service = new SafeEditService(workspace, async () => ({
+      approved: true,
+      previewId: 'preview-for-this-run',
+    }));
+
+    await expect(service.previewAndApply(plan)).resolves.toMatchObject({
+      applied: true,
+      previewId: 'preview-for-this-run',
+    });
+  });
 });

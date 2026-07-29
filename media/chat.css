@@ -632,6 +632,17 @@ textarea:disabled {
   white-space: nowrap;
 }
 
+.change-file {
+  grid-template-columns: auto minmax(0, 1fr) auto;
+}
+
+.change-token {
+  color: var(--claw-muted);
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
 .workbench {
   min-height: 0;
   overflow: auto;
@@ -812,6 +823,79 @@ textarea:disabled {
   white-space: nowrap;
 }
 
+.request-activity {
+  position: relative;
+  display: grid;
+  margin: 1px 0 10px;
+  padding: 0;
+  gap: 1px;
+  list-style: none;
+}
+
+.request-activity[hidden] {
+  display: none;
+}
+
+.request-activity::before {
+  position: absolute;
+  width: 1px;
+  content: '';
+  inset-block: 10px;
+  inset-inline-start: 4px;
+  background: color-mix(in srgb, var(--claw-accent) 35%, var(--claw-border));
+}
+
+.activity-item {
+  position: relative;
+  display: grid;
+  min-width: 0;
+  padding: 4px 0;
+  grid-template-columns: 9px minmax(0, 1fr) auto;
+  align-items: start;
+  gap: 8px;
+}
+
+.activity-marker {
+  z-index: 1;
+  width: 7px;
+  height: 7px;
+  margin-block-start: 4px;
+  border: 1px solid var(--vscode-editor-background);
+  border-radius: 50%;
+  background: var(--claw-accent);
+}
+
+.activity-copy {
+  display: grid;
+  min-width: 0;
+  gap: 1px;
+}
+
+.activity-copy strong {
+  overflow: hidden;
+  font-size: 0.72rem;
+  font-weight: 600;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-copy small {
+  overflow: hidden;
+  color: var(--claw-muted);
+  font-size: 0.67rem;
+  line-height: 1.35;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.activity-token {
+  margin-block-start: 1px;
+  color: var(--claw-muted);
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.62rem;
+  white-space: nowrap;
+}
+
 .message-body {
   overflow: auto;
   margin: 0;
@@ -853,6 +937,13 @@ textarea:disabled {
   padding: 0;
   gap: 4px;
   list-style: none;
+}
+
+.receipt-actions {
+  display: flex;
+  justify-content: flex-end;
+  gap: 6px;
+  margin-block-start: 8px;
 }
 
 .change-operation {

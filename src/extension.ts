@@ -139,6 +139,12 @@ export function activate(context: vscode.ExtensionContext): void {
       await vscode.commands.executeCommand('workbench.action.files.openFolder');
     },
     refreshModels: () => coordinator.refreshModels(),
+    reviewChanges: async (previewId) => {
+      const available = await diffPreview.show(previewId);
+      if (!available) {
+        await chatView.postNotice(vscode.l10n.t('No ClawAI file changes are ready to review.'));
+      }
+    },
     removeQueued: (requestId) => {
       coordinator.removeQueued(requestId);
       return Promise.resolve();

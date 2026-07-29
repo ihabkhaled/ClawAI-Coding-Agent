@@ -35,6 +35,15 @@ describe('ChatService', () => {
             delta: 'hello',
           },
           {
+            type: 'usage',
+            usage: {
+              completionTokens: 7,
+              costAvailable: false,
+              promptTokens: 11,
+              totalTokens: 18,
+            },
+          },
+          {
             type: 'done',
           },
         ]);
@@ -69,6 +78,12 @@ describe('ChatService', () => {
       model: 'qwen3-coder',
       provider: 'OLLAMA',
       threadId: 'thread-1',
+      tokens: {
+        input: 11,
+        output: 7,
+        source: 'reported',
+        total: 18,
+      },
     });
     expect(backend.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -76,6 +91,26 @@ describe('ChatService', () => {
       }),
     );
     expect(events).toContainEqual(expect.objectContaining({ type: 'CONTENT_DELTA' }));
+  });
+
+  it('labels prompt and response token counts as estimated when the provider omits usage', async () => {
+    const backend: ChatBackendPort = {
+      createThread: vi.fn(async () => ({ id: 'thread-1' })),
+      openStream: vi.fn(async () =>
+        streamResponse([{ type: 'content_delta', delta: 'hello' }, { type: 'done' }]),
+      ),
+      sendMessage: vi.fn(async () => ({ id: 'message-1' })),
+    };
+
+    const result = await new ChatService(backend).send(
+      { content: 'Question', context: [], routingMode: 'AUTO' },
+      () => undefined,
+    );
+
+    expect(result.tokens.source).toBe('estimated');
+    expect(result.tokens.input).toBeGreaterThan(0);
+    expect(result.tokens.output).toBeGreaterThan(0);
+    expect(result.tokens.total).toBe(result.tokens.input + result.tokens.output);
   });
 
   it('caps the assembled prompt below the backend message limit', async () => {
