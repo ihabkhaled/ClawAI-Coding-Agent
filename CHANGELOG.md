@@ -2,6 +2,13 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.5.1
+
+- Replaced the Chat participant's dark cat artwork with explicit three-scratch
+  theme assets, so the ClawAI agent button beside Claude and Codex is light in
+  dark themes and dark in light themes. The cat-with-laptop artwork remains the
+  Marketplace listing icon.
+
 ## 0.5.0
 
 - Added the three-scratch ClawAI navigation mark to the VS Code Activity Bar

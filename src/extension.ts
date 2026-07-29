@@ -10,6 +10,7 @@ import { ConfigurationService } from './services/configuration-service';
 import { GlobalContextService } from './services/global-context-service';
 import { WorkspaceContextService } from './services/workspace-context-service';
 import { WorkspaceScopeService } from './services/workspace-scope-service';
+import { createClawIconPath } from './views/claw-icon-path';
 import { DiffPreviewProvider } from './views/diff-preview-provider';
 import { StateTreeProvider } from './views/state-tree-provider';
 import { StatusBarController } from './views/status-bar-controller';
@@ -75,7 +76,7 @@ function registerChatParticipant(
       await coordinator.chatParticipant.send(request.prompt, response, token);
     },
   );
-  participant.iconPath = vscode.Uri.joinPath(context.extensionUri, 'resources', 'icon.png');
+  participant.iconPath = createClawIconPath(context.extensionUri);
   context.subscriptions.push(participant);
 }
 

@@ -6,6 +6,7 @@ import { cwd, stdout } from 'node:process';
 const root = cwd();
 const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const extensionSource = readFileSync(join(root, 'src', 'extension.ts'), 'utf8');
+const clawIconPathSource = readFileSync(join(root, 'src', 'views', 'claw-icon-path.ts'), 'utf8');
 const webviewSource = readFileSync(join(root, 'src', 'webview', 'chat-view-provider.ts'), 'utf8');
 const webviewMarkup = readFileSync(join(root, 'src', 'webview', 'chat-markup.ts'), 'utf8');
 const clawIcon = readFileSync(join(root, 'resources', 'claw.svg'), 'utf8');
@@ -15,7 +16,7 @@ const releaseWorkflowPath = join(root, '.github', 'workflows', 'release.yml');
 const commands = manifest.contributes.commands.map((command) => command.command);
 const uniqueCommands = new Set(commands);
 
-assert.equal(manifest.version, '0.5.0', 'release version must be 0.5.0');
+assert.equal(manifest.version, '0.5.1', 'release version must be 0.5.1');
 assert.equal(uniqueCommands.size, commands.length, 'command IDs must be unique');
 for (const command of commands) {
   assert.match(
@@ -40,6 +41,16 @@ assert.equal(
 );
 assert.equal(existsSync(darkClawIconPath), true, 'Dark-theme scratch icon is missing');
 assert.equal(existsSync(lightClawIconPath), true, 'Light-theme scratch icon is missing');
+assert.match(
+  extensionSource,
+  /participant\.iconPath = createClawIconPath\(context\.extensionUri\);/u,
+  'Chat participant must use the themed claw scratch mark',
+);
+assert.doesNotMatch(
+  clawIconPathSource,
+  /icon\.png/u,
+  'Navigation icon paths must not use the Marketplace artwork',
+);
 const darkClawIcon = readFileSync(darkClawIconPath, 'utf8');
 const lightClawIcon = readFileSync(lightClawIconPath, 'utf8');
 assert.equal(
