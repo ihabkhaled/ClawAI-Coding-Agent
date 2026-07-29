@@ -1,6 +1,6 @@
 import type { TokenReceipt } from './token-telemetry';
 
-const DEFAULT_SUBJECT = 'New ClawAI chat';
+export const DEFAULT_CHAT_SUBJECT = 'New ClawAI chat';
 const MAX_SUBJECT_LENGTH = 48;
 const LOCATION_WORDS = new Set(['at', 'in', 'inside', 'under']);
 
@@ -61,7 +61,7 @@ function omitLocation(words: string[]): string[] {
 export function deriveConversationSubject(prompt: string): string {
   const normalized = prompt.replaceAll(/\s+/gu, ' ').trim();
   if (normalized.length === 0) {
-    return DEFAULT_SUBJECT;
+    return DEFAULT_CHAT_SUBJECT;
   }
   const sentence = normalized.split(/[.!?](?:\s|$)/u, 1)[0] ?? normalized;
   const subject = omitLocation(sentence.split(' ')).join(' ');
@@ -72,7 +72,7 @@ export function createChatSession(sessionId: string, now = Date.now()): ChatSess
   return {
     createdAt: now,
     sessionId,
-    subject: DEFAULT_SUBJECT,
+    subject: DEFAULT_CHAT_SUBJECT,
     threadId: undefined,
     updatedAt: now,
   };

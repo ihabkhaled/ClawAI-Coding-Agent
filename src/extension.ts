@@ -134,6 +134,7 @@ export function activate(context: vscode.ExtensionContext): void {
     compare: (input) => coordinator.compare(input),
     connect: () => coordinator.connect(),
     logout: () => coordinator.logout(),
+    openThread: (input) => coordinator.openThread(input),
     openFolder: async () => {
       await vscode.commands.executeCommand('workbench.action.files.openFolder');
     },

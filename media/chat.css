@@ -101,7 +101,40 @@ textarea:disabled {
 }
 
 .workspace-identity {
+  display: grid;
+  flex: 1 1 auto;
   min-width: 0;
+  gap: 1px;
+}
+
+.conversation-heading {
+  display: flex;
+  min-width: 0;
+  align-items: center;
+  gap: 6px;
+}
+
+.conversation-heading strong {
+  overflow: hidden;
+  font-size: 0.82rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.history-select {
+  width: min(260px, 34vw);
+  min-width: 120px;
+  height: 23px;
+  margin-inline-start: auto;
+  padding: 1px 22px 1px 7px;
+  overflow: hidden;
+  border: 1px solid var(--claw-border);
+  border-radius: 5px;
+  color: var(--vscode-dropdown-foreground);
+  background: var(--vscode-dropdown-background);
+  font: inherit;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
 }
 
 .utility-label,

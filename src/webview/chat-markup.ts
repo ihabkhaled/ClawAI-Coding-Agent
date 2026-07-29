@@ -43,7 +43,14 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     <header id="workspaceBar" class="workspace-bar">
       <img class="brand-logo" src="${escapeHtml(input.logoUri)}" alt="">
       <div class="workspace-identity">
-        <p class="utility-label">${translated('ClawAI Coding Agent')}</p>
+        <p class="utility-label">${translated('ClawAI')}</p>
+        <div class="conversation-heading">
+          <strong id="conversationTitle">${translated('New ClawAI chat')}</strong>
+          <label class="sr-only" for="historySelect">${translated('Conversation history')}</label>
+          <select id="historySelect" class="history-select" aria-label="${translated('Conversation history')}">
+            <option value="">${translated('Recent conversations')}</option>
+          </select>
+        </div>
         <div class="workspace-line">
           <strong id="workspaceName">${translated('No workspace')}</strong>
           <select id="workspaceSelect" class="workspace-select" aria-label="${translated('Agent workspace folder')}" hidden></select>
@@ -251,6 +258,10 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-queue="${translated('Queue')}"
     data-queued="${translated('Queued')}"
     data-ready="${translated('Ready')}"
+    data-recent-conversations="${translated('Recent conversations')}"
+    data-reported="${translated('reported')}"
+    data-estimated="${translated('estimated')}"
+    data-tokens="${translated('tokens')}"
     data-warning-llamacpp="${translated('Local llama.cpp models could not be loaded. Refresh to retry.')}"
     data-warning-ollama="${translated('Local Ollama models could not be loaded. Refresh to retry.')}"
     data-reject="${translated('Reject')}"

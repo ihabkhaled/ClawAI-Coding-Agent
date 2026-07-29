@@ -230,12 +230,13 @@ export class AgentRunService {
     callbacks: AgentRunCallbacks,
     threadId?: string,
   ): ReturnType<AgentRunChatPort['send']> {
+    const resolvedThreadId = threadId ?? input.threadId;
     return this.chat.send(
       {
         content: this.session.preparePrompt(content),
         context: [],
         ...input.selection,
-        ...(threadId === undefined ? {} : { threadId }),
+        ...(resolvedThreadId === undefined ? {} : { threadId: resolvedThreadId }),
       },
       (event) => {
         callbacks.onEvent(event);

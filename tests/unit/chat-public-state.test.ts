@@ -27,7 +27,18 @@ const snapshot: ExtensionSnapshot = {
     truncated: false,
   },
   entitlements: undefined,
-  history: [],
+  history: [
+    {
+      _count: { messages: 3 },
+      createdAt: new Date('2026-07-29T10:00:00.000Z'),
+      id: 'thread-1',
+      preferredModel: 'secret-model-choice',
+      preferredProvider: 'SECRET_PROVIDER',
+      routingMode: 'MANUAL_MODEL',
+      title: 'Create loop file',
+      updatedAt: '2026-07-29T10:05:00.000Z',
+    },
+  ],
   lastError: undefined,
   models: [],
   modelWarnings: ['Ollama is unavailable'],
@@ -54,7 +65,7 @@ const snapshot: ExtensionSnapshot = {
 };
 
 describe('toPublicChatState', () => {
-  it('exposes the workbench state needed by the webview without conversation history', () => {
+  it('exposes the workbench state and sanitized conversation history needed by the webview', () => {
     expect(toPublicChatState(snapshot)).toMatchObject({
       agentRun: {
         files: [{ operation: 'update', path: 'src/app.ts' }],
@@ -62,6 +73,15 @@ describe('toPublicChatState', () => {
       },
       agentMode: 'PLAN',
       backendStatus: 'connected',
+      history: [
+        {
+          createdAt: '2026-07-29T10:00:00.000Z',
+          id: 'thread-1',
+          messageCount: 3,
+          title: 'Create loop file',
+          updatedAt: '2026-07-29T10:05:00.000Z',
+        },
+      ],
       modelWarnings: ['Ollama is unavailable'],
       permissionMode: 'MANUAL',
       workspaceReadiness: {
@@ -78,6 +98,7 @@ describe('toPublicChatState', () => {
         selectedFolderKey: 'web-key',
       },
     });
-    expect(toPublicChatState(snapshot)).not.toHaveProperty('history');
+    expect(toPublicChatState(snapshot).history[0]).not.toHaveProperty('preferredProvider');
+    expect(toPublicChatState(snapshot).history[0]).not.toHaveProperty('preferredModel');
   });
 });

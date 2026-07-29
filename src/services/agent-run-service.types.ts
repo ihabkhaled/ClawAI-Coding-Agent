@@ -51,6 +51,7 @@ export interface AgentRunInput {
   kind?: WorkflowKind;
   selection: ResolvedModelSelection;
   signal: AbortSignal;
+  threadId?: string;
 }
 
 export interface AgentRunCallbacks {

@@ -24,6 +24,9 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('id="agentMode"');
     expect(html).toContain('id="permissionMode"');
     expect(html).toContain('id="contextMode"');
+    expect(html).toContain('id="historySelect"');
+    expect(html).toContain('id="conversationTitle"');
+    expect(html).toContain('aria-label="Conversation history"');
   });
 
   it('keeps accessible landmarks and a strict nonce-based CSP without inline handlers', () => {

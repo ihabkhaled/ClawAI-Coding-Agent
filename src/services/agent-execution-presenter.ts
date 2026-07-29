@@ -10,7 +10,7 @@ export class AgentExecutionPresenter {
     private readonly runs: AgentRunService,
     private readonly state: ExtensionState,
     private readonly view: () => ChatViewProvider | null,
-    private readonly threadChanged: (threadId: string) => void,
+    private readonly threadChanged: (threadId: string, requestId: string) => void,
   ) {}
 
   async execute(
@@ -31,7 +31,7 @@ export class AgentExecutionPresenter {
           this.state.update({ agentRun });
         },
         onThread: (threadId) => {
-          this.threadChanged(threadId);
+          this.threadChanged(threadId, requestId);
         },
       },
     );

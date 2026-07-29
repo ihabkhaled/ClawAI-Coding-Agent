@@ -1,0 +1,74 @@
+import { describe, expect, it, vi } from 'vitest';
+
+import { ChatSessionRegistry } from '../../src/webview/chat-session-registry';
+
+describe('ChatSessionRegistry', () => {
+  it('keeps editor sessions independent and routes requests to their owner', () => {
+    const registry = new ChatSessionRegistry();
+    const firstDisposed = vi.fn();
+    const secondDisposed = vi.fn();
+
+    registry.add(
+      {
+        createdAt: 1,
+        sessionId: 'session-1',
+        subject: 'First',
+        threadId: undefined,
+        updatedAt: 1,
+      },
+      { dispose: firstDisposed },
+    );
+    registry.add(
+      {
+        createdAt: 2,
+        sessionId: 'session-2',
+        subject: 'Second',
+        threadId: undefined,
+        updatedAt: 2,
+      },
+      { dispose: secondDisposed },
+    );
+    registry.bindRequest('request-2', 'session-2');
+
+    expect(registry.requestOwner('request-2')?.descriptor.sessionId).toBe('session-2');
+    expect(registry.get('session-1')?.descriptor.subject).toBe('First');
+
+    registry.remove('session-1');
+    expect(firstDisposed).not.toHaveBeenCalled();
+    expect(registry.get('session-1')).toBeUndefined();
+    expect(registry.get('session-2')).toBeDefined();
+  });
+
+  it('updates the subject and backend thread without replacing the panel target', () => {
+    const registry = new ChatSessionRegistry();
+    const target = { dispose: vi.fn() };
+    registry.add(
+      {
+        createdAt: 1,
+        sessionId: 'session-1',
+        subject: 'New ClawAI chat',
+        threadId: undefined,
+        updatedAt: 1,
+      },
+      target,
+    );
+
+    registry.update('session-1', {
+      subject: 'Create loop file',
+      threadId: 'thread-1',
+      updatedAt: 3,
+    });
+
+    expect(registry.get('session-1')).toEqual({
+      descriptor: {
+        createdAt: 1,
+        sessionId: 'session-1',
+        subject: 'Create loop file',
+        threadId: 'thread-1',
+        updatedAt: 3,
+      },
+      target,
+    });
+  });
+});
+

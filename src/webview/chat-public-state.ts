@@ -1,5 +1,14 @@
 import type { ExtensionSnapshot } from '../core/extension-state';
 
+function publicDate(value: Date | string | undefined): string | undefined {
+  return value instanceof Date ? value.toISOString() : value;
+}
+
+function publicTitle(value: string | null | undefined): string {
+  const title = value?.trim();
+  return title === undefined || title.length === 0 ? 'Untitled conversation' : title;
+}
+
 export function toPublicChatState(snapshot: ExtensionSnapshot) {
   return {
     agentRun: snapshot.agentRun,
@@ -11,6 +20,13 @@ export function toPublicChatState(snapshot: ExtensionSnapshot) {
     connected: snapshot.connected,
     contextReceipt: snapshot.contextReceipt,
     generationQueue: snapshot.generationQueue,
+    history: snapshot.history.map((thread) => ({
+      createdAt: publicDate(thread.createdAt),
+      id: thread.id,
+      messageCount: thread._count?.messages ?? 0,
+      title: publicTitle(thread.title),
+      updatedAt: publicDate(thread.updatedAt),
+    })),
     workspaceReadiness: snapshot.workspaceReadiness,
     workspaceScope: snapshot.workspaceScope,
     entitlements:

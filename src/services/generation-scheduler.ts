@@ -9,7 +9,7 @@ export interface GenerationSchedulerHooks {
   before(): Promise<void>;
   failed(error: unknown, requestId: string): Promise<void>;
   queueChanged(snapshot: GenerationQueueSnapshot): void;
-  settled(): void;
+  settled(requestId: string): void;
 }
 
 export class GenerationScheduler {
@@ -59,7 +59,7 @@ export class GenerationScheduler {
     } catch (error: unknown) {
       await this.hooks.failed(error, requestId);
     } finally {
-      this.hooks.settled();
+      this.hooks.settled(requestId);
     }
   }
 }

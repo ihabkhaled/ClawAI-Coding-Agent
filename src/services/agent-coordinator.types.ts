@@ -7,10 +7,12 @@ export interface CompareInput {
   modelKeys: string[];
   judgeEnabled: boolean;
   requestId?: string;
+  sessionId?: string;
 }
 
 export interface AgentWorkflowInput {
   content: string;
   contextMode: ContextMode;
   kind: WorkflowKind;
+  sessionId?: string;
 }

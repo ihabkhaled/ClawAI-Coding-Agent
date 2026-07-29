@@ -1,16 +1,25 @@
-import { randomBytes } from 'node:crypto';
+import { randomBytes, randomUUID } from 'node:crypto';
 
 import * as vscode from 'vscode';
 import { z } from 'zod';
 
+import {
+  createChatSession,
+  DEFAULT_CHAT_SUBJECT,
+  deriveConversationSubject,
+} from '../core/chat-session';
+
 import { renderChatMarkup } from './chat-markup';
 import { toPublicChatState } from './chat-public-state';
+import { ChatSessionRegistry } from './chat-session-registry';
 
+import type { ChatMessage } from '../backend/contracts';
 import type { AgentMode } from '../core/agent-mode.types';
 import type { ContextMode } from '../core/context-mode';
 import type { ExtensionState } from '../core/extension-state';
 import type { PermissionMode } from '../core/permission-policy.types';
 
+const SIDEBAR_SESSION_ID = 'sidebar';
 const contextModeSchema: z.ZodType<ContextMode> = z.enum([
   'file',
   'none',
@@ -24,8 +33,13 @@ const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('logout') }),
   z.object({ type: z.literal('cancel') }),
   z.object({ type: z.literal('undo') }),
+  z.object({ type: z.literal('newChat') }),
   z.object({ type: z.literal('openFolder') }),
   z.object({ type: z.literal('refreshModels') }),
+  z.object({
+    type: z.literal('selectHistory'),
+    threadId: z.string().min(1).max(100),
+  }),
   z.object({
     type: z.literal('removeQueued'),
     requestId: z.string().min(1).max(100),
@@ -76,19 +90,28 @@ type InboundMessage = z.infer<typeof inboundMessageSchema>;
 type PromptMessage = Extract<InboundMessage, { type: 'agent' | 'compare' | 'send' }>;
 type ControlMessage = Exclude<InboundMessage, PromptMessage | { type: 'ready' }>;
 
+interface SessionInput {
+  sessionId: string;
+}
+
 export interface ChatViewActions {
-  agent(input: { content: string; contextMode: ContextMode; requestId: string }): Promise<void>;
+  agent(
+    input: SessionInput & { content: string; contextMode: ContextMode; requestId: string },
+  ): Promise<void>;
   cancel(): Promise<void>;
-  compare(input: {
-    content: string;
-    contextMode: ContextMode;
-    modelKeys: string[];
-    judgeEnabled: boolean;
-    requestId: string;
-  }): Promise<void>;
+  compare(
+    input: SessionInput & {
+      content: string;
+      contextMode: ContextMode;
+      modelKeys: string[];
+      judgeEnabled: boolean;
+      requestId: string;
+    },
+  ): Promise<void>;
   connect(): Promise<void>;
   logout(): Promise<void>;
   openFolder(): Promise<void>;
+  openThread(input: SessionInput & { threadId: string }): Promise<void>;
   refreshModels(): Promise<void>;
   removeQueued(requestId: string): Promise<void>;
   resolveApproval(requestId: string, approved: boolean): Promise<void>;
@@ -96,12 +119,14 @@ export interface ChatViewActions {
   selectModel(modelKey: string): Promise<void>;
   selectPermissionMode(mode: PermissionMode): Promise<boolean>;
   selectWorkspaceFolder(folderKey: string): Promise<void>;
-  send(input: { content: string; contextMode: ContextMode; requestId: string }): Promise<void>;
+  send(
+    input: SessionInput & { content: string; contextMode: ContextMode; requestId: string },
+  ): Promise<void>;
   undo(): Promise<void>;
 }
 
 export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
-  private panel: vscode.WebviewPanel | null = null;
+  private readonly sessions = new ChatSessionRegistry<vscode.WebviewPanel>();
   private view: vscode.WebviewView | null = null;
   private readonly unsubscribe: () => void;
 
@@ -111,7 +136,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     private readonly actions: ChatViewActions,
   ) {
     this.unsubscribe = state.subscribe((snapshot) => {
-      void this.post({
+      void this.broadcast({
         type: 'state',
         state: toPublicChatState(snapshot),
       });
@@ -120,21 +145,129 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
 
   resolveWebviewView(view: vscode.WebviewView): void {
     this.view = view;
-    this.configureWebview(view.webview);
+    this.configureWebview(view.webview, SIDEBAR_SESSION_ID);
     view.onDidDispose(() => {
       this.view = null;
     });
-    void this.postState();
+    void this.postStateTo(view.webview);
   }
 
-  async reveal(): Promise<void> {
-    if (this.panel !== null) {
-      this.panel.reveal(vscode.ViewColumn.Active, false);
+  async reveal(): Promise<string> {
+    return this.createEditorSession();
+  }
+
+  async revealThread(threadId: string, title: string): Promise<string> {
+    const sessionId = await this.createEditorSession(title, threadId);
+    await this.actions.openThread({ sessionId, threadId });
+    return sessionId;
+  }
+
+  bindRequest(requestId: string, sessionId: string): void {
+    this.sessions.bindRequest(requestId, sessionId);
+  }
+
+  async titleSessionFromPrompt(sessionId: string, prompt: string): Promise<void> {
+    const session = this.sessions.get(sessionId);
+    if (session?.descriptor.subject === DEFAULT_CHAT_SUBJECT) {
+      await this.updateSession(sessionId, {
+        subject: deriveConversationSubject(prompt),
+      });
+    }
+  }
+
+  async updateSession(
+    sessionId: string,
+    patch: { subject?: string; threadId?: string },
+  ): Promise<void> {
+    const session = this.sessions.update(sessionId, {
+      ...patch,
+      updatedAt: Date.now(),
+    });
+    if (session === undefined) {
       return;
     }
+    session.target.title = session.descriptor.subject;
+    await session.target.webview.postMessage({
+      type: 'session',
+      session: session.descriptor,
+    });
+  }
+
+  async postHistory(sessionId: string, messages: ChatMessage[]): Promise<void> {
+    await this.postToSession(sessionId, {
+      type: 'historyLoaded',
+      messages: messages.map((message) => ({
+        content: message.content,
+        createdAt:
+          message.createdAt instanceof Date ? message.createdAt.toISOString() : message.createdAt,
+        id: message.id,
+        inputTokens: message.inputTokens,
+        latencyMs: message.latencyMs,
+        model: message.model,
+        outputTokens: message.outputTokens,
+        provider: message.provider,
+        role: message.role,
+        status: message.status,
+      })),
+    });
+  }
+
+  async postEvent(event: Record<string, unknown>, requestId?: string): Promise<void> {
+    await this.postForRequest(
+      {
+        type: 'streamEvent',
+        event,
+        ...(requestId === undefined ? {} : { requestId }),
+      },
+      requestId,
+    );
+  }
+
+  async postResult(result: unknown, requestId?: string): Promise<void> {
+    await this.postForRequest(
+      {
+        type: 'result',
+        result,
+        ...(requestId === undefined ? {} : { requestId }),
+      },
+      requestId,
+    );
+  }
+
+  async postError(message: string, requestId?: string): Promise<void> {
+    await this.postForRequest(
+      {
+        type: 'error',
+        message,
+        ...(requestId === undefined ? {} : { requestId }),
+      },
+      requestId,
+    );
+  }
+
+  async postNotice(message: string): Promise<void> {
+    await this.broadcast({ type: 'notice', message });
+  }
+
+  dispose(): void {
+    this.unsubscribe();
+    this.sessions.dispose();
+    this.view = null;
+  }
+
+  private async createEditorSession(
+    title = DEFAULT_CHAT_SUBJECT,
+    threadId?: string,
+  ): Promise<string> {
+    const sessionId = randomUUID();
+    const descriptor = {
+      ...createChatSession(sessionId),
+      subject: title,
+      threadId,
+    };
     const panel = vscode.window.createWebviewPanel(
       'clawAI.chatEditor',
-      vscode.l10n.t('ClawAI Coding Agent'),
+      title,
       vscode.ViewColumn.Active,
       {
         enableScripts: true,
@@ -142,80 +275,61 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
         retainContextWhenHidden: true,
       },
     );
-    this.panel = panel;
     panel.iconPath = {
       dark: vscode.Uri.joinPath(this.extensionUri, 'resources', 'claw-dark.svg'),
       light: vscode.Uri.joinPath(this.extensionUri, 'resources', 'claw-light.svg'),
     };
-    this.configureWebview(panel.webview);
+    this.sessions.add(descriptor, panel);
+    this.configureWebview(panel.webview, sessionId);
     panel.onDidDispose(() => {
-      this.panel = null;
+      this.sessions.remove(sessionId);
     });
-    await this.postState();
+    await this.postStateTo(panel.webview);
+    await panel.webview.postMessage({ type: 'session', session: descriptor });
+    return sessionId;
   }
 
-  async postEvent(event: Record<string, unknown>, requestId?: string): Promise<void> {
-    await this.post({
-      type: 'streamEvent',
-      event,
-      ...(requestId === undefined ? {} : { requestId }),
-    });
-  }
-
-  async postResult(result: unknown, requestId?: string): Promise<void> {
-    await this.post({
-      type: 'result',
-      result,
-      ...(requestId === undefined ? {} : { requestId }),
-    });
-  }
-
-  async postError(message: string, requestId?: string): Promise<void> {
-    await this.post({
-      type: 'error',
-      message,
-      ...(requestId === undefined ? {} : { requestId }),
-    });
-  }
-
-  async postNotice(message: string): Promise<void> {
-    await this.post({ type: 'notice', message });
-  }
-
-  dispose(): void {
-    this.unsubscribe();
-    this.panel?.dispose();
-    this.panel = null;
-    this.view = null;
-  }
-
-  private async handleMessage(message: unknown): Promise<void> {
+  private async handleMessage(
+    message: unknown,
+    sourceSessionId: string,
+    sourceWebview: vscode.Webview,
+  ): Promise<void> {
     const parsed = inboundMessageSchema.safeParse(message);
     if (!parsed.success) {
-      await this.postError(vscode.l10n.t('The ClawAI view sent an invalid request.'));
+      await sourceWebview.postMessage({
+        type: 'error',
+        message: vscode.l10n.t('The ClawAI view sent an invalid request.'),
+      });
       return;
     }
     try {
       const request = parsed.data;
       if (request.type === 'ready') {
-        await this.postState();
+        await this.postStateTo(sourceWebview);
+        const session = this.sessions.get(sourceSessionId);
+        if (session !== undefined) {
+          await sourceWebview.postMessage({ type: 'session', session: session.descriptor });
+        }
       } else if (
         request.type === 'agent' ||
         request.type === 'compare' ||
         request.type === 'send'
       ) {
-        await this.handlePromptMessage(request);
+        await this.handlePromptMessage(request, sourceSessionId);
       } else {
-        await this.handleControlMessage(request);
+        await this.handleControlMessage(request, sourceSessionId);
       }
     } catch (error: unknown) {
       const message =
         error instanceof Error ? error.message : vscode.l10n.t('ClawAI request failed.');
-      await this.postError(message);
+      await sourceWebview.postMessage({ type: 'error', message });
     }
   }
 
-  private async handleControlMessage(request: ControlMessage): Promise<void> {
+  private async handleControlMessage(
+    request: ControlMessage,
+    sourceSessionId: string,
+  ): Promise<void> {
     if (request.type === 'connect') {
       await this.actions.connect();
     } else if (request.type === 'logout') {
@@ -224,58 +338,119 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.actions.cancel();
     } else if (request.type === 'undo') {
       await this.actions.undo();
+    } else if (request.type === 'newChat') {
+      await this.reveal();
     } else if (request.type === 'openFolder') {
       await this.actions.openFolder();
     } else if (request.type === 'refreshModels') {
       await this.actions.refreshModels();
+    } else if (request.type === 'selectHistory') {
+      await this.selectHistory(sourceSessionId, request.threadId);
     } else if (request.type === 'removeQueued') {
       await this.actions.removeQueued(request.requestId);
     } else if (request.type === 'resolveApproval') {
       await this.actions.resolveApproval(request.requestId, request.approved);
-    } else if (request.type === 'selectModel') {
+    } else {
+      await this.handleSelectionControl(request);
+    }
+  }
+
+  private async handleSelectionControl(request: ControlMessage): Promise<void> {
+    if (request.type === 'selectModel') {
       await this.actions.selectModel(request.modelKey);
     } else if (request.type === 'selectAgentMode') {
       await this.actions.selectAgentMode(request.mode);
     } else if (request.type === 'selectPermissionMode') {
       await this.actions.selectPermissionMode(request.mode);
       await this.postState();
-    } else {
+    } else if (request.type === 'selectWorkspaceFolder') {
       await this.actions.selectWorkspaceFolder(request.folderKey);
     }
   }
 
-  private async handlePromptMessage(request: PromptMessage): Promise<void> {
+  private async handlePromptMessage(
+    request: PromptMessage,
+    sourceSessionId: string,
+  ): Promise<void> {
+    const sessionId =
+      sourceSessionId === SIDEBAR_SESSION_ID ? await this.reveal() : sourceSessionId;
+    this.bindRequest(request.requestId, sessionId);
+    await this.titleSessionFromPrompt(sessionId, request.content);
     if (request.type === 'compare') {
-      await this.actions.compare(request);
+      await this.actions.compare({ ...request, sessionId });
     } else if (request.type === 'agent') {
-      await this.actions.agent(request);
+      await this.actions.agent({ ...request, sessionId });
     } else {
-      await this.actions.send(request);
+      await this.actions.send({ ...request, sessionId });
     }
   }
 
-  private async post(message: unknown): Promise<void> {
+  private async selectHistory(sourceSessionId: string, threadId: string): Promise<void> {
+    const thread = this.state.snapshot.history.find((entry) => entry.id === threadId);
+    if (thread === undefined) {
+      throw new Error(vscode.l10n.t('That ClawAI conversation is no longer available.'));
+    }
+    const trimmedTitle = thread.title?.trim();
+    const title =
+      trimmedTitle === undefined || trimmedTitle.length === 0
+        ? vscode.l10n.t('Untitled conversation')
+        : trimmedTitle;
+    if (sourceSessionId === SIDEBAR_SESSION_ID) {
+      await this.revealThread(threadId, title);
+      return;
+    }
+    await this.updateSession(sourceSessionId, {
+      subject: title,
+      threadId,
+    });
+    await this.actions.openThread({ sessionId: sourceSessionId, threadId });
+  }
+
+  private async broadcast(message: unknown): Promise<void> {
     await Promise.all([
       this.view?.webview.postMessage(message),
-      this.panel?.webview.postMessage(message),
+      ...this.sessions.list().map((session) => session.target.webview.postMessage(message)),
+    ]);
+  }
+
+  private async postForRequest(message: unknown, requestId?: string): Promise<void> {
+    if (requestId === undefined) {
+      await this.broadcast(message);
+      return;
+    }
+    const owner = this.sessions.requestOwner(requestId);
+    await Promise.all([
+      owner?.target.webview.postMessage(message),
+      this.view?.webview.postMessage(message),
     ]);
   }
 
   private async postState(): Promise<void> {
-    await this.post({
+    await this.broadcast({
       type: 'state',
       state: toPublicChatState(this.state.snapshot),
     });
   }
 
-  private configureWebview(webview: vscode.Webview): void {
+  private async postStateTo(webview: vscode.Webview): Promise<void> {
+    await webview.postMessage({
+      type: 'state',
+      state: toPublicChatState(this.state.snapshot),
+    });
+  }
+
+  private async postToSession(sessionId: string, message: unknown): Promise<void> {
+    await this.sessions.get(sessionId)?.target.webview.postMessage(message);
+  }
+
+  private configureWebview(webview: vscode.Webview, sessionId: string): void {
     webview.options = {
       enableScripts: true,
       localResourceRoots: this.localResourceRoots(),
     };
     webview.html = this.html(webview);
     webview.onDidReceiveMessage((message: unknown) => {
-      void this.handleMessage(message);
+      void this.handleMessage(message, sessionId, webview);
     });
   }
 

@@ -10,6 +10,7 @@ import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-worksp
 import { type DiffPreviewProvider } from '../views/diff-preview-provider';
 import { type ChatViewProvider } from '../webview/chat-view-provider';
 
+import { AgentConnectionService } from './agent-connection-service';
 import {
   contextualPrompt,
   currentModelSelection,
@@ -28,6 +29,7 @@ import { ChatParticipantService } from './chat-participant-service';
 import { ChatService } from './chat-service';
 import { ClawaiInitializer } from './clawai-initializer';
 import { ConfigurationService, type RuntimeConfiguration } from './configuration-service';
+import { ConversationSessionService } from './conversation-session-service';
 import { GenerationScheduler } from './generation-scheduler';
 import { ModelService } from './model-service';
 import { confirmSafeEdits } from './safe-edit-confirmation';
@@ -47,6 +49,7 @@ export class AgentCoordinator implements vscode.Disposable {
   readonly sessionControls: SessionControlService;
   private backend: BackendClient;
   private readonly approvals: ApprovalBroker;
+  private readonly connection: AgentConnectionService;
   private readonly agentExecutions: AgentExecutionPresenter;
   private readonly chat: ChatService;
   private readonly configuration = new ConfigurationService();
@@ -54,6 +57,7 @@ export class AgentCoordinator implements vscode.Disposable {
   private readonly modelService: ModelService;
   private readonly safeEdits: SafeEditService;
   private readonly generations: GenerationScheduler;
+  private readonly conversations: ConversationSessionService;
   private activeThreadId: string | null = null;
   private view: ChatViewProvider | null = null;
 
@@ -70,7 +74,12 @@ export class AgentCoordinator implements vscode.Disposable {
     this.approvals = new ApprovalBroker(this.state);
     this.generations = new GenerationScheduler({
       after: async () => {
-        this.state.update({ usage: await this.backend.getUsage() });
+        const settings = this.configuration.read();
+        const [history, usage] = await Promise.all([
+          this.backend.listThreads(settings.historyLimit),
+          this.backend.getUsage(),
+        ]);
+        this.state.update({ history, usage });
       },
       before: () => this.prepareGeneration(),
       failed: (error, requestId) => this.generationFailed(error, requestId),
@@ -80,13 +89,34 @@ export class AgentCoordinator implements vscode.Disposable {
           generationQueue,
         });
       },
-      settled: () => {
+      settled: (requestId) => {
         this.activeThreadId = null;
+        this.conversations.forgetRequest(requestId);
       },
     });
     this.browserAuthorization = new BrowserAuthorizationService(this.backend);
+    this.conversations = new ConversationSessionService(
+      this.state,
+      () => this.backend,
+      () => this.view,
+    );
     this.chat = new ChatService(this.backend);
     this.modelService = new ModelService(this.backend);
+    this.connection = new AgentConnectionService(
+      this.state,
+      this.sessionVault,
+      this.logger,
+      this.configuration,
+      this.browserAuthorization,
+      this.chat,
+      this.modelService,
+      () => this.backend,
+      (configuration) => {
+        this.backend = this.createBackend(configuration);
+      },
+      () => refreshAgentData(this.backend, this.configuration, this.modelService, this.state),
+      () => this.view,
+    );
     this.sessionControls = new SessionControlService(
       this.state,
       this.configuration,
@@ -108,8 +138,9 @@ export class AgentCoordinator implements vscode.Disposable {
       new AgentRunService(this.context, this.sessionControls, this.chat, this.safeEdits),
       this.state,
       () => this.view,
-      (threadId) => {
+      (threadId, requestId) => {
         this.activeThreadId = threadId;
+        this.conversations.recordThread(requestId, threadId);
       },
     );
   }
@@ -125,52 +156,11 @@ export class AgentCoordinator implements vscode.Disposable {
       'clawAI.workspaceTrusted',
       vscode.workspace.isTrusted,
     );
-    if (!this.configuration.hasConfiguredBackendUrl()) {
-      const configured = await this.configuration.promptForBackendUrl();
-      if (configured === null) {
-        this.state.update({
-          backendStatus: 'disconnected',
-          connected: false,
-        });
-        return;
-      }
-      await this.configurationChanged();
-    }
-    const tokens = await this.sessionVault.load();
-    if (tokens === null) {
-      this.state.update({
-        backendStatus: 'disconnected',
-        connected: false,
-      });
-      return;
-    }
-    await this.runOperation(async () => {
-      const user = await this.backend.getProfile();
-      this.state.update({
-        backendStatus: 'connected',
-        connected: true,
-        user,
-      });
-      await this.refreshData();
-    });
+    await this.connection.initialize();
   }
 
   async configurationChanged(): Promise<void> {
-    const configuration = this.configuration.read();
-    this.backend = this.createBackend(configuration);
-    this.browserAuthorization.setBackend(this.backend);
-    this.chat.setBackend(this.backend);
-    this.modelService.setBackend(this.backend);
-    this.state.update({
-      agentMode: configuration.agentMode,
-      backendUrl: configuration.backendUrl,
-      permissionMode: configuration.permissionMode,
-      routingMode: configuration.routingMode,
-      selectedModel: configuration.selectedModel,
-    });
-    if (this.state.snapshot.connected) {
-      await this.refreshData();
-    }
+    await this.connection.configurationChanged();
   }
 
   async trustChanged(): Promise<void> {
@@ -195,23 +185,7 @@ export class AgentCoordinator implements vscode.Disposable {
   }
 
   async connect(): Promise<void> {
-    if (!this.configuration.hasConfiguredBackendUrl()) {
-      const configured = await this.configuration.promptForBackendUrl();
-      if (configured === null) {
-        return;
-      }
-      await this.configurationChanged();
-    }
-    await this.runOperation(async () => {
-      const user = await this.browserAuthorization.signIn();
-      this.state.update({
-        backendStatus: 'connected',
-        connected: true,
-        user,
-        lastError: undefined,
-      });
-      await this.refreshData();
-    });
+    await this.connection.connect();
   }
 
   dispose(): void {
@@ -221,34 +195,19 @@ export class AgentCoordinator implements vscode.Disposable {
   }
 
   async logout(): Promise<void> {
-    await this.runOperation(async () => {
-      await this.backend.logout();
-      this.state.update({
-        backendStatus: 'disconnected',
-        connected: false,
-        history: [],
-        modelWarnings: [],
-        models: [],
-        selectedModel: '',
-        user: undefined,
-        usage: undefined,
-        entitlements: undefined,
-      });
-    });
+    await this.connection.logout();
   }
 
-  async openChat(threadId?: string): Promise<void> {
-    await this.view?.reveal();
-    if (threadId === undefined || !this.state.snapshot.connected) {
+  async openChat(threadId?: string): Promise<string | undefined> {
+    return this.conversations.openChat(threadId);
+  }
+
+  async openThread(input: { sessionId: string; threadId: string }): Promise<void> {
+    if (!this.state.snapshot.connected) {
       return;
     }
-    await this.runOperation(async () => {
-      const messages = await this.backend.listMessages(threadId, 100);
-      const content = messages.map((message) => `${message.role}: ${message.content}`).join('\n\n');
-      await this.view?.postResult({
-        content,
-        threadId,
-      });
+    await this.connection.run(async () => {
+      await this.conversations.loadThread(input.sessionId, input.threadId);
     });
   }
 
@@ -256,19 +215,23 @@ export class AgentCoordinator implements vscode.Disposable {
     content: string;
     contextMode: ContextMode;
     requestId?: string;
+    sessionId?: string;
   }): Promise<void> {
     const requestId = input.requestId ?? randomUUID();
+    const sessionId = await this.conversations.prepare(input.sessionId, requestId, input.content);
     await this.generations.enqueue(requestId, 'chat', input.content, async (signal) => {
       const collected = await this.collect(input.contextMode);
       const selection = currentModelSelection(
         this.configuration.read(),
         this.state.snapshot.models,
       );
+      const threadId = this.conversations.threadFor(sessionId);
       const result = await this.chat.send(
         {
           content: this.sessionControls.preparePrompt(input.content),
           context: collected.files,
           ...selection,
+          ...(threadId === undefined ? {} : { threadId }),
         },
         (event) => {
           void this.view?.postEvent(event, requestId);
@@ -276,6 +239,7 @@ export class AgentCoordinator implements vscode.Disposable {
         signal,
         (threadId) => {
           this.activeThreadId = threadId;
+          this.conversations.recordThread(requestId, threadId);
         },
       );
       await this.view?.postResult(result, requestId);
@@ -286,15 +250,18 @@ export class AgentCoordinator implements vscode.Disposable {
     content: string;
     contextMode: ContextMode;
     requestId?: string;
+    sessionId?: string;
   }): Promise<void> {
     const requestId = input.requestId ?? randomUUID();
+    const sessionId = await this.conversations.prepare(input.sessionId, requestId, input.content);
     await this.generations.enqueue(requestId, 'agent', input.content, (signal) =>
-      this.executeAgentRun({ ...input, kind: 'generate' }, signal, requestId),
+      this.executeAgentRun({ ...input, kind: 'generate', sessionId }, signal, requestId),
     );
   }
 
   async compare(input: CompareInput): Promise<void> {
     const requestId = input.requestId ?? randomUUID();
+    const sessionId = await this.conversations.prepare(input.sessionId, requestId, input.content);
     await this.generations.enqueue(
       requestId,
       input.judgeEnabled ? 'judge' : 'compare',
@@ -319,6 +286,7 @@ export class AgentCoordinator implements vscode.Disposable {
           judgeEnabled: input.judgeEnabled,
           ...(input.judgeEnabled ? { judgeModel: input.modelKeys[0] ?? null } : {}),
         });
+        this.conversations.attachThread(sessionId, response.threadId);
         await this.view?.postResult(
           {
             content: formatCompareResponse(response),
@@ -335,12 +303,14 @@ export class AgentCoordinator implements vscode.Disposable {
     if (input === null) {
       return;
     }
+    const sessionId = await this.openChat();
     await this.compare({
       content: input.content,
       contextMode: 'file',
       modelKeys: input.modelKeys,
       judgeEnabled,
       requestId: randomUUID(),
+      ...(sessionId === undefined ? {} : { sessionId }),
     });
   }
 
@@ -349,8 +319,12 @@ export class AgentCoordinator implements vscode.Disposable {
     if (content === null) {
       return;
     }
-    await this.openChat();
-    await this.send({ content, contextMode });
+    const sessionId = await this.openChat();
+    await this.send({
+      content,
+      contextMode,
+      ...(sessionId === undefined ? {} : { sessionId }),
+    });
   }
 
   async runReadOnlyWorkflow(kind: WorkflowKind, contextMode: ContextMode): Promise<void> {
@@ -359,6 +333,7 @@ export class AgentCoordinator implements vscode.Disposable {
       return;
     }
     const requestId = randomUUID();
+    const sessionId = await this.conversations.prepare(undefined, requestId, request);
     await this.generations.enqueue(requestId, 'chat', request, async (signal) => {
       const collected = await this.collect(contextMode);
       const rules = await this.context.projectRules();
@@ -368,11 +343,13 @@ export class AgentCoordinator implements vscode.Disposable {
         context: collected.files,
         ...(rules.length === 0 ? {} : { rules }),
       });
+      const threadId = this.conversations.threadFor(sessionId);
       const result = await this.chat.send(
         {
           content: prompt,
           context: [],
           ...currentModelSelection(this.configuration.read(), this.state.snapshot.models),
+          ...(threadId === undefined ? {} : { threadId }),
         },
         (event) => {
           void this.view?.postEvent(event, requestId);
@@ -380,6 +357,7 @@ export class AgentCoordinator implements vscode.Disposable {
         signal,
         (threadId) => {
           this.activeThreadId = threadId;
+          this.conversations.recordThread(requestId, threadId);
         },
       );
       await this.view?.postResult(result, requestId);
@@ -392,8 +370,9 @@ export class AgentCoordinator implements vscode.Disposable {
       return;
     }
     const requestId = randomUUID();
+    const sessionId = await this.conversations.prepare(undefined, requestId, request);
     await this.generations.enqueue(requestId, 'agent', request, (signal) =>
-      this.executeAgentRun({ content: request, contextMode, kind }, signal, requestId),
+      this.executeAgentRun({ content: request, contextMode, kind, sessionId }, signal, requestId),
     );
   }
 
@@ -418,8 +397,8 @@ export class AgentCoordinator implements vscode.Disposable {
   }
 
   async refreshModels(): Promise<void> {
-    await this.runOperation(async () => {
-      await this.refreshData();
+    await this.connection.run(async () => {
+      await refreshAgentData(this.backend, this.configuration, this.modelService, this.state);
     });
   }
 
@@ -467,30 +446,30 @@ export class AgentCoordinator implements vscode.Disposable {
     signal: AbortSignal,
     requestId: string,
   ): Promise<void> {
+    const threadId = this.conversations.threadFor(input.sessionId);
     await this.agentExecutions.execute(
       {
         ...input,
         configuration: this.configuration.read(),
         selection: currentModelSelection(this.configuration.read(), this.state.snapshot.models),
+        ...(threadId === undefined ? {} : { threadId }),
       },
       signal,
       requestId,
     );
   }
 
-  private async refreshData(): Promise<void> {
-    await refreshAgentData(this.backend, this.configuration, this.modelService, this.state);
-  }
-
-  private async prepareGeneration(): Promise<void> {
+  private prepareGeneration(): Promise<void> {
     this.state.update({
       backendStatus: this.state.snapshot.connected ? 'connected' : 'loading',
       lastError: undefined,
     });
     if (!this.state.snapshot.connected) {
-      throw new Error(vscode.l10n.t('Connect to ClawAI before sending a request.'));
+      return Promise.reject(
+        new Error(vscode.l10n.t('Connect to ClawAI before sending a request.')),
+      );
     }
-    await this.openChat();
+    return Promise.resolve();
   }
 
   private async generationFailed(error: unknown, requestId: string): Promise<void> {
@@ -502,28 +481,6 @@ export class AgentCoordinator implements vscode.Disposable {
       lastError: message,
     });
     await this.view?.postError(message, requestId);
-  }
-
-  private async runOperation(action: () => Promise<void>): Promise<void> {
-    this.state.update({
-      backendStatus: this.state.snapshot.connected ? 'connected' : 'loading',
-      busy: true,
-      lastError: undefined,
-    });
-    try {
-      await action();
-    } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : vscode.l10n.t('ClawAI operation failed.');
-      this.logger.error('ClawAI operation failed.', error);
-      this.state.update({
-        backendStatus: this.state.snapshot.connected ? 'connected' : 'error',
-        lastError: message,
-      });
-      await this.view?.postError(message);
-    } finally {
-      this.state.update({ busy: false });
-    }
   }
 
   private createBackend(configuration: RuntimeConfiguration): BackendClient {
