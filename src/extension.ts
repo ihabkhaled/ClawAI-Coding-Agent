@@ -112,7 +112,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const editAdapter = new VscodeWorkspaceEditAdapter(workspaceScope);
   const diffPreview = new DiffPreviewProvider();
   const sessionVault = new SessionVault(context.secrets);
-  const approvalMemory = new WorkspaceApprovalMemory(context.workspaceState);
+  const approvalMemory = new WorkspaceApprovalMemory(
+    context.globalState,
+    () => workspaceScope.snapshot().selectedFolderKey,
+  );
   const globalContext = new GlobalContextService(context.globalStorageUri);
   const workspaceContext = new WorkspaceContextService(globalContext, workspaceScope);
   const coordinator = new AgentCoordinator(

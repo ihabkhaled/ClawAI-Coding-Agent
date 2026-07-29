@@ -211,6 +211,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-agent-rejected="${translated('Changes rejected')}"
     data-agent-reviewing="${translated('Reviewing file changes')}"
     data-agent-verified="${translated('Verified workspace changes')}"
+    data-always-allow="${translated('Always allow in this workspace')}"
     data-approval-required="${translated('Approval required')}"
     data-approve="${translated('Approve')}"
     data-assistant="${translated('CLAWAI')}"

@@ -430,9 +430,14 @@ function renderApproval(request) {
   elements.approvalPanel.hidden = request === undefined;
   if (request === undefined) {
     elements.approvalPanel.dataset.requestId = '';
+    elements.approvalApprove.textContent = labels.approve;
     return;
   }
   elements.approvalPanel.dataset.requestId = request.id;
+  elements.approvalApprove.textContent =
+    request.kind === 'workspaceContext' || request.kind === 'editGeneration'
+      ? labels.alwaysAllow
+      : labels.approve;
   elements.approvalKind.textContent = request.kind.replaceAll(/([A-Z])/gu, ' $1').trim();
   elements.approvalTitle.textContent = request.title;
   elements.approvalMessage.textContent = request.message;

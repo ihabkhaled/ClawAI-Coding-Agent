@@ -3,16 +3,30 @@ export interface WorkspaceApprovalStatePort {
   update(key: string, value: unknown): PromiseLike<void>;
 }
 
-const ROUTINE_ACCESS_APPROVAL_KEY = 'clawAI.routineAccessApproval';
+const ROUTINE_ACCESS_APPROVAL_KEY_PREFIX = 'clawAI.routineAccessApproval.v2';
 
 export class WorkspaceApprovalMemory {
-  constructor(private readonly state: WorkspaceApprovalStatePort) {}
+  constructor(
+    private readonly state: WorkspaceApprovalStatePort,
+    private readonly workspaceIdentity: () => string | undefined,
+  ) {}
 
   hasRoutineAccess(): boolean {
-    return this.state.get(ROUTINE_ACCESS_APPROVAL_KEY) === true;
+    const key = this.key();
+    return key !== undefined && this.state.get(key) === true;
   }
 
   async rememberRoutineAccess(): Promise<void> {
-    await this.state.update(ROUTINE_ACCESS_APPROVAL_KEY, true);
+    const key = this.key();
+    if (key !== undefined) {
+      await this.state.update(key, true);
+    }
+  }
+
+  private key(): string | undefined {
+    const identity = this.workspaceIdentity();
+    return identity === undefined
+      ? undefined
+      : `${ROUTINE_ACCESS_APPROVAL_KEY_PREFIX}.${identity}`;
   }
 }

@@ -207,6 +207,19 @@ test('handles Full Access and file approvals inside the workbench', async ({ pag
     });
 });
 
+test('labels routine workspace consent as a persistent workspace decision', async ({ page }) => {
+  await sendState(page, {
+    approvalRequest: {
+      id: '64cda3dd-71dd-4b37-a155-54d845ad78fc',
+      kind: 'workspaceContext',
+      title: 'Enable routine workspace access',
+      message: 'Allow safe workspace reads without asking again.',
+    },
+  });
+
+  await expect(page.locator('#approvalApprove')).toHaveText('Always allow in this workspace');
+});
+
 test('shows the owned folder and live coding-agent execution state', async ({ page }) => {
   await sendState(page, {
     agentRun: {
