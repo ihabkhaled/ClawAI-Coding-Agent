@@ -8,6 +8,7 @@ const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const extensionSource = readFileSync(join(root, 'src', 'extension.ts'), 'utf8');
 const webviewSource = readFileSync(join(root, 'src', 'webview', 'chat-view-provider.ts'), 'utf8');
 const webviewMarkup = readFileSync(join(root, 'src', 'webview', 'chat-markup.ts'), 'utf8');
+const clawIcon = readFileSync(join(root, 'resources', 'claw.svg'), 'utf8');
 const commands = manifest.contributes.commands.map((command) => command.command);
 const uniqueCommands = new Set(commands);
 
@@ -23,6 +24,26 @@ for (const command of commands) {
 
 assert.equal(extname(manifest.icon).toLowerCase(), '.png', 'Marketplace icon must be PNG');
 assert.equal(existsSync(join(root, manifest.icon)), true, 'Marketplace icon is missing');
+assert.match(clawIcon, /data-claw-scratches="3"/u, 'Activity icon must identify three scratches');
+assert.equal(
+  [...clawIcon.matchAll(/<path\b/gu)].length,
+  3,
+  'Activity icon must contain exactly three scratch paths',
+);
+assert.doesNotMatch(clawIcon, /<(?:image|text)\b/iu, 'Activity icon must be a pure vector mark');
+assert.equal(
+  manifest.contributes.viewsContainers.activitybar[0].icon,
+  'resources/claw.svg',
+  'Activity Bar must use the claw scratch mark',
+);
+assert.deepEqual(
+  manifest.contributes.commands.find((command) => command.command === 'clawAI.openChat').icon,
+  {
+    light: 'resources/claw.svg',
+    dark: 'resources/claw.svg',
+  },
+  'Editor title must use the claw scratch mark',
+);
 assert.equal(
   manifest.capabilities.untrustedWorkspaces.supported,
   'limited',
