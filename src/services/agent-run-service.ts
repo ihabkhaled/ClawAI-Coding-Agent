@@ -1,4 +1,5 @@
 import { createAgentRunSnapshot } from '../core/agent-run';
+import { EMPTY_CONTEXT } from '../core/empty-context';
 
 import {
   buildAnalysisPrompt,
@@ -23,6 +24,12 @@ function hasNoPlannedActions(plan: EditPlan): boolean {
   return plan.files.length === 0 && (plan.commands?.length ?? 0) === 0;
 }
 
+function isConversationalRequest(content: string): boolean {
+  return /^(?:(?:please\s+)?say\s+(?:hi|hello|hey)(?:\s+(?:back|to\s+me))?|(?:hi|hello|hey)(?:\s+(?:clawai|there))?|good\s+(?:morning|afternoon|evening)|thanks|thank\s+you)[!,.?\s]*$/iu.test(
+    content.trim(),
+  );
+}
+
 async function collectContext(
   input: AgentRunInput,
   context: AgentRunContextPort,
@@ -45,6 +52,9 @@ export class AgentRunService {
 
   async run(input: AgentRunInput, callbacks: AgentRunCallbacks): Promise<AgentRunResult> {
     try {
+      if (isConversationalRequest(input.content)) {
+        return await this.runConversation(input, callbacks);
+      }
       callbacks.onPhase(createAgentRunSnapshot('reading'));
       const context = await collectContext(input, this.context, this.session);
       const rules = await this.context.projectRules();
@@ -65,6 +75,21 @@ export class AgentRunService {
       callbacks.onPhase(createAgentRunSnapshot('failed', undefined, summary));
       throw error;
     }
+  }
+
+  private async runConversation(
+    input: AgentRunInput,
+    callbacks: AgentRunCallbacks,
+  ): Promise<AgentRunResult> {
+    callbacks.onPhase(createAgentRunSnapshot('generating'));
+    const response = await this.send(input, input.content, callbacks);
+    callbacks.onPhase(createAgentRunSnapshot('planned'));
+    return {
+      status: 'planned',
+      content: response.content,
+      context: EMPTY_CONTEXT,
+      threadId: response.threadId,
+    };
   }
 
   private async runPlan(

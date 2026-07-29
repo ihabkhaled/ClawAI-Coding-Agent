@@ -9,10 +9,13 @@ const extensionSource = readFileSync(join(root, 'src', 'extension.ts'), 'utf8');
 const webviewSource = readFileSync(join(root, 'src', 'webview', 'chat-view-provider.ts'), 'utf8');
 const webviewMarkup = readFileSync(join(root, 'src', 'webview', 'chat-markup.ts'), 'utf8');
 const clawIcon = readFileSync(join(root, 'resources', 'claw.svg'), 'utf8');
+const darkClawIconPath = join(root, 'resources', 'claw-dark.svg');
+const lightClawIconPath = join(root, 'resources', 'claw-light.svg');
+const releaseWorkflowPath = join(root, '.github', 'workflows', 'release.yml');
 const commands = manifest.contributes.commands.map((command) => command.command);
 const uniqueCommands = new Set(commands);
 
-assert.equal(manifest.version, '0.4.1', 'release version must be 0.4.1');
+assert.equal(manifest.version, '0.5.0', 'release version must be 0.5.0');
 assert.equal(uniqueCommands.size, commands.length, 'command IDs must be unique');
 for (const command of commands) {
   assert.match(
@@ -30,7 +33,39 @@ assert.equal(
   3,
   'Activity icon must contain exactly three scratch paths',
 );
+assert.equal(
+  [...clawIcon.matchAll(/<path\b[^>]*fill="currentColor"/gu)].length,
+  3,
+  'Every scratch must follow the active VS Code theme foreground',
+);
+assert.equal(existsSync(darkClawIconPath), true, 'Dark-theme scratch icon is missing');
+assert.equal(existsSync(lightClawIconPath), true, 'Light-theme scratch icon is missing');
+const darkClawIcon = readFileSync(darkClawIconPath, 'utf8');
+const lightClawIcon = readFileSync(lightClawIconPath, 'utf8');
+assert.equal(
+  [...darkClawIcon.matchAll(/<path\b[^>]*fill="#fff(?:fff)?"/giu)].length,
+  3,
+  'Dark themes must receive three white scratches',
+);
+assert.equal(
+  [...lightClawIcon.matchAll(/<path\b[^>]*fill="#1e1e1e"/giu)].length,
+  3,
+  'Light themes must receive three dark scratches',
+);
 assert.doesNotMatch(clawIcon, /<(?:image|text)\b/iu, 'Activity icon must be a pure vector mark');
+assert.equal(existsSync(releaseWorkflowPath), true, 'main-branch release workflow is missing');
+const releaseWorkflow = readFileSync(releaseWorkflowPath, 'utf8');
+assert.match(releaseWorkflow, /contents:\s*write/u, 'release workflow needs contents write only');
+assert.match(
+  releaseWorkflow,
+  /gh release create/u,
+  'release workflow must create a GitHub Release',
+);
+assert.match(
+  releaseWorkflow,
+  /clawai-coding-agent-\$\{\{ steps\.version\.outputs\.version \}\}\.vsix/u,
+  'release workflow must attach the versioned VSIX',
+);
 assert.equal(
   manifest.contributes.viewsContainers.activitybar[0].icon,
   'resources/claw.svg',
@@ -39,10 +74,15 @@ assert.equal(
 assert.deepEqual(
   manifest.contributes.commands.find((command) => command.command === 'clawAI.openChat').icon,
   {
-    light: 'resources/claw.svg',
-    dark: 'resources/claw.svg',
+    light: 'resources/claw-light.svg',
+    dark: 'resources/claw-dark.svg',
   },
   'Editor title must use the claw scratch mark',
+);
+assert.match(
+  webviewSource,
+  /panel\.iconPath = \{\s+dark: vscode\.Uri\.joinPath\(this\.extensionUri, 'resources', 'claw-dark\.svg'\),\s+light: vscode\.Uri\.joinPath\(this\.extensionUri, 'resources', 'claw-light\.svg'\),\s+\};/u,
+  'ClawAI editor tab must use the claw scratch mark',
 );
 assert.equal(
   manifest.capabilities.untrustedWorkspaces.supported,

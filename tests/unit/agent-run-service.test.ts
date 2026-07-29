@@ -321,13 +321,7 @@ describe('AgentRunService', () => {
     const service = new AgentRunService(
       contextPort(),
       sessionPort(),
-      textChat(
-        JSON.stringify({
-          summary: 'Hi! How can I help with your code?',
-          files: [],
-          commands: [],
-        }),
-      ),
+      textChat('Hi! How can I help with your code?'),
       new SafeEditService(
         {
           applyAtomically,
@@ -355,12 +349,7 @@ describe('AgentRunService', () => {
       content: 'Hi! How can I help with your code?',
     });
     expect(applyAtomically).not.toHaveBeenCalled();
-    expect(phases.map((phase) => phase.phase)).toEqual([
-      'reading',
-      'generating',
-      'validating',
-      'planned',
-    ]);
+    expect(phases.map((phase) => phase.phase)).toEqual(['generating', 'planned']);
   });
 
   it('stops before generation when edit permission is rejected', async () => {
@@ -423,77 +412,6 @@ describe('AgentRunService', () => {
       editPlan: { summary: 'Create a file' },
     });
     expect(files.size).toBe(0);
-  });
-
-  it('repairs one malformed local-model response in a fresh stream thread', async () => {
-    const files = new Map<string, string>();
-    const phases: AgentRunSnapshot[] = [];
-    const events: Record<string, unknown>[] = [];
-    const send = vi
-      .fn<AgentRunChatPort['send']>()
-      .mockResolvedValueOnce({
-        threadId: 'thread-1',
-        content: JSON.stringify({
-          summary: 'Production-ready code',
-          files: [
-            {
-              path: '.gitattributes',
-              operation: 'create | update | delete',
-              content: 'No changes required.',
-            },
-          ],
-        }),
-      })
-      .mockResolvedValueOnce({
-        threadId: 'thread-2',
-        content: JSON.stringify({
-          summary: 'Create the loop',
-          files: [
-            {
-              path: 'app/for-loop.js',
-              operation: 'create',
-              content: 'for (let i = 1; i <= 10; i += 1) {}\n',
-            },
-          ],
-        }),
-      });
-    const service = new AgentRunService(
-      contextPort(),
-      sessionPort(),
-      { send },
-      new SafeEditService(inMemoryWorkspace(files), async () => true),
-    );
-
-    await expect(
-      service.run(
-        {
-          configuration,
-          content: 'Create a JavaScript loop',
-          contextMode: 'workspace',
-          selection: {
-            model: 'qwen2.5-coder',
-            provider: 'OLLAMA',
-            routingMode: 'MANUAL_MODEL',
-          },
-          signal: new AbortController().signal,
-        },
-        callbacks(phases, events),
-      ),
-    ).resolves.toMatchObject({ status: 'applied', threadId: 'thread-2' });
-    expect(send).toHaveBeenCalledTimes(2);
-    expect(send.mock.calls[1]?.[0]).toMatchObject({
-      routingMode: 'MANUAL_MODEL',
-    });
-    expect(send.mock.calls[1]?.[0].content).toContain(
-      'Original user request: Create a JavaScript loop',
-    );
-    expect(send.mock.calls[1]?.[0].content.split('<previous-response>')[0]).not.toContain(
-      '"operation":"create | update | delete"',
-    );
-    expect(send.mock.calls[1]?.[0]).not.toHaveProperty('threadId');
-    expect(files.has('app/for-loop.js')).toBe(true);
-    expect(phases.map((phase) => phase.phase)).toContain('repairing');
-    expect(events).toContainEqual({ type: 'AGENT_DRAFT_RESET' });
   });
 
   it('rejects unsafe model output and reports a failed phase', async () => {

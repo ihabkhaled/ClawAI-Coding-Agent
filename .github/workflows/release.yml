@@ -1,0 +1,82 @@
+name: Release
+
+on:
+  push:
+    branches:
+      - main
+
+permissions:
+  contents: write
+
+concurrency:
+  group: release-main
+  cancel-in-progress: false
+
+jobs:
+  release:
+    name: Gate and publish VSIX
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Require a new version
+        id: version
+        shell: bash
+        run: |
+          VERSION="$(node -p "require('./package.json').version")"
+          TAG="v${VERSION}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "::error::${TAG} already exists. Increment package.json before every push to main."
+            exit 1
+          fi
+          echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
+          echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Verify generated localization
+        shell: bash
+        run: |
+          npm run l10n:build
+          git diff --exit-code -- package.nls.json package.nls.*.json l10n
+
+      - name: Run release checks
+        run: npm run check
+
+      - name: Run extension-host tests
+        run: xvfb-run -a npm run test:host
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run webview end-to-end tests
+        run: npm run test:playwright
+
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+      - name: Package VSIX
+        run: npm run package
+
+      - name: Verify release artifact
+        shell: bash
+        run: test -f "clawai-coding-agent-${{ steps.version.outputs.version }}.vsix"
+
+      - name: Create GitHub Release
+        env:
+          GH_TOKEN: ${{ github.token }}
+        shell: bash
+        run: |
+          gh release create "${{ steps.version.outputs.tag }}" \
+            "clawai-coding-agent-${{ steps.version.outputs.version }}.vsix" \
+            --target "${GITHUB_SHA}" \
+            --title "ClawAI Coding Agent ${{ steps.version.outputs.version }}" \
+            --generate-notes

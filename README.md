@@ -16,8 +16,8 @@ in the ClawAI platform.
   llama.cpp model manually.
 - Chat from a workspace even when no editor tab is open.
 - Switch between Auto execution and read-only Plan mode.
-- Choose manual approvals, routine pre-approval, or Full Access while immutable
-  safety boundaries remain enforced.
+- Choose manual approvals, persistent per-workspace routine consent, or Full
+  Access while immutable safety boundaries remain enforced.
 - Compare two to five models and optionally request a judge response.
 - Ask about a selection, active file, or bounded workspace context.
 - Generate, fix, review, test, document, plan, and audit code.
@@ -85,9 +85,11 @@ For every valid plan, the extension:
 5. runs validated development commands in a visible, cancellable task terminal;
 6. offers a session-scoped undo.
 
-Routine context/edit-generation prompts follow the selected permission mode.
-Full Access skips repeated routine and final-apply prompts, but never bypasses
-Workspace Trust, secret/path exclusions, command validation, or cancellation.
+In Manual mode, the first routine context/edit-generation prompt offers
+**Always allow in this workspace**. That consent survives reloads and restarts
+for the same trusted workspace. Full Access also skips final-apply prompts, but
+never bypasses Workspace Trust, secret/path exclusions, command validation, or
+cancellation.
 
 ## Context and `.clawai`
 
@@ -140,7 +142,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.4.1` implements the production-ready extension surface from
+Version `0.5.0` implements the production-ready extension surface from
 the ClawAI VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 

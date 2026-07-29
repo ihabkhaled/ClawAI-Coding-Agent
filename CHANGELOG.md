@@ -2,6 +2,28 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.5.0
+
+- Added the three-scratch ClawAI navigation mark to the VS Code Activity Bar
+  and editor title while retaining the cat-with-laptop artwork for the
+  Marketplace listing and branded chat surfaces. Editor tabs use explicit
+  white scratches in dark themes and dark scratches in light themes.
+- Persisted routine consent against a stable workspace identity so accepting
+  **Always allow in this workspace** survives panels, reloads, restarts, and
+  extension updates without weakening final diff or command review.
+- Replaced ambiguous edit-plan prompt examples with exact operation values,
+  request-grounded repair, placeholder rejection, and valid create/delete
+  examples for local Ollama and connected provider models.
+- Added validating and repair phases, coalesced repeated transport progress,
+  cleared malformed drafts before repair, and kept streamed model output in one
+  response.
+- Routed greetings such as `say hi` through a deterministic conversational
+  path with no workspace read, approval, edit-plan parsing, or file mutation.
+- Replaced the large multi-row diagnostic header with a compact route and
+  activity strip plus on-demand file and command details.
+- Added a gated main-branch release workflow that packages and attaches the
+  versioned VSIX to a matching GitHub Release.
+
 ## 0.4.1
 
 - Remembered the first approved routine workspace-access request in

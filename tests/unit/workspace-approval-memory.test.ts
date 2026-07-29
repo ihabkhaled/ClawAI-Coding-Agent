@@ -50,8 +50,8 @@ describe('WorkspaceApprovalMemory', () => {
       update: vi.fn(async () => undefined),
     };
 
-    expect(
-      new WorkspaceApprovalMemory(globalState, () => 'workspace-a').hasRoutineAccess(),
-    ).toBe(false);
+    expect(new WorkspaceApprovalMemory(globalState, () => 'workspace-a').hasRoutineAccess()).toBe(
+      false,
+    );
   });
 });

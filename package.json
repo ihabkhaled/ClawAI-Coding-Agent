@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.4.1",
+  "version": "0.5.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -65,8 +65,8 @@
         "title": "%command.openChat%",
         "category": "ClawAI",
         "icon": {
-          "light": "resources/claw.svg",
-          "dark": "resources/claw.svg"
+          "light": "resources/claw-light.svg",
+          "dark": "resources/claw-dark.svg"
         }
       },
       {

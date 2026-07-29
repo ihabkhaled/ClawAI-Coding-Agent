@@ -143,7 +143,10 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       },
     );
     this.panel = panel;
-    panel.iconPath = vscode.Uri.joinPath(this.extensionUri, 'resources', 'icon.png');
+    panel.iconPath = {
+      dark: vscode.Uri.joinPath(this.extensionUri, 'resources', 'claw-dark.svg'),
+      light: vscode.Uri.joinPath(this.extensionUri, 'resources', 'claw-light.svg'),
+    };
     this.configureWebview(panel.webview);
     panel.onDidDispose(() => {
       this.panel = null;

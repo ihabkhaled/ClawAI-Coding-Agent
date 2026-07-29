@@ -625,6 +625,69 @@ const routineApprovalTranslations = {
   },
 };
 
+const releaseTranslations = {
+  ar: {
+    'Always allow in this workspace': 'السماح دائمًا في مساحة العمل هذه',
+    'Repairing model response': 'إصلاح استجابة النموذج',
+    'Validating edit plan': 'التحقق من خطة التعديلات',
+  },
+  de: {
+    'Always allow in this workspace': 'In diesem Arbeitsbereich immer zulassen',
+    'Repairing model response': 'Modellantwort wird repariert',
+    'Validating edit plan': 'Bearbeitungsplan wird geprüft',
+  },
+  es: {
+    'Always allow in this workspace': 'Permitir siempre en este espacio de trabajo',
+    'Repairing model response': 'Reparando la respuesta del modelo',
+    'Validating edit plan': 'Validando el plan de edición',
+  },
+  fa: {
+    'Always allow in this workspace': 'همیشه در این فضای کاری مجاز باشد',
+    'Repairing model response': 'در حال اصلاح پاسخ مدل',
+    'Validating edit plan': 'در حال اعتبارسنجی طرح ویرایش',
+  },
+  fr: {
+    'Always allow in this workspace': 'Toujours autoriser dans cet espace de travail',
+    'Repairing model response': 'Correction de la réponse du modèle',
+    'Validating edit plan': 'Validation du plan de modification',
+  },
+  hi: {
+    'Always allow in this workspace': 'इस कार्यस्थान में हमेशा अनुमति दें',
+    'Repairing model response': 'मॉडल प्रतिक्रिया सुधारी जा रही है',
+    'Validating edit plan': 'संपादन योजना की पुष्टि की जा रही है',
+  },
+  it: {
+    'Always allow in this workspace': 'Consenti sempre in questa area di lavoro',
+    'Repairing model response': 'Correzione della risposta del modello',
+    'Validating edit plan': 'Convalida del piano di modifica',
+  },
+  ja: {
+    'Always allow in this workspace': 'このワークスペースでは常に許可',
+    'Repairing model response': 'モデル応答を修復中',
+    'Validating edit plan': '編集プランを検証中',
+  },
+  pt: {
+    'Always allow in this workspace': 'Sempre permitir neste espaço de trabalho',
+    'Repairing model response': 'Corrigindo a resposta do modelo',
+    'Validating edit plan': 'Validando o plano de edição',
+  },
+  ru: {
+    'Always allow in this workspace': 'Всегда разрешать в этой рабочей области',
+    'Repairing model response': 'Исправление ответа модели',
+    'Validating edit plan': 'Проверка плана изменений',
+  },
+  th: {
+    'Always allow in this workspace': 'อนุญาตในพื้นที่ทำงานนี้เสมอ',
+    'Repairing model response': 'กำลังแก้ไขคำตอบของโมเดล',
+    'Validating edit plan': 'กำลังตรวจสอบแผนการแก้ไข',
+  },
+  zh: {
+    'Always allow in this workspace': '始终允许此工作区',
+    'Repairing model response': '正在修复模型响应',
+    'Validating edit plan': '正在验证编辑计划',
+  },
+};
+
 function sourceFiles(directory) {
   return readdirSync(directory).flatMap((name) => {
     const path = join(directory, name);
@@ -653,6 +716,7 @@ function runtimeMessages() {
 
 function translate(locale, message) {
   return (
+    releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
     sharedTranslations[locale][message] ??

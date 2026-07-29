@@ -25,8 +25,6 @@ export class WorkspaceApprovalMemory {
 
   private key(): string | undefined {
     const identity = this.workspaceIdentity();
-    return identity === undefined
-      ? undefined
-      : `${ROUTINE_ACCESS_APPROVAL_KEY_PREFIX}.${identity}`;
+    return identity === undefined ? undefined : `${ROUTINE_ACCESS_APPROVAL_KEY_PREFIX}.${identity}`;
   }
 }

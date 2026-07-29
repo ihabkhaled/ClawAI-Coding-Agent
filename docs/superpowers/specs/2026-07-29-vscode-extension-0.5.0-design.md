@@ -8,14 +8,19 @@ from local Ollama and connected cloud models into safe file changes.
 
 ## Visual identity
 
-- Replace the cat/terminal glyph with one three-scratch claw mark.
-- Use a theme-aware monochrome SVG for the Activity Bar and editor-title action.
-- Use the same mark on a transparent square PNG for the extension listing, chat
-  participant, editor tab, header, and empty state.
+- Keep the supplied cat-with-laptop artwork as the Marketplace extension icon.
+- Replace the in-workbench cat/terminal navigation glyph with one three-scratch
+  claw mark.
+- Use a theme-aware monochrome SVG for the Activity Bar, plus explicit white
+  scratches in dark themes and dark scratches in light themes for editor-title
+  actions and editor tabs.
+- Use the cat artwork for the extension listing, webview header, and empty
+  state.
 - Optimize the silhouette for 16–24 px: exactly three separated diagonal cuts,
   strong cores, tapered torn ends, and generous negative space.
 
-The scratch mark is the release's visual signature. The surrounding UI remains
+The scratch mark is the workbench navigation signature; the detailed cat art is
+reserved for branded surfaces that can support it. The surrounding UI remains
 native to the active VS Code theme with no decorative gradients or oversized
 branding.
 
@@ -90,6 +95,8 @@ chat answer. Repeated identical progress events are coalesced.
   request, live progress, model persistence, and approval wording.
 - Extension-host activation, localization generation, package audit, strict
   checks, VSIX packaging, and production dependency audit must pass.
+- A main-branch push with a new manifest version must create a matching GitHub
+  Release and attach the generated VSIX.
 - Install the VSIX in an isolated VS Code profile and the normal profile.
 - Live E2E must prove: consent does not repeat, a local model can create a
   requested JavaScript file, a connected model is selectable when available,

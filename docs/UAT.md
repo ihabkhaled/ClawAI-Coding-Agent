@@ -18,7 +18,9 @@
 - [ ] AUTO omits a manual provider/model.
 - [ ] Manual selection persists per workspace and falls back to AUTO if removed.
 - [ ] Installed Ollama and ready llama.cpp models appear once in the local group.
-- [ ] Streaming text and provider/model attribution render incrementally.
+- [ ] Streaming text, progress, validation, repair, and provider/model
+      attribution render incrementally in one response without repeated
+      transport messages.
 - [ ] Cancellation stops the local request and calls backend cancellation.
 - [ ] History opens persisted messages.
 - [ ] Compare enforces two to five models; judge mode shows judged output.
@@ -38,8 +40,9 @@
 ## Edits
 
 - [ ] Plan mode returns a read-only implementation plan and never applies files.
-- [ ] In Ask for Approval, approve the combined routine workspace-access card
-      once; confirm later prompts and a VS Code reload do not show it again.
+- [ ] In Ask for Approval, choose **Always allow in this workspace** once;
+      confirm later prompts, panel changes, a VS Code reload, and restart do not
+      show it again.
 - [ ] Confirm final file changes and commands still require their own approval
       in Ask for Approval mode.
 - [ ] Approve for me and Full Access skip their documented routine prompts.
@@ -60,6 +63,12 @@
 
 ## Accessibility and presentation
 
+- [ ] The Marketplace listing uses the cat-with-laptop icon.
+- [ ] The Activity Bar and editor-title action use the three-scratch mark,
+      render white on dark themes and dark on light themes, and
+      remain distinct at 16–24 px.
+- [ ] The route and coding activity remain a compact line until details are
+      explicitly expanded.
 - [ ] Keyboard reaches skip link, route toggle, model tray, composer, and actions.
 - [ ] Focus is visible and live updates are announced.
 - [ ] Light, dark, and high-contrast themes remain readable.
@@ -73,3 +82,4 @@
       audit, and VSIX packaging pass.
 - [ ] Clean-profile VSIX install activates within budget.
 - [ ] VSIX contains no source, tests, maps, coverage, secrets, or nested package.
+- [ ] The matching GitHub Release tag exists and contains the versioned VSIX.

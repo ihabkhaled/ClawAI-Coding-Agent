@@ -38,10 +38,14 @@ For Visual Studio Marketplace:
 3. Authenticate locally with `npx vsce login clawai`; paste the token only into
    the interactive prompt.
 4. Publish the already-verified version with
-   `npx vsce publish --packagePath clawai-coding-agent-0.4.1.vsix`.
+   `npx vsce publish --packagePath clawai-coding-agent-0.5.0.vsix`.
 5. Verify the Marketplace listing and install that public build into a clean
    VS Code profile.
 
 Never store the Personal Access Token in settings, files, workflow logs, shell
 history, or commits. Increment the package version before every later release;
 Marketplace versions are immutable.
+
+Every push to `main` must carry a new package version. The Release workflow
+rejects an already-tagged version, runs the release gates, creates the matching
+`v<version>` GitHub Release, and attaches the versioned VSIX.

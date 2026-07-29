@@ -23,7 +23,9 @@ ESBuild, VSCE, HTML/CSS/JavaScript webview.
   final diff review, bounded commands, strict CSP, and runtime validation.
 - All user-facing strings must use VS Code localization and all 13 locale
   bundles must be regenerated.
-- Commit and push every independently gated task before starting the next.
+- Commit every independently gated task locally. Push the complete release once;
+  every later push to `main` must first bump the package version so each push
+  can produce a unique GitHub Release.
 
 ---
 
@@ -32,16 +34,19 @@ ESBuild, VSCE, HTML/CSS/JavaScript webview.
 **Files:**
 
 - Modify: `resources/claw.svg`
+- Create: `resources/claw-dark.svg`
+- Create: `resources/claw-light.svg`
 - Modify: `resources/icon.png`
 - Modify: `package.json`
 - Test: `scripts/package-audit.mjs`
 
 **Interfaces:**
 
-- Consumes: VS Code `viewsContainers.activitybar`, `commands[].icon`, extension
-  `icon`, and chat participant `iconPath`.
-- Produces: one three-scratch SVG glyph and a 128×128 transparent PNG carrying
-  the same silhouette.
+- Consumes: VS Code `viewsContainers.activitybar`, `commands[].icon`, webview
+  panel `iconPath`, and extension `icon`.
+- Produces: one theme-driven Activity Bar glyph, explicit white/dark
+  editor-tab variants, and a 128×128 Marketplace PNG carrying the supplied
+  cat-with-laptop artwork.
 
 - [ ] **Step 1: Add asset assertions**
 
@@ -58,23 +63,24 @@ declare the scratch identity marker.
 - [ ] **Step 3: Install the generated scratch assets**
 
 Use three separated diagonal filled paths in a `0 0 24 24` SVG. Produce the
-transparent 128×128 PNG from the generated chroma-key image. Keep
-`clawAI.openChat` and the Activity Bar container pointed at `claw.svg`; keep
-listing, tab, and participant icon paths pointed at `icon.png`.
+128×128 PNG from the supplied cat-with-laptop artwork. Keep the Activity Bar
+container pointed at the `currentColor` SVG. Point editor title and panel tabs
+at explicit white-on-dark and dark-on-light scratch variants. Keep only the
+Marketplace listing and branded webview artwork pointed at `icon.png`.
 
 - [ ] **Step 4: Verify and visually inspect tiny renders**
 
 Run: `npm run package:audit`
 
 Render or inspect the SVG at 16, 20, and 24 px and the PNG at 32 and 128 px.
-Expected: three distinct scratches with open negative space at every size.
+Expected: three distinct scratches with open negative space in navigation and a
+legible cat/laptop composition on branded surfaces.
 
-- [ ] **Step 5: Commit and push**
+- [ ] **Step 5: Commit locally**
 
 ```bash
-git add package.json resources/claw.svg resources/icon.png scripts/package-audit.mjs
+git add package.json resources/claw*.svg resources/icon.png scripts/package-audit.mjs
 git commit -m "feat: adopt claw scratch identity"
-git push origin main
 ```
 
 ### Task 2: Durable routine workspace consent
@@ -132,12 +138,11 @@ Run the focused Vitest command and:
 Expected: PASS; a routine approval disappears after acceptance and stays absent
 after a simulated reload.
 
-- [ ] **Step 5: Commit and push**
+- [ ] **Step 5: Commit locally**
 
 ```bash
 git add src tests media l10n package.nls*.json
 git commit -m "fix: remember routine workspace consent"
-git push origin main
 ```
 
 ### Task 3: Exact and grounded model edit plans
@@ -149,6 +154,7 @@ git push origin main
 - Modify: `src/services/agent-run-service.types.ts`
 - Test: `tests/unit/workflow-service.test.ts`
 - Test: `tests/unit/agent-run-service.test.ts`
+- Test: `tests/unit/agent-run-conversation.test.ts`
 - Test: `tests/unit/edit-plan.test.ts`
 
 **Interfaces:**
@@ -175,7 +181,9 @@ validated plan.
 Replace the ambiguous schema prose with explicit valid examples and exact enum
 language. Pass the original request and workspace path summary to
 `buildEditPlanRepairPrompt`. Preserve strict Zod validation, the `contents`
-alias, no-action plans, and unsafe-command filtering.
+alias, no-action plans, and unsafe-command filtering. Route narrow greeting
+intents through normal streamed conversation before context collection so
+`say hi` cannot request workspace access or propose edits.
 
 - [ ] **Step 4: Run focused tests**
 
@@ -185,12 +193,11 @@ Run:
 Expected: PASS with the malformed sequence repaired into the requested file
 change.
 
-- [ ] **Step 5: Commit and push**
+- [ ] **Step 5: Commit locally**
 
 ```bash
 git add src/services tests/unit
 git commit -m "fix: ground coding model edit plans"
-git push origin main
 ```
 
 ### Task 4: Compact activity and coherent streaming
@@ -244,12 +251,11 @@ Expected: dark, light, and narrow snapshots pass; controls retain keyboard
 focus, status uses `aria-live`, reduced motion is respected, and no horizontal
 overflow appears at 240 px.
 
-- [ ] **Step 5: Commit and push**
+- [ ] **Step 5: Commit locally**
 
 ```bash
 git add src media tests l10n
 git commit -m "feat: stream compact coding activity"
-git push origin main
 ```
 
 ### Task 5: Release and live verification
@@ -264,12 +270,14 @@ git push origin main
 - Regenerate: `l10n/*.json`
 - Regenerate: `package.nls*.json`
 - Create: `clawai-coding-agent-0.5.0.vsix`
+- Create: `.github/workflows/release.yml`
 
 **Interfaces:**
 
 - Consumes: all prior tasks.
 - Produces: installable release `0.5.0` and a parent-repository submodule
-  pointer to its final commit.
+  pointer to its final commit. A new manifest version on `main` produces a
+  matching Git tag and GitHub Release with the VSIX attached.
 
 - [ ] **Step 1: Bump and document**
 
@@ -292,6 +300,11 @@ npm audit --omit=dev --audit-level=high
 
 Expected: every command exits zero and creates
 `clawai-coding-agent-0.5.0.vsix`.
+
+Add a main-branch release workflow that verifies the version tag does not
+already exist, runs the complete release gate, packages the VSIX, and publishes
+`v0.5.0` with that file. Keep GitHub Actions permissions limited to
+`contents: write`.
 
 - [ ] **Step 3: Install and run isolated VS Code E2E**
 
