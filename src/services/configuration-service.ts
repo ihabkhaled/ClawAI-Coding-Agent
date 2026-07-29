@@ -42,27 +42,7 @@ export class ConfigurationService {
     return inspected?.globalValue !== undefined;
   }
 
-  async promptForBackendUrl(): Promise<string | null> {
-    const value = await vscode.window.showInputBox({
-      title: vscode.l10n.t('Connect ClawAI'),
-      prompt: vscode.l10n.t(
-        'Enter the ClawAI app address. The extension adds /api/v1 automatically.',
-      ),
-      placeHolder: 'https://claw.local or https://localhost',
-      value: 'https://claw.local',
-      ignoreFocusOut: true,
-      validateInput: (candidate) => {
-        try {
-          normalizeBackendUrl(candidate);
-          return undefined;
-        } catch (error: unknown) {
-          return error instanceof Error ? error.message : vscode.l10n.t('Invalid ClawAI URL.');
-        }
-      },
-    });
-    if (value === undefined) {
-      return null;
-    }
+  async saveBackendUrl(value: string): Promise<string> {
     const normalized = normalizeBackendUrl(value);
     await vscode.workspace
       .getConfiguration('clawAI')
@@ -75,7 +55,7 @@ export class ConfigurationService {
     return {
       agentMode: configuration.get<AgentMode>('agentMode') ?? 'AUTO',
       backendUrl: normalizeBackendUrl(
-        configuration.get<string>('backendUrl') ?? 'http://localhost',
+        configuration.get<string>('backendUrl') ?? 'https://claw.local',
       ),
       requestTimeoutMs: numberSetting(configuration, 'requestTimeoutMs', 60_000),
       routingMode: normalizeRoutingMode(configuration.get<unknown>('routingMode') ?? 'AUTO'),

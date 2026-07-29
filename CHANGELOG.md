@@ -2,6 +2,19 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.7.0
+
+- Replaced the disconnected workbench with a focused first-run connection
+  gateway. History, models, workspace controls, agent status, suggestions, and
+  the composer remain hidden until authorization succeeds.
+- Added an editable `https://claw.local` default, a prominent in-extension
+  Connect action, secure-browser guidance, authorization progress, and inline
+  connection errors without VS Code input dialogs.
+- Changed the **ClawAI: Connect** command to open the same in-extension
+  onboarding flow. Backend selection is normalized and persisted before the
+  browser authorization starts, while the authenticated session continues to
+  survive tabs, windows, reloads, and restarts.
+
 ## 0.6.1
 
 - Fixed CI artifact publishing after the VSIX archive moved into `builds/`.

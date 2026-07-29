@@ -44,13 +44,13 @@ Node.js is only required when developing or packaging the extension.
 ## Quick start
 
 1. Install the VSIX or Marketplace release.
-2. On first launch, enter the ClawAI app origin, such as
-   `https://claw.local` or `https://localhost`. The extension adds `/api/v1`
-   automatically.
-3. Choose **Connect**, then approve VS Code in the ClawAI web app. Credentials
-   are entered only in the web app; the extension receives a one-time
-   authorization code and stores the resulting tokens in VS Code
-   `SecretStorage`.
+2. The focused connection screen starts with `https://claw.local`. Keep it or
+   enter another ClawAI app origin such as `https://localhost`; `/api/v1` is
+   added automatically.
+3. Choose **Connect to ClawAI**, then approve VS Code in the ClawAI web app.
+   Credentials are entered only in the web app; the extension receives a
+   one-time authorization code and stores the resulting tokens in VS Code
+   `SecretStorage`. The full workbench appears only after this succeeds.
 4. Keep **Automatic routing** selected or choose an entitled cloud/local model
    in the composer.
 5. Choose **Auto** or **Plan mode**, then select the permission level appropriate
@@ -114,7 +114,7 @@ layout.
 
 | Setting                   | Scope     | Default                                 |
 | ------------------------- | --------- | --------------------------------------- |
-| `clawAI.backendUrl`       | machine   | prompted on first launch                |
+| `clawAI.backendUrl`       | machine   | `https://claw.local`                    |
 | `clawAI.requestTimeoutMs` | machine   | `60000`                                 |
 | `clawAI.routingMode`      | workspace | `AUTO`                                  |
 | `clawAI.agentMode`        | workspace | `AUTO`                                  |

@@ -23,7 +23,7 @@ function registerCommands(
   globalContext: GlobalContextService,
 ): void {
   const commands: [string, (...arguments_: unknown[]) => unknown][] = [
-    ['clawAI.connect', () => coordinator.connect()],
+    ['clawAI.connect', () => coordinator.openChat()],
     ['clawAI.logout', () => coordinator.logout()],
     [
       'clawAI.openChat',
@@ -132,7 +132,7 @@ export function activate(context: vscode.ExtensionContext): void {
     agent: (input) => coordinator.runAgent(input),
     cancel: () => coordinator.cancel(),
     compare: (input) => coordinator.compare(input),
-    connect: () => coordinator.connect(),
+    connect: (backendUrl) => coordinator.connect(backendUrl),
     logout: () => coordinator.logout(),
     openThread: (input) => coordinator.openThread(input),
     openFolder: async () => {

@@ -1,6 +1,6 @@
 import { expect, test } from '@playwright/test';
 
-import { expectWindowsScreenshot, localModel, type MockBridge } from './fixtures';
+import { expectWindowsScreenshot, localModel, sendState, type MockBridge } from './fixtures';
 
 import type { Page } from '@playwright/test';
 
@@ -11,54 +11,6 @@ declare global {
 }
 
 const browserIssues = new WeakMap<Page, string[]>();
-
-function baseState() {
-  return {
-    agentRun: undefined,
-    agentMode: 'AUTO',
-    approvalRequest: undefined,
-    backendStatus: 'connected',
-    backendUrl: 'https://claw.local',
-    busy: false,
-    connected: true,
-    contextReceipt: undefined,
-    entitlements: undefined,
-    generationQueue: {
-      active: undefined,
-      pending: [],
-    },
-    history: [],
-    lastError: undefined,
-    models: [localModel],
-    modelWarnings: [],
-    permissionMode: 'MANUAL',
-    routingMode: 'AUTO',
-    selectedModel: '',
-    usage: undefined,
-    user: { email: 'developer@claw.local', id: 'user-1' },
-    workspaceReadiness: {
-      hasActiveFile: false,
-      hasSelection: false,
-      hasWorkspace: true,
-      trusted: true,
-      workspaceName: 'ClawAI',
-    },
-    workspaceScope: {
-      folders: [{ key: 'workspace-key', name: 'ClawAI' }],
-      selectedFolderKey: 'workspace-key',
-      selectedFolderName: 'ClawAI',
-    },
-  };
-}
-
-async function sendState(page: Page, patch: Record<string, unknown> = {}): Promise<void> {
-  await page.evaluate(
-    (state) => {
-      window.__clawMock.send({ type: 'state', state });
-    },
-    Object.assign(baseState(), patch),
-  );
-}
 
 test.beforeEach(async ({ page }) => {
   const issues: string[] = [];
@@ -90,16 +42,6 @@ test('renders the workspace-ready editor workbench without an active file', asyn
     .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
     .toEqual({ type: 'refreshModels' });
   await expectWindowsScreenshot(page, 'workbench-dark.png');
-});
-
-test('keeps model routing available while the account reconnects', async ({ page }) => {
-  await sendState(page, {
-    backendStatus: 'loading',
-    connected: false,
-  });
-
-  await expect(page.locator('#modelSelect')).toBeEnabled();
-  await expect(page.locator('#modelSelect')).toHaveValue('AUTO');
 });
 
 test('submits coding prompts to the agent execution path by default', async ({ page }) => {

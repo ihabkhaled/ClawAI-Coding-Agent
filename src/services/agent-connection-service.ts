@@ -27,12 +27,8 @@ export class AgentConnectionService {
 
   async initialize(): Promise<void> {
     if (!this.configuration.hasConfiguredBackendUrl()) {
-      const configured = await this.configuration.promptForBackendUrl();
-      if (configured === null) {
-        this.markDisconnected();
-        return;
-      }
-      await this.configurationChanged();
+      this.markDisconnected();
+      return;
     }
     const tokens = await this.sessionVault.load();
     if (tokens === null) {
@@ -68,15 +64,10 @@ export class AgentConnectionService {
     }
   }
 
-  async connect(): Promise<void> {
-    if (!this.configuration.hasConfiguredBackendUrl()) {
-      const configured = await this.configuration.promptForBackendUrl();
-      if (configured === null) {
-        return;
-      }
-      await this.configurationChanged();
-    }
+  async connect(backendUrl: string): Promise<void> {
     await this.run(async () => {
+      await this.configuration.saveBackendUrl(backendUrl);
+      await this.configurationChanged();
       const user = await this.authorization.signIn();
       this.state.update({
         backendStatus: 'connected',

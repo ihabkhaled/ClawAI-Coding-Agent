@@ -27,11 +27,15 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('id="historySelect"');
     expect(html).toContain('id="conversationTitle"');
     expect(html).toContain('aria-label="Conversation history"');
+    expect(html).toContain('id="connectionGate"');
+    expect(html).toContain('id="backendUrlInput"');
+    expect(html).toContain('id="connectButton"');
+    expect(html).toContain('id="authenticatedUi"');
     expect(html).toContain('id="approvalReview"');
   });
 
   it('keeps accessible landmarks and a strict nonce-based CSP without inline handlers', () => {
-    expect(html).toContain('href="#prompt"');
+    expect(html).toContain('href="#backendUrlInput"');
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain('aria-live="assertive"');
     expect(html).toContain('<html lang="en" dir="ltr">');

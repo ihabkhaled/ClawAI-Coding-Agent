@@ -38,11 +38,12 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
   <title>${translated('ClawAI Coding Agent')}</title>
 </head>
 <body>
-  <a class="skip-link" href="#prompt">${translated('Skip to composer')}</a>
+  <a id="skipLink" class="skip-link" href="#backendUrlInput">${translated('Skip to connection')}</a>
   <main class="shell">
     <header id="workspaceBar" class="workspace-bar">
       <img class="brand-logo" src="${escapeHtml(input.logoUri)}" alt="">
-      <div class="workspace-identity">
+      <strong id="disconnectedBrand" class="disconnected-brand">${translated('ClawAI Coding Agent')}</strong>
+      <div id="workspaceIdentity" class="workspace-identity" hidden>
         <p class="utility-label">${translated('ClawAI')}</p>
         <div class="conversation-heading">
           <strong id="conversationTitle">${translated('New ClawAI chat')}</strong>
@@ -57,7 +58,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
           <span id="trustBadge" class="badge">${translated('No folder')}</span>
         </div>
       </div>
-      <div class="workspace-actions">
+      <div id="workspaceActions" class="workspace-actions" hidden>
         <button id="openFolderButton" class="quiet-button" type="button" hidden>${translated('Open folder')}</button>
         <button id="refreshModelsButton" class="icon-button" type="button" title="${translated('Refresh models')}" aria-label="${translated('Refresh models')}">↻</button>
         <button id="newChatButton" class="icon-button" type="button" title="${translated('New conversation')}" aria-label="${translated('New conversation')}">＋</button>
@@ -65,6 +66,39 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       </div>
     </header>
 
+    <section id="connectionGate" class="connection-gate" aria-labelledby="connectionTitle">
+      <div class="connection-card">
+        <div class="connection-hero">
+          <span class="connection-logo-wrap"><img class="connection-logo" src="${escapeHtml(input.logoUri)}" alt=""></span>
+          <p class="utility-label">${translated('GET STARTED')}</p>
+          <h1 id="connectionTitle">${translated('Connect to ClawAI')}</h1>
+          <p>${translated('Choose your ClawAI app address, then authorize securely in your browser.')}</p>
+        </div>
+        <form id="connectionForm" class="connection-form">
+          <label for="backendUrlInput">${translated('ClawAI app address')}</label>
+          <div class="connection-input-row">
+            <span class="connection-lock" aria-hidden="true">&#9671;</span>
+            <input id="backendUrlInput" name="backendUrl" type="url" value="https://claw.local" maxlength="2000" autocomplete="url" spellcheck="false" required>
+          </div>
+          <small>${translated('Use https://claw.local or https://localhost. The API path is added automatically.')}</small>
+          <button id="connectButton" class="connect-button" type="submit">
+            <span id="connectButtonLabel">${translated('Connect to ClawAI')}</span>
+            <b aria-hidden="true">&rarr;</b>
+          </button>
+        </form>
+        <div id="connectionProgress" class="connection-progress" role="status" hidden>
+          <span class="connection-spinner" aria-hidden="true"></span>
+          <span>${translated('Opening secure browser authorization...')}</span>
+        </div>
+        <p id="connectionError" class="connection-error" role="alert" hidden></p>
+        <div class="connection-security">
+          <span aria-hidden="true">&#8961;</span>
+          <p><strong>${translated('Browser-based sign in')}</strong><small>${translated('Passwords never enter VS Code. Your session is stored securely and reused across windows.')}</small></p>
+        </div>
+      </div>
+    </section>
+
+    <div id="authenticatedUi" class="authenticated-ui" hidden>
     <section class="agent-status" aria-label="${translated('Agent status')}">
       <button id="routeToggle" class="route-summary" type="button" aria-expanded="false">
         <span id="backendDot" class="status-shape" aria-hidden="true"></span>
@@ -192,6 +226,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       </div>
       <p class="composer-footnote">${translated('Ctrl/⌘ + Enter to send · final edits always require review')}</p>
     </form>
+    </div>
     <p id="announcer" class="sr-only" aria-live="assertive"></p>
   </main>
   <div id="toastStack" class="toast-stack" role="status" aria-live="polite"></div>
@@ -232,8 +267,10 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-automatic-routing="${translated('Automatic routing')}"
     data-choose-models="${translated('Choose between 2 and 5 models.')}"
     data-connect="${translated('Connect')}"
+    data-connect-clawai="${translated('Connect to ClawAI')}"
     data-connected="${translated('Connected')}"
     data-connecting="${translated('Connecting')}"
+    data-opening-authorization="${translated('Opening authorization...')}"
     data-completed="${translated('Completed')}"
     data-context-empty="${translated('No workspace context attached')}"
     data-context-file="${translated('Using the active file')}"
@@ -279,6 +316,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-retry="${translated('Retry')}"
     data-running="${translated('Running')}"
     data-send="${translated('Send')}"
+    data-skip-connection="${translated('Skip to connection')}"
+    data-skip-composer="${translated('Skip to composer')}"
     data-trusted="${translated('Trusted')}"
     data-undo="${translated('Undo')}"
     data-untrusted="${translated('Restricted')}"

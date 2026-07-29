@@ -185,8 +185,8 @@ export class AgentCoordinator implements vscode.Disposable {
     this.refreshWorkspaceReadiness();
   }
 
-  async connect(): Promise<void> {
-    await this.connection.connect();
+  async connect(backendUrl: string): Promise<void> {
+    await this.connection.connect(backendUrl);
   }
 
   dispose(): void {

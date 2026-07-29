@@ -76,7 +76,13 @@ textarea:disabled {
   display: grid;
   height: 100vh;
   min-height: 460px;
-  grid-template-rows: auto auto minmax(0, 1fr) auto auto;
+  grid-template-rows: auto minmax(0, 1fr);
+}
+
+.authenticated-ui {
+  display: grid;
+  min-height: 0;
+  grid-template-rows: auto minmax(0, 1fr) auto auto;
 }
 
 .workspace-bar {
@@ -182,6 +188,205 @@ textarea:disabled {
   align-items: center;
   margin-inline-start: auto;
   gap: 5px;
+}
+
+.disconnected-brand {
+  overflow: hidden;
+  font-size: 0.88rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.connection-gate {
+  display: grid;
+  min-height: 0;
+  place-items: center;
+  padding: clamp(18px, 5vw, 58px) 16px;
+  overflow: auto;
+}
+
+.connection-card {
+  width: min(460px, 100%);
+  padding: clamp(20px, 4vw, 32px);
+  border: 1px solid color-mix(in srgb, var(--claw-accent) 32%, var(--claw-border));
+  border-radius: 14px;
+  background:
+    linear-gradient(
+      145deg,
+      color-mix(in srgb, var(--claw-accent) 5%, transparent),
+      transparent 54%
+    ),
+    var(--claw-card);
+  box-shadow: 0 18px 52px color-mix(in srgb, #000 18%, transparent);
+}
+
+.connection-hero {
+  display: grid;
+  justify-items: center;
+  margin-block-end: 24px;
+  text-align: center;
+}
+
+.connection-logo-wrap {
+  display: grid;
+  width: 62px;
+  height: 62px;
+  margin-block-end: 14px;
+  place-items: center;
+  border: 1px solid color-mix(in srgb, var(--claw-accent) 60%, var(--claw-border));
+  border-radius: 18px;
+  background: color-mix(in srgb, var(--claw-accent) 10%, var(--claw-card));
+  box-shadow: 0 10px 30px color-mix(in srgb, var(--claw-accent) 16%, transparent);
+}
+
+.connection-logo {
+  width: 50px;
+  height: 50px;
+  border-radius: 14px;
+  object-fit: cover;
+}
+
+.connection-hero h1 {
+  margin: 6px 0 7px;
+  font-size: clamp(1.35rem, 4vw, 1.75rem);
+  letter-spacing: -0.025em;
+}
+
+.connection-hero > p:last-child {
+  max-width: 360px;
+  margin: 0;
+  color: var(--claw-muted);
+  line-height: 1.55;
+}
+
+.connection-form {
+  display: grid;
+  gap: 8px;
+}
+
+.connection-form > label {
+  font-size: 0.78rem;
+  font-weight: 700;
+}
+
+.connection-form > small {
+  color: var(--claw-muted);
+  font-size: 0.7rem;
+  line-height: 1.45;
+}
+
+.connection-input-row {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  border: 1px solid var(--vscode-input-border, var(--claw-border));
+  border-radius: 7px;
+  background: var(--vscode-input-background);
+}
+
+.connection-input-row:focus-within {
+  border-color: var(--vscode-focusBorder);
+  box-shadow: 0 0 0 1px var(--vscode-focusBorder);
+}
+
+.connection-lock {
+  padding-inline: 12px 4px;
+  color: var(--claw-accent);
+  font-size: 0.9rem;
+}
+
+.connection-input-row input {
+  min-width: 0;
+  flex: 1;
+  padding: 9px 11px 9px 7px;
+  border: 0;
+  outline: 0;
+  color: var(--vscode-input-foreground);
+  background: transparent;
+  font-family: var(--vscode-editor-font-family);
+}
+
+.connect-button {
+  display: flex;
+  min-height: 40px;
+  align-items: center;
+  justify-content: center;
+  margin-block-start: 7px;
+  gap: 9px;
+  border: 1px solid var(--vscode-button-border, transparent);
+  border-radius: 7px;
+  color: var(--vscode-button-foreground);
+  background: var(--vscode-button-background);
+  font-weight: 700;
+}
+
+.connect-button:hover:not(:disabled) {
+  background: var(--vscode-button-hoverBackground);
+}
+
+.connect-button b {
+  font-size: 1.05rem;
+}
+
+.connection-progress {
+  display: flex;
+  min-height: 38px;
+  align-items: center;
+  justify-content: center;
+  margin-block-start: 12px;
+  gap: 9px;
+  color: var(--claw-muted);
+  font-size: 0.75rem;
+}
+
+.connection-spinner {
+  width: 14px;
+  height: 14px;
+  border: 2px solid color-mix(in srgb, var(--claw-muted) 38%, transparent);
+  border-block-start-color: var(--claw-accent);
+  border-radius: 50%;
+  animation: connection-spin 0.8s linear infinite;
+}
+
+.connection-error {
+  margin: 12px 0 0;
+  padding: 9px 11px;
+  border: 1px solid color-mix(in srgb, var(--vscode-errorForeground) 55%, var(--claw-border));
+  border-radius: 6px;
+  color: var(--vscode-errorForeground);
+  background: color-mix(in srgb, var(--vscode-errorForeground) 7%, transparent);
+  font-size: 0.74rem;
+  line-height: 1.45;
+}
+
+.connection-security {
+  display: flex;
+  align-items: flex-start;
+  margin-block-start: 20px;
+  padding-block-start: 16px;
+  gap: 9px;
+  border-block-start: 1px solid var(--claw-border);
+  color: var(--claw-muted);
+}
+
+.connection-security > span {
+  color: var(--vscode-testing-iconPassed);
+}
+
+.connection-security p {
+  display: grid;
+  margin: 0;
+  gap: 3px;
+}
+
+.connection-security strong {
+  color: var(--vscode-foreground);
+  font-size: 0.73rem;
+}
+
+.connection-security small {
+  font-size: 0.68rem;
+  line-height: 1.45;
 }
 
 .badge {
@@ -1220,6 +1425,12 @@ textarea:disabled {
   }
 }
 
+@keyframes connection-spin {
+  to {
+    transform: rotate(360deg);
+  }
+}
+
 @media (max-width: 560px) {
   .workspace-bar {
     padding-inline: 8px;
@@ -1230,6 +1441,14 @@ textarea:disabled {
     overflow: hidden;
     text-overflow: ellipsis;
     white-space: nowrap;
+  }
+
+  .connection-gate {
+    padding: 12px 8px;
+  }
+
+  .connection-card {
+    padding: 20px 16px;
   }
 
   .route-rail {
@@ -1284,6 +1503,10 @@ textarea:disabled {
     display: none;
   }
 
+  .disconnected-brand {
+    display: block;
+  }
+
   .workspace-line {
     display: grid;
     gap: 2px;
@@ -1316,6 +1539,7 @@ textarea:disabled {
     min-width: 100%;
   }
 
+  .connect-button,
   .send-button {
     flex: 0 0 38px !important;
   }
@@ -1338,6 +1562,8 @@ textarea:disabled {
 
 @media (forced-colors: active) {
   .brand-mark,
+  .connection-card,
+  .connection-input-row,
   .message-card,
   .agent-run-panel,
   .change-operation,

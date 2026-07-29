@@ -29,7 +29,10 @@ const contextModeSchema: z.ZodType<ContextMode> = z.enum([
 ]);
 const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ready') }),
-  z.object({ type: z.literal('connect') }),
+  z.object({
+    type: z.literal('connect'),
+    backendUrl: z.string().trim().min(1).max(2_000),
+  }),
   z.object({ type: z.literal('logout') }),
   z.object({ type: z.literal('cancel') }),
   z.object({ type: z.literal('undo') }),
@@ -112,7 +115,7 @@ export interface ChatViewActions {
       requestId: string;
     },
   ): Promise<void>;
-  connect(): Promise<void>;
+  connect(backendUrl: string): Promise<void>;
   logout(): Promise<void>;
   openFolder(): Promise<void>;
   openThread(input: SessionInput & { threadId: string }): Promise<void>;
@@ -341,7 +344,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     sourceSessionId: string,
   ): Promise<void> {
     if (request.type === 'connect') {
-      await this.actions.connect();
+      await this.actions.connect(request.backendUrl);
     } else if (request.type === 'logout') {
       await this.actions.logout();
     } else if (request.type === 'cancel') {

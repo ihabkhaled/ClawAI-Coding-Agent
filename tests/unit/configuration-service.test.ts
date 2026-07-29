@@ -77,4 +77,16 @@ describe('ConfigurationService model selection', () => {
       'permissionMode:BYPASS_PERMISSIONS',
     ]);
   });
+
+  it('persists a normalized backend URL supplied by the in-extension connection gateway', async () => {
+    await expect(
+      new ConfigurationService().saveBackendUrl('https://claw.local/api/v1/'),
+    ).resolves.toBe('https://claw.local');
+
+    expect(vscodeConfiguration.updates).toEqual(['backendUrl:https://claw.local']);
+  });
+
+  it('uses the local ClawAI origin as the first-run default', () => {
+    expect(new ConfigurationService().read().backendUrl).toBe('https://claw.local');
+  });
 });

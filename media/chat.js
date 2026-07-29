@@ -22,14 +22,23 @@ const elements = {
   approvalTitle: byId('approvalTitle'),
   backendDot: byId('backendDot'),
   backendLabel: byId('backendLabel'),
+  backendUrlInput: byId('backendUrlInput'),
   cancelButton: byId('cancelButton'),
+  connectButton: byId('connectButton'),
+  connectButtonLabel: byId('connectButtonLabel'),
+  connectionError: byId('connectionError'),
+  connectionForm: byId('connectionForm'),
+  connectionGate: byId('connectionGate'),
+  connectionProgress: byId('connectionProgress'),
   contextCount: byId('contextCount'),
   contextHintText: byId('contextHintText'),
   contextMode: byId('contextMode'),
   conversation: byId('conversation'),
   conversationTitle: byId('conversationTitle'),
+  disconnectedBrand: byId('disconnectedBrand'),
   emptyState: byId('emptyState'),
   form: byId('composer'),
+  authenticatedUi: byId('authenticatedUi'),
   historySelect: byId('historySelect'),
   modelChecks: byId('modelChecks'),
   modelSelect: byId('modelSelect'),
@@ -51,10 +60,13 @@ const elements = {
   runMode: byId('runMode'),
   sendButton: byId('sendButton'),
   sessionButton: byId('sessionButton'),
+  skipLink: byId('skipLink'),
   tokenCount: byId('tokenCount'),
   toastStack: byId('toastStack'),
   trustBadge: byId('trustBadge'),
   workspaceName: byId('workspaceName'),
+  workspaceActions: byId('workspaceActions'),
+  workspaceIdentity: byId('workspaceIdentity'),
   workspaceSelect: byId('workspaceSelect'),
 };
 const labels = byId('i18n').dataset;
@@ -679,6 +691,29 @@ function reconcilePending(state) {
 function renderState(state) {
   currentState = state;
   reconcilePending(state);
+  const authorizing = !state.connected && state.backendStatus === 'loading';
+  elements.connectionGate.hidden = state.connected;
+  elements.authenticatedUi.hidden = !state.connected;
+  elements.disconnectedBrand.hidden = state.connected;
+  elements.workspaceIdentity.hidden = !state.connected;
+  elements.workspaceActions.hidden = !state.connected;
+  elements.skipLink.href = state.connected ? '#prompt' : '#backendUrlInput';
+  elements.skipLink.textContent = state.connected ? labels.skipComposer : labels.skipConnection;
+  if (document.activeElement !== elements.backendUrlInput && !authorizing) {
+    elements.backendUrlInput.value = state.backendUrl || 'https://claw.local';
+  }
+  elements.backendUrlInput.disabled = authorizing;
+  elements.connectButton.disabled = authorizing;
+  elements.connectButtonLabel.textContent = authorizing
+    ? labels.openingAuthorization
+    : labels.connectClawai;
+  elements.connectionProgress.hidden = !authorizing;
+  const connectionError =
+    !state.connected && state.backendStatus === 'error' && typeof state.lastError === 'string'
+      ? state.lastError
+      : '';
+  elements.connectionError.textContent = connectionError;
+  elements.connectionError.hidden = connectionError.length === 0;
   elements.backendLabel.textContent = backendStatusLabel(state.backendStatus);
   elements.backendDot.dataset.status = state.backendStatus;
   elements.routeMode.textContent = state.routingMode;
@@ -795,8 +830,18 @@ elements.form.addEventListener('submit', (event) => {
   submitPrompt();
 });
 
+elements.connectionForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  const backendUrl = elements.backendUrlInput.value.trim();
+  if (backendUrl.length === 0) {
+    return;
+  }
+  elements.connectionError.hidden = true;
+  vscode.postMessage({ type: 'connect', backendUrl });
+});
+
 elements.sessionButton.addEventListener('click', () => {
-  vscode.postMessage({ type: currentState.connected ? 'logout' : 'connect' });
+  vscode.postMessage({ type: 'logout' });
 });
 
 elements.openFolderButton.addEventListener('click', () => {
@@ -1053,6 +1098,10 @@ window.addEventListener('message', (event) => {
       responseBodies.delete(message.requestId);
       streamStates.delete(message.requestId);
       activityLists.delete(message.requestId);
+    }
+    if (!currentState.connected && typeof message.message === 'string') {
+      elements.connectionError.textContent = message.message;
+      elements.connectionError.hidden = false;
     }
     elements.announcer.textContent = message.message;
   } else if (message?.type === 'notice' && typeof message.message === 'string') {

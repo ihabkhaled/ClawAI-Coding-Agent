@@ -13,6 +13,21 @@ function usageLabel(snapshot: ExtensionSnapshot): string {
   return vscode.l10n.t('{0}/{1} tokens', day.used, day.limit);
 }
 
+export function statusBarText(snapshot: ExtensionSnapshot): string {
+  if (!snapshot.connected) {
+    const icon = snapshot.backendStatus === 'loading' ? '$(sync~spin)' : '$(plug)';
+    const label =
+      snapshot.backendStatus === 'loading' ? vscode.l10n.t('Connecting') : vscode.l10n.t('Connect');
+    return `${icon} ClawAI · ${label}`;
+  }
+  const model =
+    snapshot.routingMode === 'AUTO'
+      ? 'AUTO'
+      : (snapshot.models.find((entry) => entry.key === snapshot.selectedModel)?.displayName ??
+        snapshot.selectedModel);
+  return `$(sparkle) ClawAI · ${model || 'AUTO'}`;
+}
+
 export class StatusBarController implements vscode.Disposable {
   private readonly item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 90);
   private readonly unsubscribe: () => void;
@@ -32,18 +47,7 @@ export class StatusBarController implements vscode.Disposable {
   }
 
   private render(snapshot: ExtensionSnapshot): void {
-    const model =
-      snapshot.routingMode === 'AUTO'
-        ? 'AUTO'
-        : (snapshot.models.find((entry) => entry.key === snapshot.selectedModel)?.displayName ??
-          snapshot.selectedModel);
-    const icon =
-      snapshot.backendStatus === 'connected'
-        ? '$(sparkle)'
-        : snapshot.backendStatus === 'loading'
-          ? '$(sync~spin)'
-          : '$(warning)';
-    this.item.text = `${icon} ClawAI · ${model || 'AUTO'}`;
+    this.item.text = statusBarText(snapshot);
     this.item.tooltip = [
       `Backend: ${snapshot.backendUrl}`,
       `Status: ${snapshot.backendStatus}`,

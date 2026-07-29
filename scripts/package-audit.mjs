@@ -5,6 +5,10 @@ import { cwd, stdout } from 'node:process';
 
 const root = cwd();
 const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+const configurationSource = readFileSync(
+  join(root, 'src', 'services', 'configuration-service.ts'),
+  'utf8',
+);
 const extensionSource = readFileSync(join(root, 'src', 'extension.ts'), 'utf8');
 const clawIconPathSource = readFileSync(join(root, 'src', 'views', 'claw-icon-path.ts'), 'utf8');
 const webviewSource = readFileSync(join(root, 'src', 'webview', 'chat-view-provider.ts'), 'utf8');
@@ -18,7 +22,7 @@ const commands = manifest.contributes.commands.map((command) => command.command)
 const uniqueCommands = new Set(commands);
 const rootVsix = readdirSync(root).filter((entry) => entry.endsWith('.vsix'));
 
-assert.equal(manifest.version, '0.6.1', 'release version must be 0.6.1');
+assert.equal(manifest.version, '0.7.0', 'release version must be 0.7.0');
 assert.deepEqual(rootVsix, [], 'VSIX artifacts must live under builds/, never the repository root');
 assert.equal(uniqueCommands.size, commands.length, 'command IDs must be unique');
 for (const command of commands) {
@@ -29,6 +33,26 @@ for (const command of commands) {
   );
 }
 
+assert.equal(
+  manifest.contributes.configuration.properties['clawAI.backendUrl'].default,
+  'https://claw.local',
+  'first-run backend must default to the local ClawAI app origin',
+);
+assert.doesNotMatch(
+  configurationSource,
+  /showInputBox/u,
+  'backend configuration must stay inside the ClawAI connection gateway',
+);
+assert.match(
+  webviewMarkup,
+  /id="connectionGate"[\s\S]+id="backendUrlInput"[\s\S]+id="connectButton"/u,
+  'webview must provide the focused backend connection gateway',
+);
+assert.match(
+  extensionSource,
+  /\['clawAI\.connect', \(\) => coordinator\.openChat\(\)\]/u,
+  'Connect command must open the in-extension gateway',
+);
 assert.equal(extname(manifest.icon).toLowerCase(), '.png', 'Marketplace icon must be PNG');
 assert.equal(existsSync(join(root, manifest.icon)), true, 'Marketplace icon is missing');
 assert.match(clawIcon, /data-claw-scratches="3"/u, 'Activity icon must identify three scratches');

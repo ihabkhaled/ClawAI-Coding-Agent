@@ -2,6 +2,13 @@
 
 ## Connection and session
 
+- [ ] On a fresh profile, confirm only the connection gateway is visible; chat
+      history, models, workspace status, suggestions, and composer are hidden.
+- [ ] Keep the `https://claw.local` default once, then repeat with an edited
+      backend URL. Confirm both start browser authorization without a VS Code
+      input dialog.
+- [ ] Confirm authorization progress disables duplicate Connect submissions and
+      a backend failure appears inline without revealing the workbench.
 - [ ] Connect to a loopback HTTP backend.
 - [ ] Connect to a hosted HTTPS backend.
 - [ ] Confirm non-loopback HTTP and credential-bearing URLs are rejected.

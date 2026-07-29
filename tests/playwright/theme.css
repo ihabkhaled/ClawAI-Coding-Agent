@@ -93,6 +93,8 @@ body[data-theme='hc'] {
   --vscode-widget-border: #ffffff;
 }
 
+body[data-theme='hc'] .connection-card,
+body[data-theme='hc'] .connection-input-row,
 body[data-theme='hc'] .composer-card,
 body[data-theme='hc'] .message-card,
 body[data-theme='hc'] .suggestion-card {

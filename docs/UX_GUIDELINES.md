@@ -22,5 +22,10 @@ The webview collapses the detailed route rail at narrow widths without hiding
 the active route summary. Model comparison appears only in compare/judge mode
 and enforces two to five selections.
 
+Disconnected state is a dedicated gateway, not a disabled workbench. It exposes
+only the product identity, backend origin, Connect action, authorization
+progress/error feedback, and a short browser-auth security explanation. The
+conversation workbench becomes available only after authentication.
+
 New visible strings must use `vscode.l10n.t` or package NLS and be regenerated
 for all supported locales.
