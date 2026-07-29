@@ -248,15 +248,15 @@ test('shows the owned folder and live coding-agent execution state', async ({ pa
   await expect(page.locator('#workspaceSelect')).toHaveValue('web-key');
   await expect(page.locator('#agentRunPanel')).toBeVisible();
   await expect(page.locator('#agentRunPanel')).toContainText('Reviewing file changes');
+  await expect(page.locator('#agentRunSteps')).toHaveCount(0);
+  await expect(page.locator('#agentRunDetails')).not.toHaveAttribute('open', '');
+  await expect(page.locator('#agentRunFiles')).not.toBeVisible();
+  const activityHeight = await page.locator('#agentRunPanel').evaluate((element) => {
+    return element.getBoundingClientRect().height;
+  });
+  expect(activityHeight).toBeLessThanOrEqual(40);
+  await page.locator('#agentRunFileCount').click();
   await expect(page.locator('#agentRunPanel')).toContainText('app/for-loop.js');
-  await expect(page.locator('[data-agent-step="reading"]')).toHaveAttribute(
-    'data-status',
-    'complete',
-  );
-  await expect(page.locator('[data-agent-step="reviewing"]')).toHaveAttribute(
-    'data-status',
-    'active',
-  );
   await expectWindowsScreenshot(page, 'workbench-agent-run.png');
 
   await page.locator('#workspaceSelect').selectOption('api-key');
@@ -281,12 +281,62 @@ test('shows safe development commands while the coding agent executes them', asy
   });
 
   await expect(page.locator('#agentRunPanel')).toContainText('Running development commands');
+  await expect(page.locator('#agentRunPanel')).toContainText('1 files · 1 commands');
+  await page.locator('#agentRunFileCount').click();
   await expect(page.locator('#agentRunCommands')).toContainText('node app/for-loop.js');
   await expect(page.locator('#agentRunCommands')).toContainText('Run the generated program');
-  await expect(page.locator('[data-agent-step="executing"]')).toHaveAttribute(
-    'data-status',
-    'active',
-  );
+});
+
+test('coalesces transport progress and resets a malformed agent draft before repair', async ({
+  page,
+}) => {
+  await page.locator('#prompt').fill('Create app/for-loop.js');
+  await page.locator('#composer').evaluate((form: HTMLFormElement) => {
+    form.requestSubmit();
+  });
+  const request = await page.evaluate(() => window.__clawMock.messages.at(-1));
+  const requestId = (request as { requestId: string }).requestId;
+
+  await page.evaluate((activeRequestId) => {
+    window.__clawMock.send({
+      type: 'streamEvent',
+      requestId: activeRequestId,
+      event: {
+        type: 'RESPONSE_ACCEPTED',
+        label: 'Request accepted',
+        description: 'Preparing the run.',
+      },
+    });
+    window.__clawMock.send({
+      type: 'streamEvent',
+      requestId: activeRequestId,
+      event: {
+        type: 'RESPONSE_ACCEPTED',
+        label: 'Request accepted',
+        description: 'Preparing the run.',
+      },
+    });
+    window.__clawMock.send({
+      type: 'streamEvent',
+      requestId: activeRequestId,
+      event: { type: 'CONTENT_DELTA', delta: '{"operation":"create | update | delete"}' },
+    });
+    window.__clawMock.send({
+      type: 'streamEvent',
+      requestId: activeRequestId,
+      event: { type: 'AGENT_DRAFT_RESET' },
+    });
+    window.__clawMock.send({
+      type: 'streamEvent',
+      requestId: activeRequestId,
+      event: { type: 'CONTENT_DELTA', delta: '{"operation":"create"}' },
+    });
+  }, requestId);
+
+  const body = page.locator(`.message-assistant[data-request-id="${requestId}"] .message-body`);
+  await expect(body).toHaveText('{"operation":"create"}');
+  await expect(body).not.toContainText('create | update | delete');
+  await expect(body).not.toContainText('Request acceptedRequest accepted');
 });
 
 test('renders a structured file-change receipt after an agent run', async ({ page }) => {

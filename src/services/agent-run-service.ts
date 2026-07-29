@@ -111,14 +111,18 @@ export class AgentRunService {
       callbacks,
     );
     let plan: EditPlan;
+    callbacks.onPhase(createAgentRunSnapshot('validating'));
     try {
       plan = parseWorkflowEditPlan(response.content);
     } catch {
+      callbacks.onPhase(createAgentRunSnapshot('repairing'));
+      callbacks.onEvent({ type: 'AGENT_DRAFT_RESET' });
       response = await this.send(
         input,
         buildEditPlanRepairPrompt(input.content, response.content),
         callbacks,
       );
+      callbacks.onPhase(createAgentRunSnapshot('validating'));
       plan = parseWorkflowEditPlan(response.content);
     }
     return this.completeEditPlan(

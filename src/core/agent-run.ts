@@ -8,7 +8,9 @@ export type AgentRunPhase =
   | 'planned'
   | 'reading'
   | 'rejected'
+  | 'repairing'
   | 'reviewing'
+  | 'validating'
   | 'verified';
 
 export interface AgentRunFile {

@@ -6,11 +6,11 @@ const elements = {
   activeModeBadge: byId('activeModeBadge'),
   agentMode: byId('agentMode'),
   agentRunCommands: byId('agentRunCommands'),
+  agentRunDetails: byId('agentRunDetails'),
   agentRunFileCount: byId('agentRunFileCount'),
   agentRunFiles: byId('agentRunFiles'),
   agentRunLabel: byId('agentRunLabel'),
   agentRunPanel: byId('agentRunPanel'),
-  agentRunSteps: byId('agentRunSteps'),
   announcer: byId('announcer'),
   approvalApprove: byId('approvalApprove'),
   approvalDetails: byId('approvalDetails'),
@@ -72,6 +72,7 @@ let pendingAgentMode = null;
 let pendingModel = null;
 let pendingPermissionMode = null;
 const responseBodies = new Map();
+const streamStates = new Map();
 
 function textElement(tag, className, text) {
   const element = document.createElement(tag);
@@ -128,6 +129,9 @@ function appendMessage(role, content, meta = '', requestId = '') {
     header.append(textElement('span', 'message-meta', meta));
   }
   const body = textElement('pre', 'message-body', content);
+  if (role === 'assistant') {
+    body.dataset.streamPlaceholder = 'true';
+  }
   card.append(header, body);
   if (role === 'assistant') {
     const actions = document.createElement('div');
@@ -308,30 +312,6 @@ function renderWorkspace(readiness, scope) {
   elements.openFolderButton.hidden = hasWorkspace;
 }
 
-function agentPhaseIndex(run) {
-  const indexes = {
-    applied: 3,
-    executing: 4,
-    generating: 1,
-    planned: 1,
-    reading: 0,
-    rejected: run.files.length > 0 ? 2 : 1,
-    reviewing: 2,
-    verified: 4,
-  };
-  return indexes[run.phase] ?? (run.files.length > 0 ? 2 : 1);
-}
-
-function agentStepStatus(run, index, activeIndex) {
-  if (run.phase === 'applied' || run.phase === 'planned' || run.phase === 'verified') {
-    return index <= activeIndex ? 'complete' : 'pending';
-  }
-  if (run.phase === 'failed' || run.phase === 'rejected') {
-    return index < activeIndex ? 'complete' : index === activeIndex ? 'error' : 'pending';
-  }
-  return index < activeIndex ? 'complete' : index === activeIndex ? 'active' : 'pending';
-}
-
 function renderAgentRun(run) {
   elements.agentRunPanel.hidden = run === undefined;
   if (run === undefined) {
@@ -345,31 +325,19 @@ function renderAgentRun(run) {
     planned: labels.agentPlanned,
     reading: labels.agentReading,
     rejected: labels.agentRejected,
+    repairing: labels.agentRepairing,
     reviewing: labels.agentReviewing,
+    validating: labels.agentValidating,
     verified: labels.agentVerified,
   };
   const commands = run.commands ?? [];
-  const steps = [
-    ['reading', labels.agentReading],
-    ['generating', labels.agentGenerating],
-    ['reviewing', labels.agentReviewing],
-    ['applied', labels.agentApplied],
-    ...(commands.length === 0 ? [] : [['executing', labels.agentExecuting]]),
-  ];
-  const activeIndex = agentPhaseIndex(run);
   elements.agentRunPanel.dataset.phase = run.phase;
   elements.agentRunLabel.textContent = phaseLabels[run.phase] ?? run.phase;
   elements.agentRunFileCount.textContent =
     commands.length === 0
       ? `${run.files.length} ${labels.files}`
       : `${run.files.length} ${labels.files} · ${commands.length} ${labels.commands}`;
-  elements.agentRunSteps.replaceChildren();
-  for (const [index, step] of steps.entries()) {
-    const item = textElement('span', 'agent-run-step', step[1]);
-    item.dataset.agentStep = step[0];
-    item.dataset.status = agentStepStatus(run, index, activeIndex);
-    elements.agentRunSteps.append(item);
-  }
+  elements.agentRunDetails.hidden = run.files.length === 0 && commands.length === 0;
   elements.agentRunFiles.replaceChildren();
   for (const file of run.files) {
     const item = document.createElement('li');
@@ -419,6 +387,7 @@ function renderQueue(queue) {
         vscode.postMessage({ type: 'removeQueued', requestId: request.id });
         responseBodies.get(request.id)?.closest('.timeline-item')?.remove();
         responseBodies.delete(request.id);
+        streamStates.delete(request.id);
       });
       item.append(remove);
     }
@@ -541,6 +510,7 @@ function submitPrompt() {
     requestId,
   );
   responseBodies.set(requestId, responseBody);
+  streamStates.set(requestId, { lastProgressKey: '' });
   if (mode === 'agent' || mode === 'chat') {
     vscode.postMessage({
       type: mode === 'agent' ? 'agent' : 'send',
@@ -597,6 +567,7 @@ elements.newChatButton.addEventListener('click', () => {
   elements.conversation.replaceChildren();
   lastUserPrompt = '';
   responseBodies.clear();
+  streamStates.clear();
   setConversationVisibility();
   elements.prompt.focus();
 });
@@ -677,36 +648,47 @@ window.addEventListener('message', (event) => {
   } else if (message?.type === 'streamEvent') {
     const stream = message.event;
     const responseBody = responseBodies.get(message.requestId);
-    if (responseBody && stream.type === 'CONTENT_DELTA' && typeof stream.delta === 'string') {
-      if (
-        responseBody.textContent === labels.connecting ||
-        responseBody.textContent === labels.queued ||
-        responseBody.textContent === labels.agentReading ||
-        responseBody.textContent === labels.agentGenerating
-      ) {
+    const streamState = streamStates.get(message.requestId);
+    if (responseBody && stream.type === 'AGENT_DRAFT_RESET') {
+      responseBody.textContent = labels.agentRepairing;
+      responseBody.dataset.streamPlaceholder = 'true';
+      if (streamState) {
+        streamState.lastProgressKey = '';
+      }
+    } else if (
+      responseBody &&
+      stream.type === 'CONTENT_DELTA' &&
+      typeof stream.delta === 'string'
+    ) {
+      if (responseBody.dataset.streamPlaceholder === 'true') {
         responseBody.textContent = '';
       }
       responseBody.textContent += stream.delta;
-    }
-    if (
+      responseBody.dataset.streamPlaceholder = 'false';
+    } else if (
       responseBody &&
       stream.type === 'RESPONSE_STREAMING' &&
       typeof stream.content === 'string'
     ) {
       responseBody.textContent = stream.content;
+      responseBody.dataset.streamPlaceholder = 'false';
     } else if (
       responseBody &&
       typeof stream.label === 'string' &&
-      responseBody.textContent !== '' &&
-      (responseBody.textContent === labels.connecting ||
-        responseBody.textContent === labels.queued ||
-        responseBody.textContent === labels.agentReading ||
-        responseBody.textContent === labels.agentGenerating)
+      responseBody.dataset.streamPlaceholder === 'true'
     ) {
-      responseBody.textContent =
+      const description =
         typeof stream.description === 'string' && stream.description.length > 0
-          ? `${stream.label}\n${stream.description}`
-          : stream.label;
+          ? stream.description
+          : '';
+      const progressKey = `${String(stream.type)}\u0000${stream.label}\u0000${description}`;
+      if (streamState?.lastProgressKey !== progressKey) {
+        responseBody.textContent =
+          description.length > 0 ? `${stream.label}\n${description}` : stream.label;
+        if (streamState) {
+          streamState.lastProgressKey = progressKey;
+        }
+      }
     }
   } else if (message?.type === 'result') {
     const responseBody = responseBodies.get(message.requestId);
@@ -724,6 +706,7 @@ window.addEventListener('message', (event) => {
       }
     }
     responseBodies.delete(message.requestId);
+    streamStates.delete(message.requestId);
   } else if (message?.type === 'error') {
     const responseBody = responseBodies.get(message.requestId);
     if (responseBody) {
@@ -735,6 +718,7 @@ window.addEventListener('message', (event) => {
         meta.textContent = labels.error;
       }
       responseBodies.delete(message.requestId);
+      streamStates.delete(message.requestId);
     }
     elements.announcer.textContent = message.message;
   } else if (message?.type === 'notice' && typeof message.message === 'string') {

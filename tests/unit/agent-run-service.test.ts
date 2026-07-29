@@ -52,9 +52,12 @@ function sessionPort(overrides: Partial<AgentRunSessionPort> = {}): AgentRunSess
   };
 }
 
-function callbacks(phases: AgentRunSnapshot[] = []): AgentRunCallbacks {
+function callbacks(
+  phases: AgentRunSnapshot[] = [],
+  events: Record<string, unknown>[] = [],
+): AgentRunCallbacks {
   return {
-    onEvent: vi.fn(),
+    onEvent: (event) => events.push(event),
     onPhase: (phase) => phases.push(phase),
     onThread: vi.fn(),
   };
@@ -146,6 +149,7 @@ describe('AgentRunService', () => {
     expect(phases.map((phase) => phase.phase)).toEqual([
       'reading',
       'generating',
+      'validating',
       'reviewing',
       'applied',
     ]);
@@ -351,7 +355,12 @@ describe('AgentRunService', () => {
       content: 'Hi! How can I help with your code?',
     });
     expect(applyAtomically).not.toHaveBeenCalled();
-    expect(phases.map((phase) => phase.phase)).toEqual(['reading', 'generating', 'planned']);
+    expect(phases.map((phase) => phase.phase)).toEqual([
+      'reading',
+      'generating',
+      'validating',
+      'planned',
+    ]);
   });
 
   it('stops before generation when edit permission is rejected', async () => {
@@ -418,6 +427,8 @@ describe('AgentRunService', () => {
 
   it('repairs one malformed local-model response in a fresh stream thread', async () => {
     const files = new Map<string, string>();
+    const phases: AgentRunSnapshot[] = [];
+    const events: Record<string, unknown>[] = [];
     const send = vi
       .fn<AgentRunChatPort['send']>()
       .mockResolvedValueOnce({
@@ -466,7 +477,7 @@ describe('AgentRunService', () => {
           },
           signal: new AbortController().signal,
         },
-        callbacks(),
+        callbacks(phases, events),
       ),
     ).resolves.toMatchObject({ status: 'applied', threadId: 'thread-2' });
     expect(send).toHaveBeenCalledTimes(2);
@@ -481,6 +492,8 @@ describe('AgentRunService', () => {
     );
     expect(send.mock.calls[1]?.[0]).not.toHaveProperty('threadId');
     expect(files.has('app/for-loop.js')).toBe(true);
+    expect(phases.map((phase) => phase.phase)).toContain('repairing');
+    expect(events).toContainEqual({ type: 'AGENT_DRAFT_RESET' });
   });
 
   it('rejects unsafe model output and reports a failed phase', async () => {

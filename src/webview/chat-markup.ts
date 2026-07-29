@@ -78,12 +78,15 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       <section id="agentRunPanel" class="agent-run-panel" aria-label="${translated('Coding agent activity')}" hidden>
         <header class="agent-run-header">
           <span class="agent-run-mark" aria-hidden="true"></span>
-          <strong id="agentRunLabel">${translated('Reading workspace')}</strong>
-          <span id="agentRunFileCount" class="badge">${translated('0 files')}</span>
+          <strong id="agentRunLabel" aria-live="polite">${translated('Reading workspace')}</strong>
+          <details id="agentRunDetails" class="agent-run-details">
+            <summary id="agentRunFileCount" class="badge">${translated('0 files')}</summary>
+            <div class="agent-run-detail-body">
+              <ul id="agentRunFiles" class="agent-run-files"></ul>
+              <ul id="agentRunCommands" class="agent-run-files agent-run-commands" hidden></ul>
+            </div>
+          </details>
         </header>
-        <div id="agentRunSteps" class="agent-run-steps"></div>
-        <ul id="agentRunFiles" class="agent-run-files"></ul>
-        <ul id="agentRunCommands" class="agent-run-files agent-run-commands" hidden></ul>
       </section>
       <section id="queuePanel" class="queue-panel" aria-label="${translated('Request queue')}" hidden>
         <header class="queue-header">
@@ -209,7 +212,9 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-agent-planned="${translated('Plan ready')}"
     data-agent-reading="${translated('Reading workspace')}"
     data-agent-rejected="${translated('Changes rejected')}"
+    data-agent-repairing="${translated('Repairing model response')}"
     data-agent-reviewing="${translated('Reviewing file changes')}"
+    data-agent-validating="${translated('Validating edit plan')}"
     data-agent-verified="${translated('Verified workspace changes')}"
     data-always-allow="${translated('Always allow in this workspace')}"
     data-approval-required="${translated('Approval required')}"
