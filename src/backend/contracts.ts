@@ -15,11 +15,6 @@ export const authUserSchema = z
   })
   .loose();
 
-export const loginResultSchema = z.object({
-  tokens: tokenPairSchema,
-  user: authUserSchema,
-});
-
 export const refreshResultSchema = z.object({
   tokens: tokenPairSchema,
 });
@@ -153,6 +148,15 @@ export const messageSchema = z
   })
   .loose();
 
+export const uploadedFileSchema = z
+  .object({
+    id: z.string().min(1),
+    filename: z.string().optional(),
+    mimeType: z.string().optional(),
+    sizeBytes: z.number().int().nonnegative().optional(),
+  })
+  .loose();
+
 export const parallelModelResponseSchema = z
   .object({
     provider: z.string(),
@@ -247,13 +251,13 @@ export const usageSchema = z
   .loose();
 
 export type AuthUser = z.infer<typeof authUserSchema>;
-export type LoginResult = z.infer<typeof loginResultSchema>;
 export type RouterModel = z.infer<typeof routerModelSchema>;
 export type ConnectorModel = z.infer<typeof connectorModelSchema>;
 export type LocalOllamaModel = z.infer<typeof localOllamaModelSchema>;
 export type LocalFrontierModel = z.infer<typeof localFrontierModelSchema>;
 export type ChatThread = z.infer<typeof threadSchema>;
 export type ChatMessage = z.infer<typeof messageSchema>;
+export type UploadedFile = z.infer<typeof uploadedFileSchema>;
 export type ParallelResponse = z.infer<typeof parallelResponseSchema>;
 export type Entitlements = z.infer<typeof entitlementsSchema>;
 export type Usage = z.infer<typeof usageSchema>;

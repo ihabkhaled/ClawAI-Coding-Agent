@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { GenerationQueue } from '../../src/core/generation-queue';
+import {
+  GenerationQueue,
+  MAX_PENDING_GENERATION_BYTES,
+  MAX_PENDING_GENERATIONS,
+} from '../../src/core/generation-queue';
 
 function deferred(): {
   promise: Promise<void>;
@@ -97,5 +101,127 @@ describe('GenerationQueue', () => {
     await Promise.all([firstRun, secondRun]);
 
     expect(queue.snapshot).toEqual({ active: undefined, pending: [] });
+  });
+
+  it('cancels the active request and drops every queued request for account logout', async () => {
+    const activeAborted = deferred();
+    let queuedStarted = false;
+    const queue = new GenerationQueue(() => undefined);
+    const firstRun = queue.enqueue({
+      id: 'request-1',
+      kind: 'agent',
+      prompt: 'First',
+      run: (signal) =>
+        new Promise<void>((resolve) => {
+          signal.addEventListener(
+            'abort',
+            () => {
+              activeAborted.resolve();
+              resolve();
+            },
+            { once: true },
+          );
+        }),
+    });
+    const secondRun = queue.enqueue({
+      id: 'request-2',
+      kind: 'chat',
+      prompt: 'Private queued prompt',
+      run: async () => {
+        queuedStarted = true;
+      },
+    });
+    await vi.waitFor(() => {
+      expect(queue.snapshot.active?.id).toBe('request-1');
+    });
+
+    expect(queue.cancelAll()).toBe(true);
+    await activeAborted.promise;
+    await Promise.all([firstRun, secondRun]);
+
+    expect(queuedStarted).toBe(false);
+    expect(queue.snapshot).toEqual({ active: undefined, pending: [] });
+  });
+
+  it('rejects excess pending requests without retaining another closure', async () => {
+    const active = deferred();
+    const queue = new GenerationQueue(() => undefined);
+    const running = queue.enqueue({
+      id: 'active',
+      kind: 'agent',
+      prompt: 'Active',
+      run: () => active.promise,
+    });
+    await vi.waitFor(() => {
+      expect(queue.snapshot.active?.id).toBe('active');
+    });
+    const pending = Array.from({ length: MAX_PENDING_GENERATIONS }, (_, index) =>
+      queue.enqueue({
+        id: `pending-${String(index)}`,
+        kind: 'chat',
+        prompt: 'Queued',
+        run: async () => undefined,
+      }),
+    );
+
+    await expect(
+      queue.enqueue({
+        id: 'overflow',
+        kind: 'chat',
+        prompt: 'Overflow',
+        run: async () => undefined,
+      }),
+    ).rejects.toThrow('queue is full');
+    expect(queue.snapshot.pending).toHaveLength(MAX_PENDING_GENERATIONS);
+
+    queue.cancelAll();
+    active.resolve();
+    await Promise.all([running, ...pending]);
+  });
+
+  it('bounds aggregate bytes retained by queued attachment snapshots', async () => {
+    const active = deferred();
+    const queue = new GenerationQueue(() => undefined);
+    const running = queue.enqueue({
+      id: 'active',
+      kind: 'agent',
+      prompt: 'Active',
+      run: () => active.promise,
+    });
+    await vi.waitFor(() => {
+      expect(queue.snapshot.active?.id).toBe('active');
+    });
+    const chunk = MAX_PENDING_GENERATION_BYTES / 3;
+    const pending = Array.from({ length: 3 }, (_, index) =>
+      queue.enqueue({
+        id: `attachment-${String(index)}`,
+        kind: 'agent',
+        prompt: 'Queued attachment',
+        retainedBytes: chunk,
+        run: async () => undefined,
+      }),
+    );
+
+    await expect(
+      queue.enqueue({
+        id: 'attachment-overflow',
+        kind: 'agent',
+        prompt: 'Too many attachments',
+        retainedBytes: 1,
+        run: async () => undefined,
+      }),
+    ).rejects.toThrow('queue is full');
+    expect(queue.remove('attachment-0')).toBe(true);
+    const replacement = queue.enqueue({
+      id: 'attachment-replacement',
+      kind: 'agent',
+      prompt: 'Replacement',
+      retainedBytes: 1,
+      run: async () => undefined,
+    });
+
+    queue.cancelAll();
+    active.resolve();
+    await Promise.all([running, ...pending, replacement]);
   });
 });

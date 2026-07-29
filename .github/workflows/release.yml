@@ -39,6 +39,18 @@ jobs:
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
 
+      - name: Require committed release artifact
+        env:
+          ARTIFACT: builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix
+        shell: bash
+        run: |
+          if ! test -f "${ARTIFACT}"; then
+            echo "::error::Commit ${ARTIFACT} before pushing main."
+            exit 1
+          fi
+          git ls-files --error-unmatch "${ARTIFACT}" >/dev/null
+          cp "${ARTIFACT}" "${RUNNER_TEMP}/committed-release.vsix"
+
       - name: Install
         run: npm ci --ignore-scripts
 
@@ -67,8 +79,15 @@ jobs:
         run: npm run package
 
       - name: Verify release artifact
+        env:
+          ARTIFACT: builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix
         shell: bash
-        run: test -f "builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix"
+        run: |
+          test -f "${ARTIFACT}"
+          mkdir -p "${RUNNER_TEMP}/committed-vsix" "${RUNNER_TEMP}/fresh-vsix"
+          unzip -qq "${RUNNER_TEMP}/committed-release.vsix" -d "${RUNNER_TEMP}/committed-vsix"
+          unzip -qq "${ARTIFACT}" -d "${RUNNER_TEMP}/fresh-vsix"
+          diff -qr "${RUNNER_TEMP}/committed-vsix" "${RUNNER_TEMP}/fresh-vsix"
 
       - name: Create GitHub Release
         env:

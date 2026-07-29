@@ -33,9 +33,12 @@ logic to run under Node without a VS Code host.
 
 ## Data flow
 
-Login creates a `VSCODE` session, validates the returned user/token pair, and
-stores only tokens in `SecretStorage`. Authenticated requests attach the access
-token. A single shared refresh promise prevents concurrent refresh storms.
+Login creates a `VSCODE` session, stages its token pair, validates the profile
+with the staged access token, and then stores tokens in origin-scoped
+`SecretStorage`. A candidate backend is not activated until authorization and
+profile validation succeed. Authenticated requests attach the access token. A
+single shared refresh promise prevents concurrent refresh storms; credential
+and account epochs reject late writes after logout or endpoint replacement.
 
 Chat creates or reuses a thread, opens the SSE stream before sending the
 message, attributes provider/model events, assembles bounded output, and falls

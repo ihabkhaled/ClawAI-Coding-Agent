@@ -2,6 +2,76 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.9.0
+
+This is a pre-1.0 minor release because it adds the attachment workflow and
+expands request, permission, session, and backend media behavior compatibly.
+
+- Added first-class composer attachments for pasted, dropped, and selected
+  screenshots, images, videos, documents, archives, and source files. Requests
+  keep immutable attachment snapshots, visible file receipts, bounded upload
+  progress, and retry-safe ownership without persisting file bytes in webview
+  state.
+- Added strict client and host validation for attachment count, individual and
+  aggregate size, canonical Base64, safe filenames, and supported media types;
+  uploaded file IDs now flow through chat, compare, and coding-agent runs.
+- Added native video handling in the ClawAI backend: video binaries remain
+  binary, AUTO routing can select a video-capable Gemini model, and unsupported
+  manual providers fail with a clear capability error.
+- Isolated every run from stale thread events. Reused conversations now request
+  a live-only stream so a prior model selection, failure, or completion cannot
+  terminate or label the next request.
+- Snapshotted the selected model into each queued request, keeping rapid manual
+  model changes stable from composer submission through backend routing.
+- Added persistent Arrow Up/Arrow Down prompt recall while deliberately keeping
+  attachment bytes out of persisted history.
+- Changed confirmed **Full Access** to apply validated safe file edits without
+  another final-diff prompt. Development commands remain an explicit approval
+  boundary; Workspace Trust, secret exclusions, path containment, blocked
+  command rules, stale-review checks, and atomic apply remain enforced.
+- Hardened multi-window authentication with origin-scoped credential revisions,
+  refresh serialization, provisional authorization rollback, tombstones, and
+  lifecycle guards so logout or endpoint changes cannot be undone by late work.
+- Hardened workspace transactions against symlink escapes, changed editor
+  buffers, root changes, and cancellation races while retaining on-demand diff
+  review and session undo.
+- Added a repository release skill that requires SemVer classification,
+  versioned builds under `builds/`, installed-VSIX verification, commit, push,
+  and a matching GitHub Release asset for every shipped change.
+- Scoped persisted sessions to the normalized backend origin, discarded the
+  unattributed legacy credential, and staged browser credentials until profile
+  validation so cancelled authorization cannot activate or overwrite a session.
+- Added single-flight browser authorization with an in-extension Cancel action,
+  a two-minute stalled-attempt deadline with immediate fresh-link retry,
+  focus-safe connection transitions, offline logout cleanup, and account-bound
+  conversation reset across retained tabs.
+- Added credential and account epochs so logout or an endpoint change cannot be
+  undone by a late token refresh, history load, model refresh, or profile check.
+- Kept malformed edit-plan repair in the originating thread and aggregated its
+  token receipts; made Compare/Judge transport cancellation real and made Retry
+  replay the selected request's original mode, context, and model selection.
+- Made coding and comparison commands workspace-ready without an active editor,
+  retained in-extension final diff approval for Ask for Approval and Edit
+  Automatically, and let confirmed Full Access apply validated safe edits
+  directly while retaining persistent routine workspace consent.
+- Required explicit review for every development command in every permission
+  mode and rejected inline interpreter programs and outside-workspace command
+  arguments before terminal execution.
+- Froze each reviewed edit to its original workspace root, rejected symlink
+  escapes and assignment-form outside paths, cancelled pending approvals when
+  workspace scope changes, and refused to overwrite unsaved or concurrently
+  changed files without a new review.
+- Bound native Chat requests to immutable account, workspace, model, permission,
+  and cancellation epochs so changing accounts or folders aborts live work and
+  cannot submit stale context or render a stale response.
+- Published the actual transport context receipt before every backend request,
+  including excluded sensitive, binary, glob-filtered, over-limit, and unread
+  files, and retained structured stream error metadata without exposing raw
+  localization keys.
+- Added bounded backend response bodies, per-event SSE idle deadlines, upstream
+  cancellation, and explicit 401 body disposal so silent streams and refresh
+  retries cannot leak resources or remain stuck indefinitely.
+
 ## 0.7.0
 
 - Replaced the disconnected workbench with a focused first-run connection

@@ -22,7 +22,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
   const direction = locale === 'ar' || locale === 'fa' ? 'rtl' : 'ltr';
   const csp = [
     "default-src 'none'",
-    `img-src ${input.cspSource} data:`,
+    `img-src ${input.cspSource} data: blob:`,
+    'connect-src blob:',
     `font-src ${input.cspSource}`,
     `style-src ${input.cspSource}`,
     `script-src 'nonce-${input.nonce}'`,
@@ -44,7 +45,6 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       <img class="brand-logo" src="${escapeHtml(input.logoUri)}" alt="">
       <strong id="disconnectedBrand" class="disconnected-brand">${translated('ClawAI Coding Agent')}</strong>
       <div id="workspaceIdentity" class="workspace-identity" hidden>
-        <p class="utility-label">${translated('ClawAI')}</p>
         <div class="conversation-heading">
           <strong id="conversationTitle">${translated('New ClawAI chat')}</strong>
           <label class="sr-only" for="historySelect">${translated('Conversation history')}</label>
@@ -86,9 +86,10 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
             <b aria-hidden="true">&rarr;</b>
           </button>
         </form>
-        <div id="connectionProgress" class="connection-progress" role="status" hidden>
+        <div id="connectionProgress" class="connection-progress" hidden>
           <span class="connection-spinner" aria-hidden="true"></span>
-          <span>${translated('Opening secure browser authorization...')}</span>
+          <span role="status">${translated('Opening secure browser authorization...')}</span>
+          <button id="connectionCancelButton" class="quiet-button connection-cancel-button" type="button">${translated('Cancel')}</button>
         </div>
         <p id="connectionError" class="connection-error" role="alert" hidden></p>
         <div class="connection-security">
@@ -182,7 +183,15 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         </div>
         <label class="sr-only" for="prompt">${translated('Ask ClawAI')}</label>
         <textarea id="prompt" rows="3" maxlength="20000" placeholder="${translated('Ask ClawAI to inspect, plan, or build…')}" required></textarea>
+        <div id="attachmentTray" class="attachment-tray" hidden>
+          <div id="attachmentList" class="attachment-list" role="list" aria-label="${translated('Attachments')}"></div>
+          <p id="attachmentStatus" class="attachment-status" role="status" aria-live="polite"></p>
+        </div>
         <div class="control-rail">
+          <input id="attachmentInput" class="sr-only" type="file" multiple>
+          <button id="attachmentButton" class="icon-button attachment-button" type="button" title="${translated('Attach files')}" aria-label="${translated('Attach files')}">
+            <span aria-hidden="true">📎</span>
+          </button>
           <label class="compact-control"><span>${translated('Model')}</span>
             <select id="modelSelect" aria-label="${translated('Model')}">
               <option value="AUTO">${translated('Automatic routing')}</option>
@@ -224,7 +233,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
           </div>
         </div>
       </div>
-      <p class="composer-footnote">${translated('Ctrl/⌘ + Enter to send · final edits always require review')}</p>
+      <p class="composer-footnote">${translated('Ctrl/⌘ + Enter to send · approval follows the selected mode')}</p>
     </form>
     </div>
     <p id="announcer" class="sr-only" aria-live="assertive"></p>
@@ -263,6 +272,17 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-always-allow="${translated('Always allow in this workspace')}"
     data-approval-required="${translated('Approval required')}"
     data-approve="${translated('Approve')}"
+    data-attachment-added="${translated('Attachment added')}"
+    data-attachment="${translated('attachment')}"
+    data-attaching-files="${translated('Attaching files…')}"
+    data-attachment-empty="${translated('Empty files cannot be attached.')}"
+    data-attachment-limit-summary="${translated('{0}/10 attachments · {1}/10 MiB')}"
+    data-attachment-read-failed="${translated('This file could not be attached.')}"
+    data-attachment-too-large="${translated('Each attachment must be 5 MiB or smaller.')}"
+    data-attachment-total-too-large="${translated('Attachments must total 10 MiB or less.')}"
+    data-attachment-too-many="${translated('You can attach up to 10 files.')}"
+    data-attachment-type-unsupported="${translated('This file type is not supported.')}"
+    data-attachments="${translated('Attachments')}"
     data-assistant="${translated('CLAWAI')}"
     data-automatic-routing="${translated('Automatic routing')}"
     data-choose-models="${translated('Choose between 2 and 5 models.')}"
@@ -283,11 +303,13 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-files="${translated('files')}"
     data-commands="${translated('commands')}"
     data-command-activity="${translated('Workspace command')}"
+    data-connection-ready="${translated('Connected to ClawAI.')}"
     data-operation-create="${translated('Create')}"
     data-operation-delete="${translated('Delete')}"
     data-operation-update="${translated('Update')}"
     data-local="${translated('local')}"
     data-logout="${translated('Log out')}"
+    data-new-chat="${translated('New ClawAI chat')}"
     data-no-folder="${translated('No folder')}"
     data-no-workspace="${translated('No workspace')}"
     data-prompt-explain="${translated('Explain the architecture of this workspace and identify the best starting points.')}"

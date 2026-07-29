@@ -1,10 +1,15 @@
 import { z } from 'zod';
 
-const dangerousSegmentPattern =
-  /(?:^|\/)(?:\.git|\.env(?:\.|$)|[^/]*(?:secret|credential|api[-_]?key)[^/]*)(?:\/|$)/iu;
-const windowsAbsolutePattern = /^[A-Za-z]:[\\/]/u;
-const shellControlPattern = /[\r\n;&|<>`$]/u;
+import { tokenizeWorkspaceCommand } from './command-tokenizer';
+import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
+
+const shellControlPattern = /[\r\n;&|<>`$^\\!~*?()[\]{}@]/u;
 const environmentExpansionPattern = /%[^%\s]+%/u;
+const nestedParentPathPattern = /(?:^|[\\/=])\.\.(?:[\\/]|$)/u;
+const outsideWorkspaceArgumentPattern =
+  /(?:^|[\s=])["']?(?:\.\.(?:[\\/]|(?=["']?(?:\s|$)))|[A-Za-z]:[\\/]|\/(?!\/)|\\\\)/u;
+const externalUriArgumentPattern =
+  /(?:^|=)(?:(?:bitbucket|data|file|ftp|ftps|git(?:\+(?:http|https|ssh))?|github|gitlab|http|https|jsr|npm|ssh|ws|wss):|[A-Za-z][A-Za-z0-9+.-]*:\/\/)/iu;
 const allowedExecutables = new Set([
   'bun',
   'cargo',
@@ -39,25 +44,57 @@ const allowedExecutables = new Set([
   'yarn',
   'yarn.cmd',
 ]);
-const safeGitSubcommands = new Set([
-  'branch',
-  'diff',
-  'log',
-  'ls-files',
-  'rev-parse',
-  'show',
-  'status',
+const safeGitSubcommands = new Set(['diff', 'log', 'ls-files', 'rev-parse', 'show', 'status']);
+const inlineInterpreterArgumentPatterns = new Map<string, RegExp>([
+  ['bun', /^(?:-[^-]*[ep]|--(?:eval|print)(?:=|$))/u],
+  ['deno', /^eval$/u],
+  ['node', /^(?:-[^-]*[ep]|--(?:eval|print)(?:=|$))/u],
+  ['python', /^-c/u],
+  ['python3', /^-c/u],
 ]);
 
-function isSafeRelativePath(path: string): boolean {
-  const normalized = path.replaceAll('\\', '/');
-  const segments = normalized.split('/');
+function usesInlineInterpreter(executable: string, arguments_: string[]): boolean {
+  const blockedArgumentPattern = inlineInterpreterArgumentPatterns.get(executable);
   return (
-    !normalized.startsWith('/') &&
-    !windowsAbsolutePattern.test(path) &&
-    !segments.includes('..') &&
-    !dangerousSegmentPattern.test(normalized)
+    blockedArgumentPattern !== undefined &&
+    arguments_.some((argument) => blockedArgumentPattern.test(argument.toLowerCase()))
   );
+}
+
+function unsafeCommandReason(
+  executable: string,
+  arguments_: string[],
+  command: string,
+): string | undefined {
+  if (usesInlineInterpreter(executable, arguments_)) {
+    return 'Inline interpreter programs are blocked.';
+  }
+  if (nestedParentPathPattern.test(command) || outsideWorkspaceArgumentPattern.test(command)) {
+    return 'Command arguments must stay inside the workspace.';
+  }
+  if (arguments_.some((argument) => externalUriArgumentPattern.test(argument))) {
+    return 'Command arguments must not load external URI resources.';
+  }
+  return undefined;
+}
+
+function invalidWorkspaceCommandReason(command: string): string | undefined {
+  if (shellControlPattern.test(command) || environmentExpansionPattern.test(command)) {
+    return 'Command chaining, redirection, substitution, and environment expansion are blocked.';
+  }
+  const tokens = tokenizeWorkspaceCommand(command);
+  if (tokens === undefined) {
+    return 'Command arguments contain an unterminated quoted value.';
+  }
+  const [executable = '', subcommand = '', ...remainingArguments] = tokens;
+  const normalizedExecutable = executable.toLowerCase();
+  if (!allowedExecutables.has(normalizedExecutable)) {
+    return 'Command executable is not in the development-tool allowlist.';
+  }
+  if (normalizedExecutable === 'git' && !safeGitSubcommands.has(subcommand.toLowerCase())) {
+    return 'Only read-only Git commands are allowed.';
+  }
+  return unsafeCommandReason(normalizedExecutable, [subcommand, ...remainingArguments], command);
 }
 
 const editFileSchema = z
@@ -68,7 +105,7 @@ const editFileSchema = z
   })
   .strict()
   .superRefine((file, context) => {
-    if (!isSafeRelativePath(file.path)) {
+    if (!isSafeRelativeWorkspacePath(file.path)) {
       context.addIssue({
         code: 'custom',
         path: ['path'],
@@ -125,35 +162,15 @@ const workspaceCommandSchema = z
   })
   .strict()
   .superRefine((entry, context) => {
-    if (
-      shellControlPattern.test(entry.command) ||
-      environmentExpansionPattern.test(entry.command)
-    ) {
+    const commandReason = invalidWorkspaceCommandReason(entry.command);
+    if (commandReason !== undefined) {
       context.addIssue({
         code: 'custom',
         path: ['command'],
-        message:
-          'Command chaining, redirection, substitution, and environment expansion are blocked.',
-      });
-      return;
-    }
-    const [executable = '', subcommand = ''] = entry.command.split(/\s+/u);
-    const normalizedExecutable = executable.toLowerCase();
-    if (!allowedExecutables.has(normalizedExecutable)) {
-      context.addIssue({
-        code: 'custom',
-        path: ['command'],
-        message: 'Command executable is not in the development-tool allowlist.',
+        message: commandReason,
       });
     }
-    if (normalizedExecutable === 'git' && !safeGitSubcommands.has(subcommand.toLowerCase())) {
-      context.addIssue({
-        code: 'custom',
-        path: ['command'],
-        message: 'Only read-only Git commands are allowed.',
-      });
-    }
-    if (entry.cwd !== undefined && !isSafeRelativePath(entry.cwd)) {
+    if (entry.cwd !== undefined && entry.cwd !== '.' && !isSafeRelativeWorkspacePath(entry.cwd)) {
       context.addIssue({
         code: 'custom',
         path: ['cwd'],

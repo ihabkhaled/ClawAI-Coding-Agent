@@ -21,8 +21,10 @@ backends require HTTPS. A 401 triggers one coordinated refresh and one retry.
 
 Workspace context is untrusted and bounded. Always deny secrets even if a user
 removes an ignore rule. Every modifying workflow returns a strict edit plan,
-opens diffs, requires modal approval, rechecks trust, and applies one atomic
-workspace edit. There is no setting to bypass approval.
+stages reviewable diffs, follows the selected permission mode, rechecks trust,
+and applies one atomic workspace edit. Manual and Edit Automatically modes
+require final-diff approval; Full Access may apply the staged diff without an
+extra prompt but never bypasses trust, secret, path, or command safety.
 
 Keep webviews under strict CSP with fresh nonces, local resources, text-only
 untrusted rendering, validated message schemas, keyboard access, theme colors,
@@ -37,3 +39,7 @@ and RTL-compatible layout.
 - formatting, ESLint, strict TypeScript, bundle, package audit, runtime
   dependency audit, and VSIX packaging green;
 - docs and changelog updated for user-visible or contract changes.
+
+Every publishable change must apply `skills/version-every-change/SKILL.md`,
+advance SemVer, rebuild the versioned VSIX in `builds/`, and publish a matching
+GitHub release. One unpublished coherent batch receives one bump.

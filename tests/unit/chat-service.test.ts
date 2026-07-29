@@ -1,5 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
+vi.mock('vscode', () => ({
+  l10n: {
+    t: (message: string) => message,
+  },
+}));
+
 import { ChatService, type ChatBackendPort } from '../../src/services/chat-service';
 
 function streamResponse(events: Record<string, unknown>[]): Response {
@@ -121,10 +127,19 @@ describe('ChatService', () => {
     };
     const service = new ChatService(backend);
 
-    await service.send(
+    const result = await service.send(
       {
         content: 'Question',
-        context: [{ path: 'large.ts', content: 'x'.repeat(150_000) }],
+        context: [
+          { path: 'small.ts', content: 'export {};\n' },
+          { path: 'large.ts', content: 'x'.repeat(150_000) },
+        ],
+        contextReceipt: {
+          excluded: [{ path: 'ignored.ts', reason: 'excluded' }],
+          included: ['small.ts', 'large.ts'],
+          totalBytes: 150_011,
+          truncated: false,
+        },
         routingMode: 'AUTO',
       },
       () => undefined,
@@ -132,6 +147,38 @@ describe('ChatService', () => {
 
     const request = vi.mocked(backend.sendMessage).mock.calls[0]?.[0];
     expect(new TextEncoder().encode(request?.content ?? '').byteLength).toBeLessThanOrEqual(95_000);
+    expect(request?.content).toContain('small.ts');
+    expect(request?.content).not.toContain('large.ts');
+    expect(result.contextReceipt).toEqual({
+      excluded: [
+        { path: 'ignored.ts', reason: 'excluded' },
+        { path: 'large.ts', reason: 'limit' },
+      ],
+      included: ['small.ts'],
+      totalBytes: 11,
+      truncated: true,
+    });
+  });
+
+  it('forwards caller cancellation through both stream setup and message submission', async () => {
+    const controller = new AbortController();
+    const backend: ChatBackendPort = {
+      createThread: vi.fn(async () => ({ id: 'thread-1' })),
+      openStream: vi.fn(async () => streamResponse([{ type: 'done' }])),
+      sendMessage: vi.fn(async () => ({ id: 'message-1' })),
+    };
+
+    await new ChatService(backend).send(
+      { content: 'Question', context: [], routingMode: 'AUTO' },
+      () => undefined,
+      controller.signal,
+    );
+
+    expect(backend.openStream).toHaveBeenCalledWith('thread-1', controller.signal);
+    expect(backend.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({ threadId: 'thread-1' }),
+      controller.signal,
+    );
   });
 
   it('reuses a thread, sends the MANUAL_MODEL backend contract, and accepts snapshots', async () => {
@@ -186,21 +233,35 @@ describe('ChatService', () => {
     expect(onThread).toHaveBeenCalledWith('existing-thread');
   });
 
-  it('falls back to the latest attributed assistant message after an empty stream', async () => {
+  it('forwards uploaded file IDs on the request that owns the attachments', async () => {
     const backend: ChatBackendPort = {
       createThread: vi.fn(async () => ({ id: 'thread-1' })),
       openStream: vi.fn(async () => streamResponse([{ type: 'done' }])),
       sendMessage: vi.fn(async () => ({ id: 'message-1' })),
-      listMessages: vi.fn(async () => [
-        { role: 'ASSISTANT', content: 'older' },
-        { role: 'USER', content: 'question' },
-        {
-          role: 'ASSISTANT',
-          content: 'final answer',
-          provider: 'OLLAMA',
-          model: 'qwen3-coder',
-        },
-      ]),
+    };
+
+    await new ChatService(backend).send(
+      {
+        content: 'Inspect these files',
+        context: [],
+        fileIds: ['file-image', 'file-source'],
+        routingMode: 'AUTO',
+      },
+      () => undefined,
+    );
+
+    expect(backend.sendMessage).toHaveBeenCalledWith(
+      expect.objectContaining({
+        fileIds: ['file-image', 'file-source'],
+      }),
+    );
+  });
+
+  it('keeps an empty completed response isolated from older thread messages', async () => {
+    const backend: ChatBackendPort = {
+      createThread: vi.fn(async () => ({ id: 'thread-1' })),
+      openStream: vi.fn(async () => streamResponse([{ type: 'done' }])),
+      sendMessage: vi.fn(async () => ({ id: 'message-1' })),
     };
 
     await expect(
@@ -208,11 +269,150 @@ describe('ChatService', () => {
         { content: 'Question', context: [], routingMode: 'AUTO' },
         () => undefined,
       ),
-    ).resolves.toMatchObject({
-      content: 'final answer',
-      provider: 'OLLAMA',
-      model: 'qwen3-coder',
+    ).resolves.toMatchObject({ content: '' });
+  });
+
+  it('rejects a live stream that closes without the current request DONE event', async () => {
+    const backend: ChatBackendPort = {
+      createThread: vi.fn(async () => ({ id: 'thread-1' })),
+      openStream: vi.fn(async () =>
+        streamResponse([{ type: 'content_delta', delta: 'stale answer' }]),
+      ),
+      sendMessage: vi.fn(async () => ({ id: 'message-1' })),
+    };
+
+    await expect(
+      new ChatService(backend).send(
+        { content: 'New question', context: [], routingMode: 'AUTO' },
+        () => undefined,
+      ),
+    ).rejects.toThrow('closed before the request completed');
+  });
+
+  it('cancels an opened SSE body when message submission is rejected', async () => {
+    const cancel = vi.fn();
+    const accepted = vi.fn();
+    const backend: ChatBackendPort = {
+      createThread: vi.fn(async () => ({ id: 'thread-1' })),
+      openStream: vi.fn(
+        async () =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              cancel,
+            }),
+          ),
+      ),
+      sendMessage: vi.fn(async () => {
+        throw new Error('message rejected');
+      }),
+    };
+
+    await expect(
+      new ChatService(backend).send(
+        { content: 'Question', context: [], routingMode: 'AUTO' },
+        () => undefined,
+        undefined,
+        undefined,
+        accepted,
+      ),
+    ).rejects.toThrow('message rejected');
+    expect(accepted).toHaveBeenCalledOnce();
+    expect(cancel).toHaveBeenCalledOnce();
+  });
+
+  it('publishes the transport receipt before a rejected message submission', async () => {
+    const order: string[] = [];
+    const receipts: unknown[] = [];
+    const backend: ChatBackendPort = {
+      createThread: vi.fn(async () => ({ id: 'thread-1' })),
+      openStream: vi.fn(
+        async () =>
+          new Response(
+            new ReadableStream<Uint8Array>({
+              cancel: vi.fn(),
+            }),
+          ),
+      ),
+      sendMessage: vi.fn(async () => {
+        order.push('submit');
+        throw new Error('message rejected');
+      }),
+    };
+    const service = new ChatService(backend, (receipt) => {
+      order.push('receipt');
+      receipts.push(receipt);
     });
+
+    await expect(
+      service.send(
+        {
+          content: 'Inspect the workspace',
+          context: [
+            { path: 'src/small.ts', content: 'export {};\n' },
+            { path: 'src/large.ts', content: 'x'.repeat(150_000) },
+          ],
+          contextReceipt: {
+            excluded: [],
+            included: ['src/small.ts', 'src/large.ts'],
+            totalBytes: 150_011,
+            truncated: false,
+          },
+          routingMode: 'AUTO',
+        },
+        () => undefined,
+      ),
+    ).rejects.toThrow('message rejected');
+
+    expect(order).toEqual(['receipt', 'submit']);
+    expect(receipts).toEqual([
+      {
+        excluded: [{ path: 'src/large.ts', reason: 'limit' }],
+        included: ['src/small.ts'],
+        totalBytes: 11,
+        truncated: true,
+      },
+    ]);
+  });
+
+  it('publishes the transport receipt when stream setup fails', async () => {
+    const receipts: unknown[] = [];
+    const backend: ChatBackendPort = {
+      createThread: vi.fn(async () => ({ id: 'thread-1' })),
+      openStream: vi.fn(async () => {
+        throw new Error('stream unavailable');
+      }),
+      sendMessage: vi.fn(async () => ({ id: 'message-1' })),
+    };
+    const service = new ChatService(backend, (receipt) => {
+      receipts.push(receipt);
+    });
+
+    await expect(
+      service.send(
+        {
+          content: 'Inspect the workspace',
+          context: [{ path: 'src/app.ts', content: 'export {};\n' }],
+          contextReceipt: {
+            excluded: [],
+            included: ['src/app.ts'],
+            totalBytes: 11,
+            truncated: false,
+          },
+          routingMode: 'AUTO',
+        },
+        () => undefined,
+      ),
+    ).rejects.toThrow('stream unavailable');
+
+    expect(receipts).toEqual([
+      {
+        excluded: [],
+        included: ['src/app.ts'],
+        totalBytes: 11,
+        truncated: false,
+      },
+    ]);
+    expect(backend.sendMessage).not.toHaveBeenCalled();
   });
 
   it('rejects missing streams and attributed generation errors', async () => {
@@ -241,5 +441,97 @@ describe('ChatService', () => {
         () => undefined,
       ),
     ).rejects.toThrow('Provider unavailable');
+  });
+
+  it('preserves structured SSE error metadata without replacing the safe user message', async () => {
+    const backend: ChatBackendPort = {
+      createThread: vi.fn(async () => ({ id: 'thread-1' })),
+      openStream: vi.fn(async () =>
+        streamResponse([
+          {
+            type: 'error',
+            code: 'PROVIDER_BUSY',
+            error: 'The selected provider is temporarily unavailable.',
+            errorMessageKey: 'chat.errors.providerBusy',
+            retryable: true,
+          },
+        ]),
+      ),
+      sendMessage: vi.fn(async () => ({ id: 'message-1' })),
+    };
+
+    const failure = await new ChatService(backend)
+      .send({ content: 'Question', context: [], routingMode: 'AUTO' }, () => undefined)
+      .catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: 'The selected provider is temporarily unavailable.',
+      metadata: {
+        code: 'PROVIDER_BUSY',
+        key: 'chat.errors.providerBusy',
+        retryable: true,
+      },
+    });
+  });
+
+  it('keeps raw error translation keys in metadata and out of the visible message', async () => {
+    const backend: ChatBackendPort = {
+      createThread: vi.fn(async () => ({ id: 'thread-1' })),
+      openStream: vi.fn(async () =>
+        streamResponse([
+          {
+            type: 'error',
+            code: 'PROVIDER_BUSY',
+            error: 'chat.errors.providerBusy',
+            errorMessageKey: 'chat.errors.providerBusy',
+            retryable: false,
+          },
+        ]),
+      ),
+      sendMessage: vi.fn(async () => ({ id: 'message-1' })),
+    };
+
+    const failure = await new ChatService(backend)
+      .send({ content: 'Question', context: [], routingMode: 'AUTO' }, () => undefined)
+      .catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: 'ClawAI request failed.',
+      metadata: {
+        code: 'PROVIDER_BUSY',
+        key: 'chat.errors.providerBusy',
+        retryable: false,
+      },
+    });
+    expect((failure as Error).message).not.toContain('chat.errors.providerBusy');
+  });
+
+  it('uses a safe structured SSE description when no user-facing error is present', async () => {
+    const backend: ChatBackendPort = {
+      createThread: vi.fn(async () => ({ id: 'thread-1' })),
+      openStream: vi.fn(async () =>
+        streamResponse([
+          {
+            type: 'error',
+            code: 'VIDEO_UNSUPPORTED',
+            description: 'The selected provider cannot process this video.',
+            retryable: false,
+          },
+        ]),
+      ),
+      sendMessage: vi.fn(async () => ({ id: 'message-1' })),
+    };
+
+    const failure = await new ChatService(backend)
+      .send({ content: 'Question', context: [], routingMode: 'AUTO' }, () => undefined)
+      .catch((error: unknown) => error);
+
+    expect(failure).toMatchObject({
+      message: 'The selected provider cannot process this video.',
+      metadata: {
+        code: 'VIDEO_UNSUPPORTED',
+        retryable: false,
+      },
+    });
   });
 });

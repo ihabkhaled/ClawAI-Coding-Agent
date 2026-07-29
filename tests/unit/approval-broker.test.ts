@@ -54,4 +54,23 @@ describe('ApprovalBroker', () => {
     expect(broker.cancelCurrent()).toBe(true);
     await expect(result).resolves.toBe(false);
   });
+
+  it('cancels the active and queued approvals at an account boundary', async () => {
+    const broker = new ApprovalBroker({ update: () => undefined });
+    const first = broker.request({
+      kind: 'finalDiff',
+      message: 'Apply changes',
+      title: 'Apply',
+    });
+    const second = broker.request({
+      kind: 'commandExecution',
+      message: 'Run command',
+      title: 'Run',
+    });
+
+    expect(broker.cancelAll()).toBe(true);
+
+    await expect(Promise.all([first, second])).resolves.toEqual([false, false]);
+    expect(broker.current).toBeUndefined();
+  });
 });

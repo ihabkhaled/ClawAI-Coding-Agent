@@ -31,6 +31,7 @@ export interface AgentRunChatPort {
     onEvent: (event: Record<string, unknown>) => void,
     signal?: AbortSignal,
     onThread?: (threadId: string) => void,
+    onAccepted?: () => void,
   ): Promise<ChatResult>;
 }
 
@@ -42,7 +43,11 @@ export interface AgentRunCommandPort {
 }
 
 export interface AgentRunEditPort extends AgentRunCommandPort {
-  previewAndApply(plan: EditPlan): Promise<SafeEditResult>;
+  previewAndApply(
+    plan: EditPlan,
+    signal: AbortSignal,
+    session?: AgentRunSessionPort,
+  ): Promise<SafeEditResult>;
 }
 
 export interface AgentRunInput {
@@ -51,7 +56,11 @@ export interface AgentRunInput {
   contextMode: ContextMode;
   kind?: WorkflowKind;
   selection: ResolvedModelSelection;
+  session?: AgentRunSessionPort;
   signal: AbortSignal;
+  fileIds?: string[];
+  prepareFileIds?: () => Promise<string[]>;
+  onAccepted?: () => void;
   threadId?: string;
 }
 
@@ -68,6 +77,10 @@ export interface AgentRunResult {
   editPlan?: EditPlan;
   previewId?: string;
   commandsExecuted?: boolean;
+  commandsCompleted?: number;
+  commandsTotal?: number;
+  commandError?: string;
+  filesApplied?: boolean;
   threadId?: string;
   tokens?: TokenReceipt;
 }

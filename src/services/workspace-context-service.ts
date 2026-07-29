@@ -4,6 +4,8 @@ import {
   collectContext,
   type CollectedContext,
   type ContextCandidate,
+  type ContextReceipt,
+  workspaceGlobToRegExp,
 } from '../core/context-collector';
 import {
   resolveSmartContext,
@@ -11,6 +13,11 @@ import {
   type WorkspaceReadiness,
 } from '../core/context-mode';
 import { EMPTY_CONTEXT } from '../core/empty-context';
+import {
+  isRealPathInsideWorkspace,
+  resolveCanonicalWorkspacePath,
+} from '../core/workspace-file-containment';
+import { isSensitiveWorkspacePath } from '../core/workspace-path-policy';
 
 import { WorkspaceScopeService } from './workspace-scope-service';
 
@@ -21,29 +28,16 @@ import type { WorkspaceScopeSnapshot } from '../core/workspace-scope.types';
 const CLAWAI_IGNORE_PATH = '.clawai/ignore';
 const FILE_SCAN_MULTIPLIER = 10;
 
-function isAlwaysDeniedPath(path: string): boolean {
-  return /(?:^|\/)(?:\.git|node_modules|\.env(?:\.|$)|[^/]*(?:secret|credential|api[-_]?key)[^/]*)(?:\/|$)/iu.test(
-    path,
-  );
+type ContextExclusion = ContextReceipt['excluded'][number];
+
+interface WorkspaceFileCandidate {
+  path: string;
+  uri: vscode.Uri;
 }
 
-function globToRegExp(glob: string): RegExp {
-  let pattern = '^';
-  for (let index = 0; index < glob.length; index += 1) {
-    const character = glob[index];
-    const next = glob[index + 1];
-    if (character === '*' && next === '*') {
-      pattern += '.*';
-      index += 1;
-    } else if (character === '*') {
-      pattern += '[^/]*';
-    } else if (character === '?') {
-      pattern += '[^/]';
-    } else if (character !== undefined) {
-      pattern += character.replace(/[\\^$.[\]{}()+|]/gu, '\\$&');
-    }
-  }
-  return new RegExp(`${pattern}$`, 'u');
+interface WorkspaceReadResult {
+  candidates: ContextCandidate[];
+  excluded: ContextExclusion[];
 }
 
 export class WorkspaceContextService {
@@ -76,6 +70,12 @@ export class WorkspaceContextService {
     return this.scope.refresh();
   }
 
+  freezeWorkspaceFolder(): void {
+    if (this.scope.refresh().selectedFolderKey !== undefined) {
+      this.scope.selectedFolder();
+    }
+  }
+
   selectWorkspaceFolder(folderKey: string): void {
     this.scope.select(folderKey);
   }
@@ -100,28 +100,36 @@ export class WorkspaceContextService {
     return this.workspace(configuration);
   }
 
-  selection(configuration: RuntimeConfiguration): Promise<CollectedContext> {
+  async selection(configuration: RuntimeConfiguration): Promise<CollectedContext> {
     const editor = vscode.window.activeTextEditor;
     if (editor === undefined || editor.selection.isEmpty) {
       throw new Error(vscode.l10n.t('Select code before running this command.'));
     }
+    const folder = this.scope.selectedFolder();
+    const path = this.scope.relativePath(editor.document.uri);
+    const canonicalWorkspacePath = await this.canonicalWorkspacePath(folder.uri);
+    await this.assertRealPathInsideWorkspace(canonicalWorkspacePath, editor.document.uri);
     const candidate = {
-      path: this.scope.relativePath(editor.document.uri),
+      path,
       content: editor.document.getText(editor.selection),
     };
-    return Promise.resolve(this.finish([candidate], configuration, []));
+    return this.finish([candidate], configuration, []);
   }
 
-  activeFile(configuration: RuntimeConfiguration): Promise<CollectedContext> {
+  async activeFile(configuration: RuntimeConfiguration): Promise<CollectedContext> {
     const editor = vscode.window.activeTextEditor;
     if (editor === undefined) {
       throw new Error(vscode.l10n.t('Open a file before running this command.'));
     }
+    const folder = this.scope.selectedFolder();
+    const path = this.scope.relativePath(editor.document.uri);
+    const canonicalWorkspacePath = await this.canonicalWorkspacePath(folder.uri);
+    await this.assertRealPathInsideWorkspace(canonicalWorkspacePath, editor.document.uri);
     const candidate = {
-      path: this.scope.relativePath(editor.document.uri),
+      path,
       content: editor.document.getText(),
     };
-    return Promise.resolve(this.finish([candidate], configuration, []));
+    return this.finish([candidate], configuration, []);
   }
 
   async workspace(configuration: RuntimeConfiguration): Promise<CollectedContext> {
@@ -129,24 +137,43 @@ export class WorkspaceContextService {
       throw new Error(vscode.l10n.t('Trust this workspace before collecting project context.'));
     }
     const folder = this.scope.selectedFolder();
-    const ignore = await this.readIgnore();
+    const canonicalWorkspacePath = await this.canonicalWorkspacePath(folder.uri);
+    const ignore = await this.readIgnore(folder.uri, canonicalWorkspacePath);
     const excludedPatterns = [...configuration.exclude, ...ignore];
-    const patterns = excludedPatterns.map(globToRegExp);
+    const patterns = excludedPatterns.map(workspaceGlobToRegExp);
     const uris = await vscode.workspace.findFiles(
       new vscode.RelativePattern(folder, '**/*'),
       undefined,
       configuration.maxContextFiles * FILE_SCAN_MULTIPLIER,
     );
-    const eligible = uris.filter((uri) => {
+    const preReadExcluded: ContextExclusion[] = [];
+    const eligible = uris.flatMap((uri): WorkspaceFileCandidate[] => {
       const path = this.scope.relativePath(uri);
-      return !isAlwaysDeniedPath(path) && !patterns.some((pattern) => pattern.test(path));
+      if (isSensitiveWorkspacePath(path)) {
+        preReadExcluded.push({ path, reason: 'sensitive' });
+        return [];
+      }
+      if (patterns.some((pattern) => pattern.test(path))) {
+        preReadExcluded.push({ path, reason: 'excluded' });
+        return [];
+      }
+      return [{ path, uri }];
     });
-    const candidates = await this.readCandidates(eligible, configuration.maxContextBytes);
-    return this.finish(candidates, configuration, ignore);
+    const read = await this.readCandidates(
+      eligible,
+      configuration.maxContextBytes,
+      configuration.maxContextFiles,
+      canonicalWorkspacePath,
+    );
+    return this.finish(read.candidates, configuration, ignore, [
+      ...preReadExcluded,
+      ...read.excluded,
+    ]);
   }
 
   async projectRules(): Promise<string> {
     const folder = this.scope.selectedFolder();
+    const canonicalWorkspacePath = await this.canonicalWorkspacePath(folder.uri);
     const ruleUris = [
       vscode.Uri.joinPath(folder.uri, '.clawai', 'rules.md'),
       vscode.Uri.joinPath(folder.uri, '.clawai', 'architecture.md'),
@@ -156,6 +183,7 @@ export class WorkspaceContextService {
     const contents: string[] =
       globalContext === undefined || globalContext.length === 0 ? [] : [globalContext];
     for (const uri of ruleUris) {
+      await this.assertRealPathInsideWorkspace(canonicalWorkspacePath, uri);
       const content = await this.readOptionalText(uri);
       if (content !== null) {
         contents.push(`# ${this.scope.relativePath(uri)}\n${content}`);
@@ -168,36 +196,77 @@ export class WorkspaceContextService {
     candidates: ContextCandidate[],
     configuration: RuntimeConfiguration,
     workspaceIgnore: string[],
+    preReadExcluded: ContextExclusion[] = [],
   ): CollectedContext {
-    return collectContext(candidates, {
+    const collected = collectContext(candidates, {
       exclude: [...configuration.exclude, ...workspaceIgnore],
       maxBytes: configuration.maxContextBytes,
       maxFiles: configuration.maxContextFiles,
     });
+    return {
+      ...collected,
+      receipt: {
+        ...collected.receipt,
+        excluded: [...preReadExcluded, ...collected.receipt.excluded],
+        truncated:
+          collected.receipt.truncated || preReadExcluded.some((entry) => entry.reason === 'limit'),
+      },
+    };
   }
 
-  private async readCandidates(uris: vscode.Uri[], maxBytes: number): Promise<ContextCandidate[]> {
+  private async readCandidates(
+    files: WorkspaceFileCandidate[],
+    maxBytes: number,
+    maxFiles: number,
+    canonicalWorkspacePath: string | undefined,
+  ): Promise<WorkspaceReadResult> {
     const candidates: ContextCandidate[] = [];
-    for (const uri of uris) {
-      const stat = await vscode.workspace.fs.stat(uri);
-      if (stat.type !== vscode.FileType.File || stat.size > maxBytes) {
+    const excluded: ContextExclusion[] = [];
+    let readBytes = 0;
+    let readFiles = 0;
+    for (const [index, file] of files.entries()) {
+      const remainingBytes = maxBytes - readBytes;
+      if (remainingBytes <= 0 || readFiles >= maxFiles) {
+        excluded.push(
+          ...files.slice(index).map((remaining) => ({
+            path: remaining.path,
+            reason: 'limit' as const,
+          })),
+        );
+        break;
+      }
+      await this.assertRealPathInsideWorkspace(canonicalWorkspacePath, file.uri);
+      const stat = await vscode.workspace.fs.stat(file.uri);
+      if (stat.type !== vscode.FileType.File) {
         continue;
       }
-      const bytes = await vscode.workspace.fs.readFile(uri);
+      if (stat.size > remainingBytes) {
+        excluded.push({ path: file.path, reason: 'limit' });
+        continue;
+      }
+      const bytes = await vscode.workspace.fs.readFile(file.uri);
+      readBytes += bytes.byteLength;
+      readFiles += 1;
+      if (bytes.byteLength > remainingBytes) {
+        excluded.push({ path: file.path, reason: 'limit' });
+        continue;
+      }
       const content = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
       candidates.push({
-        path: this.scope.relativePath(uri),
+        path: file.path,
         content,
       });
     }
-    return candidates;
+    return { candidates, excluded };
   }
 
-  private async readIgnore(): Promise<string[]> {
-    const folder = this.scope.selectedFolder();
-    const content = await this.readOptionalText(
-      vscode.Uri.joinPath(folder.uri, CLAWAI_IGNORE_PATH),
-    );
+  private async readIgnore(
+    folderUri: vscode.Uri,
+    canonicalWorkspacePath: string | undefined,
+  ): Promise<string[]> {
+    const ignoreUri = vscode.Uri.joinPath(folderUri, CLAWAI_IGNORE_PATH);
+    await this.assertRealPathInsideWorkspace(canonicalWorkspacePath, ignoreUri);
+    const content = await this.readOptionalText(ignoreUri);
     if (content === null) {
       return [];
     }
@@ -205,6 +274,25 @@ export class WorkspaceContextService {
       .split(/\r?\n/u)
       .map((line) => line.trim())
       .filter((line) => line.length > 0 && !line.startsWith('#'));
+  }
+
+  private async canonicalWorkspacePath(folderUri: vscode.Uri): Promise<string | undefined> {
+    return folderUri.scheme === 'file'
+      ? resolveCanonicalWorkspacePath(folderUri.fsPath)
+      : Promise.resolve(undefined);
+  }
+
+  private async assertRealPathInsideWorkspace(
+    canonicalWorkspacePath: string | undefined,
+    uri: vscode.Uri,
+  ): Promise<void> {
+    if (
+      canonicalWorkspacePath !== undefined &&
+      uri.scheme === 'file' &&
+      !(await isRealPathInsideWorkspace(canonicalWorkspacePath, uri.fsPath))
+    ) {
+      throw new Error(vscode.l10n.t('The file is outside the selected workspace folder.'));
+    }
   }
 
   private async readOptionalText(uri: vscode.Uri): Promise<string | null> {

@@ -1,5 +1,6 @@
 import { createAgentRunSnapshot } from '../core/agent-run';
 import { EMPTY_CONTEXT } from '../core/empty-context';
+import { addTokenReceipts } from '../core/token-telemetry';
 
 import {
   buildAnalysisPrompt,
@@ -24,6 +25,44 @@ function hasNoPlannedActions(plan: EditPlan): boolean {
   return plan.files.length === 0 && (plan.commands?.length ?? 0) === 0;
 }
 
+function enforcePostEditCancellation(signal: AbortSignal, committed: boolean): void {
+  if (signal.aborted && !committed) {
+    signal.throwIfAborted();
+  }
+}
+
+function shouldRunCommands(signal: AbortSignal, plan: EditPlan, applied: boolean): boolean {
+  return !signal.aborted && applied && (plan.commands?.length ?? 0) > 0;
+}
+
+interface CommandExecutionOutcome {
+  commandError?: string;
+  commandsCompleted?: number;
+  commandsExecuted?: boolean;
+  commandsTotal?: number;
+}
+
+function commandMetadata(
+  outcome: CommandExecutionOutcome,
+): Partial<
+  Pick<AgentRunResult, 'commandError' | 'commandsCompleted' | 'commandsExecuted' | 'commandsTotal'>
+> {
+  return {
+    ...(outcome.commandError === undefined ? {} : { commandError: outcome.commandError }),
+    ...(outcome.commandsCompleted === undefined
+      ? {}
+      : { commandsCompleted: outcome.commandsCompleted }),
+    ...(outcome.commandsExecuted === undefined
+      ? {}
+      : { commandsExecuted: outcome.commandsExecuted }),
+    ...(outcome.commandsTotal === undefined ? {} : { commandsTotal: outcome.commandsTotal }),
+  };
+}
+
+function commandOutcomeApplied(outcome: CommandExecutionOutcome): boolean {
+  return outcome.commandsExecuted === true || (outcome.commandsCompleted ?? 0) > 0;
+}
+
 function runMetadata(
   threadId: string | undefined,
   tokens: AgentRunResult['tokens'],
@@ -32,6 +71,28 @@ function runMetadata(
     ...(threadId === undefined ? {} : { threadId }),
     ...(tokens === undefined ? {} : { tokens }),
   };
+}
+
+function combineTokens(
+  first: AgentRunResult['tokens'],
+  second: AgentRunResult['tokens'],
+): AgentRunResult['tokens'] {
+  if (first === undefined) {
+    return second;
+  }
+  if (second === undefined) {
+    return first;
+  }
+  return addTokenReceipts(first, second);
+}
+
+function transportedContext(
+  context: CollectedContext,
+  response: Awaited<ReturnType<AgentRunChatPort['send']>>,
+): CollectedContext {
+  return response.contextReceipt === undefined
+    ? context
+    : { ...context, receipt: response.contextReceipt };
 }
 
 function isConversationalRequest(content: string): boolean {
@@ -49,7 +110,16 @@ async function collectContext(
   if (resolvedMode === 'workspace' && !(await session.authorize('workspaceContext'))) {
     throw new Error('Workspace context access was not approved.');
   }
-  return context.collect(resolvedMode, input.configuration);
+  input.signal.throwIfAborted();
+  const collected = await context.collect(resolvedMode, input.configuration);
+  input.signal.throwIfAborted();
+  return collected;
+}
+
+async function prepareFileIds(input: AgentRunInput): Promise<string[] | undefined> {
+  const fileIds = input.prepareFileIds === undefined ? input.fileIds : await input.prepareFileIds();
+  input.signal.throwIfAborted();
+  return fileIds === undefined || fileIds.length === 0 ? undefined : fileIds;
 }
 
 export class AgentRunService {
@@ -62,16 +132,28 @@ export class AgentRunService {
 
   async run(input: AgentRunInput, callbacks: AgentRunCallbacks): Promise<AgentRunResult> {
     try {
+      const session = input.session ?? this.session;
+      input.signal.throwIfAborted();
       if (isConversationalRequest(input.content)) {
-        return await this.runConversation(input, callbacks);
+        return await this.runConversation(input, callbacks, session, await prepareFileIds(input));
       }
       callbacks.onPhase(createAgentRunSnapshot('reading'));
-      const context = await collectContext(input, this.context, this.session);
+      const context = await collectContext(input, this.context, session);
       const rules = await this.context.projectRules();
-      if (this.session.isPlanMode()) {
-        return await this.runPlan(input, context, rules, callbacks);
+      input.signal.throwIfAborted();
+      if (session.isPlanMode()) {
+        return await this.runPlan(
+          input,
+          context,
+          rules,
+          callbacks,
+          session,
+          await prepareFileIds(input),
+        );
       }
-      if (!(await this.session.authorize('editGeneration'))) {
+      const editGenerationApproved = await session.authorize('editGeneration');
+      input.signal.throwIfAborted();
+      if (!editGenerationApproved) {
         callbacks.onPhase(createAgentRunSnapshot('rejected'));
         return {
           status: 'rejected',
@@ -79,7 +161,14 @@ export class AgentRunService {
           context,
         };
       }
-      return await this.runEdit(input, context, rules, callbacks);
+      return await this.runEdit(
+        input,
+        context,
+        rules,
+        callbacks,
+        session,
+        await prepareFileIds(input),
+      );
     } catch (error: unknown) {
       const summary = error instanceof Error ? error.message : 'ClawAI coding run failed.';
       callbacks.onPhase(createAgentRunSnapshot('failed', undefined, summary));
@@ -90,9 +179,12 @@ export class AgentRunService {
   private async runConversation(
     input: AgentRunInput,
     callbacks: AgentRunCallbacks,
+    session: AgentRunSessionPort,
+    fileIds: string[] | undefined,
   ): Promise<AgentRunResult> {
     callbacks.onPhase(createAgentRunSnapshot('generating'));
-    const response = await this.send(input, input.content, callbacks);
+    const response = await this.send(input, input.content, callbacks, session, fileIds);
+    input.signal.throwIfAborted();
     callbacks.onPhase(createAgentRunSnapshot('planned'));
     return {
       status: 'planned',
@@ -108,23 +200,30 @@ export class AgentRunService {
     context: CollectedContext,
     rules: string,
     callbacks: AgentRunCallbacks,
+    session: AgentRunSessionPort,
+    fileIds: string[] | undefined,
   ): Promise<AgentRunResult> {
     callbacks.onPhase(createAgentRunSnapshot('generating'));
     const response = await this.send(
       input,
       buildAnalysisPrompt({
-        context: context.files,
+        context: [],
         kind: 'plan',
         request: input.content,
         ...(rules.length === 0 ? {} : { rules }),
       }),
       callbacks,
+      session,
+      fileIds,
+      undefined,
+      context,
     );
+    input.signal.throwIfAborted();
     callbacks.onPhase(createAgentRunSnapshot('planned'));
     return {
       status: 'planned',
       content: response.content,
-      context,
+      context: transportedContext(context, response),
       threadId: response.threadId,
       tokens: response.tokens,
     };
@@ -135,30 +234,45 @@ export class AgentRunService {
     context: CollectedContext,
     rules: string,
     callbacks: AgentRunCallbacks,
+    session: AgentRunSessionPort,
+    fileIds: string[] | undefined,
   ): Promise<AgentRunResult> {
     callbacks.onPhase(createAgentRunSnapshot('generating'));
     let response = await this.send(
       input,
       buildWorkflowPrompt({
-        context: context.files,
+        context: [],
         kind: input.kind ?? 'generate',
         request: input.content,
         ...(rules.length === 0 ? {} : { rules }),
       }),
       callbacks,
+      session,
+      fileIds,
+      undefined,
+      context,
     );
+    input.signal.throwIfAborted();
+    const runContext = transportedContext(context, response);
     let plan: EditPlan;
+    let tokens: AgentRunResult['tokens'] = response.tokens;
     callbacks.onPhase(createAgentRunSnapshot('validating'));
     try {
       plan = parseWorkflowEditPlan(response.content);
     } catch {
       callbacks.onPhase(createAgentRunSnapshot('repairing'));
       callbacks.onEvent({ type: 'AGENT_DRAFT_RESET' });
+      const malformed = response;
       response = await this.send(
         input,
-        buildEditPlanRepairPrompt(input.content, response.content),
+        buildEditPlanRepairPrompt(input.content, malformed.content),
         callbacks,
+        session,
+        fileIds,
+        malformed.threadId,
       );
+      input.signal.throwIfAborted();
+      tokens = combineTokens(malformed.tokens, response.tokens);
       callbacks.onPhase(createAgentRunSnapshot('validating'));
       plan = parseWorkflowEditPlan(response.content);
     }
@@ -166,10 +280,11 @@ export class AgentRunService {
       plan,
       response.content,
       response.threadId,
-      response.tokens,
-      context,
+      tokens,
+      runContext,
       input.signal,
       callbacks,
+      session,
     );
   }
 
@@ -181,7 +296,9 @@ export class AgentRunService {
     context: CollectedContext,
     signal: AbortSignal,
     callbacks: AgentRunCallbacks,
+    session: AgentRunSessionPort,
   ): Promise<AgentRunResult> {
+    signal.throwIfAborted();
     if (hasNoPlannedActions(plan)) {
       callbacks.onPhase(createAgentRunSnapshot('planned'));
       return {
@@ -195,62 +312,125 @@ export class AgentRunService {
     const editResult =
       plan.files.length === 0
         ? { applied: true, previews: [] }
-        : await this.edits.previewAndApply(plan);
-    const status = editResult.applied ? 'applied' : 'rejected';
-    callbacks.onPhase(createAgentRunSnapshot(status, plan, plan.summary));
-    let commandsExecuted: boolean | undefined;
-    if (editResult.applied && (plan.commands?.length ?? 0) > 0) {
-      commandsExecuted = await this.runCommands(plan, signal, callbacks);
+        : await this.edits.previewAndApply(plan, signal, session);
+    const filesApplied = plan.files.length > 0 && editResult.applied;
+    enforcePostEditCancellation(signal, filesApplied);
+    const commandOutcome = await this.attemptCommands(
+      plan,
+      signal,
+      editResult.applied,
+      callbacks,
+      session,
+    );
+    const status = filesApplied || commandOutcomeApplied(commandOutcome) ? 'applied' : 'rejected';
+    if (commandOutcome.commandsExecuted !== true) {
+      callbacks.onPhase(createAgentRunSnapshot(status, plan, plan.summary));
     }
     return {
       status,
       content,
       context,
       editPlan: plan,
+      filesApplied,
       ...(editResult.previewId === undefined ? {} : { previewId: editResult.previewId }),
-      ...(commandsExecuted === undefined ? {} : { commandsExecuted }),
+      ...commandMetadata(commandOutcome),
       ...runMetadata(threadId, tokens),
     };
+  }
+
+  private async attemptCommands(
+    plan: EditPlan,
+    signal: AbortSignal,
+    applied: boolean,
+    callbacks: AgentRunCallbacks,
+    session: AgentRunSessionPort,
+  ): Promise<CommandExecutionOutcome> {
+    if (!shouldRunCommands(signal, plan, applied)) {
+      return {};
+    }
+    try {
+      return await this.runCommands(plan, signal, callbacks, session);
+    } catch (error: unknown) {
+      return {
+        commandError: error instanceof Error ? error.message : 'ClawAI command execution failed.',
+        commandsCompleted: 0,
+        commandsExecuted: false,
+        commandsTotal: plan.commands?.length ?? 0,
+      };
+    }
   }
 
   private async runCommands(
     plan: EditPlan,
     signal: AbortSignal,
     callbacks: AgentRunCallbacks,
-  ): Promise<boolean> {
+    session: AgentRunSessionPort,
+  ): Promise<CommandExecutionOutcome> {
     const commands = plan.commands ?? [];
-    const approved = await this.session.authorize(
+    const approved = await session.authorize(
       'commandExecution',
       commands.map((entry) => `${entry.purpose}: ${entry.command}`),
     );
+    signal.throwIfAborted();
     if (!approved) {
-      return false;
+      return {
+        commandsCompleted: 0,
+        commandsExecuted: false,
+        commandsTotal: commands.length,
+      };
     }
     callbacks.onPhase(createAgentRunSnapshot('executing', plan, plan.summary));
-    for (const command of commands) {
-      const result = await this.edits.execute(command, signal);
-      if (result.exitCode !== 0) {
-        throw new Error(
-          `Command failed with exit code ${String(result.exitCode ?? 'unknown')}: ${command.command}`,
-        );
+    let commandsCompleted = 0;
+    try {
+      for (const command of commands) {
+        signal.throwIfAborted();
+        const result = await this.edits.execute(command, signal);
+        signal.throwIfAborted();
+        if (result.exitCode !== 0) {
+          return {
+            commandError: `Command failed with exit code ${String(
+              result.exitCode ?? 'unknown',
+            )}: ${command.command}`,
+            commandsCompleted,
+            commandsExecuted: false,
+            commandsTotal: commands.length,
+          };
+        }
+        commandsCompleted += 1;
       }
+    } catch (error: unknown) {
+      return {
+        commandError: error instanceof Error ? error.message : 'ClawAI command execution failed.',
+        commandsCompleted,
+        commandsExecuted: false,
+        commandsTotal: commands.length,
+      };
     }
     callbacks.onPhase(createAgentRunSnapshot('verified', plan, plan.summary));
-    return true;
+    return {
+      commandsCompleted,
+      commandsExecuted: true,
+      commandsTotal: commands.length,
+    };
   }
 
   private send(
     input: AgentRunInput,
     content: string,
     callbacks: AgentRunCallbacks,
+    session: AgentRunSessionPort,
+    fileIds: string[] | undefined,
     threadId?: string,
+    context?: CollectedContext,
   ): ReturnType<AgentRunChatPort['send']> {
     const resolvedThreadId = threadId ?? input.threadId;
     return this.chat.send(
       {
-        content: this.session.preparePrompt(content),
-        context: [],
+        content: session.preparePrompt(content),
+        context: context?.files ?? [],
+        ...(context === undefined ? {} : { contextReceipt: context.receipt }),
         ...input.selection,
+        ...(fileIds === undefined ? {} : { fileIds }),
         ...(resolvedThreadId === undefined ? {} : { threadId: resolvedThreadId }),
       },
       (event) => {
@@ -260,6 +440,7 @@ export class AgentRunService {
       (threadId) => {
         callbacks.onThread(threadId);
       },
+      input.onAccepted,
     );
   }
 }

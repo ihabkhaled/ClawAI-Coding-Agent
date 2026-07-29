@@ -2,14 +2,13 @@ import { z } from 'zod';
 
 import { joinApiUrl, normalizeBackendUrl } from '../core/configuration';
 import { redactText } from '../core/redaction';
-import { type SessionVault } from '../core/session-vault';
+import { type SessionVault, type TokenPair } from '../core/session-vault';
 
 import {
   connectorModelSchema,
   entitlementsSchema,
   localFrontierListSchema,
   localOllamaModelSchema,
-  loginResultSchema,
   messageSchema,
   paginatedSchema,
   parallelResponseSchema,
@@ -19,19 +18,31 @@ import {
   usageSchema,
   userProfileSchema,
   vscodeAuthorizationInitResultSchema,
+  uploadedFileSchema,
   type ChatMessage,
   type ChatThread,
   type ConnectorModel,
   type Entitlements,
-  type LoginResult,
   type LocalFrontierModel,
   type LocalOllamaModel,
   type ParallelResponse,
   type RouterModel,
   type Usage,
+  type UploadedFile,
 } from './contracts';
+import {
+  discardResponseBody,
+  readBoundedResponseText,
+  ResponseBodyLimitError,
+  responseWithIdleTimeout,
+  type ResponseLease,
+  waitForCaller,
+} from './response-lease';
+
+import type { ChatAttachment } from '../core/chat-attachment';
 
 const MAX_ERROR_BODY_BYTES = 64_000;
+const MAX_SUCCESS_BODY_BYTES = 8_000_000;
 
 export interface BackendClientOptions {
   backendUrl: string;
@@ -48,6 +59,7 @@ export interface MessageRequest {
   provider?: string;
   model?: string;
   modelDisplayName?: string;
+  fileIds?: string[];
 }
 
 export interface CompareRequest {
@@ -59,6 +71,7 @@ export interface CompareRequest {
   }[];
   judgeEnabled?: boolean;
   judgeModel?: string | null;
+  fileIds?: string[];
 }
 
 export class BackendRequestError extends Error {
@@ -72,12 +85,25 @@ export class BackendRequestError extends Error {
   }
 }
 
+export class BackendSessionChangedError extends BackendRequestError {
+  constructor() {
+    super(
+      'The ClawAI account changed in another VS Code window. Reconnect to continue.',
+      401,
+      false,
+    );
+    this.name = 'BackendSessionChangedError';
+  }
+}
+
 export class BackendClient {
   private readonly backendUrl: string;
   private readonly clientName: string;
   private readonly fetcher: typeof fetch;
   private readonly sessionVault: SessionVault;
   private readonly timeoutMs: number;
+  private boundSessionId: string | null = null;
+  private refreshController: AbortController | null = null;
   private refreshPromise: Promise<void> | null = null;
 
   constructor(options: BackendClientOptions) {
@@ -88,27 +114,14 @@ export class BackendClient {
     this.timeoutMs = options.timeoutMs;
   }
 
-  async login(email: string, password: string): Promise<LoginResult> {
-    const response = await this.send('/auth/login', {
-      auth: false,
-      body: {
-        clientKind: 'VSCODE',
-        clientName: this.clientName,
-        email,
-        password,
-      },
-      method: 'POST',
-    });
-    const result = await this.parse(response, loginResultSchema);
-    await this.sessionVault.save(result.tokens);
-    return result;
-  }
-
-  async initializeVscodeAuthorization(input: {
-    callbackUri: string;
-    state: string;
-    codeChallenge: string;
-  }): Promise<z.infer<typeof vscodeAuthorizationInitResultSchema>> {
+  async initializeVscodeAuthorization(
+    input: {
+      callbackUri: string;
+      state: string;
+      codeChallenge: string;
+    },
+    signal?: AbortSignal,
+  ): Promise<z.infer<typeof vscodeAuthorizationInitResultSchema>> {
     const response = await this.send('/auth/vscode/authorize/init', {
       auth: false,
       body: {
@@ -116,36 +129,64 @@ export class BackendClient {
         clientName: this.clientName,
       },
       method: 'POST',
+      ...(signal === undefined ? {} : { signal }),
     });
     return this.parse(response, vscodeAuthorizationInitResultSchema);
   }
 
-  async exchangeVscodeAuthorization(code: string, codeVerifier: string): Promise<void> {
+  async exchangeVscodeAuthorization(
+    code: string,
+    codeVerifier: string,
+    signal?: AbortSignal,
+  ): Promise<TokenPair> {
     const response = await this.send('/auth/vscode/authorize/exchange', {
       auth: false,
       body: { code, codeVerifier },
       method: 'POST',
+      ...(signal === undefined ? {} : { signal }),
     });
     const result = await this.parse(response, refreshResultSchema);
-    await this.sessionVault.save(result.tokens);
+    return result.tokens;
   }
 
   async logout(): Promise<void> {
-    try {
-      const response = await this.send('/auth/logout', {
-        auth: true,
-        method: 'POST',
-      });
-      if (!response.ok && response.status !== 401) {
-        await this.throwResponseError(response);
-      }
-    } finally {
-      await this.sessionVault.clear();
+    this.refreshController?.abort(new Error('ClawAI session ended.'));
+    const current = await this.sessionVault.loadBound(this.backendUrl);
+    if (current === null) {
+      return;
     }
+    this.bindSession(current.sessionId);
+    const tokens = await this.sessionVault.clearIfSession(this.backendUrl, current.sessionId);
+    if (tokens === null) {
+      throw new BackendSessionChangedError();
+    }
+    const response = await this.send('/auth/logout', {
+      accessToken: tokens.accessToken,
+      auth: false,
+      method: 'POST',
+    });
+    if (!response.response.ok && response.response.status !== 401) {
+      await this.throwResponseError(response);
+      return;
+    }
+    await discardResponseBody(response);
   }
 
   async getProfile(): Promise<z.infer<typeof userProfileSchema>> {
     return this.request('/auth/me', userProfileSchema);
+  }
+
+  async getProfileWithAccessToken(
+    accessToken: string,
+    signal?: AbortSignal,
+  ): Promise<z.infer<typeof userProfileSchema>> {
+    const response = await this.send('/auth/me', {
+      accessToken,
+      auth: false,
+      method: 'GET',
+      ...(signal === undefined ? {} : { signal }),
+    });
+    return this.parse(response, userProfileSchema);
   }
 
   async getEntitlements(): Promise<Entitlements> {
@@ -213,17 +254,38 @@ export class BackendClient {
     return result.data;
   }
 
-  async sendMessage(input: MessageRequest): Promise<ChatMessage> {
-    return this.request('/chat-messages', messageSchema, {
-      body: input,
+  async uploadFile(input: ChatAttachment, signal?: AbortSignal): Promise<UploadedFile> {
+    return this.request('/files/upload', uploadedFileSchema, {
+      body: {
+        content: input.content,
+        filename: input.filename,
+        mimeType: input.mimeType,
+        sizeBytes: input.sizeBytes,
+      },
       method: 'POST',
+      ...(signal === undefined ? {} : { signal }),
     });
   }
 
-  async compare(input: CompareRequest): Promise<ParallelResponse> {
+  async deleteFile(id: string): Promise<void> {
+    await this.request(`/files/${encodeURIComponent(id)}`, z.unknown(), {
+      method: 'DELETE',
+    });
+  }
+
+  async sendMessage(input: MessageRequest, signal?: AbortSignal): Promise<ChatMessage> {
+    return this.request('/chat-messages', messageSchema, {
+      body: input,
+      method: 'POST',
+      ...(signal === undefined ? {} : { signal }),
+    });
+  }
+
+  async compare(input: CompareRequest, signal?: AbortSignal): Promise<ParallelResponse> {
     return this.request('/chat-messages/parallel', parallelResponseSchema, {
       body: input,
       method: 'POST',
+      ...(signal === undefined ? {} : { signal }),
     });
   }
 
@@ -238,25 +300,29 @@ export class BackendClient {
   }
 
   async openStream(threadId: string, signal?: AbortSignal): Promise<Response> {
-    let response = await this.send(`/chat-messages/stream/${encodeURIComponent(threadId)}`, {
+    const path = `/chat-messages/stream/${encodeURIComponent(threadId)}?replay=false`;
+    let response = await this.send(path, {
       accept: 'text/event-stream',
       auth: true,
       method: 'GET',
       ...(signal === undefined ? {} : { signal }),
     });
-    if (response.status === 401) {
-      await this.refreshSession();
-      response = await this.send(`/chat-messages/stream/${encodeURIComponent(threadId)}`, {
+    if (response.response.status === 401) {
+      await discardResponseBody(response);
+      await this.refreshSession(signal);
+      response = await this.send(path, {
         accept: 'text/event-stream',
         auth: true,
         method: 'GET',
         ...(signal === undefined ? {} : { signal }),
       });
     }
-    if (!response.ok) {
+    if (!response.response.ok) {
       await this.throwResponseError(response);
     }
-    return response;
+    const streamResponse = responseWithIdleTimeout(response.response, this.timeoutMs, signal);
+    response.release();
+    return streamResponse;
   }
 
   private async request<T>(
@@ -274,8 +340,9 @@ export class BackendClient {
       ...(options.body === undefined ? {} : { body: options.body }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
     });
-    if (response.status === 401) {
-      await this.refreshSession();
+    if (response.response.status === 401) {
+      await discardResponseBody(response);
+      await this.refreshSession(options.signal);
       response = await this.send(path, {
         auth: true,
         method: options.method ?? 'GET',
@@ -286,56 +353,85 @@ export class BackendClient {
     return this.parse(response, schema);
   }
 
-  private async refreshSession(): Promise<void> {
-    if (this.refreshPromise !== null) {
-      return this.refreshPromise;
+  private refreshSession(signal?: AbortSignal): Promise<void> {
+    let promise = this.refreshPromise;
+    if (promise === null) {
+      const controller = new AbortController();
+      promise = this.performRefresh(controller.signal);
+      const ownedPromise = promise;
+      this.refreshPromise = promise;
+      this.refreshController = controller;
+      void ownedPromise.then(
+        () => {
+          this.finishRefresh(ownedPromise, controller);
+        },
+        () => {
+          this.finishRefresh(ownedPromise, controller);
+        },
+      );
     }
-    this.refreshPromise = this.performRefresh();
-    try {
-      await this.refreshPromise;
-    } finally {
+    return waitForCaller(promise, signal);
+  }
+
+  private finishRefresh(promise: Promise<void>, controller: AbortController): void {
+    if (this.refreshPromise === promise) {
       this.refreshPromise = null;
+    }
+    if (this.refreshController === controller) {
+      this.refreshController = null;
     }
   }
 
-  private async performRefresh(): Promise<void> {
-    const tokens = await this.sessionVault.load();
-    if (tokens === null) {
+  private async performRefresh(signal: AbortSignal): Promise<void> {
+    const outcome = await this.sessionVault.refreshIfCurrent(
+      this.backendUrl,
+      signal,
+      async (tokens) => {
+        const response = await this.send('/auth/refresh', {
+          auth: false,
+          body: {
+            refreshToken: tokens.refreshToken,
+          },
+          method: 'POST',
+          signal,
+        });
+        const result = await this.parse(response, refreshResultSchema);
+        signal.throwIfAborted();
+        return result.tokens;
+      },
+      this.boundSessionId ?? undefined,
+    );
+    if (outcome === 'missing') {
       throw new BackendRequestError('Connect to ClawAI to continue.', 401, false);
     }
-    const response = await this.send('/auth/refresh', {
-      auth: false,
-      body: {
-        refreshToken: tokens.refreshToken,
-      },
-      method: 'POST',
-    });
-    const result = await this.parse(response, refreshResultSchema);
-    await this.sessionVault.save(result.tokens);
   }
 
   private async send(
     path: string,
     options: {
       accept?: string;
+      accessToken?: string;
       auth: boolean;
       method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
       body?: unknown;
       signal?: AbortSignal;
     },
-  ): Promise<Response> {
+  ): Promise<ResponseLease> {
     const headers: Record<string, string> = {
       Accept: options.accept ?? 'application/json',
     };
     if (options.body !== undefined) {
       headers['Content-Type'] = 'application/json';
     }
-    if (options.auth) {
-      const tokens = await this.sessionVault.load();
-      if (tokens === null) {
+    if (options.accessToken !== undefined) {
+      headers.Authorization = `Bearer ${options.accessToken}`;
+    } else if (options.auth) {
+      const session = await this.sessionVault.loadBound(this.backendUrl);
+      if (session === null) {
         throw new BackendRequestError('Connect to ClawAI to continue.', 401, false);
       }
-      headers.Authorization = `Bearer ${tokens.accessToken}`;
+      this.bindSession(session.sessionId);
+      headers.Authorization = `Bearer ${session.tokens.accessToken}`;
     }
 
     const timeoutController = new AbortController();
@@ -348,40 +444,76 @@ export class BackendClient {
         : AbortSignal.any([options.signal, timeoutController.signal]);
 
     try {
-      return await this.fetcher(joinApiUrl(this.backendUrl, path), {
+      const response = await this.fetcher(joinApiUrl(this.backendUrl, path), {
         method: options.method,
         headers,
         signal,
         ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
       });
+      return {
+        ...(options.signal === undefined ? {} : { callerSignal: options.signal }),
+        release: () => {
+          clearTimeout(timeout);
+        },
+        response,
+        signal,
+      };
     } catch (error: unknown) {
+      clearTimeout(timeout);
+      options.signal?.throwIfAborted();
       const message =
         error instanceof Error ? redactText(error.message) : 'Backend request failed.';
       throw new BackendRequestError(message, 0, true);
-    } finally {
-      clearTimeout(timeout);
     }
   }
 
-  private async parse<T>(response: Response, schema: z.ZodType<T>): Promise<T> {
-    if (!response.ok) {
-      await this.throwResponseError(response);
+  private async parse<T>(lease: ResponseLease, schema: z.ZodType<T>): Promise<T> {
+    if (!lease.response.ok) {
+      await this.throwResponseError(lease);
     }
-    if (response.status === 204) {
+    if (lease.response.status === 204) {
+      lease.release();
       return schema.parse(undefined);
     }
-    const body: unknown = await response.json();
+    const text = await this.readResponseBody(lease, MAX_SUCCESS_BODY_BYTES);
+    const body: unknown = JSON.parse(text);
     return schema.parse(body);
   }
 
-  private async throwResponseError(response: Response): Promise<never> {
-    const body = (await response.text()).slice(0, MAX_ERROR_BODY_BYTES);
+  private bindSession(sessionId: string): void {
+    if (this.boundSessionId === null) {
+      this.boundSessionId = sessionId;
+      return;
+    }
+    if (this.boundSessionId !== sessionId) {
+      throw new BackendSessionChangedError();
+    }
+  }
+
+  private async readResponseBody(lease: ResponseLease, limitBytes: number): Promise<string> {
+    try {
+      return await readBoundedResponseText(lease, limitBytes);
+    } catch (error: unknown) {
+      lease.callerSignal?.throwIfAborted();
+      if (error instanceof ResponseBodyLimitError) {
+        throw new BackendRequestError(error.message, lease.response.status, false);
+      }
+      const message =
+        error instanceof Error ? redactText(error.message) : 'Backend response failed.';
+      throw new BackendRequestError(message, 0, true);
+    }
+  }
+
+  private async throwResponseError(lease: ResponseLease): Promise<never> {
+    const body = await this.readResponseBody(lease, MAX_ERROR_BODY_BYTES);
     const safeBody = redactText(body).trim();
-    const statusMessage = `ClawAI request failed (${String(response.status)}).`;
+    const statusMessage = `ClawAI request failed (${String(lease.response.status)}).`;
     throw new BackendRequestError(
       safeBody.length === 0 ? statusMessage : `${statusMessage} ${safeBody}`,
-      response.status,
-      response.status === 408 || response.status === 429 || response.status >= 500,
+      lease.response.status,
+      lease.response.status === 408 ||
+        lease.response.status === 429 ||
+        lease.response.status >= 500,
     );
   }
 }

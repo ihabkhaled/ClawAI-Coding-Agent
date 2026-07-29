@@ -23,7 +23,7 @@ const configuration: RuntimeConfiguration = {
 };
 
 describe('AgentRunService malformed model repair', () => {
-  it('repairs one malformed local-model response in a fresh stream thread', async () => {
+  it('repairs one malformed response in the original thread and aggregates usage', async () => {
     const files = new Map<string, string>();
     const phases: AgentRunSnapshot[] = [];
     const events: Record<string, unknown>[] = [];
@@ -44,7 +44,7 @@ describe('AgentRunService malformed model repair', () => {
         }),
       })
       .mockResolvedValueOnce({
-        threadId: 'thread-2',
+        threadId: 'thread-1',
         tokens: { input: 1, output: 1, source: 'estimated', total: 2 },
         content: JSON.stringify({
           summary: 'Create the loop',
@@ -80,12 +80,14 @@ describe('AgentRunService malformed model repair', () => {
       new SafeEditService(
         {
           isTrusted: () => true,
-          preview: async (plan) =>
-            plan.files.map((file) => ({
+          preview: async (plan) => ({
+            workspaceFolderUri: 'memory:///workspace',
+            previews: plan.files.map((file) => ({
               path: file.path,
               before: files.get(file.path) ?? null,
               after: file.operation === 'delete' ? null : (file.content ?? null),
             })),
+          }),
           applyAtomically: async (plan) => {
             for (const file of plan.files) {
               if (file.operation === 'delete') {
@@ -120,10 +122,15 @@ describe('AgentRunService malformed model repair', () => {
           onThread: vi.fn(),
         },
       ),
-    ).resolves.toMatchObject({ status: 'applied', threadId: 'thread-2' });
+    ).resolves.toMatchObject({
+      status: 'applied',
+      threadId: 'thread-1',
+      tokens: { input: 2, output: 2, source: 'estimated', total: 4 },
+    });
     expect(send).toHaveBeenCalledTimes(2);
     expect(send.mock.calls[1]?.[0]).toMatchObject({
       routingMode: 'MANUAL_MODEL',
+      threadId: 'thread-1',
     });
     expect(send.mock.calls[1]?.[0].content).toContain(
       'Original user request: Create a JavaScript loop',
@@ -131,7 +138,6 @@ describe('AgentRunService malformed model repair', () => {
     expect(send.mock.calls[1]?.[0].content.split('<previous-response>')[0]).not.toContain(
       '"operation":"create | update | delete"',
     );
-    expect(send.mock.calls[1]?.[0]).not.toHaveProperty('threadId');
     expect(files.has('app/for-loop.js')).toBe(true);
     expect(phases.map((phase) => phase.phase)).toContain('repairing');
     expect(events).toContainEqual({ type: 'AGENT_DRAFT_RESET' });

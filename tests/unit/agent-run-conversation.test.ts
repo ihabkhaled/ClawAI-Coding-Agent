@@ -85,6 +85,7 @@ describe('AgentRunService conversational requests', () => {
       expect.any(Function),
       expect.any(AbortSignal),
       expect.any(Function),
+      undefined,
     );
     expect(collect).not.toHaveBeenCalled();
     expect(authorize).not.toHaveBeenCalled();

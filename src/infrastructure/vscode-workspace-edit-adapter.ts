@@ -1,12 +1,20 @@
+import path from 'node:path';
+
 import * as vscode from 'vscode';
 
+import { tokenizeWorkspaceCommand } from '../core/command-tokenizer';
+import {
+  isRealPathInsideWorkspace,
+  resolveCanonicalWorkspacePath,
+} from '../core/workspace-file-containment';
+
 import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
-import type { EditPreview, WorkspaceEditPort } from '../services/safe-edit-service';
+import type { EditPreview, EditReview, WorkspaceEditPort } from '../services/safe-edit-service';
 import type { WorkspaceFolderScopePort } from '../services/workspace-scope-service.types';
 
 interface EditBackup {
   plan: EditPlan;
-  previews: EditPreview[];
+  review: EditReview;
 }
 
 export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
@@ -18,52 +26,67 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
     return vscode.workspace.isTrusted;
   }
 
-  async preview(plan: EditPlan): Promise<EditPreview[]> {
+  async preview(plan: EditPlan): Promise<EditReview> {
     const folder = this.workspaceFolder();
-    const previews: EditPreview[] = [];
-    for (const file of plan.files) {
-      const uri = vscode.Uri.joinPath(folder.uri, ...file.path.replaceAll('\\', '/').split('/'));
-      const before = await this.readOptional(uri);
-      previews.push({
-        path: file.path,
-        before,
-        after: file.operation === 'delete' ? null : (file.content ?? null),
-      });
-    }
-    return previews;
+    return this.previewInFolder(plan, folder.uri);
   }
 
-  async applyAtomically(plan: EditPlan): Promise<boolean> {
-    const folder = this.workspaceFolder();
-    const previews = await this.preview(plan);
+  async applyAtomically(
+    plan: EditPlan,
+    review: EditReview,
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    signal?.throwIfAborted();
+    this.assertReviewMatchesPlan(plan, review);
+    const folderUri = vscode.Uri.parse(review.workspaceFolderUri);
+    const targetUris = plan.files.map((file) => this.targetUri(folderUri, file.path));
+    const reviewState = { bufferChanged: false };
+    const watchedTargets = new Set(targetUris.map((uri) => uri.toString()));
+    const changed = vscode.workspace.onDidChangeTextDocument((event) => {
+      if (watchedTargets.has(event.document.uri.toString())) {
+        reviewState.bufferChanged = true;
+      }
+    });
     const edit = new vscode.WorkspaceEdit();
 
-    for (const file of plan.files) {
-      const uri = vscode.Uri.joinPath(folder.uri, ...file.path.replaceAll('\\', '/').split('/'));
-      if (file.operation === 'create') {
-        edit.createFile(uri, {
-          contents: new TextEncoder().encode(file.content ?? ''),
-          ignoreIfExists: false,
-          overwrite: false,
-        });
-      } else if (file.operation === 'delete') {
-        edit.deleteFile(uri, { ignoreIfNotExists: false, recursive: false });
-      } else {
-        const document = await vscode.workspace.openTextDocument(uri);
-        const lastLine = document.lineAt(document.lineCount - 1);
-        const fullRange = new vscode.Range(
-          new vscode.Position(0, 0),
-          lastLine.rangeIncludingLineBreak.end,
-        );
-        edit.replace(uri, fullRange, file.content ?? '');
+    try {
+      await this.assertReviewCurrent(plan, review, folderUri);
+      for (const [index, file] of plan.files.entries()) {
+        const uri = targetUris[index];
+        if (uri === undefined) {
+          throw new Error(vscode.l10n.t('The reviewed file changes are no longer available.'));
+        }
+        if (file.operation === 'create') {
+          edit.createFile(uri, {
+            contents: new TextEncoder().encode(file.content ?? ''),
+            ignoreIfExists: false,
+            overwrite: false,
+          });
+        } else if (file.operation === 'delete') {
+          edit.deleteFile(uri, { ignoreIfNotExists: false, recursive: false });
+        } else {
+          const document = await vscode.workspace.openTextDocument(uri);
+          const lastLine = document.lineAt(document.lineCount - 1);
+          const fullRange = new vscode.Range(
+            new vscode.Position(0, 0),
+            lastLine.rangeIncludingLineBreak.end,
+          );
+          edit.replace(uri, fullRange, file.content ?? '');
+        }
       }
+      await this.assertReviewCurrent(plan, review, folderUri);
+      if (reviewState.bufferChanged) {
+        throw this.staleReviewError();
+      }
+      signal?.throwIfAborted();
+      const applied = await vscode.workspace.applyEdit(edit);
+      if (applied) {
+        this.lastBackup = { plan, review };
+      }
+      return applied;
+    } finally {
+      changed.dispose();
     }
-
-    const applied = await vscode.workspace.applyEdit(edit);
-    if (applied) {
-      this.lastBackup = { plan, previews };
-    }
-    return applied;
   }
 
   async undoLast(): Promise<boolean> {
@@ -71,9 +94,26 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
     if (backup === null || !this.isTrusted()) {
       return false;
     }
+    let selectedFolder: Pick<vscode.WorkspaceFolder, 'uri'>;
+    try {
+      selectedFolder = this.workspaceFolder();
+    } catch {
+      return false;
+    }
+    if (selectedFolder.uri.toString() !== backup.review.workspaceFolderUri) {
+      return false;
+    }
+    const folderUri = vscode.Uri.parse(backup.review.workspaceFolderUri);
+    for (const preview of backup.review.previews) {
+      const uri = this.targetUri(folderUri, preview.path);
+      await this.assertTargetInsideWorkspace(folderUri, uri, preview.after === null);
+      if ((await this.readOptional(uri)) !== preview.after) {
+        return false;
+      }
+    }
     const inverse: EditPlan = {
       summary: `Undo: ${backup.plan.summary}`,
-      files: backup.previews.map((preview) => {
+      files: backup.review.previews.map((preview) => {
         if (preview.before === null) {
           return { path: preview.path, operation: 'delete' as const };
         }
@@ -84,7 +124,15 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
         };
       }),
     };
-    const applied = await this.applyAtomically(inverse);
+    const inverseReview: EditReview = {
+      workspaceFolderUri: backup.review.workspaceFolderUri,
+      previews: backup.review.previews.map((preview) => ({
+        path: preview.path,
+        before: preview.after,
+        after: preview.before,
+      })),
+    };
+    const applied = await this.applyAtomically(inverse, inverseReview);
     if (applied) {
       this.lastBackup = null;
     }
@@ -103,6 +151,9 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
       command.cwd === undefined || command.cwd === '.'
         ? folder.uri.fsPath
         : vscode.Uri.joinPath(folder.uri, ...command.cwd.replaceAll('\\', '/').split('/')).fsPath;
+    await this.assertTargetInsideWorkspace(folder.uri, vscode.Uri.file(cwd), false);
+    await this.assertCommandPathsInsideWorkspace(folder.uri, command.command);
+    signal.throwIfAborted();
     const task = new vscode.Task(
       { type: 'clawai', command: command.command },
       vscode.TaskScope.Workspace,
@@ -137,6 +188,9 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
         signal.removeEventListener('abort', aborted);
       };
       signal.addEventListener('abort', aborted, { once: true });
+      if (signal.aborted) {
+        aborted();
+      }
     });
   }
 
@@ -144,7 +198,117 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
     return this.scope.selectedFolder();
   }
 
+  private async previewInFolder(plan: EditPlan, folderUri: vscode.Uri): Promise<EditReview> {
+    const previews: EditPreview[] = [];
+    for (const file of plan.files) {
+      const uri = this.targetUri(folderUri, file.path);
+      await this.assertTargetInsideWorkspace(folderUri, uri, file.operation === 'create');
+      const before = await this.readOptional(uri);
+      previews.push({
+        path: file.path,
+        before,
+        after: file.operation === 'delete' ? null : (file.content ?? null),
+      });
+    }
+    return {
+      workspaceFolderUri: folderUri.toString(),
+      previews,
+    };
+  }
+
+  private assertReviewMatchesPlan(plan: EditPlan, review: EditReview): void {
+    if (
+      review.previews.length !== plan.files.length ||
+      review.previews.some((preview, index) => {
+        const file = plan.files[index];
+        if (file === undefined) {
+          return true;
+        }
+        return (
+          preview.path !== file.path ||
+          preview.after !== (file.operation === 'delete' ? null : (file.content ?? null))
+        );
+      })
+    ) {
+      throw new Error(vscode.l10n.t('The reviewed file changes are no longer available.'));
+    }
+  }
+
+  private async assertReviewCurrent(
+    plan: EditPlan,
+    review: EditReview,
+    folderUri: vscode.Uri,
+  ): Promise<void> {
+    for (const [index, file] of plan.files.entries()) {
+      const preview = review.previews[index];
+      if (preview === undefined) {
+        throw new Error(vscode.l10n.t('The reviewed file changes are no longer available.'));
+      }
+      const uri = this.targetUri(folderUri, file.path);
+      await this.assertTargetInsideWorkspace(folderUri, uri, file.operation === 'create');
+      if ((await this.readOptional(uri)) !== preview.before) {
+        throw this.staleReviewError();
+      }
+    }
+  }
+
+  private staleReviewError(): Error {
+    return new Error(
+      vscode.l10n.t(
+        'A workspace file changed during review. Review the updated changes before applying.',
+      ),
+    );
+  }
+
+  private targetUri(folderUri: vscode.Uri, relativePath: string): vscode.Uri {
+    return vscode.Uri.joinPath(folderUri, ...relativePath.replaceAll('\\', '/').split('/'));
+  }
+
+  private async assertTargetInsideWorkspace(
+    folderUri: vscode.Uri,
+    targetUri: vscode.Uri,
+    useParent: boolean,
+  ): Promise<void> {
+    if (folderUri.scheme !== 'file' || targetUri.scheme !== 'file') {
+      return;
+    }
+    const workspacePath = await resolveCanonicalWorkspacePath(folderUri.fsPath);
+    if (!(await isRealPathInsideWorkspace(workspacePath, targetUri.fsPath, useParent))) {
+      throw new Error(vscode.l10n.t('The file is outside the selected workspace folder.'));
+    }
+  }
+
+  private async assertCommandPathsInsideWorkspace(
+    folderUri: vscode.Uri,
+    command: string,
+  ): Promise<void> {
+    if (folderUri.scheme !== 'file') {
+      return;
+    }
+    const commandTokens = tokenizeWorkspaceCommand(command);
+    if (commandTokens === undefined) {
+      throw new Error(vscode.l10n.t('The file is outside the selected workspace folder.'));
+    }
+    const tokens = commandTokens
+      .slice(1)
+      .map((token) => {
+        const assignment = token.indexOf('=');
+        return assignment < 0 ? token : token.slice(assignment + 1);
+      })
+      .filter((token) => token !== '' && !token.startsWith('-'));
+    for (const token of tokens) {
+      const target = vscode.Uri.file(path.resolve(folderUri.fsPath, token));
+      await this.assertTargetInsideWorkspace(folderUri, target, false);
+    }
+  }
+
   private async readOptional(uri: vscode.Uri): Promise<string | null> {
+    const openDocument = vscode.workspace.textDocuments.find(
+      (document) => document.uri.toString() === uri.toString(),
+    );
+    if (openDocument !== undefined) {
+      return openDocument.getText();
+    }
     try {
       const bytes = await vscode.workspace.fs.readFile(uri);
       return new TextDecoder().decode(bytes);

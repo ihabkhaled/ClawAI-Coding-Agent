@@ -1,0 +1,4 @@
+interface:
+  display_name: 'Version Every Change'
+  short_description: 'Apply SemVer and release every extension change'
+  default_prompt: 'Use $version-every-change to classify this ClawAI extension change, bump its version, rebuild the VSIX, and publish it safely.'

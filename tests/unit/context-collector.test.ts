@@ -77,4 +77,36 @@ describe('context collection', () => {
       ]),
     );
   });
+
+  it('always excludes repository metadata and common credential files with no user excludes', () => {
+    const sensitivePaths = [
+      '.git/config',
+      '.ssh/id_rsa',
+      '.npmrc',
+      '.pypirc',
+      '.netrc',
+      'config/password.txt',
+      'config/private-key.pem',
+      'config/access_token.json',
+      'config/token.txt',
+    ];
+    const result = collectContext(
+      [
+        ...sensitivePaths.map((path) => ({ path, content: 'must-not-leave-workspace' })),
+        { path: 'src/tokenizer.ts', content: 'export const tokenizer = true;\n' },
+      ],
+      {
+        exclude: [],
+        maxBytes: 10_000,
+        maxFiles: 20,
+      },
+    );
+
+    expect(result.files).toEqual([
+      { path: 'src/tokenizer.ts', content: 'export const tokenizer = true;\n' },
+    ]);
+    expect(result.receipt.excluded).toEqual(
+      sensitivePaths.map((path) => ({ path, reason: 'sensitive' })),
+    );
+  });
 });

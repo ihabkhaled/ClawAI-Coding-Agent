@@ -2,20 +2,23 @@ import { describe, expect, it, vi } from 'vitest';
 
 import {
   SafeEditService,
-  type EditPreview,
+  type EditReview,
   type WorkspaceEditPort,
 } from '../../src/services/safe-edit-service';
 
 function workspacePort(trusted: boolean): WorkspaceEditPort {
   return {
     isTrusted: () => trusted,
-    preview: vi.fn(async (): Promise<EditPreview[]> => [
-      {
-        path: 'src/a.ts',
-        before: 'old',
-        after: 'new',
-      },
-    ]),
+    preview: vi.fn(async (): Promise<EditReview> => ({
+      workspaceFolderUri: 'memory:///workspace',
+      previews: [
+        {
+          path: 'src/a.ts',
+          before: 'old',
+          after: 'new',
+        },
+      ],
+    })),
     applyAtomically: vi.fn(async () => true),
   };
 }
@@ -43,6 +46,11 @@ describe('SafeEditService', () => {
     });
     expect(workspace.preview).toHaveBeenCalledBefore(confirm);
     expect(confirm).toHaveBeenCalledBefore(vi.mocked(workspace.applyAtomically));
+    expect(workspace.applyAtomically).toHaveBeenCalledWith(
+      plan,
+      expect.objectContaining({ workspaceFolderUri: 'memory:///workspace' }),
+      undefined,
+    );
   });
 
   it('never applies in an untrusted workspace or after rejection', async () => {
@@ -70,5 +78,50 @@ describe('SafeEditService', () => {
       applied: true,
       previewId: 'preview-for-this-run',
     });
+  });
+
+  it('cannot apply after cancellation while final review is open', async () => {
+    const workspace = workspacePort(true);
+    let finishReview: ((approved: boolean) => void) | undefined;
+    const service = new SafeEditService(
+      workspace,
+      () =>
+        new Promise<boolean>((resolve) => {
+          finishReview = resolve;
+        }),
+    );
+    const controller = new AbortController();
+    const cancellation = new Error('Account changed.');
+    const applying = service.previewAndApply(plan, controller.signal);
+    await vi.waitFor(() => {
+      expect(finishReview).toBeTypeOf('function');
+    });
+
+    controller.abort(cancellation);
+    finishReview?.(true);
+
+    await expect(applying).rejects.toBe(cancellation);
+    expect(workspace.applyAtomically).not.toHaveBeenCalled();
+  });
+
+  it('reports a completed atomic commit even if cancellation arrives while it is applying', async () => {
+    const workspace = workspacePort(true);
+    let finishApply: ((applied: boolean) => void) | undefined;
+    vi.mocked(workspace.applyAtomically).mockReturnValueOnce(
+      new Promise<boolean>((resolve) => {
+        finishApply = resolve;
+      }),
+    );
+    const controller = new AbortController();
+    const service = new SafeEditService(workspace, async () => true);
+    const applying = service.previewAndApply(plan, controller.signal);
+    await vi.waitFor(() => {
+      expect(workspace.applyAtomically).toHaveBeenCalledOnce();
+    });
+
+    controller.abort(new Error('Workspace changed.'));
+    finishApply?.(true);
+
+    await expect(applying).resolves.toMatchObject({ applied: true });
   });
 });

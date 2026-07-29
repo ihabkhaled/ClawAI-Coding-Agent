@@ -110,7 +110,7 @@ textarea:disabled {
   display: grid;
   flex: 1 1 auto;
   min-width: 0;
-  gap: 1px;
+  gap: 2px;
 }
 
 .conversation-heading {
@@ -122,7 +122,8 @@ textarea:disabled {
 
 .conversation-heading strong {
   overflow: hidden;
-  font-size: 0.82rem;
+  font-size: 0.92rem;
+  line-height: 1.25;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -163,7 +164,9 @@ textarea:disabled {
 
 .workspace-line strong {
   overflow: hidden;
-  font-size: 0.92rem;
+  color: var(--claw-muted);
+  font-size: 0.72rem;
+  font-weight: 600;
   text-overflow: ellipsis;
   white-space: nowrap;
 }
@@ -340,12 +343,19 @@ textarea:disabled {
 }
 
 .connection-spinner {
+  flex: 0 0 auto;
   width: 14px;
   height: 14px;
   border: 2px solid color-mix(in srgb, var(--claw-muted) 38%, transparent);
   border-block-start-color: var(--claw-accent);
   border-radius: 50%;
   animation: connection-spin 0.8s linear infinite;
+}
+
+.connection-cancel-button {
+  min-height: 28px;
+  margin-inline-start: auto;
+  padding-inline: 10px;
 }
 
 .connection-error {
@@ -487,6 +497,11 @@ textarea:disabled {
   font-size: 0.76rem;
   text-overflow: ellipsis;
   white-space: nowrap;
+}
+
+.queue-item .queue-attachments {
+  color: var(--claw-muted);
+  font-size: 0.68rem;
 }
 
 .approval-panel {
@@ -1258,6 +1273,22 @@ textarea:disabled {
   box-shadow: 0 0 0 1px var(--vscode-focusBorder);
 }
 
+.composer.dragging-files .composer-card {
+  border-color: var(--vscode-focusBorder);
+  background: color-mix(in srgb, var(--vscode-input-background) 88%, var(--claw-accent));
+  box-shadow: 0 0 0 2px color-mix(in srgb, var(--vscode-focusBorder) 48%, transparent);
+}
+
+.composer.reading-attachments .attachment-button {
+  color: var(--claw-accent);
+  background: color-mix(in srgb, var(--claw-accent) 12%, transparent);
+}
+
+.composer.reading-attachments .attachment-button span {
+  display: inline-block;
+  animation: attachment-pulse 900ms ease-in-out infinite alternate;
+}
+
 .context-hint {
   display: flex;
   min-height: 27px;
@@ -1289,6 +1320,149 @@ textarea:disabled {
 
 .composer textarea::placeholder {
   color: var(--vscode-input-placeholderForeground);
+}
+
+.attachment-tray {
+  padding: 3px 9px 7px;
+}
+
+.attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 6px;
+}
+
+.attachment-chip {
+  display: grid;
+  grid-template-columns: 30px minmax(0, 1fr) 22px;
+  width: min(220px, 100%);
+  min-height: 38px;
+  align-items: center;
+  gap: 6px;
+  padding: 3px;
+  border: 1px solid var(--claw-border);
+  border-radius: 7px;
+  background: color-mix(in srgb, var(--vscode-editorWidget-background) 82%, transparent);
+}
+
+.attachment-thumbnail,
+.attachment-file-icon {
+  width: 30px;
+  height: 30px;
+  border-radius: 5px;
+}
+
+.attachment-thumbnail {
+  object-fit: cover;
+}
+
+.attachment-file-icon {
+  display: grid;
+  place-items: center;
+  color: var(--claw-accent);
+  background: color-mix(in srgb, var(--claw-accent) 11%, transparent);
+}
+
+.attachment-details {
+  display: grid;
+  min-width: 0;
+}
+
+.attachment-details strong,
+.attachment-details small {
+  overflow: hidden;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.attachment-details small,
+.attachment-status {
+  color: var(--claw-muted);
+  font-size: 0.68rem;
+}
+
+.attachment-remove {
+  width: 22px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: 4px;
+  color: var(--vscode-foreground);
+  background: transparent;
+  font-size: 1rem;
+  cursor: pointer;
+}
+
+.attachment-remove:hover {
+  background: var(--vscode-toolbar-hoverBackground);
+}
+
+.attachment-remove:focus-visible {
+  outline: 1px solid var(--vscode-focusBorder);
+  outline-offset: 1px;
+}
+
+.attachment-status {
+  margin: 5px 1px 0;
+}
+
+.message-attachment-list {
+  display: flex;
+  flex-wrap: wrap;
+  margin: 8px 0 0;
+  padding: 0;
+  gap: 5px;
+  list-style: none;
+}
+
+.message-attachment {
+  display: grid;
+  min-width: 0;
+  max-width: 240px;
+  grid-template-columns: 22px minmax(0, 1fr) auto;
+  align-items: center;
+  gap: 6px;
+  padding: 4px 7px 4px 4px;
+  border: 1px solid var(--claw-border);
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--vscode-editorWidget-background) 70%, transparent);
+}
+
+.message-attachment .attachment-file-icon {
+  width: 22px;
+  height: 22px;
+}
+
+.message-attachment strong {
+  overflow: hidden;
+  font-size: 0.72rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-attachment small {
+  color: var(--claw-muted);
+  font-size: 0.65rem;
+  white-space: nowrap;
+}
+
+.attachment-button {
+  flex: 0 0 29px;
+  padding: 3px;
+  font-size: 0.85rem;
+}
+
+@keyframes attachment-pulse {
+  to {
+    opacity: 0.42;
+    transform: scale(0.88);
+  }
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .composer.reading-attachments .attachment-button span {
+    animation: none;
+  }
 }
 
 .control-rail {

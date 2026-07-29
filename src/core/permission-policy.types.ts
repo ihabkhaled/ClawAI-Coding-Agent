@@ -5,6 +5,7 @@ export type PermissionOperation =
   'commandExecution' | 'editGeneration' | 'finalDiff' | 'workspaceContext';
 export type PermissionOutcome = 'allow' | 'ask' | 'deny';
 export type PermissionReason =
+  | 'commandReviewRequired'
   | 'finalDiffRequired'
   | 'fullAccess'
   | 'manualApproval'

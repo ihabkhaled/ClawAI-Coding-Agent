@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { contextModeForCommand } from './core/command-context';
 import { ExtensionState } from './core/extension-state';
 import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
@@ -30,18 +31,40 @@ function registerCommands(
       (threadId?: unknown) =>
         coordinator.openChat(typeof threadId === 'string' ? threadId : undefined),
     ],
-    ['clawAI.askSelection', () => coordinator.ask('selection')],
-    ['clawAI.askFile', () => coordinator.ask('file')],
-    ['clawAI.askWorkspace', () => coordinator.ask('workspace')],
+    ['clawAI.askSelection', () => coordinator.ask(contextModeForCommand('clawAI.askSelection'))],
+    ['clawAI.askFile', () => coordinator.ask(contextModeForCommand('clawAI.askFile'))],
+    ['clawAI.askWorkspace', () => coordinator.ask(contextModeForCommand('clawAI.askWorkspace'))],
     ['clawAI.compareModels', () => coordinator.compareModels(false)],
     ['clawAI.judgeResponses', () => coordinator.compareModels(true)],
-    ['clawAI.generateCode', () => coordinator.runEditWorkflow('generate', 'file')],
-    ['clawAI.fixCode', () => coordinator.runEditWorkflow('fix', 'selection')],
-    ['clawAI.reviewCode', () => coordinator.runReadOnlyWorkflow('review', 'selection')],
-    ['clawAI.generateTests', () => coordinator.runEditWorkflow('tests', 'file')],
-    ['clawAI.generatePlan', () => coordinator.runReadOnlyWorkflow('plan', 'workspace')],
-    ['clawAI.generateDocs', () => coordinator.runEditWorkflow('docs', 'workspace')],
-    ['clawAI.auditWorkspace', () => coordinator.runReadOnlyWorkflow('audit', 'workspace')],
+    [
+      'clawAI.generateCode',
+      () => coordinator.runEditWorkflow('generate', contextModeForCommand('clawAI.generateCode')),
+    ],
+    [
+      'clawAI.fixCode',
+      () => coordinator.runEditWorkflow('fix', contextModeForCommand('clawAI.fixCode')),
+    ],
+    [
+      'clawAI.reviewCode',
+      () => coordinator.runReadOnlyWorkflow('review', contextModeForCommand('clawAI.reviewCode')),
+    ],
+    [
+      'clawAI.generateTests',
+      () => coordinator.runEditWorkflow('tests', contextModeForCommand('clawAI.generateTests')),
+    ],
+    [
+      'clawAI.generatePlan',
+      () => coordinator.runReadOnlyWorkflow('plan', contextModeForCommand('clawAI.generatePlan')),
+    ],
+    [
+      'clawAI.generateDocs',
+      () => coordinator.runEditWorkflow('docs', contextModeForCommand('clawAI.generateDocs')),
+    ],
+    [
+      'clawAI.auditWorkspace',
+      () =>
+        coordinator.runReadOnlyWorkflow('audit', contextModeForCommand('clawAI.auditWorkspace')),
+    ],
     ['clawAI.initializeWorkspace', () => coordinator.initializeWorkspace()],
     ['clawAI.openGlobalRules', () => globalContext.open('rules')],
     ['clawAI.openGlobalSkills', () => globalContext.open('skills')],
@@ -131,6 +154,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const chatView = new ChatViewProvider(context.extensionUri, state, {
     agent: (input) => coordinator.runAgent(input),
     cancel: () => coordinator.cancel(),
+    captureAdmission: (threadId) => coordinator.captureAdmission(threadId),
     compare: (input) => coordinator.compare(input),
     connect: (backendUrl) => coordinator.connect(backendUrl),
     logout: () => coordinator.logout(),
@@ -157,10 +181,7 @@ export function activate(context: vscode.ExtensionContext): void {
     selectAgentMode: (mode) => coordinator.sessionControls.selectAgentMode(mode),
     selectModel: (modelKey) => coordinator.selectModel(modelKey),
     selectPermissionMode: (mode) => coordinator.sessionControls.selectPermissionMode(mode),
-    selectWorkspaceFolder: (folderKey) => {
-      coordinator.selectWorkspaceFolder(folderKey);
-      return Promise.resolve();
-    },
+    selectWorkspaceFolder: (folderKey) => coordinator.selectWorkspaceFolder(folderKey),
     send: (input) => coordinator.send(input),
   });
   coordinator.attachView(chatView);
@@ -196,7 +217,7 @@ export function activate(context: vscode.ExtensionContext): void {
       void coordinator.trustChanged();
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
-      coordinator.refreshWorkspaceReadiness();
+      void coordinator.workspaceFoldersChanged();
     }),
     vscode.window.onDidChangeActiveTextEditor(() => {
       coordinator.refreshWorkspaceReadiness();

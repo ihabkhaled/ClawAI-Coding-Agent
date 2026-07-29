@@ -50,8 +50,13 @@ describe('WorkspaceScopeService', () => {
     vscodeEnvironment.folders = [vscodeEnvironment.api, vscodeEnvironment.web];
   });
 
-  it('follows the active editor until a user explicitly selects another root', () => {
+  it('freezes the active root when a run first consumes the selected folder', () => {
     const service = new WorkspaceScopeService();
+
+    expect(service.selectedFolder()).toBe(vscodeEnvironment.web);
+    vscodeEnvironment.activeTextEditor = {
+      document: { uri: vscodeEnvironment.uri('file:///workspace/api/src/other.ts') },
+    };
 
     expect(service.selectedFolder()).toBe(vscodeEnvironment.web);
     service.select(workspaceFolderKey(vscodeEnvironment.api.uri.toString()));

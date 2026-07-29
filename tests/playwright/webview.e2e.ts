@@ -56,6 +56,7 @@ test('submits coding prompts to the agent execution path by default', async ({ p
       type: 'agent',
       content: 'write for loop from 1 to 10 in file .js inside folder app',
       contextMode: 'smart',
+      modelKey: 'AUTO',
       requestId: expect.any(String),
     });
 });
@@ -91,6 +92,7 @@ test('keeps controls interactive and queues follow-up requests while an agent ru
       type: 'agent',
       content: 'Run the focused tests next',
       contextMode: 'smart',
+      modelKey: localModel.key,
       requestId: expect.any(String),
     });
   await expect(page.locator('.message-assistant').last()).toContainText('Queued');

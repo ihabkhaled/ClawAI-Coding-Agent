@@ -1,3 +1,4 @@
+import type { SessionControlPort } from './session-control.types';
 import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
 
 export interface EditPreview {
@@ -6,14 +7,19 @@ export interface EditPreview {
   after: string | null;
 }
 
+export interface EditReview {
+  workspaceFolderUri: string;
+  previews: EditPreview[];
+}
+
 export interface WorkspaceEditPort {
   execute?(
     command: WorkspaceCommand,
     signal: AbortSignal,
   ): Promise<{ exitCode: number | undefined }>;
   isTrusted(): boolean;
-  preview(plan: EditPlan): Promise<EditPreview[]>;
-  applyAtomically(plan: EditPlan): Promise<boolean>;
+  preview(plan: EditPlan): Promise<EditReview>;
+  applyAtomically(plan: EditPlan, review: EditReview, signal?: AbortSignal): Promise<boolean>;
 }
 
 export interface SafeEditResult {
@@ -27,39 +33,57 @@ export interface EditConfirmation {
   previewId: string;
 }
 
+function confirmationResult(confirmation: boolean | EditConfirmation): {
+  approved: boolean;
+  previewId?: string;
+} {
+  return typeof confirmation === 'boolean'
+    ? { approved: confirmation }
+    : { approved: confirmation.approved, previewId: confirmation.previewId };
+}
+
+function editResult(applied: boolean, previews: EditPreview[], previewId?: string): SafeEditResult {
+  return {
+    applied,
+    ...(previewId === undefined ? {} : { previewId }),
+    previews,
+  };
+}
+
 export class SafeEditService {
   constructor(
     private readonly workspace: WorkspaceEditPort,
     private readonly confirm: (
       previews: EditPreview[],
       summary: string,
+      session?: SessionControlPort,
     ) => Promise<boolean | EditConfirmation>,
   ) {}
 
-  async previewAndApply(plan: EditPlan): Promise<SafeEditResult> {
+  async previewAndApply(
+    plan: EditPlan,
+    signal?: AbortSignal,
+    session?: SessionControlPort,
+  ): Promise<SafeEditResult> {
+    signal?.throwIfAborted();
     if (!this.workspace.isTrusted()) {
       throw new Error('Trust this workspace before applying ClawAI changes.');
     }
-    const previews = await this.workspace.preview(plan);
-    const confirmation = await this.confirm(previews, plan.summary);
-    const approved = typeof confirmation === 'boolean' ? confirmation : confirmation.approved;
-    const previewId = typeof confirmation === 'boolean' ? undefined : confirmation.previewId;
+    const review = await this.workspace.preview(plan);
+    const { previews } = review;
+    signal?.throwIfAborted();
+    const confirmation = await this.confirm(previews, plan.summary, session);
+    signal?.throwIfAborted();
+    const { approved, previewId } = confirmationResult(confirmation);
     if (!approved) {
-      return {
-        applied: false,
-        ...(previewId === undefined ? {} : { previewId }),
-        previews,
-      };
+      return editResult(false, previews, previewId);
     }
     if (!this.workspace.isTrusted()) {
       throw new Error('Workspace trust changed before the edit could be applied.');
     }
-    const applied = await this.workspace.applyAtomically(plan);
-    return {
-      applied,
-      ...(previewId === undefined ? {} : { previewId }),
-      previews,
-    };
+    signal?.throwIfAborted();
+    const applied = await this.workspace.applyAtomically(plan, review, signal);
+    return editResult(applied, previews, previewId);
   }
 
   execute(

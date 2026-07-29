@@ -14,9 +14,12 @@
 
 Passwords stay in the ClawAI web app. Browser authorization uses PKCE, exact
 state validation, and a one-shot `127.0.0.1` callback. Tokens use
-`SecretStorage`. URLs reject embedded credentials. Non-local HTTP is rejected.
-Logger and backend errors redact bearers, query parameters, secret keys, and
-assignment syntax.
+origin-scoped `SecretStorage`; exchanged candidate credentials remain staged
+until profile validation and attempt-ownership checks succeed. The legacy
+origin-agnostic credential is discarded instead of attributed by guesswork.
+URLs reject embedded credentials. Non-local HTTP is rejected. Logger and
+backend errors redact bearers, query parameters, secret keys, and assignment
+syntax.
 
 ### Prompt injection and context exfiltration
 
@@ -25,27 +28,47 @@ command/context mode, bounded, and receipt-producing. `.git`, dependencies,
 outputs, `.env`, and credential-like paths are denied. User ignore rules can
 add exclusions but cannot remove built-in denials.
 
+### Untrusted attachments
+
+Composer attachments are untrusted input. The webview rejects oversized
+batches before reading their bytes, while the extension host independently
+validates the count, canonical Base64 representation, decoded size, filename,
+and MIME allowlist before any upload. Files are uploaded only when their queued
+request starts and only backend file IDs enter chat contracts. Attachment bytes
+are never written to webview persistence. The backend validates filenames and
+media signatures, keeps video payloads binary, and routes video only to a
+provider path that declares native support.
+
 ### Malicious model edits
 
 The edit plan is strict and bounded to 50 files and one megabyte per file.
 Absolute paths, traversal, VCS metadata, environment files, and credential-like
 targets are rejected. Approvals are rendered inside the workbench. Trust is
-checked both before preview and immediately before atomic apply.
+checked both before preview and immediately before atomic apply. The selected
+workspace root is frozen for the reviewed batch, local targets and command
+working paths are canonicalized to reject symlink escapes, and scope changes
+cancel queued work and pending approvals. Preview reads unsaved editor content;
+apply compares the current before-state with the reviewed one and requires a new
+review after any intervening change.
 
 In Manual mode, approving routine workspace access once stores only a boolean
 grant in VS Code's workspace-scoped state. It covers non-sensitive context
 collection and proposal generation for that workspace across reloads. It does
-not authorize final file changes or commands, and it never weakens Workspace
-Trust, secret exclusions, path validation, command validation, or atomic apply.
+not authorize commands, and it never weakens Workspace Trust, secret
+exclusions, path validation, command validation, or atomic apply. Full Access
+applies validated file changes automatically after its one-time confirmation;
+development commands remain an explicit approval boundary.
 
 ### Malicious model commands
 
-Command plans are optional, bounded, and executed only after approved file
-changes. Executables use a development-tool allowlist. Shell chaining,
+Command plans are optional, bounded, and require an explicit in-extension
+review even in Full Access. Executables use a development-tool allowlist.
+Inline interpreter programs, outside-workspace arguments, shell chaining,
 redirection, substitution, environment expansion, privilege tools, destructive
 utilities, and mutating Git commands are rejected. Working directories must be
-safe relative workspace paths. Commands run in a visible VS Code task terminal
-and are cancellable.
+safe relative workspace paths; assignment-form and canonical filesystem paths
+must remain inside the frozen workspace. Commands run in a visible VS Code task
+terminal and are cancellable.
 
 ### Webview injection
 

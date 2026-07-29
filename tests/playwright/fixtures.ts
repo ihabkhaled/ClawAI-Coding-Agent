@@ -6,6 +6,7 @@ import type { Page } from '@playwright/test';
 
 export interface MockBridge {
   messages: unknown[];
+  state: unknown;
   send(message: unknown): void;
 }
 

@@ -688,6 +688,420 @@ const releaseTranslations = {
   },
 };
 
+const continuityTranslations = {
+  ar: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'تغيّر ملف في مساحة العمل أثناء المراجعة. راجع التغييرات المحدّثة قبل تطبيقها.',
+    'Connected to ClawAI.': 'تم الاتصال بـ ClawAI.',
+    'ClawAI authorization timed out. Please try again.': 'انتهت مهلة تفويض ClawAI. حاول مرة أخرى.',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'يتخطى الوصول الكامل مطالبات مساحة العمل الروتينية. تظل موافقات الفروق النهائية والأوامر، وثقة مساحة العمل، واستثناءات الأسرار، وحدود المسارات، وقواعد الأوامر المحظورة مطبقة.',
+    'The reviewed file changes are no longer available.':
+      'لم تعد تغييرات الملفات التي تمت مراجعتها متاحة.',
+  },
+  de: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Eine Arbeitsbereichsdatei wurde während der Überprüfung geändert. Prüfen Sie die aktualisierten Änderungen vor dem Anwenden.',
+    'Connected to ClawAI.': 'Mit ClawAI verbunden.',
+    'ClawAI authorization timed out. Please try again.':
+      'Die ClawAI-Autorisierung hat das Zeitlimit überschritten. Versuchen Sie es erneut.',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'Vollzugriff überspringt routinemäßige Arbeitsbereichsabfragen. Freigaben für den finalen Diff und Befehle, Arbeitsbereichsvertrauen, Geheimnisausschlüsse, Pfadgrenzen und Regeln für blockierte Befehle bleiben aktiv.',
+    'The reviewed file changes are no longer available.':
+      'Die überprüften Dateiänderungen sind nicht mehr verfügbar.',
+  },
+  es: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Un archivo del área de trabajo cambió durante la revisión. Revisa los cambios actualizados antes de aplicarlos.',
+    'Connected to ClawAI.': 'Conectado a ClawAI.',
+    'ClawAI authorization timed out. Please try again.':
+      'La autorización de ClawAI agotó el tiempo de espera. Inténtalo de nuevo.',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'El acceso completo omite las solicitudes rutinarias del área de trabajo. Se mantienen las aprobaciones del diff final y de comandos, la confianza del área de trabajo, las exclusiones de secretos, los límites de rutas y las reglas de comandos bloqueados.',
+    'The reviewed file changes are no longer available.':
+      'Los cambios de archivo revisados ya no están disponibles.',
+  },
+  fa: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'یک فایل فضای کاری هنگام بازبینی تغییر کرد. پیش از اعمال، تغییرات به‌روزشده را بازبینی کنید.',
+    'Connected to ClawAI.': 'به ClawAI متصل شد.',
+    'ClawAI authorization timed out. Please try again.':
+      'مهلت مجوز ClawAI به پایان رسید. دوباره تلاش کنید.',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'دسترسی کامل از پیام‌های معمول فضای کاری عبور می‌کند. تأیید تغییرات نهایی و فرمان‌ها، اعتماد فضای کاری، استثناهای اسرار، مرزهای مسیر و قوانین فرمان‌های مسدودشده همچنان اعمال می‌شوند.',
+    'The reviewed file changes are no longer available.':
+      'تغییرات فایل بازبینی‌شده دیگر در دسترس نیستند.',
+  },
+  fr: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Un fichier de l’espace de travail a changé pendant la vérification. Vérifiez les modifications actualisées avant de les appliquer.',
+    'Connected to ClawAI.': 'Connecté à ClawAI.',
+    'ClawAI authorization timed out. Please try again.':
+      'L’autorisation ClawAI a expiré. Réessayez.',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'L’accès complet ignore les demandes courantes liées à l’espace de travail. Les approbations du diff final et des commandes, la confiance de l’espace de travail, les exclusions de secrets, les limites de chemins et les règles de commandes bloquées restent appliquées.',
+    'The reviewed file changes are no longer available.':
+      'Les modifications de fichiers vérifiées ne sont plus disponibles.',
+  },
+  hi: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'समीक्षा के दौरान कार्यस्थान की एक फ़ाइल बदल गई। लागू करने से पहले अद्यतन बदलावों की समीक्षा करें।',
+    'Connected to ClawAI.': 'ClawAI से कनेक्ट किया गया।',
+    'ClawAI authorization timed out. Please try again.':
+      'ClawAI प्राधिकरण का समय समाप्त हो गया। फिर से प्रयास करें।',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'पूर्ण पहुँच नियमित कार्यस्थान संकेतों को छोड़ देती है। अंतिम डिफ़ और कमांड की स्वीकृति, कार्यस्थान विश्वास, गुप्त जानकारी के बहिष्करण, पथ सीमाएँ और अवरुद्ध कमांड के नियम लागू रहते हैं।',
+    'The reviewed file changes are no longer available.':
+      'समीक्षा किए गए फ़ाइल बदलाव अब उपलब्ध नहीं हैं।',
+  },
+  it: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Un file dell’area di lavoro è cambiato durante la revisione. Rivedi le modifiche aggiornate prima di applicarle.',
+    'Connected to ClawAI.': 'Connesso a ClawAI.',
+    'ClawAI authorization timed out. Please try again.':
+      'L’autorizzazione ClawAI è scaduta. Riprova.',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'L’accesso completo ignora le richieste di routine dell’area di lavoro. Restano attive le approvazioni del diff finale e dei comandi, l’attendibilità dell’area di lavoro, le esclusioni dei segreti, i limiti dei percorsi e le regole per i comandi bloccati.',
+    'The reviewed file changes are no longer available.':
+      'Le modifiche ai file revisionate non sono più disponibili.',
+  },
+  ja: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'レビュー中にワークスペースのファイルが変更されました。適用する前に更新された変更を確認してください。',
+    'Connected to ClawAI.': 'ClawAI に接続しました。',
+    'ClawAI authorization timed out. Please try again.':
+      'ClawAI の認証がタイムアウトしました。もう一度お試しください。',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'フルアクセスでは通常のワークスペース確認を省略します。最終差分とコマンドの承認、ワークスペースの信頼、シークレットの除外、パス境界、禁止コマンドの規則は引き続き適用されます。',
+    'The reviewed file changes are no longer available.':
+      'レビュー済みのファイル変更は利用できなくなりました。',
+  },
+  pt: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Um arquivo do espaço de trabalho mudou durante a revisão. Revise as alterações atualizadas antes de aplicá-las.',
+    'Connected to ClawAI.': 'Conectado ao ClawAI.',
+    'ClawAI authorization timed out. Please try again.':
+      'A autorização do ClawAI expirou. Tente novamente.',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'O acesso total ignora solicitações rotineiras do espaço de trabalho. As aprovações do diff final e de comandos, a confiança do espaço de trabalho, as exclusões de segredos, os limites de caminho e as regras de comandos bloqueados continuam em vigor.',
+    'The reviewed file changes are no longer available.':
+      'As alterações de arquivo revisadas não estão mais disponíveis.',
+  },
+  ru: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Файл рабочей области изменился во время проверки. Проверьте обновлённые изменения перед применением.',
+    'Connected to ClawAI.': 'Подключено к ClawAI.',
+    'ClawAI authorization timed out. Please try again.':
+      'Время ожидания авторизации ClawAI истекло. Повторите попытку.',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'Полный доступ пропускает обычные запросы к рабочей области. Подтверждение итогового diff и команд, доверие к рабочей области, исключение секретов, границы путей и правила блокировки команд продолжают действовать.',
+    'The reviewed file changes are no longer available.':
+      'Проверенные изменения файлов больше недоступны.',
+  },
+  th: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'ไฟล์ในพื้นที่ทำงานเปลี่ยนแปลงระหว่างการตรวจทาน โปรดตรวจทานการเปลี่ยนแปลงล่าสุดก่อนนำไปใช้',
+    'Connected to ClawAI.': 'เชื่อมต่อกับ ClawAI แล้ว',
+    'ClawAI authorization timed out. Please try again.': 'การอนุญาต ClawAI หมดเวลา โปรดลองอีกครั้ง',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'การเข้าถึงแบบเต็มจะข้ามคำขอพื้นที่ทำงานตามปกติ แต่ยังคงบังคับใช้การอนุมัติดิฟสุดท้ายและคำสั่ง ความน่าเชื่อถือของพื้นที่ทำงาน การยกเว้นข้อมูลลับ ขอบเขตพาธ และกฎคำสั่งที่ถูกบล็อก',
+    'The reviewed file changes are no longer available.':
+      'การเปลี่ยนแปลงไฟล์ที่ตรวจทานแล้วไม่พร้อมใช้งานอีกต่อไป',
+  },
+  zh: {
+    'A workspace file changed during review. Review the updated changes before applying.':
+      '工作区文件在审查期间发生了变化。请在应用前审查更新后的更改。',
+    'Connected to ClawAI.': '已连接到 ClawAI。',
+    'ClawAI authorization timed out. Please try again.': 'ClawAI 授权已超时。请重试。',
+    'Full Access skips routine workspace prompts. Final diff and command approvals, Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      '完全访问会跳过常规工作区提示，但仍会强制执行最终差异和命令审批、工作区信任、机密排除、路径边界以及命令阻止规则。',
+    'The reviewed file changes are no longer available.': '已审查的文件更改不再可用。',
+  },
+};
+
+const v090Translations = {
+  ar: {
+    '{0} ({1}/{2})': '{0} ({1}/{2})',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'تغيّر ملف في مساحة العمل أثناء المراجعة. راجع التغييرات المحدّثة قبل تطبيقها.',
+    'Attach files': 'إرفاق ملفات',
+    'Attached file': 'تم إرفاق الملف',
+    'Attachment added': 'تمت إضافة المرفق',
+    Attachments: 'المرفقات',
+    'Attachments must total 10 MiB or less.': 'يجب ألا يتجاوز إجمالي المرفقات 10 ميبيبايت.',
+    'ClawAI authorization timed out. Please try again.': 'انتهت مهلة تفويض ClawAI. حاول مرة أخرى.',
+    'Connected to ClawAI.': 'تم الاتصال بـ ClawAI.',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'Ctrl/⌘ + Enter للإرسال · تتبع الموافقة الوضع المحدد',
+    'Each attachment must be 5 MiB or smaller.': 'يجب ألا يزيد حجم كل مرفق عن 5 ميبيبايت.',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'يطبّق الوصول الكامل تغييرات الملفات الآمنة تلقائيًا ويتخطى مطالبات مساحة العمل الروتينية. لا تزال أوامر التطوير تتطلب الموافقة. وتظل ثقة مساحة العمل واستثناءات الأسرار وحدود المسارات وقواعد الأوامر المحظورة مطبقة.',
+    'The reviewed file changes are no longer available.':
+      'لم تعد تغييرات الملفات التي تمت مراجعتها متاحة.',
+    'This file could not be attached.': 'تعذر إرفاق هذا الملف.',
+    'Uploading attachment': 'جارٍ رفع المرفق',
+    'You can attach up to 10 files.': 'يمكنك إرفاق ما يصل إلى 10 ملفات.',
+  },
+  de: {
+    '{0} ({1}/{2})': '{0} ({1}/{2})',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Eine Arbeitsbereichsdatei wurde während der Überprüfung geändert. Prüfen Sie die aktualisierten Änderungen vor dem Anwenden.',
+    'Attach files': 'Dateien anhängen',
+    'Attached file': 'Datei angehängt',
+    'Attachment added': 'Anhang hinzugefügt',
+    Attachments: 'Anhänge',
+    'Attachments must total 10 MiB or less.':
+      'Anhänge dürfen insgesamt höchstens 10 MiB groß sein.',
+    'ClawAI authorization timed out. Please try again.':
+      'Die ClawAI-Autorisierung hat das Zeitlimit überschritten. Versuchen Sie es erneut.',
+    'Connected to ClawAI.': 'Mit ClawAI verbunden.',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'Ctrl/⌘ + Enter zum Senden · Freigaben folgen dem ausgewählten Modus',
+    'Each attachment must be 5 MiB or smaller.': 'Jeder Anhang darf höchstens 5 MiB groß sein.',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'Vollzugriff wendet sichere Dateiänderungen automatisch an und überspringt routinemäßige Arbeitsbereichsabfragen. Entwicklungsbefehle müssen weiterhin freigegeben werden. Arbeitsbereichsvertrauen, Geheimnisausschlüsse, Pfadgrenzen und Regeln für blockierte Befehle bleiben aktiv.',
+    'The reviewed file changes are no longer available.':
+      'Die überprüften Dateiänderungen sind nicht mehr verfügbar.',
+    'This file could not be attached.': 'Diese Datei konnte nicht angehängt werden.',
+    'Uploading attachment': 'Anhang wird hochgeladen',
+    'You can attach up to 10 files.': 'Sie können bis zu 10 Dateien anhängen.',
+  },
+  es: {
+    '{0} ({1}/{2})': '{0} ({1}/{2})',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Un archivo del área de trabajo cambió durante la revisión. Revisa los cambios actualizados antes de aplicarlos.',
+    'Attach files': 'Adjuntar archivos',
+    'Attached file': 'Archivo adjuntado',
+    'Attachment added': 'Adjunto añadido',
+    Attachments: 'Archivos adjuntos',
+    'Attachments must total 10 MiB or less.': 'Los archivos adjuntos deben sumar 10 MiB o menos.',
+    'ClawAI authorization timed out. Please try again.':
+      'La autorización de ClawAI agotó el tiempo de espera. Inténtalo de nuevo.',
+    'Connected to ClawAI.': 'Conectado a ClawAI.',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'Ctrl/⌘ + Enter para enviar · la aprobación sigue el modo seleccionado',
+    'Each attachment must be 5 MiB or smaller.':
+      'Cada archivo adjunto debe tener un tamaño máximo de 5 MiB.',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'El acceso completo aplica automáticamente los cambios seguros en archivos y omite las solicitudes rutinarias del área de trabajo. Los comandos de desarrollo aún requieren aprobación. La confianza del área de trabajo, las exclusiones de secretos, los límites de rutas y las reglas de comandos bloqueados siguen vigentes.',
+    'The reviewed file changes are no longer available.':
+      'Los cambios de archivo revisados ya no están disponibles.',
+    'This file could not be attached.': 'No se pudo adjuntar este archivo.',
+    'Uploading attachment': 'Subiendo archivo adjunto',
+    'You can attach up to 10 files.': 'Puedes adjuntar hasta 10 archivos.',
+  },
+  fa: {
+    '{0} ({1}/{2})': '{0} ({1}/{2})',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'یک فایل فضای کاری هنگام بازبینی تغییر کرد. پیش از اعمال، تغییرات به‌روزشده را بازبینی کنید.',
+    'Attach files': 'پیوست کردن فایل‌ها',
+    'Attached file': 'فایل پیوست شد',
+    'Attachment added': 'پیوست افزوده شد',
+    Attachments: 'پیوست‌ها',
+    'Attachments must total 10 MiB or less.': 'حجم کل پیوست‌ها باید ۱۰ مِبی‌بایت یا کمتر باشد.',
+    'ClawAI authorization timed out. Please try again.':
+      'مهلت مجوز ClawAI به پایان رسید. دوباره تلاش کنید.',
+    'Connected to ClawAI.': 'به ClawAI متصل شد.',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'Ctrl/⌘ + Enter برای ارسال · تأیید از حالت انتخاب‌شده پیروی می‌کند',
+    'Each attachment must be 5 MiB or smaller.': 'حجم هر پیوست باید ۵ مِبی‌بایت یا کمتر باشد.',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'دسترسی کامل تغییرات امن فایل را به‌طور خودکار اعمال می‌کند و از پیام‌های معمول فضای کاری می‌گذرد. فرمان‌های توسعه همچنان به تأیید نیاز دارند. اعتماد فضای کاری، استثناهای اسرار، مرزهای مسیر و قوانین فرمان‌های مسدودشده همچنان اعمال می‌شوند.',
+    'The reviewed file changes are no longer available.':
+      'تغییرات فایل بازبینی‌شده دیگر در دسترس نیستند.',
+    'This file could not be attached.': 'این فایل پیوست نشد.',
+    'Uploading attachment': 'در حال بارگذاری پیوست',
+    'You can attach up to 10 files.': 'می‌توانید حداکثر ۱۰ فایل پیوست کنید.',
+  },
+  fr: {
+    '{0} ({1}/{2})': '{0} ({1}/{2})',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Un fichier de l’espace de travail a changé pendant la vérification. Vérifiez les modifications actualisées avant de les appliquer.',
+    'Attach files': 'Joindre des fichiers',
+    'Attached file': 'Fichier joint',
+    'Attachment added': 'Pièce jointe ajoutée',
+    Attachments: 'Pièces jointes',
+    'Attachments must total 10 MiB or less.':
+      'La taille totale des pièces jointes doit être inférieure ou égale à 10 Mio.',
+    'ClawAI authorization timed out. Please try again.':
+      'L’autorisation ClawAI a expiré. Réessayez.',
+    'Connected to ClawAI.': 'Connecté à ClawAI.',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'Ctrl/⌘ + Entrée pour envoyer · l’approbation suit le mode sélectionné',
+    'Each attachment must be 5 MiB or smaller.':
+      'Chaque pièce jointe doit être inférieure ou égale à 5 Mio.',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'L’accès complet applique automatiquement les modifications de fichiers sûres et ignore les demandes courantes liées à l’espace de travail. Les commandes de développement nécessitent toujours une approbation. La confiance de l’espace de travail, les exclusions de secrets, les limites de chemins et les règles de commandes bloquées restent appliquées.',
+    'The reviewed file changes are no longer available.':
+      'Les modifications de fichiers vérifiées ne sont plus disponibles.',
+    'This file could not be attached.': 'Ce fichier n’a pas pu être joint.',
+    'Uploading attachment': 'Téléversement de la pièce jointe',
+    'You can attach up to 10 files.': 'Vous pouvez joindre jusqu’à 10 fichiers.',
+  },
+  hi: {
+    '{0} ({1}/{2})': '{0} ({1}/{2})',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'समीक्षा के दौरान कार्यस्थान की एक फ़ाइल बदल गई। लागू करने से पहले अद्यतन बदलावों की समीक्षा करें।',
+    'Attach files': 'फ़ाइलें संलग्न करें',
+    'Attached file': 'फ़ाइल संलग्न की गई',
+    'Attachment added': 'संलग्नक जोड़ा गया',
+    Attachments: 'संलग्नक',
+    'Attachments must total 10 MiB or less.': 'संलग्नकों का कुल आकार 10 MiB या कम होना चाहिए।',
+    'ClawAI authorization timed out. Please try again.':
+      'ClawAI प्राधिकरण का समय समाप्त हो गया। फिर से प्रयास करें।',
+    'Connected to ClawAI.': 'ClawAI से कनेक्ट किया गया।',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'भेजने के लिए Ctrl/⌘ + Enter · स्वीकृति चयनित मोड के अनुसार होगी',
+    'Each attachment must be 5 MiB or smaller.': 'प्रत्येक संलग्नक का आकार 5 MiB या कम होना चाहिए।',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'पूर्ण पहुँच सुरक्षित फ़ाइल बदलावों को अपने आप लागू करती है और नियमित कार्यस्थान संकेतों को छोड़ देती है। विकास कमांड के लिए अभी भी स्वीकृति आवश्यक है। कार्यस्थान विश्वास, गुप्त जानकारी के बहिष्करण, पथ सीमाएँ और अवरुद्ध कमांड के नियम लागू रहते हैं।',
+    'The reviewed file changes are no longer available.':
+      'समीक्षा किए गए फ़ाइल बदलाव अब उपलब्ध नहीं हैं।',
+    'This file could not be attached.': 'यह फ़ाइल संलग्न नहीं की जा सकी।',
+    'Uploading attachment': 'संलग्नक अपलोड किया जा रहा है',
+    'You can attach up to 10 files.': 'आप अधिकतम 10 फ़ाइलें संलग्न कर सकते हैं।',
+  },
+  it: {
+    '{0} ({1}/{2})': '{0} ({1}/{2})',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Un file dell’area di lavoro è cambiato durante la revisione. Rivedi le modifiche aggiornate prima di applicarle.',
+    'Attach files': 'Allega file',
+    'Attached file': 'File allegato',
+    'Attachment added': 'Allegato aggiunto',
+    Attachments: 'Allegati',
+    'Attachments must total 10 MiB or less.':
+      'La dimensione totale degli allegati deve essere pari o inferiore a 10 MiB.',
+    'ClawAI authorization timed out. Please try again.':
+      'L’autorizzazione ClawAI è scaduta. Riprova.',
+    'Connected to ClawAI.': 'Connesso a ClawAI.',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'Ctrl/⌘ + Invio per inviare · l’approvazione segue la modalità selezionata',
+    'Each attachment must be 5 MiB or smaller.':
+      'Ogni allegato deve avere una dimensione massima di 5 MiB.',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'L’accesso completo applica automaticamente le modifiche sicure ai file e ignora le richieste di routine dell’area di lavoro. I comandi di sviluppo richiedono ancora l’approvazione. L’attendibilità dell’area di lavoro, le esclusioni dei segreti, i limiti dei percorsi e le regole per i comandi bloccati restano attivi.',
+    'The reviewed file changes are no longer available.':
+      'Le modifiche ai file revisionate non sono più disponibili.',
+    'This file could not be attached.': 'Impossibile allegare questo file.',
+    'Uploading attachment': 'Caricamento dell’allegato',
+    'You can attach up to 10 files.': 'Puoi allegare fino a 10 file.',
+  },
+  ja: {
+    '{0} ({1}/{2})': '{0}（{1}/{2}）',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'レビュー中にワークスペースのファイルが変更されました。適用する前に更新された変更を確認してください。',
+    'Attach files': 'ファイルを添付',
+    'Attached file': 'ファイルを添付しました',
+    'Attachment added': '添付ファイルを追加しました',
+    Attachments: '添付ファイル',
+    'Attachments must total 10 MiB or less.': '添付ファイルの合計は 10 MiB 以下にしてください。',
+    'ClawAI authorization timed out. Please try again.':
+      'ClawAI の認証がタイムアウトしました。もう一度お試しください。',
+    'Connected to ClawAI.': 'ClawAI に接続しました。',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'Ctrl/⌘ + Enter で送信 · 承認は選択したモードに従います',
+    'Each attachment must be 5 MiB or smaller.': '各添付ファイルは 5 MiB 以下にしてください。',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'フルアクセスでは安全なファイル変更を自動的に適用し、通常のワークスペース確認を省略します。開発コマンドには引き続き承認が必要です。ワークスペースの信頼、シークレットの除外、パス境界、禁止コマンドの規則は引き続き適用されます。',
+    'The reviewed file changes are no longer available.':
+      'レビュー済みのファイル変更は利用できなくなりました。',
+    'This file could not be attached.': 'このファイルを添付できませんでした。',
+    'Uploading attachment': '添付ファイルをアップロード中',
+    'You can attach up to 10 files.': 'ファイルは最大 10 個まで添付できます。',
+  },
+  pt: {
+    '{0} ({1}/{2})': '{0} ({1}/{2})',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Um arquivo do espaço de trabalho mudou durante a revisão. Revise as alterações atualizadas antes de aplicá-las.',
+    'Attach files': 'Anexar arquivos',
+    'Attached file': 'Arquivo anexado',
+    'Attachment added': 'Anexo adicionado',
+    Attachments: 'Anexos',
+    'Attachments must total 10 MiB or less.':
+      'O tamanho total dos anexos deve ser de 10 MiB ou menos.',
+    'ClawAI authorization timed out. Please try again.':
+      'A autorização do ClawAI expirou. Tente novamente.',
+    'Connected to ClawAI.': 'Conectado ao ClawAI.',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'Ctrl/⌘ + Enter para enviar · a aprovação segue o modo selecionado',
+    'Each attachment must be 5 MiB or smaller.': 'Cada anexo deve ter no máximo 5 MiB.',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'O acesso total aplica automaticamente alterações seguras nos arquivos e ignora solicitações rotineiras do espaço de trabalho. Os comandos de desenvolvimento ainda exigem aprovação. A confiança do espaço de trabalho, as exclusões de segredos, os limites de caminho e as regras de comandos bloqueados continuam em vigor.',
+    'The reviewed file changes are no longer available.':
+      'As alterações de arquivo revisadas não estão mais disponíveis.',
+    'This file could not be attached.': 'Não foi possível anexar este arquivo.',
+    'Uploading attachment': 'Enviando anexo',
+    'You can attach up to 10 files.': 'Você pode anexar até 10 arquivos.',
+  },
+  ru: {
+    '{0} ({1}/{2})': '{0} ({1}/{2})',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'Файл рабочей области изменился во время проверки. Проверьте обновлённые изменения перед применением.',
+    'Attach files': 'Прикрепить файлы',
+    'Attached file': 'Файл прикреплён',
+    'Attachment added': 'Вложение добавлено',
+    Attachments: 'Вложения',
+    'Attachments must total 10 MiB or less.': 'Общий размер вложений не должен превышать 10 МиБ.',
+    'ClawAI authorization timed out. Please try again.':
+      'Время ожидания авторизации ClawAI истекло. Повторите попытку.',
+    'Connected to ClawAI.': 'Подключено к ClawAI.',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'Ctrl/⌘ + Enter для отправки · подтверждение зависит от выбранного режима',
+    'Each attachment must be 5 MiB or smaller.':
+      'Размер каждого вложения не должен превышать 5 МиБ.',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'Полный доступ автоматически применяет безопасные изменения файлов и пропускает обычные запросы к рабочей области. Команды разработки по-прежнему требуют подтверждения. Доверие к рабочей области, исключение секретов, границы путей и правила блокировки команд продолжают действовать.',
+    'The reviewed file changes are no longer available.':
+      'Проверенные изменения файлов больше недоступны.',
+    'This file could not be attached.': 'Не удалось прикрепить этот файл.',
+    'Uploading attachment': 'Загрузка вложения',
+    'You can attach up to 10 files.': 'Можно прикрепить до 10 файлов.',
+  },
+  th: {
+    '{0} ({1}/{2})': '{0} ({1}/{2})',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      'ไฟล์ในพื้นที่ทำงานเปลี่ยนแปลงระหว่างการตรวจทาน โปรดตรวจทานการเปลี่ยนแปลงล่าสุดก่อนนำไปใช้',
+    'Attach files': 'แนบไฟล์',
+    'Attached file': 'แนบไฟล์แล้ว',
+    'Attachment added': 'เพิ่มไฟล์แนบแล้ว',
+    Attachments: 'ไฟล์แนบ',
+    'Attachments must total 10 MiB or less.': 'ไฟล์แนบทั้งหมดต้องมีขนาดไม่เกิน 10 MiB',
+    'ClawAI authorization timed out. Please try again.': 'การอนุญาต ClawAI หมดเวลา โปรดลองอีกครั้ง',
+    'Connected to ClawAI.': 'เชื่อมต่อกับ ClawAI แล้ว',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'Ctrl/⌘ + Enter เพื่อส่ง · การอนุมัติเป็นไปตามโหมดที่เลือก',
+    'Each attachment must be 5 MiB or smaller.': 'ไฟล์แนบแต่ละไฟล์ต้องมีขนาดไม่เกิน 5 MiB',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      'การเข้าถึงแบบเต็มจะใช้การเปลี่ยนแปลงไฟล์ที่ปลอดภัยโดยอัตโนมัติและข้ามคำขอพื้นที่ทำงานตามปกติ คำสั่งสำหรับการพัฒนายังต้องได้รับการอนุมัติ ความน่าเชื่อถือของพื้นที่ทำงาน การยกเว้นข้อมูลลับ ขอบเขตพาธ และกฎคำสั่งที่ถูกบล็อกยังคงมีผล',
+    'The reviewed file changes are no longer available.':
+      'การเปลี่ยนแปลงไฟล์ที่ตรวจทานแล้วไม่พร้อมใช้งานอีกต่อไป',
+    'This file could not be attached.': 'ไม่สามารถแนบไฟล์นี้ได้',
+    'Uploading attachment': 'กำลังอัปโหลดไฟล์แนบ',
+    'You can attach up to 10 files.': 'คุณสามารถแนบไฟล์ได้สูงสุด 10 ไฟล์',
+  },
+  zh: {
+    '{0} ({1}/{2})': '{0}（{1}/{2}）',
+    'A workspace file changed during review. Review the updated changes before applying.':
+      '工作区文件在审查期间发生了变化。请在应用前审查更新后的更改。',
+    'Attach files': '附加文件',
+    'Attached file': '已附加文件',
+    'Attachment added': '已添加附件',
+    Attachments: '附件',
+    'Attachments must total 10 MiB or less.': '附件总大小不得超过 10 MiB。',
+    'ClawAI authorization timed out. Please try again.': 'ClawAI 授权已超时。请重试。',
+    'Connected to ClawAI.': '已连接到 ClawAI。',
+    'Ctrl/⌘ + Enter to send · approval follows the selected mode':
+      'Ctrl/⌘ + Enter 发送 · 审批方式取决于所选模式',
+    'Each attachment must be 5 MiB or smaller.': '每个附件不得超过 5 MiB。',
+    'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.':
+      '完全访问会自动应用安全的文件更改并跳过常规工作区提示。开发命令仍需审批。工作区信任、机密排除、路径边界以及命令阻止规则仍然有效。',
+    'The reviewed file changes are no longer available.': '已审查的文件更改不再可用。',
+    'This file could not be attached.': '无法附加此文件。',
+    'Uploading attachment': '正在上传附件',
+    'You can attach up to 10 files.': '最多可以附加 10 个文件。',
+  },
+};
+
 function sourceFiles(directory) {
   return readdirSync(directory).flatMap((name) => {
     const path = join(directory, name);
@@ -716,6 +1130,8 @@ function runtimeMessages() {
 
 function translate(locale, message) {
   return (
+    v090Translations[locale][message] ??
+    continuityTranslations[locale][message] ??
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??

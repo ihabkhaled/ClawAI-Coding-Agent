@@ -22,10 +22,15 @@ export class ChatSessionRegistry<TTarget extends ChatSessionTarget = ChatSession
     });
   }
 
-  bindRequest(requestId: string, sessionId: string): void {
-    if (this.sessions.has(sessionId)) {
-      this.requests.set(requestId, sessionId);
+  bindRequest(requestId: string, sessionId: string): boolean {
+    if (this.requests.has(requestId)) {
+      return false;
     }
+    if (!this.sessions.has(sessionId)) {
+      return false;
+    }
+    this.requests.set(requestId, sessionId);
+    return true;
   }
 
   dispose(): void {
@@ -60,6 +65,19 @@ export class ChatSessionRegistry<TTarget extends ChatSessionTarget = ChatSession
 
   releaseRequest(requestId: string): void {
     this.requests.delete(requestId);
+  }
+
+  resetAccountState(subject: string, updatedAt: number): RegisteredChatSession<TTarget>[] {
+    this.requests.clear();
+    for (const session of this.sessions.values()) {
+      session.descriptor = {
+        ...session.descriptor,
+        subject,
+        threadId: undefined,
+        updatedAt,
+      };
+    }
+    return this.list();
   }
 
   update(sessionId: string, patch: SessionUpdate): RegisteredChatSession<TTarget> | undefined {

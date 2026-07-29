@@ -14,6 +14,19 @@ import { SessionControlService } from '../../src/services/session-control-servic
 import type { AgentMode } from '../../src/core/agent-mode.types';
 import type { PermissionMode } from '../../src/core/permission-policy.types';
 
+function deferred() {
+  let resolve: (() => void) | undefined;
+  const promise = new Promise<void>((complete) => {
+    resolve = complete;
+  });
+  return {
+    promise,
+    resolve: () => {
+      resolve?.();
+    },
+  };
+}
+
 describe('SessionControlService', () => {
   const configuration = {
     agentMode: 'AUTO' as AgentMode,
@@ -77,6 +90,79 @@ describe('SessionControlService', () => {
     expect(approvals.request).toHaveBeenCalledOnce();
   });
 
+  it('captures agent and permission policy for a queued request', async () => {
+    configuration.agentMode = 'PLAN';
+    configuration.permissionMode = 'MANUAL';
+    const approvals = {
+      request: vi.fn(async () => true),
+    };
+    const service = new SessionControlService(state, configuration, approvals);
+    const requestSession = await service.capture();
+
+    configuration.agentMode = 'AUTO';
+    configuration.permissionMode = 'BYPASS_PERMISSIONS';
+
+    expect(requestSession.isPlanMode()).toBe(true);
+    expect(requestSession.preparePrompt('Change a file')).toContain('read-only');
+    await expect(requestSession.authorize('finalDiff')).resolves.toBe(true);
+    expect(approvals.request).toHaveBeenCalledWith(expect.objectContaining({ kind: 'finalDiff' }));
+  });
+
+  it('waits for visible mode selections before capturing an immediate request', async () => {
+    configuration.agentMode = 'AUTO';
+    configuration.permissionMode = 'BYPASS_PERMISSIONS';
+    const persistence = deferred();
+    configuration.selectAgentMode.mockImplementation(async (mode: AgentMode) => {
+      await persistence.promise;
+      configuration.agentMode = mode;
+    });
+    configuration.selectPermissionMode.mockImplementation(async (mode: PermissionMode) => {
+      configuration.permissionMode = mode;
+      return true;
+    });
+    const approvals = {
+      request: vi.fn(async () => true),
+    };
+    const service = new SessionControlService(state, configuration, approvals);
+
+    const agentSelection = service.selectAgentMode('PLAN');
+    const permissionSelection = service.selectPermissionMode('MANUAL');
+    let captured = false;
+    const requestSessionPromise = service.capture().then((session) => {
+      captured = true;
+      return session;
+    });
+    await Promise.resolve();
+
+    expect(captured).toBe(false);
+    persistence.resolve();
+    await Promise.all([agentSelection, permissionSelection]);
+    const requestSession = await requestSessionPromise;
+
+    expect(requestSession.isPlanMode()).toBe(true);
+    expect(requestSession.preparePrompt('Change a file')).toContain('read-only');
+    await expect(requestSession.authorize('finalDiff')).resolves.toBe(true);
+    expect(approvals.request).toHaveBeenCalledWith(expect.objectContaining({ kind: 'finalDiff' }));
+  });
+
+  it('does not let a policy mutation started after submission change the captured request', async () => {
+    configuration.selectAgentMode.mockImplementation(async (mode: AgentMode) => {
+      configuration.agentMode = mode;
+    });
+    const service = new SessionControlService(state, configuration, {
+      request: vi.fn(async () => true),
+    });
+
+    const requestSessionPromise = service.capture();
+    const laterSelection = service.selectAgentMode('PLAN');
+    const requestSession = await requestSessionPromise;
+    await laterSelection;
+
+    expect(requestSession.isPlanMode()).toBe(false);
+    expect(requestSession.preparePrompt('Change a file')).toBe('Change a file');
+    expect(configuration.agentMode).toBe('PLAN');
+  });
+
   it('remembers one approved routine-access request for the current workspace', async () => {
     let routineAccessRemembered = false;
     const approvals = {
@@ -120,5 +206,33 @@ describe('SessionControlService', () => {
     await expect(service.selectPermissionMode('BYPASS_PERMISSIONS')).resolves.toBe(true);
     expect(configuration.selectPermissionMode).toHaveBeenCalledWith('BYPASS_PERMISSIONS');
     expect(approvals.request).toHaveBeenCalledTimes(2);
+  });
+
+  it('applies final diffs without another approval after Full Access has been enabled', async () => {
+    configuration.permissionMode = 'BYPASS_PERMISSIONS';
+    const approvals = {
+      request: vi.fn(async () => true),
+    };
+    const service = new SessionControlService(state, configuration, approvals);
+
+    await expect(service.authorize('finalDiff')).resolves.toBe(true);
+    expect(approvals.request).not.toHaveBeenCalled();
+  });
+
+  it('requires command review with exact details after Full Access has been enabled', async () => {
+    configuration.permissionMode = 'BYPASS_PERMISSIONS';
+    const approvals = {
+      request: vi.fn(async () => true),
+    };
+    const service = new SessionControlService(state, configuration, approvals);
+    const details = [`Inspect workspace: node -e "require('fs').readFileSync('../outside.txt')"`];
+
+    await expect(service.authorize('commandExecution', details)).resolves.toBe(true);
+    expect(approvals.request).toHaveBeenCalledWith({
+      details,
+      kind: 'commandExecution',
+      message: 'Allow ClawAI to run these safe development commands in this workspace?',
+      title: 'Run development commands',
+    });
   });
 });

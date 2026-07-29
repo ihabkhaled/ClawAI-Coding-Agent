@@ -13,8 +13,13 @@ export function decidePermission(input: PermissionInput): PermissionDecision {
   ) {
     return { outcome: 'deny', reason: 'planReadOnly' };
   }
-  if (input.operation === 'finalDiff' && input.permissionMode !== 'BYPASS_PERMISSIONS') {
-    return { outcome: 'ask', reason: 'finalDiffRequired' };
+  if (input.operation === 'finalDiff') {
+    return input.permissionMode === 'BYPASS_PERMISSIONS'
+      ? { outcome: 'allow', reason: 'fullAccess' }
+      : { outcome: 'ask', reason: 'finalDiffRequired' };
+  }
+  if (input.operation === 'commandExecution') {
+    return { outcome: 'ask', reason: 'commandReviewRequired' };
   }
   if (input.permissionMode === 'MANUAL') {
     return { outcome: 'ask', reason: 'manualApproval' };

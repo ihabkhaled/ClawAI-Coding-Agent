@@ -9,6 +9,10 @@ Read `CLAUDE.md`, the affected source, its tests, and the relevant document in
 `docs/`. Never infer a backend contract from UI needs; verify it against
 `docs/API_CONTRACTS.md` and the ClawAI backend.
 
+Read and apply `skills/version-every-change/SKILL.md` for every publishable
+change. Every push to `main` must carry a new SemVer version, matching changelog
+entry, rebuilt VSIX in `builds/`, and GitHub release asset.
+
 ## Required gates
 
 ```bash
@@ -27,8 +31,8 @@ npm audit --omit=dev --audit-level=high
 - Never add a secret-bearing VS Code setting.
 - Never collect workspace content or write files without the required
   Workspace Trust boundary.
-- Never weaken path validation, explicit diff approval, atomic edits, or the
-  built-in secret exclusions.
+- Never weaken path validation, permission-mode approval policy, atomic edits,
+  or the built-in secret exclusions.
 - Never use `innerHTML` for model/backend/user data or relax the webview CSP.
 - Never accept backend or webview data without runtime validation.
 - Never add user-facing strings outside VS Code localization.

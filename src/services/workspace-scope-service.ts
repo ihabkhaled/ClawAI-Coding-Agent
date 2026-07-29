@@ -45,6 +45,7 @@ export class WorkspaceScopeService {
     if (snapshot.selectedFolderKey === undefined) {
       throw new Error(vscode.l10n.t('Open a workspace before running ClawAI.'));
     }
+    this.explicitFolderKey ??= snapshot.selectedFolderKey;
     const folder = this.workspaceFolders().find(
       (candidate) => workspaceFolderKey(candidate.uri.toString()) === snapshot.selectedFolderKey,
     );

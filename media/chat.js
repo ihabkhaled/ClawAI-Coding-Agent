@@ -20,6 +20,11 @@ const elements = {
   approvalReject: byId('approvalReject'),
   approvalReview: byId('approvalReview'),
   approvalTitle: byId('approvalTitle'),
+  attachmentButton: byId('attachmentButton'),
+  attachmentInput: byId('attachmentInput'),
+  attachmentList: byId('attachmentList'),
+  attachmentStatus: byId('attachmentStatus'),
+  attachmentTray: byId('attachmentTray'),
   backendDot: byId('backendDot'),
   backendLabel: byId('backendLabel'),
   backendUrlInput: byId('backendUrlInput'),
@@ -29,6 +34,7 @@ const elements = {
   connectionError: byId('connectionError'),
   connectionForm: byId('connectionForm'),
   connectionGate: byId('connectionGate'),
+  connectionCancelButton: byId('connectionCancelButton'),
   connectionProgress: byId('connectionProgress'),
   contextCount: byId('contextCount'),
   contextHintText: byId('contextHintText'),
@@ -82,15 +88,98 @@ let currentState = {
   routingMode: 'AUTO',
   selectedModel: '',
 };
-let lastUserPrompt = '';
 let currentSession = null;
 let pendingAgentMode = null;
 let pendingModel = null;
 let pendingPermissionMode = null;
+let connectionViewInitialized = false;
 const responseBodies = new Map();
 const streamStates = new Map();
 const activityLists = new Map();
 const requestTokens = new Map();
+const requestInputs = new Map();
+const MAX_RETRY_INPUTS = 25;
+const MAX_RETRY_ATTACHMENT_CHARS = 32 * 1024 * 1024;
+const MAX_ATTACHMENTS = 10;
+const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
+const MAX_TOTAL_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
+  'application/graphql',
+  'application/javascript',
+  'application/json',
+  'application/ld+json',
+  'application/octet-stream',
+  'application/pdf',
+  'application/rtf',
+  'application/sql',
+  'application/toml',
+  'application/typescript',
+  'application/vnd.openxmlformats-officedocument.presentationml.presentation',
+  'application/vnd.openxmlformats-officedocument.spreadsheetml.sheet',
+  'application/vnd.openxmlformats-officedocument.wordprocessingml.document',
+  'application/x-httpd-php',
+  'application/x-latex',
+  'application/x-ndjson',
+  'application/x-perl',
+  'application/x-python',
+  'application/x-ruby',
+  'application/x-sh',
+  'application/x-tex',
+  'application/x-yaml',
+  'application/x-zip-compressed',
+  'application/xml',
+  'application/yaml',
+  'application/zip',
+  'image/gif',
+  'image/jpeg',
+  'image/png',
+  'image/svg+xml',
+  'image/webp',
+  'text/css',
+  'text/csv',
+  'text/html',
+  'text/javascript',
+  'text/markdown',
+  'text/plain',
+  'text/rtf',
+  'text/tab-separated-values',
+  'text/x-c',
+  'text/x-c++',
+  'text/x-diff',
+  'text/x-go',
+  'text/x-java-source',
+  'text/x-log',
+  'text/x-python',
+  'text/x-ruby',
+  'text/x-rust',
+  'text/x-shellscript',
+  'text/x-sql',
+  'text/x-toml',
+  'text/x-yaml',
+  'text/xml',
+  'video/avi',
+  'video/mov',
+  'video/mp4',
+  'video/mpeg',
+  'video/quicktime',
+  'video/webm',
+  'video/x-msvideo',
+]);
+const composerAttachments = [];
+const pendingAttachmentBatches = [];
+let attachmentsReading = false;
+let attachmentReadGeneration = 0;
+let reservedAttachmentBytes = 0;
+let reservedAttachmentCount = 0;
+const MAX_PROMPT_HISTORY = 100;
+const persistedViewState = vscode.getState?.() ?? {};
+const promptHistory = Array.isArray(persistedViewState.promptHistory)
+  ? persistedViewState.promptHistory
+      .filter((entry) => typeof entry === 'string' && entry.trim().length > 0)
+      .slice(-MAX_PROMPT_HISTORY)
+  : [];
+let promptHistoryIndex = promptHistory.length;
+let promptHistoryDraft = '';
 let historyTokenTotal = 0;
 let historyTokensReported = false;
 
@@ -219,18 +308,73 @@ function copyButton(body) {
   return button;
 }
 
-function retryButton() {
+function retryButton(requestId) {
   const button = textElement('button', 'message-action', labels.retry);
   button.type = 'button';
+  button.dataset.action = 'retry';
   button.addEventListener('click', () => {
-    elements.prompt.value = lastUserPrompt;
-    elements.prompt.focus();
-    elements.form.requestSubmit();
+    const input = requestInputs.get(requestId);
+    if (input) {
+      submitPrompt(input);
+    }
   });
   return button;
 }
 
-function appendMessage(role, content, meta = '', requestId = '') {
+function forgetRequestInput(requestId) {
+  requestInputs.delete(requestId);
+  for (const timeline of elements.conversation.querySelectorAll(
+    `.timeline-item[data-request-id="${globalThis.CSS.escape(requestId)}"]`,
+  )) {
+    timeline.querySelector('[data-action="retry"]')?.remove();
+  }
+}
+
+function retryAttachmentChars() {
+  let total = 0;
+  for (const input of requestInputs.values()) {
+    for (const attachment of input.attachments ?? []) {
+      total += attachment.content.length;
+    }
+  }
+  return total;
+}
+
+function rememberRequestInput(requestId, input) {
+  requestInputs.set(requestId, input);
+  while (
+    requestInputs.size > MAX_RETRY_INPUTS ||
+    retryAttachmentChars() > MAX_RETRY_ATTACHMENT_CHARS
+  ) {
+    const oldest = requestInputs.keys().next().value;
+    if (typeof oldest !== 'string') {
+      return;
+    }
+    forgetRequestInput(oldest);
+  }
+}
+
+function appendMessageAttachments(card, attachments) {
+  if (attachments.length === 0) {
+    return;
+  }
+  const list = document.createElement('ul');
+  list.className = 'message-attachment-list';
+  list.setAttribute('aria-label', labels.attachments);
+  for (const attachment of attachments) {
+    const item = document.createElement('li');
+    item.className = 'message-attachment';
+    item.append(
+      textElement('span', 'attachment-file-icon', '◇'),
+      textElement('strong', '', attachment.filename),
+      textElement('small', '', formatBytes(attachment.sizeBytes)),
+    );
+    list.append(item);
+  }
+  card.append(list);
+}
+
+function appendMessage(role, content, meta = '', requestId = '', attachments = []) {
   const article = document.createElement('article');
   article.className = `message timeline-item message-${role}`;
   if (requestId.length > 0) {
@@ -261,10 +405,16 @@ function appendMessage(role, content, meta = '', requestId = '') {
     card.append(activity);
   }
   card.append(body);
+  if (role === 'user') {
+    appendMessageAttachments(card, attachments);
+  }
   if (role === 'assistant') {
     const actions = document.createElement('div');
     actions.className = 'message-actions';
-    actions.append(copyButton(body), retryButton());
+    actions.append(copyButton(body));
+    if (requestId.length > 0 && requestInputs.has(requestId)) {
+      actions.append(retryButton(requestId));
+    }
     card.append(actions);
   }
   article.append(card);
@@ -301,6 +451,7 @@ function renderHistoryMessages(messages) {
   streamStates.clear();
   activityLists.clear();
   requestTokens.clear();
+  requestInputs.clear();
   historyTokenTotal = 0;
   historyTokensReported = false;
   for (const message of messages) {
@@ -611,18 +762,16 @@ function renderQueue(queue) {
       textElement('strong', '', request.status),
       textElement('small', '', request.prompt),
     );
+    const requestAttachments = requestInputs.get(request.id)?.attachments ?? [];
+    if (requestAttachments.length > 0) {
+      copy.append(textElement('small', 'queue-attachments', attachmentReceipt(requestAttachments)));
+    }
     item.append(copy);
     if (request.id !== active?.id) {
       const remove = textElement('button', 'message-action', labels.remove);
       remove.type = 'button';
       remove.addEventListener('click', () => {
         vscode.postMessage({ type: 'removeQueued', requestId: request.id });
-        responseBodies.get(request.id)?.closest('.timeline-item')?.remove();
-        responseBodies.delete(request.id);
-        streamStates.delete(request.id);
-        activityLists.delete(request.id);
-        requestTokens.delete(request.id);
-        renderConversationTokenCount();
       });
       item.append(remove);
     }
@@ -689,6 +838,7 @@ function reconcilePending(state) {
 }
 
 function renderState(state) {
+  const previousState = currentState;
   currentState = state;
   reconcilePending(state);
   const authorizing = !state.connected && state.backendStatus === 'loading';
@@ -704,10 +854,12 @@ function renderState(state) {
   }
   elements.backendUrlInput.disabled = authorizing;
   elements.connectButton.disabled = authorizing;
+  elements.connectionForm.setAttribute('aria-busy', authorizing ? 'true' : 'false');
   elements.connectButtonLabel.textContent = authorizing
     ? labels.openingAuthorization
     : labels.connectClawai;
   elements.connectionProgress.hidden = !authorizing;
+  elements.connectionCancelButton.hidden = !authorizing;
   const connectionError =
     !state.connected && state.backendStatus === 'error' && typeof state.lastError === 'string'
       ? state.lastError
@@ -726,7 +878,7 @@ function renderState(state) {
   renderConversationTokenCount();
   elements.planName.textContent = state.entitlements?.plan?.name ?? '—';
   elements.sessionButton.textContent = state.connected ? labels.logout : labels.connect;
-  elements.sendButton.disabled = !state.connected;
+  elements.sendButton.disabled = !state.connected || attachmentsReading;
   elements.sendButton.querySelector('span').textContent = state.busy ? labels.queue : labels.send;
   elements.cancelButton.hidden = state.generationQueue?.active === undefined;
   elements.prompt.disabled = false;
@@ -744,6 +896,20 @@ function renderState(state) {
   renderQueue(state.generationQueue);
   renderApproval(state.approvalRequest);
   renderContextHint();
+  const wasAuthorizing = !previousState.connected && previousState.backendStatus === 'loading';
+  if (!connectionViewInitialized) {
+    connectionViewInitialized = true;
+    if (!state.connected && !authorizing) {
+      elements.backendUrlInput.focus();
+    }
+  } else if (authorizing && !wasAuthorizing) {
+    elements.connectionCancelButton.focus();
+  } else if (!state.connected && !authorizing && (wasAuthorizing || previousState.connected)) {
+    elements.backendUrlInput.focus();
+  } else if (state.connected && !previousState.connected) {
+    elements.announcer.textContent = labels.connectionReady;
+    elements.prompt.focus();
+  }
   if (state.lastError) {
     elements.announcer.textContent = state.lastError;
   }
@@ -753,20 +919,361 @@ function selectedModels() {
   return [...elements.modelChecks.querySelectorAll('input:checked')].map((input) => input.value);
 }
 
-function submitPrompt() {
-  const content = elements.prompt.value.trim();
+function persistPromptHistory() {
+  vscode.setState?.({
+    ...(vscode.getState?.() ?? {}),
+    promptHistory: [...promptHistory],
+  });
+}
+
+function rememberPrompt(content) {
+  if (promptHistory.at(-1) !== content) {
+    promptHistory.push(content);
+    if (promptHistory.length > MAX_PROMPT_HISTORY) {
+      promptHistory.shift();
+    }
+    persistPromptHistory();
+  }
+  promptHistoryIndex = promptHistory.length;
+  promptHistoryDraft = '';
+}
+
+function navigatePromptHistory(direction) {
+  if (promptHistory.length === 0) {
+    return false;
+  }
+  if (direction < 0) {
+    if (promptHistoryIndex === promptHistory.length) {
+      promptHistoryDraft = elements.prompt.value;
+    }
+    if (promptHistoryIndex === 0) {
+      return false;
+    }
+    promptHistoryIndex -= 1;
+  } else {
+    if (promptHistoryIndex >= promptHistory.length) {
+      return false;
+    }
+    promptHistoryIndex += 1;
+  }
+  const value =
+    promptHistoryIndex === promptHistory.length
+      ? promptHistoryDraft
+      : promptHistory[promptHistoryIndex];
+  elements.prompt.value = value;
+  elements.prompt.setSelectionRange(value.length, value.length);
+  return true;
+}
+
+function normalizedMimeType(value) {
+  const mimeType = value.trim().toLowerCase();
+  if (mimeType === 'image/jpg') {
+    return 'image/jpeg';
+  }
+  return mimeType.length > 0 ? mimeType : 'application/octet-stream';
+}
+
+function formatBytes(sizeBytes) {
+  if (sizeBytes < 1024) {
+    return `${sizeBytes} B`;
+  }
+  if (sizeBytes < 1024 * 1024) {
+    return `${(sizeBytes / 1024).toFixed(1)} KiB`;
+  }
+  return `${(sizeBytes / (1024 * 1024)).toFixed(1)} MiB`;
+}
+
+function setAttachmentStatus(message) {
+  elements.attachmentStatus.textContent = message;
+  elements.attachmentTray.hidden = composerAttachments.length === 0 && message.length === 0;
+  elements.announcer.textContent = message;
+}
+
+function attachmentReceipt(attachments) {
+  const totalBytes = attachments.reduce((total, attachment) => total + attachment.sizeBytes, 0);
+  const noun = attachments.length === 1 ? labels.attachment : labels.attachments.toLowerCase();
+  return `${attachments.length} ${noun} · ${formatBytes(totalBytes)}`;
+}
+
+function composerAttachmentSummary() {
+  const totalBytes = composerAttachments.reduce(
+    (total, attachment) => total + attachment.sizeBytes,
+    0,
+  );
+  return labels.attachmentLimitSummary
+    .replace('{0}', String(composerAttachments.length))
+    .replace('{1}', formatBytes(totalBytes));
+}
+
+function setAttachmentBusy(busy) {
+  attachmentsReading = busy;
+  elements.form.classList.toggle('reading-attachments', busy);
+  elements.form.setAttribute('aria-busy', busy ? 'true' : 'false');
+  elements.attachmentButton.disabled = busy;
+  elements.sendButton.disabled = busy || !currentState.connected;
+}
+
+function revokePreview(attachment) {
+  if (attachment.previewUrl.length > 0) {
+    window.URL.revokeObjectURL(attachment.previewUrl);
+  }
+}
+
+function renderAttachments() {
+  elements.attachmentList.replaceChildren();
+  for (const attachment of composerAttachments) {
+    const item = document.createElement('div');
+    item.className = 'attachment-chip';
+    item.setAttribute('role', 'listitem');
+    if (attachment.mimeType.startsWith('image/') && attachment.previewUrl.length > 0) {
+      const preview = document.createElement('img');
+      preview.className = 'attachment-thumbnail';
+      preview.src = attachment.previewUrl;
+      preview.alt = '';
+      item.append(preview);
+    } else {
+      item.append(textElement('span', 'attachment-file-icon', '◇'));
+    }
+    const details = document.createElement('span');
+    details.className = 'attachment-details';
+    details.append(
+      textElement('strong', 'attachment-name', attachment.filename),
+      textElement('small', '', formatBytes(attachment.sizeBytes)),
+    );
+    const remove = textElement('button', 'attachment-remove', '×');
+    remove.type = 'button';
+    remove.setAttribute('aria-label', `${labels.remove} ${attachment.filename}`);
+    remove.addEventListener('click', () => {
+      const index = composerAttachments.findIndex(
+        (candidate) => candidate.clientId === attachment.clientId,
+      );
+      if (index >= 0) {
+        const [removed] = composerAttachments.splice(index, 1);
+        revokePreview(removed);
+        setAttachmentStatus(composerAttachments.length === 0 ? '' : composerAttachmentSummary());
+        renderAttachments();
+        elements.prompt.focus();
+      }
+    });
+    item.append(details, remove);
+    elements.attachmentList.append(item);
+  }
+  elements.attachmentTray.hidden =
+    composerAttachments.length === 0 && elements.attachmentStatus.textContent.length === 0;
+}
+
+function fileContent(file) {
+  return new Promise((resolve, reject) => {
+    const reader = new window.FileReader();
+    reader.addEventListener('error', () => reject(reader.error));
+    reader.addEventListener('load', () => {
+      const result = reader.result;
+      if (typeof result !== 'string') {
+        reject(new Error(labels.attachmentReadFailed));
+        return;
+      }
+      const separator = result.indexOf(',');
+      resolve(separator >= 0 ? result.slice(separator + 1) : '');
+    });
+    reader.readAsDataURL(file);
+  });
+}
+
+function validateAttachmentFiles(files) {
+  if (composerAttachments.length + reservedAttachmentCount + files.length > MAX_ATTACHMENTS) {
+    return labels.attachmentTooMany;
+  }
+  if (files.some((file) => file.size === 0)) {
+    return labels.attachmentEmpty;
+  }
+  if (files.some((file) => file.size > MAX_ATTACHMENT_BYTES)) {
+    return labels.attachmentTooLarge;
+  }
+  if (
+    files.some((file) => {
+      const filename = file.name.trim();
+      return (
+        filename.length === 0 ||
+        filename.length > 255 ||
+        filename.includes('/') ||
+        filename.includes('\\') ||
+        [...filename].some((character) => {
+          const codePoint = character.codePointAt(0) ?? 0;
+          return codePoint < 32 || codePoint === 127;
+        })
+      );
+    })
+  ) {
+    return labels.attachmentReadFailed;
+  }
+  if (files.some((file) => !ALLOWED_ATTACHMENT_MIME_TYPES.has(normalizedMimeType(file.type)))) {
+    return labels.attachmentTypeUnsupported;
+  }
+  const currentBytes = composerAttachments.reduce(
+    (total, attachment) => total + attachment.sizeBytes,
+    0,
+  );
+  const incomingBytes = files.reduce((total, file) => total + file.size, 0);
+  if (currentBytes + reservedAttachmentBytes + incomingBytes > MAX_TOTAL_ATTACHMENT_BYTES) {
+    return labels.attachmentTotalTooLarge;
+  }
+  return '';
+}
+
+async function readAttachmentBatch(files, readGeneration) {
+  const prepared = [];
+  try {
+    for (const file of files) {
+      const mimeType = normalizedMimeType(file.type);
+      const content = await fileContent(file);
+      if (readGeneration !== attachmentReadGeneration) {
+        return false;
+      }
+      prepared.push({
+        clientId: window.crypto.randomUUID(),
+        content,
+        filename: file.name,
+        mimeType,
+        previewFile: mimeType.startsWith('image/') ? file : undefined,
+        sizeBytes: file.size,
+      });
+    }
+    for (const attachment of prepared) {
+      const { previewFile, ...attachmentData } = attachment;
+      composerAttachments.push({
+        ...attachmentData,
+        previewUrl: previewFile === undefined ? '' : window.URL.createObjectURL(previewFile),
+      });
+    }
+    renderAttachments();
+    setAttachmentStatus(composerAttachmentSummary());
+    elements.announcer.textContent = `${labels.attachmentAdded}: ${files
+      .map((file) => file.name)
+      .join(', ')}`;
+    return true;
+  } catch {
+    if (readGeneration === attachmentReadGeneration) {
+      setAttachmentStatus(labels.attachmentReadFailed);
+    }
+    return false;
+  }
+}
+
+async function drainAttachmentBatches(readGeneration) {
+  setAttachmentBusy(true);
+  setAttachmentStatus(labels.attachingFiles);
+  try {
+    while (readGeneration === attachmentReadGeneration && pendingAttachmentBatches.length > 0) {
+      const files = pendingAttachmentBatches.shift();
+      await readAttachmentBatch(files, readGeneration);
+      if (readGeneration === attachmentReadGeneration) {
+        reservedAttachmentCount -= files.length;
+        reservedAttachmentBytes -= files.reduce((total, file) => total + file.size, 0);
+      }
+    }
+  } finally {
+    if (readGeneration === attachmentReadGeneration) {
+      setAttachmentBusy(false);
+      elements.attachmentInput.value = '';
+      elements.prompt.focus();
+    }
+  }
+}
+
+function addAttachmentFiles(fileList) {
+  const files = [...fileList];
+  if (files.length === 0) {
+    return;
+  }
+  const validationError = validateAttachmentFiles(files);
+  if (validationError.length > 0) {
+    setAttachmentStatus(validationError);
+    elements.attachmentInput.value = '';
+    elements.prompt.focus();
+    return;
+  }
+  pendingAttachmentBatches.push(files);
+  reservedAttachmentCount += files.length;
+  reservedAttachmentBytes += files.reduce((total, file) => total + file.size, 0);
+  if (!attachmentsReading) {
+    void drainAttachmentBatches(attachmentReadGeneration);
+  }
+}
+
+function snapshotAttachments(attachments) {
+  return Object.freeze(
+    attachments.map((attachment) =>
+      Object.freeze({
+        clientId: attachment.clientId,
+        content: attachment.content,
+        filename: attachment.filename,
+        mimeType: attachment.mimeType,
+        sizeBytes: attachment.sizeBytes,
+      }),
+    ),
+  );
+}
+
+function clearComposerAttachments() {
+  for (const attachment of composerAttachments) {
+    revokePreview(attachment);
+  }
+  composerAttachments.splice(0);
+  elements.attachmentStatus.textContent = '';
+  renderAttachments();
+}
+
+function resetAccountComposer() {
+  attachmentReadGeneration += 1;
+  pendingAttachmentBatches.splice(0);
+  reservedAttachmentCount = 0;
+  reservedAttachmentBytes = 0;
+  setAttachmentBusy(false);
+  clearComposerAttachments();
+  elements.attachmentButton.disabled = false;
+  elements.sendButton.disabled = !currentState.connected;
+  elements.attachmentInput.value = '';
+  elements.prompt.value = '';
+  promptHistory.splice(0);
+  promptHistoryIndex = 0;
+  promptHistoryDraft = '';
+  persistPromptHistory();
+}
+
+function submitPrompt(retryInput) {
+  if (attachmentsReading) {
+    return;
+  }
+  const content = (retryInput?.content ?? elements.prompt.value).trim();
   if (content.length === 0) {
     return;
   }
   const requestId = window.crypto.randomUUID();
-  const mode = elements.runMode.value;
+  const mode = retryInput?.mode ?? elements.runMode.value;
+  const contextMode = retryInput?.contextMode ?? elements.contextMode.value;
+  const modelKeys = retryInput?.modelKeys ?? selectedModels();
+  const modelKey = retryInput?.modelKey ?? activeModelValue();
+  const judgeEnabled = retryInput?.judgeEnabled ?? mode === 'judge';
+  const attachments = snapshotAttachments(retryInput?.attachments ?? composerAttachments);
+  const requestInput = {
+    content,
+    mode,
+    contextMode,
+    modelKey,
+    modelKeys: [...modelKeys],
+    judgeEnabled,
+  };
+  if (attachments.length > 0) {
+    requestInput.attachments = attachments;
+  }
+  rememberRequestInput(requestId, requestInput);
   const promptTokens = estimateTokens(content);
-  lastUserPrompt = content;
   appendMessage(
     'user',
     content,
     `${promptTokens} ${labels.tokens} · ${labels.estimated}`,
     requestId,
+    attachments,
   );
   const responseBody = appendMessage(
     'assistant',
@@ -797,37 +1304,90 @@ function submitPrompt() {
     promptTokens,
   );
   if (mode === 'agent' || mode === 'chat') {
-    vscode.postMessage({
+    const message = {
       type: mode === 'agent' ? 'agent' : 'send',
       content,
-      contextMode: elements.contextMode.value,
+      contextMode,
+      modelKey,
       requestId,
-    });
+    };
+    if (attachments.length > 0) {
+      message.attachments = attachments;
+    }
+    vscode.postMessage(message);
   } else {
-    const modelKeys = selectedModels();
     if (modelKeys.length < 2 || modelKeys.length > 5) {
       elements.announcer.textContent = labels.chooseModels;
       responseBody.textContent = labels.chooseModels;
       responseBody.closest('.timeline-item')?.classList.add('message-error');
       responseBodies.delete(requestId);
       activityLists.delete(requestId);
+      forgetRequestInput(requestId);
       return;
     }
-    vscode.postMessage({
+    const message = {
       type: 'compare',
       content,
-      contextMode: elements.contextMode.value,
+      contextMode,
       modelKeys,
-      judgeEnabled: mode === 'judge',
+      judgeEnabled,
       requestId,
-    });
+    };
+    if (attachments.length > 0) {
+      message.attachments = attachments;
+    }
+    vscode.postMessage(message);
   }
-  elements.prompt.value = '';
+  if (retryInput === undefined) {
+    rememberPrompt(content);
+    elements.prompt.value = '';
+    clearComposerAttachments();
+  }
 }
 
 elements.form.addEventListener('submit', (event) => {
   event.preventDefault();
   submitPrompt();
+});
+
+elements.attachmentButton.addEventListener('click', () => {
+  elements.attachmentInput.click();
+});
+
+elements.attachmentInput.addEventListener('change', () => {
+  addAttachmentFiles(elements.attachmentInput.files ?? []);
+});
+
+elements.prompt.addEventListener('paste', (event) => {
+  const files = event.clipboardData?.files;
+  if (files && files.length > 0) {
+    if ((event.clipboardData?.getData('text/plain') ?? '').length === 0) {
+      event.preventDefault();
+    }
+    addAttachmentFiles(files);
+  }
+});
+
+elements.form.addEventListener('dragover', (event) => {
+  if (event.dataTransfer?.types.includes('Files')) {
+    event.preventDefault();
+    elements.form.classList.add('dragging-files');
+  }
+});
+
+elements.form.addEventListener('dragleave', (event) => {
+  if (!elements.form.contains(event.relatedTarget)) {
+    elements.form.classList.remove('dragging-files');
+  }
+});
+
+elements.form.addEventListener('drop', (event) => {
+  elements.form.classList.remove('dragging-files');
+  const files = event.dataTransfer?.files;
+  if (files && files.length > 0) {
+    event.preventDefault();
+    addAttachmentFiles(files);
+  }
 });
 
 elements.connectionForm.addEventListener('submit', (event) => {
@@ -838,6 +1398,10 @@ elements.connectionForm.addEventListener('submit', (event) => {
   }
   elements.connectionError.hidden = true;
   vscode.postMessage({ type: 'connect', backendUrl });
+});
+
+elements.connectionCancelButton.addEventListener('click', () => {
+  vscode.postMessage({ type: 'cancel' });
 });
 
 elements.sessionButton.addEventListener('click', () => {
@@ -918,6 +1482,30 @@ elements.permissionMode.addEventListener('change', () => {
 });
 
 elements.contextMode.addEventListener('change', renderContextHint);
+
+elements.prompt.addEventListener('input', () => {
+  if (promptHistoryIndex < promptHistory.length) {
+    promptHistoryIndex = promptHistory.length;
+    promptHistoryDraft = elements.prompt.value;
+  }
+});
+
+elements.prompt.addEventListener('keydown', (event) => {
+  if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
+    return;
+  }
+  const browsingHistory = promptHistoryIndex < promptHistory.length;
+  const atStart = elements.prompt.selectionStart === 0 && elements.prompt.selectionEnd === 0;
+  if (
+    event.key === 'ArrowUp' &&
+    (browsingHistory || elements.prompt.value.length === 0 || atStart) &&
+    navigatePromptHistory(-1)
+  ) {
+    event.preventDefault();
+  } else if (event.key === 'ArrowDown' && browsingHistory && navigatePromptHistory(1)) {
+    event.preventDefault();
+  }
+});
 
 elements.routeToggle.addEventListener('click', () => {
   const expanded = elements.routeToggle.getAttribute('aria-expanded') === 'true';
@@ -1024,6 +1612,23 @@ window.addEventListener('message', (event) => {
     elements.historySelect.value = message.session.threadId ?? '';
   } else if (message?.type === 'historyLoaded') {
     renderHistoryMessages(message.messages ?? []);
+  } else if (message?.type === 'accountReset') {
+    currentSession =
+      currentSession === null
+        ? null
+        : { ...currentSession, subject: labels.newChat, threadId: undefined };
+    elements.conversationTitle.textContent = labels.newChat;
+    elements.historySelect.value = '';
+    resetAccountComposer();
+    renderHistoryMessages([]);
+  } else if (message?.type === 'requestDropped' && typeof message.requestId === 'string') {
+    responseBodies.get(message.requestId)?.closest('.timeline-item')?.remove();
+    responseBodies.delete(message.requestId);
+    streamStates.delete(message.requestId);
+    activityLists.delete(message.requestId);
+    requestTokens.delete(message.requestId);
+    forgetRequestInput(message.requestId);
+    renderConversationTokenCount();
   } else if (message?.type === 'streamEvent') {
     const stream = message.event;
     const responseBody = responseBodies.get(message.requestId);
@@ -1110,4 +1715,5 @@ window.addEventListener('message', (event) => {
 });
 
 setConversationVisibility();
+elements.attachmentInput.accept = [...ALLOWED_ATTACHMENT_MIME_TYPES].join(',');
 vscode.postMessage({ type: 'ready' });

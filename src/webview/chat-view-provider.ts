@@ -1,7 +1,6 @@
 import { randomBytes, randomUUID } from 'node:crypto';
 
 import * as vscode from 'vscode';
-import { z } from 'zod';
 
 import {
   createChatSession,
@@ -9,93 +8,33 @@ import {
   deriveConversationSubject,
 } from '../core/chat-session';
 
+import {
+  inboundMessageSchema,
+  promptRequestId,
+  type ControlMessage,
+  type InboundMessage,
+  type PromptMessage,
+} from './chat-inbound-message';
 import { renderChatMarkup } from './chat-markup';
 import { toPublicChatState } from './chat-public-state';
 import { ChatSessionRegistry } from './chat-session-registry';
+import { runPromptAdmissionFlow } from './prompt-admission-flow';
 
 import type { ChatMessage } from '../backend/contracts';
 import type { AgentMode } from '../core/agent-mode.types';
+import type { ChatAttachment } from '../core/chat-attachment';
 import type { ContextMode } from '../core/context-mode';
 import type { ExtensionState } from '../core/extension-state';
 import type { PermissionMode } from '../core/permission-policy.types';
+import type { RequestAdmission } from '../services/agent-coordinator.types';
 
 const SIDEBAR_SESSION_ID = 'sidebar';
-const contextModeSchema: z.ZodType<ContextMode> = z.enum([
-  'file',
-  'none',
-  'selection',
-  'smart',
-  'workspace',
-]);
-const inboundMessageSchema = z.discriminatedUnion('type', [
-  z.object({ type: z.literal('ready') }),
-  z.object({
-    type: z.literal('connect'),
-    backendUrl: z.string().trim().min(1).max(2_000),
-  }),
-  z.object({ type: z.literal('logout') }),
-  z.object({ type: z.literal('cancel') }),
-  z.object({ type: z.literal('undo') }),
-  z.object({ type: z.literal('newChat') }),
-  z.object({ type: z.literal('openFolder') }),
-  z.object({ type: z.literal('refreshModels') }),
-  z.object({
-    type: z.literal('reviewChanges'),
-    previewId: z.uuid().optional(),
-  }),
-  z.object({
-    type: z.literal('selectHistory'),
-    threadId: z.string().min(1).max(100),
-  }),
-  z.object({
-    type: z.literal('removeQueued'),
-    requestId: z.string().min(1).max(100),
-  }),
-  z.object({
-    type: z.literal('resolveApproval'),
-    requestId: z.uuid(),
-    approved: z.boolean(),
-  }),
-  z.object({
-    type: z.literal('agent'),
-    content: z.string().min(1).max(20_000),
-    contextMode: contextModeSchema,
-    requestId: z.string().min(1).max(100),
-  }),
-  z.object({
-    type: z.literal('send'),
-    content: z.string().min(1).max(20_000),
-    contextMode: contextModeSchema,
-    requestId: z.string().min(1).max(100),
-  }),
-  z.object({
-    type: z.literal('compare'),
-    content: z.string().min(1).max(20_000),
-    contextMode: contextModeSchema,
-    modelKeys: z.array(z.string()).min(2).max(5),
-    judgeEnabled: z.boolean(),
-    requestId: z.string().min(1).max(100),
-  }),
-  z.object({
-    type: z.literal('selectModel'),
-    modelKey: z.string().min(1).max(500),
-  }),
-  z.object({
-    type: z.literal('selectAgentMode'),
-    mode: z.enum(['AUTO', 'PLAN']),
-  }),
-  z.object({
-    type: z.literal('selectPermissionMode'),
-    mode: z.enum(['BYPASS_PERMISSIONS', 'EDIT_AUTOMATICALLY', 'MANUAL']),
-  }),
-  z.object({
-    type: z.literal('selectWorkspaceFolder'),
-    folderKey: z.string().min(1).max(100),
-  }),
-]);
-type InboundMessage = z.infer<typeof inboundMessageSchema>;
-type PromptMessage = Extract<InboundMessage, { type: 'agent' | 'compare' | 'send' }>;
-type ControlMessage = Exclude<InboundMessage, PromptMessage | { type: 'ready' }>;
+
+class RequestBindingError extends Error {}
+
+function isPromptMessage(request: InboundMessage): request is PromptMessage {
+  return request.type === 'agent' || request.type === 'compare' || request.type === 'send';
+}
 
 interface SessionInput {
   sessionId: string;
@@ -103,12 +42,22 @@ interface SessionInput {
 
 export interface ChatViewActions {
   agent(
-    input: SessionInput & { content: string; contextMode: ContextMode; requestId: string },
+    input: SessionInput & {
+      admission: RequestAdmission;
+      content: string;
+      attachments: ChatAttachment[];
+      contextMode: ContextMode;
+      modelKey: string;
+      requestId: string;
+    },
   ): Promise<void>;
   cancel(): Promise<void>;
+  captureAdmission(threadId?: string): RequestAdmission;
   compare(
     input: SessionInput & {
+      admission: RequestAdmission;
       content: string;
+      attachments: ChatAttachment[];
       contextMode: ContextMode;
       modelKeys: string[];
       judgeEnabled: boolean;
@@ -128,7 +77,14 @@ export interface ChatViewActions {
   selectPermissionMode(mode: PermissionMode): Promise<boolean>;
   selectWorkspaceFolder(folderKey: string): Promise<void>;
   send(
-    input: SessionInput & { content: string; contextMode: ContextMode; requestId: string },
+    input: SessionInput & {
+      admission: RequestAdmission;
+      content: string;
+      attachments: ChatAttachment[];
+      contextMode: ContextMode;
+      modelKey: string;
+      requestId: string;
+    },
   ): Promise<void>;
   undo(): Promise<void>;
 }
@@ -171,12 +127,31 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     return sessionId;
   }
 
-  bindRequest(requestId: string, sessionId: string): void {
-    this.sessions.bindRequest(requestId, sessionId);
+  bindRequest(requestId: string, sessionId: string): boolean {
+    return this.sessions.bindRequest(requestId, sessionId);
   }
 
   releaseRequest(requestId: string): void {
     this.sessions.releaseRequest(requestId);
+  }
+
+  dropRequest(requestId: string): void {
+    const owner = this.sessions.requestOwner(requestId);
+    if (owner !== undefined) {
+      void owner.target.webview.postMessage({ type: 'requestDropped', requestId });
+    }
+  }
+
+  resetAccountState(): void {
+    const sessions = this.sessions.resetAccountState(DEFAULT_CHAT_SUBJECT, Date.now());
+    for (const session of sessions) {
+      session.target.title = DEFAULT_CHAT_SUBJECT;
+      void session.target.webview.postMessage({
+        type: 'session',
+        session: session.descriptor,
+      });
+    }
+    void this.broadcast({ type: 'accountReset' });
   }
 
   async titleSessionFromPrompt(sessionId: string, prompt: string): Promise<void> {
@@ -309,34 +284,60 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   ): Promise<void> {
     const parsed = inboundMessageSchema.safeParse(message);
     if (!parsed.success) {
+      const requestId = promptRequestId(message);
       await sourceWebview.postMessage({
         type: 'error',
         message: vscode.l10n.t('The ClawAI view sent an invalid request.'),
+        ...(requestId === undefined ? {} : { requestId }),
       });
       return;
     }
+    const request = parsed.data;
     try {
-      const request = parsed.data;
-      if (request.type === 'ready') {
-        await this.postStateTo(sourceWebview);
-        const session = this.sessions.get(sourceSessionId);
-        if (session !== undefined) {
-          await sourceWebview.postMessage({ type: 'session', session: session.descriptor });
-        }
-      } else if (
-        request.type === 'agent' ||
-        request.type === 'compare' ||
-        request.type === 'send'
-      ) {
-        await this.handlePromptMessage(request, sourceSessionId);
-      } else {
-        await this.handleControlMessage(request, sourceSessionId);
-      }
+      await this.dispatchMessage(request, sourceSessionId, sourceWebview);
     } catch (error: unknown) {
-      const message =
-        error instanceof Error ? error.message : vscode.l10n.t('ClawAI request failed.');
-      await sourceWebview.postMessage({ type: 'error', message });
+      await this.handleMessageError(error, request, sourceWebview);
     }
+  }
+
+  private async dispatchMessage(
+    request: InboundMessage,
+    sourceSessionId: string,
+    sourceWebview: vscode.Webview,
+  ): Promise<void> {
+    if (request.type === 'ready') {
+      await this.postStateTo(sourceWebview);
+      const session = this.sessions.get(sourceSessionId);
+      if (session !== undefined) {
+        await sourceWebview.postMessage({ type: 'session', session: session.descriptor });
+      }
+      return;
+    }
+    if (isPromptMessage(request)) {
+      await this.handlePromptMessage(request, sourceSessionId);
+      return;
+    }
+    await this.handleControlMessage(request, sourceSessionId);
+  }
+
+  private async handleMessageError(
+    error: unknown,
+    request: InboundMessage,
+    sourceWebview: vscode.Webview,
+  ): Promise<void> {
+    const message =
+      error instanceof Error ? error.message : vscode.l10n.t('ClawAI request failed.');
+    if (error instanceof RequestBindingError || !isPromptMessage(request)) {
+      await sourceWebview.postMessage({ type: 'error', message });
+      return;
+    }
+    const owner = this.sessions.requestOwner(request.requestId);
+    await (owner?.target.webview ?? sourceWebview).postMessage({
+      type: 'error',
+      message,
+      requestId: request.requestId,
+    });
+    this.releaseRequest(request.requestId);
   }
 
   private async handleControlMessage(
@@ -387,16 +388,25 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     request: PromptMessage,
     sourceSessionId: string,
   ): Promise<void> {
-    const sessionId =
-      sourceSessionId === SIDEBAR_SESSION_ID ? await this.reveal() : sourceSessionId;
-    this.bindRequest(request.requestId, sessionId);
-    await this.titleSessionFromPrompt(sessionId, request.content);
-    if (request.type === 'compare') {
-      await this.actions.compare({ ...request, sessionId });
-    } else if (request.type === 'agent') {
-      await this.actions.agent({ ...request, sessionId });
-    } else {
-      await this.actions.send({ ...request, sessionId });
+    const bound = await runPromptAdmissionFlow({
+      bindRequest: (sessionId) => this.bindRequest(request.requestId, sessionId),
+      captureAdmission: (threadId) => this.actions.captureAdmission(threadId),
+      dispatch: async (admission, sessionId) => {
+        if (request.type === 'compare') {
+          await this.actions.compare({ ...request, admission, sessionId });
+        } else if (request.type === 'agent') {
+          await this.actions.agent({ ...request, admission, sessionId });
+        } else {
+          await this.actions.send({ ...request, admission, sessionId });
+        }
+      },
+      resolveSession: () =>
+        sourceSessionId === SIDEBAR_SESSION_ID ? this.reveal() : Promise.resolve(sourceSessionId),
+      threadId: this.sessions.get(sourceSessionId)?.descriptor.threadId,
+      titleSession: (sessionId) => this.titleSessionFromPrompt(sessionId, request.content),
+    });
+    if (!bound) {
+      throw new RequestBindingError(vscode.l10n.t('The ClawAI view sent an invalid request.'));
     }
   }
 

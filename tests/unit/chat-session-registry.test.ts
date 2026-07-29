@@ -72,4 +72,59 @@ describe('ChatSessionRegistry', () => {
       target,
     });
   });
+
+  it('clears request ownership and backend thread descriptors for an account reset', () => {
+    const registry = new ChatSessionRegistry();
+    const target = { dispose: vi.fn() };
+    registry.add(
+      {
+        createdAt: 1,
+        sessionId: 'session-1',
+        subject: 'Private thread',
+        threadId: 'thread-1',
+        updatedAt: 1,
+      },
+      target,
+    );
+    registry.bindRequest('request-1', 'session-1');
+
+    const reset = registry.resetAccountState('New ClawAI chat', 5);
+
+    expect(registry.requestOwner('request-1')).toBeUndefined();
+    expect(reset).toHaveLength(1);
+    expect(registry.get('session-1')?.descriptor).toMatchObject({
+      subject: 'New ClawAI chat',
+      threadId: undefined,
+      updatedAt: 5,
+    });
+  });
+
+  it('reserves request ownership atomically and rejects a second session', () => {
+    const registry = new ChatSessionRegistry();
+    registry.add(
+      {
+        createdAt: 1,
+        sessionId: 'session-1',
+        subject: 'First',
+        threadId: undefined,
+        updatedAt: 1,
+      },
+      { dispose: vi.fn() },
+    );
+    registry.add(
+      {
+        createdAt: 2,
+        sessionId: 'session-2',
+        subject: 'Second',
+        threadId: undefined,
+        updatedAt: 2,
+      },
+      { dispose: vi.fn() },
+    );
+
+    expect(registry.bindRequest('request-1', 'session-1')).toBe(true);
+    expect(registry.bindRequest('request-1', 'session-1')).toBe(false);
+    expect(registry.bindRequest('request-1', 'session-2')).toBe(false);
+    expect(registry.requestOwner('request-1')?.descriptor.sessionId).toBe('session-1');
+  });
 });

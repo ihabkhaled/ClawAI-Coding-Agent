@@ -67,16 +67,24 @@ export class ApprovalBroker {
     return id === undefined ? false : this.resolve(id, false);
   }
 
+  cancelAll(): boolean {
+    const active = this.active;
+    const pending = this.pending.splice(0);
+    this.active = undefined;
+    active?.resolve(false);
+    for (const approval of pending) {
+      approval.resolve(false);
+    }
+    this.publish();
+    return active !== undefined || pending.length > 0;
+  }
+
   dispose(): void {
     if (this.disposed) {
       return;
     }
     this.disposed = true;
-    this.cancelCurrent();
-    for (const pending of this.pending.splice(0)) {
-      pending.resolve(false);
-    }
-    this.publish();
+    this.cancelAll();
   }
 
   private activateNext(): void {

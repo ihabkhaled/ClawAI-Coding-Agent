@@ -20,13 +20,20 @@ const markupModule = await import(
 const bridge = `<script nonce="${nonce}">
 window.__clawMock = {
   messages: [],
+  state: {},
   send(message) {
     window.dispatchEvent(new MessageEvent('message', { data: message }));
   }
 };
 window.acquireVsCodeApi = () => ({
+  getState() {
+    return window.__clawMock.state;
+  },
   postMessage(message) {
     window.__clawMock.messages.push(message);
+  },
+  setState(state) {
+    window.__clawMock.state = state;
   }
 });
 </script>`;

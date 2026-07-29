@@ -1,5 +1,4 @@
-const alwaysSensitivePattern =
-  /(?:^|\/)(?:\.env(?:\.|$)|[^/]*(?:secret|credential|api[-_]?key)[^/]*)/iu;
+import { isSensitiveWorkspacePath, normalizeWorkspacePath } from './workspace-path-policy';
 
 export interface ContextCandidate {
   path: string;
@@ -29,7 +28,7 @@ export interface CollectedContext {
   receipt: ContextReceipt;
 }
 
-function globToRegExp(glob: string): RegExp {
+export function workspaceGlobToRegExp(glob: string): RegExp {
   let pattern = '^';
   for (let index = 0; index < glob.length; index += 1) {
     const character = glob[index];
@@ -54,10 +53,6 @@ function globToRegExp(glob: string): RegExp {
   return new RegExp(`${pattern}$`, 'u');
 }
 
-function normalizedPath(path: string): string {
-  return path.replaceAll('\\', '/').replace(/^\.\/+/u, '');
-}
-
 function isBinaryContent(content: string): boolean {
   return content.includes('\0');
 }
@@ -66,13 +61,13 @@ export function collectContext(
   candidates: ContextCandidate[],
   options: ContextCollectionOptions,
 ): CollectedContext {
-  const excludePatterns = options.exclude.map(globToRegExp);
+  const excludePatterns = options.exclude.map(workspaceGlobToRegExp);
   const excluded: ContextReceipt['excluded'] = [];
   const eligible: ContextCandidate[] = [];
 
   for (const candidate of candidates) {
-    const path = normalizedPath(candidate.path);
-    if (alwaysSensitivePattern.test(path)) {
+    const path = normalizeWorkspacePath(candidate.path);
+    if (isSensitiveWorkspacePath(path)) {
       excluded.push({ path, reason: 'sensitive' });
     } else if (isBinaryContent(candidate.content)) {
       excluded.push({ path, reason: 'binary' });

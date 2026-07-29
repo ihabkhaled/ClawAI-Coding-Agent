@@ -21,10 +21,26 @@ closes the listener.
 The callback rejects non-loopback hosts, wrong paths, query-bearing callback
 registrations, mismatched state, duplicate callbacks, and timeouts. The success
 page has a restrictive CSP and contains no token or authorization code.
+The complete browser attempt also has a two-minute deadline. Cancel or timeout
+aborts its HTTP work, closes the callback listener, restores the Connect action,
+and lets the next click create a new PKCE request and authorization link.
 
 After runtime validation, access and refresh tokens are stored as one strict
-token pair in VS Code `SecretStorage`. They survive tabs, windows, reloads, and
-VS Code restarts. Corrupt stored data is deleted and treated as disconnected.
+token pair in VS Code `SecretStorage`, keyed by a digest of the normalized
+backend origin. Tokens issued by one origin cannot be loaded, refreshed, or
+cleared by another. They survive tabs, windows, reloads, and VS Code restarts.
+Corrupt stored data is deleted and treated as disconnected. The old
+origin-agnostic credential is deliberately deleted rather than guessed into an
+origin, so upgrading from that legacy format requires one safe reconnect.
+
+Connect authorizes a candidate backend before changing the saved endpoint.
+Exchanged credentials remain staged in memory while the candidate profile is
+validated and are committed only after the attempt still owns authorization.
+Duplicate submissions share one browser attempt, and Cancel aborts every
+network stage without showing an error. Only successful authorization plus
+profile validation activates and persists the candidate endpoint. A direct
+settings change clears the prior account first and may resume only a stored,
+origin-scoped session whose profile validates on the selected backend.
 
 For an authenticated 401, the client:
 
@@ -33,6 +49,9 @@ For an authenticated 401, the client:
 3. validates and atomically replaces the stored token pair;
 4. retries the original request exactly once.
 
-Logout calls the backend and clears local tokens in `finally`, including when
-the backend is unavailable. Tokens are never exposed in settings, URLs, logs,
+Logout invalidates the credential epoch and clears local tokens and UI state
+before the best-effort backend call, including when the backend is unavailable.
+Late refreshes re-check ownership before and after storage writes. Logout also
+invalidates account-bound data loads and clears retained-tab transcripts before
+another account can connect. Tokens are never exposed in settings, URLs, logs,
 telemetry, or diagnostics.

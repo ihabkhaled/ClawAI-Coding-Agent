@@ -17,6 +17,10 @@ in the ClawAI platform.
 - Use backend AUTO routing or reliably choose an entitled cloud, Ollama, or
   llama.cpp model manually.
 - Chat from a workspace even when no editor tab is open.
+- Paste, drop, or pick screenshots, images, videos, documents, and source files
+  into the composer. Attachments stay visibly bound to the request that owns
+  them and upload only when that queued request starts.
+- Recall submitted prompts with Arrow Up and move forward again with Arrow Down.
 - Switch between Auto execution and read-only Plan mode.
 - Choose manual approvals, persistent per-workspace routine consent, or Full
   Access while immutable safety boundaries remain enforced.
@@ -82,19 +86,23 @@ operations, and oversized plans.
 
 For every valid plan, the extension:
 
-1. stages before/after diff previews without opening files;
+1. freezes the selected workspace root and stages before/after diff previews
+   from the live editor buffer without opening files;
 2. offers an explicit **Review changes** action and requests approval inside the
    ClawAI workbench when required;
-3. checks Workspace Trust again;
-4. applies one atomic `WorkspaceEdit`;
+3. checks Workspace Trust, canonical path containment, and the reviewed
+   before-state again;
+4. rejects stale reviews or applies one atomic `WorkspaceEdit`;
 5. runs validated development commands in a visible, cancellable task terminal;
 6. offers a session-scoped undo.
 
 In Manual mode, the first routine context/edit-generation prompt offers
 **Always allow in this workspace**. That consent survives reloads and restarts
-for the same trusted workspace. Full Access also skips final-apply prompts, but
-never bypasses Workspace Trust, secret/path exclusions, command validation, or
-cancellation.
+for the same trusted workspace. Full Access skips repeated routine context
+and proposal-generation prompts and applies validated file changes
+automatically. Development commands still require in-extension approval. Full
+Access never bypasses Workspace Trust, secret/path exclusions, command
+validation, or cancellation.
 
 ## Context and `.clawai`
 
@@ -147,8 +155,8 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.6.0` implements the production-ready extension surface from
-the ClawAI VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
+Version `0.9.0` implements the current extension surface from the ClawAI VS
+Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 
 ## License

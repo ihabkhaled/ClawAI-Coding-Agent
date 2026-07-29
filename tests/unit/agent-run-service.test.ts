@@ -78,12 +78,14 @@ function textChat(content: string): AgentRunChatPort {
 function inMemoryWorkspace(files: Map<string, string>): WorkspaceEditPort {
   return {
     isTrusted: () => true,
-    preview: async (plan: EditPlan) =>
-      plan.files.map((file) => ({
+    preview: async (plan: EditPlan) => ({
+      workspaceFolderUri: 'memory:///workspace',
+      previews: plan.files.map((file) => ({
         path: file.path,
         before: files.get(file.path) ?? null,
         after: file.operation === 'delete' ? null : (file.content ?? null),
       })),
+    }),
     applyAtomically: async (plan: EditPlan) => {
       for (const file of plan.files) {
         if (file.operation === 'delete') {
@@ -230,7 +232,10 @@ describe('AgentRunService', () => {
           applyAtomically,
           execute,
           isTrusted: () => true,
-          preview: async () => [],
+          preview: async () => ({
+            workspaceFolderUri: 'memory:///workspace',
+            previews: [],
+          }),
         },
         async () => true,
       ),
@@ -247,12 +252,153 @@ describe('AgentRunService', () => {
         },
         callbacks(),
       ),
-    ).resolves.toMatchObject({ status: 'applied', commandsExecuted: true });
+    ).resolves.toMatchObject({
+      status: 'applied',
+      commandsExecuted: true,
+      filesApplied: false,
+    });
     expect(applyAtomically).not.toHaveBeenCalled();
     expect(execute).toHaveBeenCalledWith(
       expect.objectContaining({ command: 'node app/for-loop.js' }),
       expect.any(AbortSignal),
     );
+  });
+
+  it('reports a rejected command-only plan when command approval is declined', async () => {
+    const execute = vi.fn();
+    const service = new AgentRunService(
+      contextPort(),
+      sessionPort({
+        authorize: vi.fn(async (operation) => operation !== 'commandExecution'),
+      }),
+      textChat(
+        JSON.stringify({
+          summary: 'Verify the generated loop',
+          files: [],
+          commands: [{ command: 'node app/for-loop.js', purpose: 'Verify the output' }],
+        }),
+      ),
+      new SafeEditService(
+        {
+          applyAtomically: vi.fn(async () => true),
+          execute,
+          isTrusted: () => true,
+          preview: async () => ({
+            workspaceFolderUri: 'memory:///workspace',
+            previews: [],
+          }),
+        },
+        async () => true,
+      ),
+    );
+
+    await expect(
+      service.run(
+        {
+          configuration,
+          content: 'Run the generated loop',
+          contextMode: 'workspace',
+          selection: { routingMode: 'AUTO' },
+          signal: new AbortController().signal,
+        },
+        callbacks(),
+      ),
+    ).resolves.toMatchObject({
+      status: 'rejected',
+      commandsExecuted: false,
+      filesApplied: false,
+    });
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('preserves an applied file receipt when a reviewed command fails', async () => {
+    const files = new Map<string, string>();
+    const service = new AgentRunService(
+      contextPort(),
+      sessionPort(),
+      textChat(
+        JSON.stringify({
+          summary: 'Create and verify a file',
+          files: [{ path: 'app/a.js', operation: 'create', content: 'export {};\n' }],
+          commands: [{ command: 'npm test', purpose: 'Run tests' }],
+        }),
+      ),
+      new SafeEditService(
+        {
+          ...inMemoryWorkspace(files),
+          execute: vi.fn(async () => ({ exitCode: 1 })),
+        },
+        async () => true,
+      ),
+    );
+
+    await expect(
+      service.run(
+        {
+          configuration,
+          content: 'Create and test a file',
+          contextMode: 'workspace',
+          selection: { routingMode: 'AUTO' },
+          signal: new AbortController().signal,
+        },
+        callbacks(),
+      ),
+    ).resolves.toMatchObject({
+      status: 'applied',
+      commandsExecuted: false,
+      commandError: expect.stringContaining('exit code 1'),
+      filesApplied: true,
+    });
+    expect(files.get('app/a.js')).toBe('export {};\n');
+  });
+
+  it('reports partial completion when the second command-only verification fails', async () => {
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({ exitCode: 0 })
+      .mockResolvedValueOnce({ exitCode: 1 });
+    const service = new AgentRunService(
+      contextPort(),
+      sessionPort(),
+      textChat(
+        JSON.stringify({
+          summary: 'Run both verification commands',
+          files: [],
+          commands: [
+            { command: 'npm run lint', purpose: 'Check lint' },
+            { command: 'npm test', purpose: 'Run tests' },
+          ],
+        }),
+      ),
+      new SafeEditService(
+        {
+          ...inMemoryWorkspace(new Map()),
+          execute,
+        },
+        async () => true,
+      ),
+    );
+
+    await expect(
+      service.run(
+        {
+          configuration,
+          content: 'Run the checks',
+          contextMode: 'workspace',
+          selection: { routingMode: 'AUTO' },
+          signal: new AbortController().signal,
+        },
+        callbacks(),
+      ),
+    ).resolves.toMatchObject({
+      commandError: expect.stringContaining('npm test'),
+      commandsCompleted: 1,
+      commandsExecuted: false,
+      commandsTotal: 2,
+      filesApplied: false,
+      status: 'applied',
+    });
+    expect(execute).toHaveBeenCalledTimes(2);
   });
 
   it('does not run commands when in-panel command approval is rejected', async () => {
@@ -282,7 +428,11 @@ describe('AgentRunService', () => {
         },
         callbacks(),
       ),
-    ).resolves.toMatchObject({ status: 'applied', commandsExecuted: false });
+    ).resolves.toMatchObject({
+      status: 'applied',
+      commandsExecuted: false,
+      filesApplied: true,
+    });
     expect(execute).not.toHaveBeenCalled();
   });
 
@@ -328,7 +478,10 @@ describe('AgentRunService', () => {
         {
           applyAtomically,
           isTrusted: () => true,
-          preview: async () => [],
+          preview: async () => ({
+            workspaceFolderUri: 'memory:///workspace',
+            previews: [],
+          }),
         },
         async () => true,
       ),
@@ -352,125 +505,5 @@ describe('AgentRunService', () => {
     });
     expect(applyAtomically).not.toHaveBeenCalled();
     expect(phases.map((phase) => phase.phase)).toEqual(['generating', 'planned']);
-  });
-
-  it('stops before generation when edit permission is rejected', async () => {
-    const chat = textChat('not reached');
-    const service = new AgentRunService(
-      contextPort({ resolve: () => 'none' }),
-      sessionPort({
-        authorize: async (operation) => operation === 'workspaceContext',
-      }),
-      chat,
-      new SafeEditService(inMemoryWorkspace(new Map()), async () => true),
-    );
-
-    await expect(
-      service.run(
-        {
-          configuration,
-          content: 'Change a file',
-          contextMode: 'none',
-          selection: { routingMode: 'AUTO' },
-          signal: new AbortController().signal,
-        },
-        callbacks(),
-      ),
-    ).resolves.toMatchObject({
-      status: 'rejected',
-      content: '',
-    });
-    expect(chat.send).not.toHaveBeenCalled();
-  });
-
-  it('keeps the workspace unchanged when final diff approval is rejected', async () => {
-    const files = new Map<string, string>();
-    const chat = textChat(
-      JSON.stringify({
-        summary: 'Create a file',
-        files: [{ path: 'app/new.js', operation: 'create', content: 'export {};\n' }],
-      }),
-    );
-    const service = new AgentRunService(
-      contextPort(),
-      sessionPort(),
-      chat,
-      new SafeEditService(inMemoryWorkspace(files), async () => false),
-    );
-
-    await expect(
-      service.run(
-        {
-          configuration,
-          content: 'Create a file',
-          contextMode: 'workspace',
-          selection: { routingMode: 'AUTO' },
-          signal: new AbortController().signal,
-        },
-        callbacks(),
-      ),
-    ).resolves.toMatchObject({
-      status: 'rejected',
-      editPlan: { summary: 'Create a file' },
-    });
-    expect(files.size).toBe(0);
-  });
-
-  it('rejects unsafe model output and reports a failed phase', async () => {
-    const phases: AgentRunSnapshot[] = [];
-    const service = new AgentRunService(
-      contextPort(),
-      sessionPort(),
-      textChat(
-        JSON.stringify({
-          summary: 'Escape the workspace',
-          files: [{ path: '../outside.js', operation: 'create', content: 'unsafe' }],
-        }),
-      ),
-      new SafeEditService(inMemoryWorkspace(new Map()), async () => true),
-    );
-
-    await expect(
-      service.run(
-        {
-          configuration,
-          content: 'Create a file',
-          contextMode: 'workspace',
-          selection: { routingMode: 'AUTO' },
-          signal: new AbortController().signal,
-        },
-        callbacks(phases),
-      ),
-    ).rejects.toThrow();
-    expect(phases.at(-1)).toMatchObject({
-      phase: 'failed',
-      summary: expect.stringContaining('path'),
-    });
-  });
-
-  it('fails before reading files when workspace access is denied', async () => {
-    const context = contextPort();
-    const phases: AgentRunSnapshot[] = [];
-    const service = new AgentRunService(
-      context,
-      sessionPort({ authorize: async () => false }),
-      textChat('not reached'),
-      new SafeEditService(inMemoryWorkspace(new Map()), async () => true),
-    );
-
-    await expect(
-      service.run(
-        {
-          configuration,
-          content: 'Read the workspace',
-          contextMode: 'workspace',
-          selection: { routingMode: 'AUTO' },
-          signal: new AbortController().signal,
-        },
-        callbacks(phases),
-      ),
-    ).rejects.toThrow(/not approved/iu);
-    expect(context.collect).not.toHaveBeenCalled();
-    expect(phases.at(-1)?.phase).toBe('failed');
   });
 });

@@ -23,6 +23,10 @@ export interface SessionControlPort {
   preparePrompt(content: string): string;
 }
 
+export interface SessionPolicySnapshot extends SessionConfiguration {
+  trusted: boolean;
+}
+
 export interface SessionApprovalPort {
   request(input: ApprovalRequestInput): Promise<boolean>;
 }

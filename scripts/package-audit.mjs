@@ -5,11 +5,15 @@ import { cwd, stdout } from 'node:process';
 
 const root = cwd();
 const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
+const lockfile = JSON.parse(readFileSync(join(root, 'package-lock.json'), 'utf8'));
+const changelog = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
+const gitAttributes = readFileSync(join(root, '.gitattributes'), 'utf8');
 const configurationSource = readFileSync(
   join(root, 'src', 'services', 'configuration-service.ts'),
   'utf8',
 );
 const extensionSource = readFileSync(join(root, 'src', 'extension.ts'), 'utf8');
+const backendClientSource = readFileSync(join(root, 'src', 'backend', 'backend-client.ts'), 'utf8');
 const clawIconPathSource = readFileSync(join(root, 'src', 'views', 'claw-icon-path.ts'), 'utf8');
 const webviewSource = readFileSync(join(root, 'src', 'webview', 'chat-view-provider.ts'), 'utf8');
 const webviewMarkup = readFileSync(join(root, 'src', 'webview', 'chat-markup.ts'), 'utf8');
@@ -22,7 +26,23 @@ const commands = manifest.contributes.commands.map((command) => command.command)
 const uniqueCommands = new Set(commands);
 const rootVsix = readdirSync(root).filter((entry) => entry.endsWith('.vsix'));
 
-assert.equal(manifest.version, '0.7.0', 'release version must be 0.7.0');
+assert.match(
+  manifest.version,
+  /^(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)\.(?:0|[1-9]\d*)(?:-[0-9A-Za-z.-]+)?$/u,
+  'release version must be valid SemVer',
+);
+assert.equal(lockfile.version, manifest.version, 'package-lock version must match package version');
+assert.equal(
+  lockfile.packages[''].version,
+  manifest.version,
+  'package-lock root package version must match package version',
+);
+assert.match(
+  changelog,
+  new RegExp(`^## ${manifest.version.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}$`, 'mu'),
+  'CHANGELOG must contain a heading for the package version',
+);
+assert.match(gitAttributes, /^\*\.vsix binary$/mu, 'tracked VSIX archives must be marked binary');
 assert.deepEqual(rootVsix, [], 'VSIX artifacts must live under builds/, never the repository root');
 assert.equal(uniqueCommands.size, commands.length, 'command IDs must be unique');
 for (const command of commands) {
@@ -42,6 +62,11 @@ assert.doesNotMatch(
   configurationSource,
   /showInputBox/u,
   'backend configuration must stay inside the ClawAI connection gateway',
+);
+assert.doesNotMatch(
+  backendClientSource,
+  /\/auth\/login|password/iu,
+  'the extension must authorize in the browser and never expose password login',
 );
 assert.match(
   webviewMarkup,
@@ -103,6 +128,11 @@ const releaseWorkflow = readFileSync(releaseWorkflowPath, 'utf8');
 assert.match(releaseWorkflow, /contents:\s*write/u, 'release workflow needs contents write only');
 assert.match(
   releaseWorkflow,
+  /push:\s*\n\s+branches:\s*\n\s+- main/u,
+  'every main push must enter the release workflow',
+);
+assert.match(
+  releaseWorkflow,
   /gh release create/u,
   'release workflow must create a GitHub Release',
 );
@@ -110,6 +140,16 @@ assert.match(
   releaseWorkflow,
   /builds\/clawai-coding-agent-\$\{\{ steps\.version\.outputs\.version \}\}\.vsix/u,
   'release workflow must attach the versioned VSIX',
+);
+assert.match(
+  releaseWorkflow,
+  /git ls-files --error-unmatch/u,
+  'release workflow must require the versioned VSIX to be tracked in git',
+);
+assert.match(
+  releaseWorkflow,
+  /diff -qr/u,
+  'release workflow must compare the committed VSIX contents with a fresh package',
 );
 assert.equal(
   manifest.scripts.package,
@@ -185,6 +225,7 @@ for (const path of [
   'dist/**/*.map',
   'playwright-report/**',
   'playwright.config.ts',
+  'skills/**',
   'test-results/**',
 ]) {
   assert.equal(ignore.includes(path), true, `${path} must be excluded`);

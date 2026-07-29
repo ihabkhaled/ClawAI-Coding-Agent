@@ -33,7 +33,7 @@ describe('permission policy', () => {
     ).toEqual({ outcome: 'allow', reason: 'fullAccess' });
   });
 
-  it('keeps Plan mode read-only and only bypasses final review in Full Access', () => {
+  it('keeps Plan mode read-only and auto-applies final diffs only in Full Access', () => {
     expect(
       decidePermission({
         agentMode: 'PLAN',
@@ -62,6 +62,21 @@ describe('permission policy', () => {
       }),
     ).toEqual({ outcome: 'ask', reason: 'finalDiffRequired' });
   });
+
+  it.each(['EDIT_AUTOMATICALLY', 'BYPASS_PERMISSIONS'] as const)(
+    'requires explicit command review in %s mode',
+    (permissionMode) => {
+      expect(
+        decidePermission({
+          agentMode: 'AUTO',
+          operation: 'commandExecution',
+          permissionMode,
+          sensitive: false,
+          trusted: true,
+        }),
+      ).toEqual({ outcome: 'ask', reason: 'commandReviewRequired' });
+    },
+  );
 
   it('denies sensitive and untrusted modifying operations in every mode', () => {
     expect(

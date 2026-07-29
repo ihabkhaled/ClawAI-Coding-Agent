@@ -3,6 +3,8 @@ import { describe, expect, it, vi } from 'vitest';
 import { BackendClient, BackendRequestError } from '../../src/backend/backend-client';
 import { SessionVault, type SecretStoragePort } from '../../src/core/session-vault';
 
+const BACKEND_URL = 'https://client.claw.example';
+
 class MemorySecretStorage implements SecretStoragePort {
   readonly values = new Map<string, string>();
 
@@ -106,9 +108,9 @@ const message = {
 function authenticatedClient(fetcher: typeof fetch) {
   const storage = new MemorySecretStorage();
   const vault = new SessionVault(storage);
-  return vault.save(initialTokens).then(() => ({
+  return vault.save(BACKEND_URL, initialTokens).then(() => ({
     client: new BackendClient({
-      backendUrl: 'https://claw.example',
+      backendUrl: BACKEND_URL,
       fetcher,
       sessionVault: vault,
       timeoutMs: 1_000,
@@ -119,13 +121,40 @@ function authenticatedClient(fetcher: typeof fetch) {
 }
 
 describe('BackendClient', () => {
+  it('never sends a session stored for a different backend endpoint', async () => {
+    const storage = new MemorySecretStorage();
+    const vault = new SessionVault(storage);
+    await vault.save('https://first.claw.example', initialTokens);
+    const fetcher = vi.fn<typeof fetch>();
+    const client = new BackendClient({
+      backendUrl: 'https://second.claw.example',
+      fetcher,
+      sessionVault: vault,
+      timeoutMs: 1_000,
+    });
+
+    await expect(client.getProfile()).rejects.toMatchObject({ status: 401 });
+    expect(fetcher).not.toHaveBeenCalled();
+  });
+
   it('refreshes a rejected session once and retries with the rotated access token', async () => {
     const storage = new MemorySecretStorage();
     const vault = new SessionVault(storage);
-    await vault.save(initialTokens);
+    await vault.save(BACKEND_URL, initialTokens);
+    const cancelExpiredBody = vi.fn();
     const fetcher = vi
       .fn<typeof fetch>()
-      .mockResolvedValueOnce(new Response('expired', { status: 401 }))
+      .mockResolvedValueOnce(
+        new Response(
+          new ReadableStream<Uint8Array>({
+            cancel: cancelExpiredBody,
+            start(controller) {
+              controller.enqueue(new TextEncoder().encode('expired'));
+            },
+          }),
+          { status: 401 },
+        ),
+      )
       .mockResolvedValueOnce(
         Response.json({
           tokens: rotatedTokens,
@@ -137,7 +166,7 @@ describe('BackendClient', () => {
         }),
       );
     const client = new BackendClient({
-      backendUrl: 'https://claw.example',
+      backendUrl: BACKEND_URL,
       fetcher,
       sessionVault: vault,
       timeoutMs: 1_000,
@@ -145,39 +174,43 @@ describe('BackendClient', () => {
 
     await expect(client.getProfile()).resolves.toMatchObject({ id: 'user-1' });
     expect(fetcher).toHaveBeenCalledTimes(3);
+    expect(cancelExpiredBody).toHaveBeenCalledOnce();
     expect(fetcher.mock.calls[1]?.[0].toString()).toContain('/api/v1/auth/refresh');
     expect(fetcher.mock.calls[2]?.[1]).toMatchObject({
       headers: expect.objectContaining({
         Authorization: 'Bearer fresh-access',
       }),
     });
-    await expect(vault.load()).resolves.toEqual(rotatedTokens);
+    await expect(vault.load(BACKEND_URL)).resolves.toEqual(rotatedTokens);
   });
 
-  it('identifies login sessions as VS Code without persisting the password', async () => {
+  it('stages browser authorization tokens until the validated candidate is committed', async () => {
     const storage = new MemorySecretStorage();
     const vault = new SessionVault(storage);
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
-      Response.json({
-        tokens: initialTokens,
-        user: profile,
-      }),
-    );
+    const fetcher = vi.fn<typeof fetch>(async (input, init) => {
+      const path = new URL(input.toString()).pathname;
+      if (path.endsWith('/auth/vscode/authorize/exchange')) {
+        return Response.json({ tokens: rotatedTokens });
+      }
+      if (path.endsWith('/auth/me')) {
+        expect(init?.headers).toMatchObject({ Authorization: 'Bearer fresh-access' });
+        return Response.json(profile);
+      }
+      throw new Error(`Unexpected request: ${path}`);
+    });
     const client = new BackendClient({
-      backendUrl: 'https://claw.example',
+      backendUrl: BACKEND_URL,
       fetcher,
       sessionVault: vault,
       timeoutMs: 1_000,
     });
 
-    await client.login('dev@example.com', 'one-time-password');
-
-    const request = fetcher.mock.calls[0]?.[1];
-    expect(JSON.parse(request?.body?.toString() ?? '{}')).toMatchObject({
-      clientKind: 'VSCODE',
-      email: 'dev@example.com',
-    });
-    expect([...storage.values.values()].join(' ')).not.toContain('one-time-password');
+    const candidateTokens = await client.exchangeVscodeAuthorization('code', 'verifier');
+    await expect(vault.load(BACKEND_URL)).resolves.toBeNull();
+    await expect(
+      client.getProfileWithAccessToken(candidateTokens.accessToken),
+    ).resolves.toMatchObject({ id: 'user-1' });
+    await expect(vault.load(BACKEND_URL)).resolves.toBeNull();
   });
 
   it('maps every authenticated backend contract and preserves API versioning', async () => {
@@ -339,18 +372,47 @@ describe('BackendClient', () => {
     ]);
   });
 
-  it('opens an event stream with the SSE accept header', async () => {
-    const fetcher = vi.fn<typeof fetch>().mockResolvedValue(
-      new Response('data: {"type":"DONE"}\n\n', {
+  it('forwards caller cancellation to the parallel comparison transport', async () => {
+    const controller = new AbortController();
+    const cancellation = new Error('Comparison cancelled.');
+    controller.abort(cancellation);
+    const fetcher = vi.fn<typeof fetch>(async (_input, init) => {
+      expect(init?.signal?.aborted).toBe(true);
+      init?.signal?.throwIfAborted();
+      throw new Error('Expected an aborted transport.');
+    });
+    const { client } = await authenticatedClient(fetcher);
+
+    await expect(
+      client.compare(
+        {
+          content: 'Compare',
+          models: [
+            { provider: 'OPENAI', model: 'gpt-5' },
+            { provider: 'OLLAMA', model: 'qwen3-coder' },
+          ],
+        },
+        controller.signal,
+      ),
+    ).rejects.toBe(cancellation);
+    expect(fetcher).toHaveBeenCalledOnce();
+  });
+
+  it('opens a live-only event stream so reused threads do not replay a prior run', async () => {
+    const fetcher = vi.fn<typeof fetch>().mockImplementation(async (input, init) => {
+      const url = new URL(input.toString());
+      expect(url.pathname).toBe('/api/v1/chat-messages/stream/thread-1');
+      expect(url.searchParams.get('replay')).toBe('false');
+      expect(init?.headers).toMatchObject({
+        Accept: 'text/event-stream',
+      });
+      return new Response('data: {"type":"DONE"}\n\n', {
         headers: { 'Content-Type': 'text/event-stream' },
-      }),
-    );
+      });
+    });
     const { client } = await authenticatedClient(fetcher);
 
     await expect(client.openStream('thread-1')).resolves.toBeInstanceOf(Response);
-    expect(fetcher.mock.calls[0]?.[1]?.headers).toMatchObject({
-      Accept: 'text/event-stream',
-    });
   });
 
   it('requests only installed Ollama runtime models within the backend page limit', async () => {
@@ -386,13 +448,32 @@ describe('BackendClient', () => {
       status: 503,
       retryable: true,
     });
-    await expect(vault.load()).resolves.toBeNull();
+    await expect(vault.load(BACKEND_URL)).resolves.toBeNull();
+  });
+
+  it('clears only the active backend session during logout', async () => {
+    const storage = new MemorySecretStorage();
+    const vault = new SessionVault(storage);
+    const otherBackend = 'https://other.claw.example';
+    await vault.save(BACKEND_URL, initialTokens);
+    await vault.save(otherBackend, rotatedTokens);
+    const client = new BackendClient({
+      backendUrl: BACKEND_URL,
+      fetcher: vi.fn<typeof fetch>().mockResolvedValue(new Response(null, { status: 204 })),
+      sessionVault: vault,
+      timeoutMs: 1_000,
+    });
+
+    await client.logout();
+
+    await expect(vault.load(BACKEND_URL)).resolves.toBeNull();
+    await expect(vault.load(otherBackend)).resolves.toEqual(rotatedTokens);
   });
 
   it('fails closed without a session and redacts backend error bodies', async () => {
     const emptyVault = new SessionVault(new MemorySecretStorage());
     const withoutSession = new BackendClient({
-      backendUrl: 'https://claw.example',
+      backendUrl: 'https://missing.client.claw.example',
       fetcher: vi.fn<typeof fetch>(),
       sessionVault: emptyVault,
       timeoutMs: 1_000,
