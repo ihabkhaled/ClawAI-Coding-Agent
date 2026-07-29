@@ -23,6 +23,11 @@
       transport messages.
 - [ ] Cancellation stops the local request and calls backend cancellation.
 - [ ] History opens persisted messages.
+- [ ] The top ClawAI action creates independent editor tabs, each tab title
+      follows its conversation subject, and the history selector restores a
+      thread in the selected tab.
+- [ ] Prompt, activity, file, response, and conversation token counters remain
+      visible while streaming and distinguish reported values from estimates.
 - [ ] Compare enforces two to five models; judge mode shows judged output.
 
 ## Context and safety
@@ -53,7 +58,9 @@
 - [ ] Confirm a model response using `contents` creates or updates the intended
       file after normal validation and final approval.
 - [ ] Invalid, absolute, traversal, secret, or oversized targets are rejected.
-- [ ] Every file opens a before/after diff.
+- [ ] File creation and edits do not open editor tabs automatically.
+- [ ] **Review changes** opens every staged before/after diff on demand from
+      final approval and the completed file receipt.
 - [ ] Reject applies nothing.
 - [ ] Approve applies all changes atomically.
 - [ ] Session undo restores create/update/delete before-state.
@@ -81,5 +88,6 @@
 - [ ] `npm run check`, `npm run test:host`, `npm run test:playwright`, runtime
       audit, and VSIX packaging pass.
 - [ ] Clean-profile VSIX install activates within budget.
-- [ ] VSIX contains no source, tests, maps, coverage, secrets, or nested package.
+- [ ] The versioned VSIX exists under `builds/` and contains no source, tests,
+      maps, coverage, secrets, or nested package.
 - [ ] The matching GitHub Release tag exists and contains the versioned VSIX.

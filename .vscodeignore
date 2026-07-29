@@ -9,6 +9,7 @@ CLAUDE.md
 CODE_OF_CONDUCT.md
 CONTRIBUTING.md
 coverage/**
+builds/**
 docs/**
 node_modules/**
 scripts/**

@@ -2,6 +2,23 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.6.0
+
+- Added durable, independently titled editor-tab conversations. The top ClawAI
+  action creates a fresh chat tab, and the in-tab history selector restores a
+  backend conversation without replacing other open ClawAI tabs.
+- Added a chronological coding timeline for lifecycle, tool, reasoning-status,
+  workspace-file, and command events while keeping the composer available for
+  queued follow-up prompts.
+- Added visible prompt, step, file, response, and conversation token telemetry.
+  Provider usage is marked **reported**; fallback estimates are explicitly
+  marked **estimated** and reconcile when final usage arrives.
+- Stopped automatically opening created or edited files. Proposed changes are
+  staged silently and open in VS Code diff editors only when **Review changes**
+  is selected from the in-extension approval or final file receipt.
+- Moved every retained and newly generated VSIX into the tracked `builds/`
+  directory, with release automation attaching the matching build artifact.
+
 ## 0.5.1
 
 - Replaced the Chat participant's dark cat artwork with explicit three-scratch

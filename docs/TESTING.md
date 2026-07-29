@@ -17,7 +17,8 @@
   deterministic VS Code bridge. It covers responsive editor/sidebar layouts,
   local/manual model persistence, agent and permission modes, workspace
   fallback, streaming/completion/error states, theme tokens, browser errors,
-  and Windows screenshot baselines.
+  multi-tab history, token reconciliation, explicit diff review, and Windows
+  screenshot baselines.
 
 `npm test` enforces at least 85% lines, statements, functions, and 80% branches
 over the pure backend/security/application modules. VS Code adapters are

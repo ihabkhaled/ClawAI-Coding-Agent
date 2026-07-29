@@ -1,5 +1,5 @@
 import assert from 'node:assert/strict';
-import { existsSync, readFileSync } from 'node:fs';
+import { existsSync, readdirSync, readFileSync } from 'node:fs';
 import { extname, join } from 'node:path';
 import { cwd, stdout } from 'node:process';
 
@@ -15,8 +15,10 @@ const lightClawIconPath = join(root, 'resources', 'claw-light.svg');
 const releaseWorkflowPath = join(root, '.github', 'workflows', 'release.yml');
 const commands = manifest.contributes.commands.map((command) => command.command);
 const uniqueCommands = new Set(commands);
+const rootVsix = readdirSync(root).filter((entry) => entry.endsWith('.vsix'));
 
-assert.equal(manifest.version, '0.5.1', 'release version must be 0.5.1');
+assert.equal(manifest.version, '0.6.0', 'release version must be 0.6.0');
+assert.deepEqual(rootVsix, [], 'VSIX artifacts must live under builds/, never the repository root');
 assert.equal(uniqueCommands.size, commands.length, 'command IDs must be unique');
 for (const command of commands) {
   assert.match(
@@ -74,8 +76,13 @@ assert.match(
 );
 assert.match(
   releaseWorkflow,
-  /clawai-coding-agent-\$\{\{ steps\.version\.outputs\.version \}\}\.vsix/u,
+  /builds\/clawai-coding-agent-\$\{\{ steps\.version\.outputs\.version \}\}\.vsix/u,
   'release workflow must attach the versioned VSIX',
+);
+assert.equal(
+  manifest.scripts.package,
+  'npm run build && node scripts/package-extension.mjs',
+  'packaging must write the versioned VSIX through the builds script',
 );
 assert.equal(
   manifest.contributes.viewsContainers.activitybar[0].icon,
@@ -140,6 +147,7 @@ for (const path of [
   'src/**',
   'tests/**',
   'coverage/**',
+  'builds/**',
   '.github/**',
   'node_modules/**',
   'dist/**/*.map',

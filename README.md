@@ -12,6 +12,8 @@ in the ClawAI platform.
 ## Highlights
 
 - Stream responses from local or hosted ClawAI deployments.
+- Keep multiple titled ClawAI chat tabs open, restore backend history in place,
+  and queue follow-up prompts while a coding run is active.
 - Use backend AUTO routing or reliably choose an entitled cloud, Ollama, or
   llama.cpp model manually.
 - Chat from a workspace even when no editor tab is open.
@@ -21,8 +23,10 @@ in the ClawAI platform.
 - Compare two to five models and optionally request a judge response.
 - Ask about a selection, active file, or bounded workspace context.
 - Generate, fix, review, test, document, plan, and audit code.
-- Inspect proposed files in VS Code diff editors and approve changes inside the
-  ClawAI workbench when the selected permission mode requires it.
+- Follow ordered coding activity and reported/estimated token use for prompts,
+  reasoning status, tools, files, responses, and the current conversation.
+- Approve changes inside the ClawAI workbench and open proposed VS Code diffs
+  only when **Review changes** is selected.
 - Run bounded development commands in visible VS Code task terminals after
   approved edits.
 - Undo the most recent ClawAI edit made during the current extension session.
@@ -78,8 +82,9 @@ operations, and oversized plans.
 
 For every valid plan, the extension:
 
-1. opens before/after diff previews;
-2. requests approval inside the ClawAI workbench when required;
+1. stages before/after diff previews without opening files;
+2. offers an explicit **Review changes** action and requests approval inside the
+   ClawAI workbench when required;
 3. checks Workspace Trust again;
 4. applies one atomic `WorkspaceEdit`;
 5. runs validated development commands in a visible, cancellable task terminal;
@@ -142,7 +147,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.5.1` implements the production-ready extension surface from
+Version `0.6.0` implements the production-ready extension surface from
 the ClawAI VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 

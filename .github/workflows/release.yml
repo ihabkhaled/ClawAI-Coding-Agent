@@ -68,7 +68,7 @@ jobs:
 
       - name: Verify release artifact
         shell: bash
-        run: test -f "clawai-coding-agent-${{ steps.version.outputs.version }}.vsix"
+        run: test -f "builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix"
 
       - name: Create GitHub Release
         env:
@@ -76,7 +76,7 @@ jobs:
         shell: bash
         run: |
           gh release create "${{ steps.version.outputs.tag }}" \
-            "clawai-coding-agent-${{ steps.version.outputs.version }}.vsix" \
+            "builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix" \
             --target "${GITHUB_SHA}" \
             --title "ClawAI Coding Agent ${{ steps.version.outputs.version }}" \
             --generate-notes
