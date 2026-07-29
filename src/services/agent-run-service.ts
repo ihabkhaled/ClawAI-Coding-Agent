@@ -114,7 +114,11 @@ export class AgentRunService {
     try {
       plan = parseWorkflowEditPlan(response.content);
     } catch {
-      response = await this.send(input, buildEditPlanRepairPrompt(response.content), callbacks);
+      response = await this.send(
+        input,
+        buildEditPlanRepairPrompt(input.content, response.content),
+        callbacks,
+      );
       plan = parseWorkflowEditPlan(response.content);
     }
     return this.completeEditPlan(

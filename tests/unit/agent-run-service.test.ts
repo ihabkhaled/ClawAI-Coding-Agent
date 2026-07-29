@@ -422,7 +422,16 @@ describe('AgentRunService', () => {
       .fn<AgentRunChatPort['send']>()
       .mockResolvedValueOnce({
         threadId: 'thread-1',
-        content: 'Here is the JavaScript file you requested.',
+        content: JSON.stringify({
+          summary: 'Production-ready code',
+          files: [
+            {
+              path: '.gitattributes',
+              operation: 'create | update | delete',
+              content: 'No changes required.',
+            },
+          ],
+        }),
       })
       .mockResolvedValueOnce({
         threadId: 'thread-2',
@@ -464,6 +473,12 @@ describe('AgentRunService', () => {
     expect(send.mock.calls[1]?.[0]).toMatchObject({
       routingMode: 'MANUAL_MODEL',
     });
+    expect(send.mock.calls[1]?.[0].content).toContain(
+      'Original user request: Create a JavaScript loop',
+    );
+    expect(send.mock.calls[1]?.[0].content.split('<previous-response>')[0]).not.toContain(
+      '"operation":"create | update | delete"',
+    );
     expect(send.mock.calls[1]?.[0]).not.toHaveProperty('threadId');
     expect(files.has('app/for-loop.js')).toBe(true);
   });
