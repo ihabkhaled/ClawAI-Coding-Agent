@@ -8,6 +8,7 @@ import type { ContextMode } from '../core/context-mode';
 import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
 import type { ResolvedModelSelection } from '../core/model-catalog';
 import type { PermissionOperation } from '../core/permission-policy.types';
+import type { ResearchMode } from '../core/research-mode';
 import type { TokenReceipt } from '../core/token-telemetry';
 
 export interface AgentRunContextPort {
@@ -70,6 +71,7 @@ export interface AgentRunInput {
   fileIds?: string[];
   prepareFileIds?: () => Promise<string[]>;
   onAccepted?: () => void;
+  researchMode?: ResearchMode;
   threadId?: string;
 }
 

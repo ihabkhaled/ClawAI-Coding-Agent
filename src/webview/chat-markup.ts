@@ -244,6 +244,14 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
                   <option value="none">${translated('None')}</option>
                 </select>
               </label>
+              <label class="compact-control"><span>${translated('Web research')}</span>
+                <select id="researchMode">
+                  <option value="NONE">${translated('Off')}</option>
+                  <option value="SEARCH">${translated('Search')}</option>
+                  <option value="SEARCH_FETCH">${translated('Search + fetch')}</option>
+                  <option value="SEARCH_EXTRACT">${translated('Search + extract')}</option>
+                </select>
+              </label>
             </div>
           </details>
           <div class="actions">

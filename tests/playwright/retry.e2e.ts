@@ -71,6 +71,7 @@ test('retries the selected live request with its original execution inputs', asy
       type: 'agent',
       content: 'Create the original file',
       contextMode: 'smart',
+      researchMode: 'NONE',
       modelKey: 'AUTO',
       requestId: expect.not.stringMatching(firstRequestId),
     });
@@ -117,6 +118,7 @@ test('retries with the original immutable attachments after the composer is clea
       ],
       content: 'Inspect the original attachment',
       contextMode: 'smart',
+      researchMode: 'NONE',
       modelKey: 'AUTO',
       requestId: expect.not.stringMatching(first.requestId),
     });
@@ -176,6 +178,7 @@ test('preserves Compare and Judge model selections when retrying', async ({ page
       type: 'compare',
       content: 'Compare the original implementation',
       contextMode: 'workspace',
+      researchMode: 'NONE',
       modelKeys: [localModel.key, 'OPENAI:gpt-5'],
       judgeEnabled: true,
       requestId: expect.not.stringMatching(comparisonRequestId),

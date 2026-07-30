@@ -2,6 +2,7 @@ import type { SessionControlPort } from './session-control.types';
 import type { WorkflowKind } from './workflow-service';
 import type { ChatAttachment } from '../core/chat-attachment';
 import type { ContextMode } from '../core/context-mode';
+import type { ResearchMode } from '../core/research-mode';
 
 export interface RequestAdmission {
   readonly boundaryEpoch: number;
@@ -17,6 +18,7 @@ export interface ChatPromptInput {
   content: string;
   contextMode: ContextMode;
   modelKey?: string;
+  researchMode?: ResearchMode;
   requestId?: string;
   sessionId?: string;
 }
@@ -27,6 +29,7 @@ export interface CompareInput {
   content: string;
   contextMode: ContextMode;
   modelKeys: string[];
+  researchMode?: ResearchMode;
   judgeEnabled: boolean;
   requestId?: string;
   sessionId?: string;
@@ -39,5 +42,6 @@ export interface AgentWorkflowInput {
   contextMode: ContextMode;
   kind: WorkflowKind;
   modelKey?: string;
+  researchMode?: ResearchMode;
   sessionId?: string;
 }

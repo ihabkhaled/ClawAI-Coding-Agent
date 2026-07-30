@@ -500,6 +500,7 @@ export class AgentRunService {
         context: context?.files ?? [],
         ...(context === undefined ? {} : { contextReceipt: context.receipt }),
         ...input.selection,
+        ...(input.researchMode === undefined ? {} : { researchMode: input.researchMode }),
         ...(fileIds === undefined ? {} : { fileIds }),
         ...(resolvedThreadId === undefined ? {} : { threadId: resolvedThreadId }),
       },

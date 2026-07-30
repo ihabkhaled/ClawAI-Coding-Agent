@@ -56,6 +56,7 @@ test('submits coding prompts to the agent execution path by default', async ({ p
       type: 'agent',
       content: 'write for loop from 1 to 10 in file .js inside folder app',
       contextMode: 'smart',
+      researchMode: 'NONE',
       modelKey: 'AUTO',
       requestId: expect.any(String),
     });

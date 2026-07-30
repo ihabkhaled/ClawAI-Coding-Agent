@@ -26,6 +26,7 @@ import type { ChatAttachment } from '../core/chat-attachment';
 import type { ContextMode } from '../core/context-mode';
 import type { ExtensionState } from '../core/extension-state';
 import type { PermissionMode } from '../core/permission-policy.types';
+import type { ResearchMode } from '../core/research-mode';
 import type { RequestAdmission } from '../services/agent-coordinator.types';
 
 const SIDEBAR_SESSION_ID = 'sidebar';
@@ -48,6 +49,7 @@ export interface ChatViewActions {
       attachments: ChatAttachment[];
       contextMode: ContextMode;
       modelKey: string;
+      researchMode: ResearchMode;
       requestId: string;
     },
   ): Promise<void>;
@@ -60,6 +62,7 @@ export interface ChatViewActions {
       attachments: ChatAttachment[];
       contextMode: ContextMode;
       modelKeys: string[];
+      researchMode: ResearchMode;
       judgeEnabled: boolean;
       requestId: string;
     },
@@ -83,6 +86,7 @@ export interface ChatViewActions {
       attachments: ChatAttachment[];
       contextMode: ContextMode;
       modelKey: string;
+      researchMode: ResearchMode;
       requestId: string;
     },
   ): Promise<void>;

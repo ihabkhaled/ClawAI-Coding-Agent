@@ -9,6 +9,7 @@ import { totalAttachmentBytes } from '../core/chat-attachment';
 import { contextModeForCommand } from '../core/command-context';
 import { type ContextMode } from '../core/context-mode';
 import { GenerationThreadRegistry } from '../core/generation-thread-registry';
+import { type ResearchMode } from '../core/research-mode';
 import { cancelRunBoundary, transitionRunBoundary } from '../core/run-boundary';
 import { type OutputLogger } from '../infrastructure/output-logger';
 import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-workspace-edit-adapter';
@@ -343,6 +344,7 @@ export class AgentCoordinator implements vscode.Disposable {
     content: string;
     contextMode: ContextMode;
     modelKey?: string;
+    researchMode?: ResearchMode;
     requestId?: string;
     sessionId?: string;
   }): Promise<void> {

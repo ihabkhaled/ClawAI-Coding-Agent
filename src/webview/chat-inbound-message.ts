@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { chatAttachmentsSchema } from '../core/chat-attachment';
+import { RESEARCH_MODES } from '../core/research-mode';
 
 import type { ContextMode } from '../core/context-mode';
 
@@ -11,6 +12,7 @@ const contextModeSchema: z.ZodType<ContextMode> = z.enum([
   'smart',
   'workspace',
 ]);
+const researchModeSchema = z.enum(RESEARCH_MODES).default('NONE');
 
 export const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ready') }),
@@ -47,6 +49,7 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
     content: z.string().min(1).max(20_000),
     contextMode: contextModeSchema,
     modelKey: z.string().min(1).max(500),
+    researchMode: researchModeSchema,
     requestId: z.uuid(),
   }),
   z.object({
@@ -55,6 +58,7 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
     content: z.string().min(1).max(20_000),
     contextMode: contextModeSchema,
     modelKey: z.string().min(1).max(500),
+    researchMode: researchModeSchema,
     requestId: z.uuid(),
   }),
   z.object({
@@ -63,6 +67,7 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
     content: z.string().min(1).max(20_000),
     contextMode: contextModeSchema,
     modelKeys: z.array(z.string().min(1).max(500)).min(2).max(5),
+    researchMode: researchModeSchema,
     judgeEnabled: z.boolean(),
     requestId: z.uuid(),
   }),

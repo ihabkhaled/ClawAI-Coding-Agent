@@ -73,6 +73,7 @@ test('snapshots the selected model into a prompt sent immediately after changing
       type: 'agent',
       content: 'Create the selected-model file',
       contextMode: 'smart',
+      researchMode: 'NONE',
       modelKey: localModel.key,
       requestId: expect.any(String),
     });
@@ -115,6 +116,7 @@ test('pastes screenshots and files into the composer and sends immutable attachm
       ],
       content: 'Explain this screenshot',
       contextMode: 'smart',
+      researchMode: 'NONE',
       modelKey: 'AUTO',
       requestId: expect.any(String),
     });

@@ -102,6 +102,7 @@ export class AgentWorkflowService {
           content: input.content,
           contextMode: input.contextMode,
           kind: input.kind,
+          ...(input.researchMode === undefined ? {} : { researchMode: input.researchMode }),
           selection: input.selection,
           session: input.session,
           ...(input.attachments === undefined || input.attachments.length === 0

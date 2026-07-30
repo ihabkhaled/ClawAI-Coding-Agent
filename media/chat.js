@@ -53,6 +53,7 @@ const elements = {
   planName: byId('planName'),
   prompt: byId('prompt'),
   refreshModelsButton: byId('refreshModelsButton'),
+  researchMode: byId('researchMode'),
   routeModel: byId('routeModel'),
   routeMode: byId('routeMode'),
   routeRail: byId('routeRail'),
@@ -1512,6 +1513,7 @@ function submitPrompt(retryInput) {
   const requestId = window.crypto.randomUUID();
   const mode = retryInput?.mode ?? elements.runMode.value;
   const contextMode = retryInput?.contextMode ?? elements.contextMode.value;
+  const researchMode = retryInput?.researchMode ?? elements.researchMode.value;
   const modelKeys = retryInput?.modelKeys ?? selectedModels();
   const modelKey = retryInput?.modelKey ?? activeModelValue();
   const judgeEnabled = retryInput?.judgeEnabled ?? mode === 'judge';
@@ -1526,6 +1528,7 @@ function submitPrompt(retryInput) {
     content,
     mode,
     contextMode,
+    researchMode,
     modelKey,
     modelKeys: [...modelKeys],
     judgeEnabled,
@@ -1575,6 +1578,7 @@ function submitPrompt(retryInput) {
       type: mode === 'agent' ? 'agent' : 'send',
       content,
       contextMode,
+      researchMode,
       modelKey,
       requestId,
     };
@@ -1599,6 +1603,7 @@ function submitPrompt(retryInput) {
       type: 'compare',
       content,
       contextMode,
+      researchMode,
       modelKeys,
       judgeEnabled,
       requestId,

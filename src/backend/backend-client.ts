@@ -40,6 +40,7 @@ import {
 } from './response-lease';
 
 import type { ChatAttachment } from '../core/chat-attachment';
+import type { ResearchMode } from '../core/research-mode';
 
 const MAX_ERROR_BODY_BYTES = 64_000;
 const MAX_SUCCESS_BODY_BYTES = 8_000_000;
@@ -60,6 +61,7 @@ export interface MessageRequest {
   provider?: string;
   model?: string;
   modelDisplayName?: string;
+  researchMode?: ResearchMode;
   fileIds?: string[];
 }
 
@@ -73,6 +75,7 @@ export interface CompareRequest {
   judgeEnabled?: boolean;
   judgeModel?: string | null;
   fileIds?: string[];
+  researchMode?: ResearchMode;
 }
 
 export class BackendRequestError extends Error {

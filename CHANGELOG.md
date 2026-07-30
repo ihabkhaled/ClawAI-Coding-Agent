@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.12.0
+
+This pre-1.0 minor release adds an explicit, quota-safe online research
+workflow for cloud and local models.
+
+- Added Off, Search, Search + fetch, and Search + extract modes under More
+  settings, with research disabled by default.
+- Routed research through ClawAI's configured multi-provider evidence layer so
+  offline models can work from current cited sources without direct network
+  access.
+- Kept token consumption distinct from web-search and fetch request counts;
+  Ollama remaining session quota is not estimated because the provider does not
+  expose it through an API.
+- Prevented ordinary Ollama generation requests from silently advertising
+  provider-native web tools and consuming repeated search requests.
+
 ## 0.11.1
 
 This patch makes the composer settings easier to discover and reliably

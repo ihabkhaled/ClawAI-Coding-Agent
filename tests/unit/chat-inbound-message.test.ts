@@ -64,4 +64,23 @@ describe('inboundMessageSchema', () => {
       }).success,
     ).toBe(true);
   });
+
+  it('defaults research off and accepts an explicit bounded research mode', () => {
+    const base = {
+      attachments: [],
+      content: 'Find current documentation',
+      contextMode: 'none',
+      modelKey: 'OLLAMA:gpt-oss:20b-cloud',
+      requestId: '11c89732-7559-42d5-9ab1-c752ee98ea0d',
+      type: 'send',
+    };
+
+    expect(inboundMessageSchema.parse(base)).toMatchObject({ researchMode: 'NONE' });
+    expect(inboundMessageSchema.parse({ ...base, researchMode: 'SEARCH_FETCH' })).toMatchObject({
+      researchMode: 'SEARCH_FETCH',
+    });
+    expect(inboundMessageSchema.safeParse({ ...base, researchMode: 'UNBOUNDED' }).success).toBe(
+      false,
+    );
+  });
 });

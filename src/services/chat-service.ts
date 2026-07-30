@@ -6,6 +6,7 @@ import { addTokenReceipts, estimateTokens, reconcileTokenReceipt } from '../core
 
 import type { RoutingMode } from '../core/configuration';
 import type { ContextCandidate, ContextReceipt } from '../core/context-collector';
+import type { ResearchMode } from '../core/research-mode';
 import type { ReportedTokenUsage, TokenReceipt } from '../core/token-telemetry';
 
 export interface ChatBackendPort {
@@ -25,6 +26,7 @@ export interface ChatBackendPort {
       provider?: string;
       model?: string;
       modelDisplayName?: string;
+      researchMode?: ResearchMode;
       fileIds?: string[];
     },
     signal?: AbortSignal,
@@ -40,6 +42,7 @@ export interface ChatSendInput {
   provider?: string;
   model?: string;
   modelDisplayName?: string;
+  researchMode?: ResearchMode;
   fileIds?: string[];
   threadId?: string;
 }
@@ -102,6 +105,7 @@ function messageRequest(input: ChatSendInput, threadId: string) {
       ...(input.provider === undefined ? {} : { provider: input.provider }),
       ...(input.model === undefined ? {} : { model: input.model }),
       ...(input.modelDisplayName === undefined ? {} : { modelDisplayName: input.modelDisplayName }),
+      ...(input.researchMode === undefined ? {} : { researchMode: input.researchMode }),
       ...(input.fileIds === undefined || input.fileIds.length === 0
         ? {}
         : { fileIds: input.fileIds }),

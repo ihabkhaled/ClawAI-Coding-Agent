@@ -94,6 +94,7 @@ export class PromptExecutionService {
               context: collected.files,
               contextReceipt: collected.receipt,
               ...selection,
+              ...(input.researchMode === undefined ? {} : { researchMode: input.researchMode }),
               ...(attachmentLease.fileIds.length === 0 ? {} : { fileIds: attachmentLease.fileIds }),
               ...(threadId === undefined ? {} : { threadId }),
             },
@@ -192,6 +193,7 @@ export class PromptExecutionService {
             {
               content: prompt.content,
               models,
+              ...(input.researchMode === undefined ? {} : { researchMode: input.researchMode }),
               ...(attachmentLease.fileIds.length === 0 ? {} : { fileIds: attachmentLease.fileIds }),
               judgeEnabled: input.judgeEnabled,
               ...(input.judgeEnabled ? { judgeModel: input.modelKeys[0] ?? null } : {}),
