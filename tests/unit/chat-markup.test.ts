@@ -13,17 +13,26 @@ describe('renderChatMarkup', () => {
     translate: (message) => message,
   });
 
-  it('renders the workspace bar, execution spine, suggestions, and sticky composer controls', () => {
+  it('renders the Signal Desk run region, token meter, and progressive composer controls', () => {
     expect(html).toContain('id="workspaceBar"');
     expect(html).toContain('class="brand-logo"');
     expect(html).toContain('vscode-webview://test/icon.png');
+    expect(html).toContain('id="conversationTokenMeter"');
+    expect(html).toContain('id="runDeck"');
+    expect(html).toContain('id="runDeckCount"');
+    expect(html).toContain('id="activeRunList"');
+    expect(html).toContain('id="waitingRunList"');
+    expect(html).toContain('aria-label="Runs"');
     expect(html).toContain('id="conversation" class="conversation execution-spine"');
     expect(html).toContain('id="emptyState"');
     expect(html).toContain('data-prompt-kind="plan"');
     expect(html).toContain('id="modelSelect"');
+    expect(html).toContain('<details id="moreSettings"');
+    expect(html).toContain('id="moreSettingsSummary"');
     expect(html).toContain('id="agentMode"');
     expect(html).toContain('id="permissionMode"');
     expect(html).toContain('id="contextMode"');
+    expect(html).toContain('id="selectedModelStrip"');
     expect(html).toContain('id="historySelect"');
     expect(html).toContain('id="conversationTitle"');
     expect(html).toContain('aria-label="Conversation history"');
@@ -38,6 +47,7 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('href="#backendUrlInput"');
     expect(html).toContain('aria-live="polite"');
     expect(html).toContain('aria-live="assertive"');
+    expect(html).not.toContain('id="conversation" class="conversation execution-spine" aria-live');
     expect(html).toContain('<html lang="en" dir="ltr">');
     expect(html).toContain("script-src 'nonce-test-nonce'");
     expect(html).not.toMatch(/<[^>]+\son[a-z]+=/iu);

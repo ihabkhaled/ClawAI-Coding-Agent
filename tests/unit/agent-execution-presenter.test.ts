@@ -29,10 +29,59 @@ const configuration: RuntimeConfiguration = {
 };
 
 describe('AgentExecutionPresenter', () => {
+  it('keeps each request phase in request-owned run state', async () => {
+    const snapshot = {
+      agentRuns: {
+        'request-a': { files: [], phase: 'reading' as const },
+      },
+    };
+    const state = {
+      snapshot,
+      update: vi.fn((patch: Partial<typeof snapshot>) => {
+        Object.assign(snapshot, patch);
+      }),
+    };
+    const runs = {
+      run: vi.fn(async (_input: AgentRunInput, callbacks: AgentRunCallbacks) => {
+        callbacks.onPhase({ files: [], phase: 'generating' });
+        return {
+          content: 'Plan B',
+          context: {
+            files: [],
+            receipt: { excluded: [], included: [], totalBytes: 0, truncated: false },
+          },
+          status: 'planned' as const,
+        };
+      }),
+    };
+    const presenter = new AgentExecutionPresenter(
+      runs as never,
+      state as never,
+      () => ({ postResult: vi.fn(async () => undefined) }) as never,
+      vi.fn(),
+    );
+
+    await presenter.execute(
+      {
+        configuration,
+        content: 'Plan B',
+        contextMode: 'workspace',
+        selection: { routingMode: 'AUTO' },
+      },
+      new AbortController().signal,
+      'request-b',
+    );
+
+    expect(snapshot.agentRuns).toEqual({
+      'request-a': { files: [], phase: 'reading' },
+      'request-b': { files: [], phase: 'generating' },
+    });
+  });
+
   it('streams request-owned events and publishes a planned response with tokens', async () => {
     const postEvent = vi.fn(async () => undefined);
     const postResult = vi.fn(async () => undefined);
-    const state = { update: vi.fn() };
+    const state = { snapshot: { agentRuns: {} }, update: vi.fn() };
     const threadChanged = vi.fn();
     const runs = {
       run: vi.fn(async (_input: AgentRunInput, callbacks: AgentRunCallbacks) => {

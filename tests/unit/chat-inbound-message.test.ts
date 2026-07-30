@@ -26,6 +26,18 @@ describe('promptRequestId', () => {
 });
 
 describe('inboundMessageSchema', () => {
+  it('accepts a request-scoped cancellation and rejects a malformed target', () => {
+    const requestId = '11c89732-7559-42d5-9ab1-c752ee98ea0d';
+    expect(inboundMessageSchema.parse({ type: 'cancel', requestId })).toEqual({
+      type: 'cancel',
+      requestId,
+    });
+    expect(
+      inboundMessageSchema.safeParse({ type: 'cancel', requestId: 'not-a-uuid' }).success,
+    ).toBe(false);
+    expect(inboundMessageSchema.safeParse({ type: 'cancel' }).success).toBe(true);
+  });
+
   it('bounds every compare model key as well as the model count', () => {
     const base = {
       attachments: [],

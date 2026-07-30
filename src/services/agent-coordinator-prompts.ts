@@ -46,6 +46,13 @@ export function currentModelSelection(
   };
 }
 
+export function modelSelectionLabel(models: ModelCatalogEntry[], requestModelKey: string): string {
+  if (requestModelKey === 'AUTO') {
+    return vscode.l10n.t('Automatic routing');
+  }
+  return models.find((model) => model.key === requestModelKey)?.displayName ?? requestModelKey;
+}
+
 export async function promptQuestion(): Promise<string | null> {
   const content = await vscode.window.showInputBox({
     title: vscode.l10n.t('Ask ClawAI'),

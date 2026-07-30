@@ -301,12 +301,21 @@ test('shows attachment ownership in the request queue', async ({ page }) => {
   await sendState(page, {
     busy: true,
     generationQueue: {
-      active: undefined,
-      pending: [{ id: request.requestId, kind: 'agent', prompt: 'Inspect the queued file' }],
+      active: [],
+      capacity: 2,
+      pending: [
+        {
+          concurrencyKey: 'chat-a',
+          id: request.requestId,
+          kind: 'agent',
+          modelLabel: 'Qwen 2.5 Coder 7B',
+          prompt: 'Inspect the queued file',
+        },
+      ],
     },
   });
 
-  await expect(page.locator('.queue-item')).toContainText('1 attachment · 6 B');
+  await expect(page.locator('.waiting-run')).toContainText('1 attachment · 6 B');
 });
 
 test('clears account-bound draft attachments and ignores a late file read', async ({ page }) => {

@@ -5,13 +5,36 @@ vi.mock('vscode', () => ({
 }));
 
 import { ExtensionState } from '../../src/core/extension-state';
-import { resetAccountScopedState } from '../../src/services/agent-coordinator-runtime';
+import {
+  cancelTargetGeneration,
+  resetAccountScopedState,
+} from '../../src/services/agent-coordinator-runtime';
 
 describe('agent coordinator account boundary', () => {
+  it('cancels only the targeted local and remote generation', async () => {
+    const cancel = vi.fn(() => true);
+    const takeThread = vi.fn(() => 'thread-b');
+    const cancelStream = vi.fn(async () => undefined);
+
+    await cancelTargetGeneration(
+      cancel,
+      takeThread,
+      { cancelStream } as never,
+      { warn: vi.fn() } as never,
+    );
+
+    expect(cancel).toHaveBeenCalledOnce();
+    expect(takeThread).toHaveBeenCalledOnce();
+    expect(cancelStream).toHaveBeenCalledWith('thread-b');
+  });
+
   it('clears every account-scoped value while preserving workspace and local settings', () => {
     const state = new ExtensionState({
       agentMode: 'PLAN',
       agentRun: { phase: 'generating' } as never,
+      agentRuns: {
+        'request-a': { phase: 'generating' } as never,
+      },
       approvalRequest: { id: 'approval-a' } as never,
       backendStatus: 'connected',
       backendUrl: 'https://claw.local',
@@ -20,8 +43,26 @@ describe('agent coordinator account boundary', () => {
       contextReceipt: { included: ['private.ts'] } as never,
       entitlements: { plan: { name: 'Pro' } } as never,
       generationQueue: {
-        active: { id: 'request-a', kind: 'agent', prompt: 'Inspect private.ts' },
-        pending: [{ id: 'request-b', kind: 'chat', prompt: 'Continue' }],
+        active: [
+          {
+            concurrencyKey: 'chat-a',
+            id: 'request-a',
+            kind: 'agent',
+            modelLabel: 'Claude Sonnet',
+            prompt: 'Inspect private.ts',
+            startedAt: 1,
+          },
+        ],
+        capacity: 2,
+        pending: [
+          {
+            concurrencyKey: 'chat-a',
+            id: 'request-b',
+            kind: 'chat',
+            modelLabel: 'Qwen 3',
+            prompt: 'Continue',
+          },
+        ],
       },
       history: [{ id: 'thread-a', title: 'Private account thread' }] as never,
       lastError: 'old error',
@@ -50,6 +91,7 @@ describe('agent coordinator account boundary', () => {
     expect(state.snapshot).toMatchObject({
       agentMode: 'PLAN',
       agentRun: undefined,
+      agentRuns: {},
       approvalRequest: undefined,
       backendStatus: 'disconnected',
       backendUrl: 'https://claw.local',
@@ -57,7 +99,7 @@ describe('agent coordinator account boundary', () => {
       connected: false,
       contextReceipt: undefined,
       entitlements: undefined,
-      generationQueue: { active: undefined, pending: [] },
+      generationQueue: { active: [], capacity: 2, pending: [] },
       history: [],
       lastError: undefined,
       modelWarnings: [],

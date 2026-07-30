@@ -61,44 +61,8 @@ test('submits coding prompts to the agent execution path by default', async ({ p
     });
 });
 
-test('keeps controls interactive and queues follow-up requests while an agent runs', async ({
-  page,
-}) => {
-  await sendState(page, {
-    busy: true,
-    generationQueue: {
-      active: { id: 'request-active', kind: 'agent', prompt: 'Implement the feature' },
-      pending: [{ id: 'request-pending', kind: 'chat', prompt: 'Explain the tests' }],
-    },
-  });
-
-  await expect(page.locator('#prompt')).toBeEnabled();
-  await expect(page.locator('#modelSelect')).toBeEnabled();
-  await expect(page.locator('#agentMode')).toBeEnabled();
-  await expect(page.locator('#permissionMode')).toBeEnabled();
-  await expect(page.locator('#sendButton')).toContainText('Queue');
-  await expect(page.locator('#queuePanel')).toContainText('Implement the feature');
-  await expect(page.locator('#queuePanel')).toContainText('Explain the tests');
-
-  await page.locator('#modelSelect').selectOption(localModel.key);
-  await page.locator('#prompt').fill('Run the focused tests next');
-  await page.locator('#composer').evaluate((form: HTMLFormElement) => {
-    form.requestSubmit();
-  });
-
-  await expect
-    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
-    .toEqual({
-      type: 'agent',
-      content: 'Run the focused tests next',
-      contextMode: 'smart',
-      modelKey: localModel.key,
-      requestId: expect.any(String),
-    });
-  await expect(page.locator('.message-assistant').last()).toContainText('Queued');
-});
-
 test('handles Full Access and file approvals inside the workbench', async ({ page }) => {
+  await page.locator('#moreSettingsSummary').click();
   await page.locator('#permissionMode').selectOption('BYPASS_PERMISSIONS');
   await expect
     .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
@@ -151,11 +115,28 @@ test('labels routine workspace consent as a persistent workspace decision', asyn
 });
 
 test('shows the owned folder and live coding-agent execution state', async ({ page }) => {
+  const requestId = '00000000-0000-4000-8000-000000000011';
   await sendState(page, {
-    agentRun: {
-      phase: 'reviewing',
-      summary: 'Create the JavaScript loop',
-      files: [{ operation: 'create', path: 'app/for-loop.js' }],
+    agentRuns: {
+      [requestId]: {
+        phase: 'reviewing',
+        summary: 'Create the JavaScript loop',
+        files: [{ operation: 'create', path: 'app/for-loop.js' }],
+      },
+    },
+    generationQueue: {
+      active: [
+        {
+          concurrencyKey: 'chat-a',
+          id: requestId,
+          kind: 'agent',
+          modelLabel: 'Qwen 2.5 Coder 7B',
+          prompt: 'Create the JavaScript loop',
+          startedAt: Date.now(),
+        },
+      ],
+      capacity: 2,
+      pending: [],
     },
     workspaceReadiness: {
       hasActiveFile: false,
@@ -176,17 +157,12 @@ test('shows the owned folder and live coding-agent execution state', async ({ pa
 
   await expect(page.locator('#workspaceSelect')).toBeVisible();
   await expect(page.locator('#workspaceSelect')).toHaveValue('web-key');
-  await expect(page.locator('#agentRunPanel')).toBeVisible();
-  await expect(page.locator('#agentRunPanel')).toContainText('Reviewing file changes');
-  await expect(page.locator('#agentRunSteps')).toHaveCount(0);
-  await expect(page.locator('#agentRunDetails')).not.toHaveAttribute('open', '');
-  await expect(page.locator('#agentRunFiles')).not.toBeVisible();
-  const activityHeight = await page.locator('#agentRunPanel').evaluate((element) => {
-    return element.getBoundingClientRect().height;
-  });
-  expect(activityHeight).toBeLessThanOrEqual(40);
-  await page.locator('#agentRunFileCount').click();
-  await expect(page.locator('#agentRunPanel')).toContainText('app/for-loop.js');
+  await expect(page.locator('#runDeck')).toBeVisible();
+  await expect(page.locator('.run-lane')).toContainText('Reviewing file changes');
+  await expect(page.locator('.run-details')).not.toHaveAttribute('open', '');
+  await expect(page.locator('.run-detail-list')).not.toBeVisible();
+  await page.locator('.run-details summary').click();
+  await expect(page.locator('.run-lane')).toContainText('app/for-loop.js');
   await expectWindowsScreenshot(page, 'workbench-agent-run.png');
 
   await page.locator('#workspaceSelect').selectOption('api-key');
@@ -196,25 +172,42 @@ test('shows the owned folder and live coding-agent execution state', async ({ pa
 });
 
 test('shows safe development commands while the coding agent executes them', async ({ page }) => {
+  const requestId = '00000000-0000-4000-8000-000000000012';
   await sendState(page, {
-    agentRun: {
-      phase: 'executing',
-      summary: 'Verify the generated loop',
-      files: [{ operation: 'create', path: 'app/for-loop.js' }],
-      commands: [
+    agentRuns: {
+      [requestId]: {
+        phase: 'executing',
+        summary: 'Verify the generated loop',
+        files: [{ operation: 'create', path: 'app/for-loop.js' }],
+        commands: [
+          {
+            command: 'node app/for-loop.js',
+            purpose: 'Run the generated program',
+          },
+        ],
+      },
+    },
+    generationQueue: {
+      active: [
         {
-          command: 'node app/for-loop.js',
-          purpose: 'Run the generated program',
+          concurrencyKey: 'chat-a',
+          id: requestId,
+          kind: 'agent',
+          modelLabel: 'Qwen 2.5 Coder 7B',
+          prompt: 'Verify the generated loop',
+          startedAt: Date.now(),
         },
       ],
+      capacity: 2,
+      pending: [],
     },
   });
 
-  await expect(page.locator('#agentRunPanel')).toContainText('Running development commands');
-  await expect(page.locator('#agentRunPanel')).toContainText('1 files · 1 commands');
-  await page.locator('#agentRunFileCount').click();
-  await expect(page.locator('#agentRunCommands')).toContainText('node app/for-loop.js');
-  await expect(page.locator('#agentRunCommands')).toContainText('Run the generated program');
+  await expect(page.locator('.run-lane')).toContainText('Running development commands');
+  await expect(page.locator('.run-details summary')).toContainText('1 files · 1 commands');
+  await page.locator('.run-details summary').click();
+  await expect(page.locator('.run-detail-list')).toContainText('node app/for-loop.js');
+  await expect(page.locator('.run-detail-list')).toContainText('Run the generated program');
 });
 
 test('coalesces transport progress and resets a malformed agent draft before repair', async ({
@@ -426,6 +419,7 @@ test('keeps manual model and mode selections stable through state round trips', 
   await sendState(page, { routingMode: 'MANUAL_MODEL', selectedModel: localModel.key });
   await expect(page.locator('#modelSelect')).toHaveValue(localModel.key);
 
+  await page.locator('#moreSettingsSummary').click();
   await page.locator('#agentMode').selectOption('PLAN');
   await page.locator('#permissionMode').selectOption('EDIT_AUTOMATICALLY');
   await expect(page.locator('#activeModeBadge')).toHaveText('Plan mode');

@@ -13,6 +13,16 @@ export interface GenerationSchedulerHooks {
   settled(requestId: string): void;
 }
 
+export interface GenerationScheduleOptions {
+  concurrencyKey: string;
+  modelLabel: string;
+  retainedBytes?: number;
+}
+
+export function generationConcurrencyKey(sessionId: string, threadId?: string): string {
+  return threadId === undefined ? `session:${sessionId}` : `thread:${threadId}`;
+}
+
 export class GenerationScheduler {
   private readonly queue: GenerationQueue;
 
@@ -33,13 +43,15 @@ export class GenerationScheduler {
     kind: GenerationKind,
     prompt: string,
     action: (signal: AbortSignal) => Promise<void>,
-    retainedBytes = 0,
+    options: GenerationScheduleOptions,
   ): Promise<void> {
     const completion = this.queue.enqueue({
+      concurrencyKey: options.concurrencyKey,
       id: requestId,
       kind,
+      modelLabel: options.modelLabel,
       prompt,
-      retainedBytes,
+      ...(options.retainedBytes === undefined ? {} : { retainedBytes: options.retainedBytes }),
       run: (signal) => this.execute(requestId, signal, action),
     });
     if (this.queue.has(requestId)) {
@@ -53,6 +65,10 @@ export class GenerationScheduler {
 
   cancelActive(): boolean {
     return this.queue.cancelActive();
+  }
+
+  cancel(requestId: string): boolean {
+    return this.queue.cancel(requestId);
   }
 
   cancelAll(): boolean {

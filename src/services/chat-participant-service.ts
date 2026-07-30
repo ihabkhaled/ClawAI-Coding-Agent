@@ -1,15 +1,39 @@
+import { randomUUID } from 'node:crypto';
+
 import * as vscode from 'vscode';
 
 import { BackendSessionChangedError } from '../backend/backend-client';
 
-import { currentModelSelection } from './agent-coordinator-prompts';
+import { currentModelSelection, modelSelectionLabel } from './agent-coordinator-prompts';
 
+import type { RequestAdmission } from './agent-coordinator.types';
 import type { ChatService } from './chat-service';
 import type { ConfigurationService } from './configuration-service';
+import type { GenerationScheduler } from './generation-scheduler';
 import type { RequestAdmissionService } from './request-admission-service';
 import type { WorkspaceContextService } from './workspace-context-service';
 import type { ExtensionState } from '../core/extension-state';
 import type { OutputLogger } from '../infrastructure/output-logger';
+
+function linkedSignal(primary: AbortSignal, boundary: AbortSignal) {
+  const controller = new AbortController();
+  const abort = (): void => {
+    controller.abort();
+  };
+  if (primary.aborted || boundary.aborted) {
+    abort();
+  } else {
+    primary.addEventListener('abort', abort, { once: true });
+    boundary.addEventListener('abort', abort, { once: true });
+  }
+  return {
+    dispose: () => {
+      primary.removeEventListener('abort', abort);
+      boundary.removeEventListener('abort', abort);
+    },
+    signal: controller.signal,
+  };
+}
 
 export class ChatParticipantService {
   constructor(
@@ -19,6 +43,9 @@ export class ChatParticipantService {
     private readonly context: WorkspaceContextService,
     private readonly chat: ChatService,
     private readonly admissions: RequestAdmissionService,
+    private readonly generations: GenerationScheduler,
+    private readonly activateThread: (threadId: string, requestId: string) => void,
+    private readonly cancelRequest: (requestId: string) => Promise<void>,
     private readonly accountBoundary: () => Promise<void> | void,
   ) {}
 
@@ -37,28 +64,58 @@ export class ChatParticipantService {
       });
       return;
     }
+    const requestId = randomUUID();
     const admission = this.admissions.capture();
     const configuration = this.configuration.read();
     const models = [...this.state.snapshot.models];
-    const contextMode = this.context.resolve('smart');
-    const abort = new AbortController();
+    const selection = currentModelSelection(configuration, models);
+    const requestedModelKey =
+      configuration.routingMode === 'MANUAL_MODEL' ? configuration.selectedModel : 'AUTO';
     const cancellation = token.onCancellationRequested(() => {
-      abort.abort();
+      void this.cancelRequest(requestId);
     });
-    const boundaryCancellation = (): void => {
-      abort.abort();
-    };
-    if (admission.boundarySignal.aborted) {
-      abort.abort();
-    } else {
-      admission.boundarySignal.addEventListener('abort', boundaryCancellation, {
-        once: true,
-      });
+    try {
+      await this.generations.enqueue(
+        requestId,
+        'chat',
+        content,
+        (signal) =>
+          this.execute(requestId, content, response, admission, configuration, selection, signal),
+        {
+          concurrencyKey: `participant:${requestId}`,
+          modelLabel: modelSelectionLabel(
+            models,
+            selection.routingMode === 'AUTO' ? 'AUTO' : requestedModelKey,
+          ),
+        },
+      );
+    } catch (error: unknown) {
+      const message =
+        error instanceof Error ? error.message : vscode.l10n.t('ClawAI request failed.');
+      response.markdown(vscode.l10n.t('ClawAI could not complete the request: {0}', message));
+    } finally {
+      cancellation.dispose();
     }
+  }
+
+  private async execute(
+    requestId: string,
+    content: string,
+    response: vscode.ChatResponseStream,
+    admission: RequestAdmission,
+    configuration: ReturnType<ConfigurationService['read']>,
+    selection: ReturnType<typeof currentModelSelection>,
+    queueSignal: AbortSignal,
+  ): Promise<void> {
+    const linked = linkedSignal(queueSignal, admission.boundarySignal);
     try {
       const session = await admission.session;
       this.admissions.assert(admission);
-      if (contextMode === 'workspace' && !(await session.authorize('workspaceContext'))) {
+      const contextMode = this.context.resolve('smart');
+      if (
+        contextMode === 'workspace' &&
+        !(await session.authorize('workspaceContext', undefined, linked.signal))
+      ) {
         response.markdown(vscode.l10n.t('Workspace context access was not approved.'));
         return;
       }
@@ -71,12 +128,13 @@ export class ChatParticipantService {
           content: session.preparePrompt(content),
           context: collected.files,
           contextReceipt: collected.receipt,
-          ...currentModelSelection(configuration, models),
+          ...selection,
         },
-        () => {
-          // ChatService assembles the final response after consuming the stream.
+        () => undefined,
+        linked.signal,
+        (threadId) => {
+          this.activateThread(threadId, requestId);
         },
-        abort.signal,
       );
       this.admissions.assert(admission);
       if (result.contextReceipt !== undefined) {
@@ -84,22 +142,29 @@ export class ChatParticipantService {
       }
       response.markdown(result.content);
     } catch (error: unknown) {
-      let message: string;
-      if (error instanceof BackendSessionChangedError) {
-        await this.accountBoundary();
-        message = error.message;
-      } else if (admission.boundarySignal.aborted) {
-        message = vscode.l10n.t(
-          'ClawAI request was cancelled because the account or workspace changed.',
-        );
-      } else {
-        message = error instanceof Error ? error.message : vscode.l10n.t('ClawAI request failed.');
-      }
-      this.logger.error('ClawAI chat participant failed.', error);
-      response.markdown(vscode.l10n.t('ClawAI could not complete the request: {0}', message));
+      await this.handleError(error, admission, response);
     } finally {
-      admission.boundarySignal.removeEventListener('abort', boundaryCancellation);
-      cancellation.dispose();
+      linked.dispose();
     }
+  }
+
+  private async handleError(
+    error: unknown,
+    admission: RequestAdmission,
+    response: vscode.ChatResponseStream,
+  ): Promise<void> {
+    let message: string;
+    if (error instanceof BackendSessionChangedError) {
+      await this.accountBoundary();
+      message = error.message;
+    } else if (admission.boundarySignal.aborted) {
+      message = vscode.l10n.t(
+        'ClawAI request was cancelled because the account or workspace changed.',
+      );
+    } else {
+      message = error instanceof Error ? error.message : vscode.l10n.t('ClawAI request failed.');
+    }
+    this.logger.error('ClawAI chat participant failed.', error);
+    response.markdown(vscode.l10n.t('ClawAI could not complete the request: {0}', message));
   }
 }

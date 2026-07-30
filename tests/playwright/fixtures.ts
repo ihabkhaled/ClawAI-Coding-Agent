@@ -25,9 +25,25 @@ export const localModel = {
   supportsVision: false,
 };
 
+export const cloudModel = {
+  contextTokens: 128000,
+  displayName: 'Claude Sonnet',
+  id: 'anthropic-claude',
+  isLocal: false,
+  key: 'ANTHROPIC:claude-sonnet',
+  model: 'claude-sonnet',
+  provider: 'ANTHROPIC',
+  source: 'connector',
+  supportsStreaming: true,
+  supportsStructuredOutput: true,
+  supportsTools: true,
+  supportsVision: true,
+};
+
 export function baseState() {
   return {
     agentRun: undefined,
+    agentRuns: {},
     agentMode: 'AUTO',
     approvalRequest: undefined,
     backendStatus: 'connected',
@@ -37,7 +53,8 @@ export function baseState() {
     contextReceipt: undefined,
     entitlements: undefined,
     generationQueue: {
-      active: undefined,
+      active: [],
+      capacity: 2,
       pending: [],
     },
     history: [],

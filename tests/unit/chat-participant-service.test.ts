@@ -30,6 +30,19 @@ function responseStream() {
   };
 }
 
+function generationHarness() {
+  return {
+    enqueue: vi.fn(
+      async (
+        _requestId: string,
+        _kind: string,
+        _prompt: string,
+        action: (signal: AbortSignal) => Promise<void>,
+      ) => action(new AbortController().signal),
+    ),
+  };
+}
+
 function admissionHarness(context: {
   freezeWorkspaceFolder: ReturnType<typeof vi.fn>;
   scopeSnapshot: ReturnType<typeof vi.fn>;
@@ -88,6 +101,9 @@ describe('ChatParticipantService', () => {
         }),
       } as never,
       admissions,
+      generationHarness() as never,
+      vi.fn(),
+      vi.fn(async () => undefined),
       accountBoundary,
     );
 
@@ -131,6 +147,9 @@ describe('ChatParticipantService', () => {
       context as never,
       chat as never,
       admissions,
+      generationHarness() as never,
+      vi.fn(),
+      vi.fn(async () => undefined),
       vi.fn(),
     );
 
@@ -178,14 +197,24 @@ describe('ChatParticipantService', () => {
     const { admissions, epoch } = admissionHarness(context);
     let requestSignal: AbortSignal | undefined;
     const chat = {
-      send: vi.fn(async (_input: unknown, _onEvent: () => void, signal?: AbortSignal) => {
-        requestSignal = signal;
-        const result = await backendResult.promise;
-        signal?.throwIfAborted();
-        return result;
-      }),
+      send: vi.fn(
+        async (
+          _input: unknown,
+          _onEvent: () => void,
+          signal?: AbortSignal,
+          onThread?: (threadId: string) => void,
+        ) => {
+          requestSignal = signal;
+          onThread?.('thread-native');
+          const result = await backendResult.promise;
+          signal?.throwIfAborted();
+          return result;
+        },
+      ),
     };
     const response = responseStream();
+    const generations = generationHarness();
+    const activateThread = vi.fn();
     const service = new ChatParticipantService(
       { snapshot: { connected: true, models: [] }, update: vi.fn() } as never,
       { error: vi.fn() } as never,
@@ -193,6 +222,9 @@ describe('ChatParticipantService', () => {
       context as never,
       chat as never,
       admissions,
+      generations as never,
+      activateThread,
+      vi.fn(async () => undefined),
       vi.fn(),
     );
 
@@ -204,6 +236,17 @@ describe('ChatParticipantService', () => {
     await vi.waitFor(() => {
       expect(chat.send).toHaveBeenCalledOnce();
     });
+    expect(generations.enqueue).toHaveBeenCalledWith(
+      expect.any(String),
+      'chat',
+      'inspect the workspace',
+      expect.any(Function),
+      expect.objectContaining({
+        concurrencyKey: expect.stringMatching(/^participant:/u),
+        modelLabel: 'Automatic routing',
+      }),
+    );
+    expect(activateThread).toHaveBeenCalledWith('thread-native', expect.any(String));
     epoch.invalidate();
     backendResult.resolve({ content: 'stale account response', contextReceipt: undefined });
     await sending;

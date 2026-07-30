@@ -36,6 +36,14 @@ function approvalTitle(operation: PermissionOperation): string {
   return vscode.l10n.t('Apply file changes');
 }
 
+function requestApproval(
+  approvals: SessionApprovalPort,
+  input: Parameters<SessionApprovalPort['request']>[0],
+  signal?: AbortSignal,
+): Promise<boolean> {
+  return signal === undefined ? approvals.request(input) : approvals.request(input, signal);
+}
+
 export class SessionControlService {
   private mutationTail: Promise<void> = Promise.resolve();
 
@@ -46,7 +54,11 @@ export class SessionControlService {
     private readonly approvalMemory?: SessionApprovalMemoryPort,
   ) {}
 
-  async authorize(operation: PermissionOperation, details?: string[]): Promise<boolean> {
+  async authorize(
+    operation: PermissionOperation,
+    details?: string[],
+    signal?: AbortSignal,
+  ): Promise<boolean> {
     const configuration = this.configuration.read();
     return this.authorizeWithPolicy(
       {
@@ -56,6 +68,7 @@ export class SessionControlService {
       },
       operation,
       details,
+      signal,
     );
   }
 
@@ -68,7 +81,8 @@ export class SessionControlService {
       trusted: vscode.workspace.isTrusted,
     };
     return {
-      authorize: (operation, details) => this.authorizeWithPolicy(policy, operation, details),
+      authorize: (operation, details, signal) =>
+        this.authorizeWithPolicy(policy, operation, details, signal),
       isPlanMode: () => policy.agentMode === 'PLAN',
       preparePrompt: (content) => applyAgentModeToPrompt(policy.agentMode, content),
     };
@@ -78,6 +92,7 @@ export class SessionControlService {
     policy: SessionPolicySnapshot,
     operation: PermissionOperation,
     details?: string[],
+    signal?: AbortSignal,
   ): Promise<boolean> {
     const decision = decidePermission({
       agentMode: policy.agentMode,
@@ -97,12 +112,13 @@ export class SessionControlService {
     if (routineOperation && this.approvalMemory?.hasRoutineAccess() === true) {
       return true;
     }
-    const approved = await this.approvals.request({
+    const approval = {
       ...(details === undefined ? {} : { details }),
       kind: operation,
       message: approvalMessage(operation),
       title: approvalTitle(operation),
-    });
+    };
+    const approved = await requestApproval(this.approvals, approval, signal);
     if (approved && routineOperation) {
       await this.approvalMemory?.rememberRoutineAccess();
     }

@@ -20,8 +20,10 @@ export interface ApprovalStatePort {
 }
 
 interface PendingApproval {
+  abort?: () => void;
   request: ApprovalRequest;
   resolve(approved: boolean): void;
+  signal?: AbortSignal;
 }
 
 export class ApprovalBroker {
@@ -35,8 +37,8 @@ export class ApprovalBroker {
     return this.active?.request;
   }
 
-  request(input: ApprovalRequestInput): Promise<boolean> {
-    if (this.disposed) {
+  request(input: ApprovalRequestInput, signal?: AbortSignal): Promise<boolean> {
+    if (this.disposed || signal?.aborted === true) {
       return Promise.resolve(false);
     }
     const request: ApprovalRequest = {
@@ -44,9 +46,24 @@ export class ApprovalBroker {
       ...(input.details === undefined ? {} : { details: input.details.slice(0, 100) }),
       id: randomUUID(),
     };
+    let resolveApproval: ((approved: boolean) => void) | undefined;
     const completion = new Promise<boolean>((resolve) => {
-      this.pending.push({ request, resolve });
+      resolveApproval = resolve;
     });
+    const pending: PendingApproval = {
+      request,
+      resolve: (approved) => {
+        resolveApproval?.(approved);
+      },
+      ...(signal === undefined ? {} : { signal }),
+    };
+    if (signal !== undefined) {
+      pending.abort = () => {
+        this.cancel(pending);
+      };
+      signal.addEventListener('abort', pending.abort, { once: true });
+    }
+    this.pending.push(pending);
     this.activateNext();
     return completion;
   }
@@ -57,7 +74,7 @@ export class ApprovalBroker {
     }
     const completed = this.active;
     this.active = undefined;
-    completed.resolve(approved);
+    this.settle(completed, approved);
     this.activateNext();
     return true;
   }
@@ -71,9 +88,11 @@ export class ApprovalBroker {
     const active = this.active;
     const pending = this.pending.splice(0);
     this.active = undefined;
-    active?.resolve(false);
+    if (active !== undefined) {
+      this.settle(active, false);
+    }
     for (const approval of pending) {
-      approval.resolve(false);
+      this.settle(approval, false);
     }
     this.publish();
     return active !== undefined || pending.length > 0;
@@ -90,6 +109,29 @@ export class ApprovalBroker {
   private activateNext(): void {
     this.active ??= this.pending.shift();
     this.publish();
+  }
+
+  private cancel(approval: PendingApproval): void {
+    if (this.active === approval) {
+      this.active = undefined;
+      this.settle(approval, false);
+      this.activateNext();
+      return;
+    }
+    const index = this.pending.indexOf(approval);
+    if (index < 0) {
+      return;
+    }
+    this.pending.splice(index, 1);
+    this.settle(approval, false);
+    this.publish();
+  }
+
+  private settle(approval: PendingApproval, approved: boolean): void {
+    if (approval.signal !== undefined && approval.abort !== undefined) {
+      approval.signal.removeEventListener('abort', approval.abort);
+    }
+    approval.resolve(approved);
   }
 
   private publish(): void {

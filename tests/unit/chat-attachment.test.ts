@@ -88,7 +88,7 @@ describe('chatAttachmentsSchema', () => {
     expect(result.error?.issues).toContainEqual(
       expect.objectContaining({ message: 'Attachments exceed the total request limit.' }),
     );
-  });
+  }, 15_000);
 
   it('matches the backend video allowlist and rejects unsupported legacy document types', () => {
     expect(

@@ -1,4 +1,4 @@
-import { currentModelSelection } from './agent-coordinator-prompts';
+import { currentModelSelection, modelSelectionLabel } from './agent-coordinator-prompts';
 
 import type { AgentWorkflowInput, RequestAdmission } from './agent-coordinator.types';
 import type { AgentExecutionPresenter } from './agent-execution-presenter';
@@ -7,7 +7,7 @@ import type { ConfigurationService, RuntimeConfiguration } from './configuration
 import type { ConversationSessionService } from './conversation-session-service';
 import type { SessionControlPort } from './session-control.types';
 import type { ExtensionState } from '../core/extension-state';
-import type { ResolvedModelSelection } from '../core/model-catalog';
+import type { ModelCatalogEntry, ResolvedModelSelection } from '../core/model-catalog';
 
 interface AgentWorkflowDependencies {
   assertAdmission(admission: RequestAdmission): void;
@@ -22,8 +22,27 @@ interface AgentWorkflowDependencies {
 export interface QueuedAgentWorkflowInput extends Omit<AgentWorkflowInput, 'admission'> {
   admission: RequestAdmission;
   configuration: RuntimeConfiguration;
+  modelLabel: string;
   selection: ResolvedModelSelection;
   session: SessionControlPort;
+}
+
+function queuedAgentModelLabel(
+  input: AgentWorkflowInput & {
+    configuration: RuntimeConfiguration;
+    selection: ResolvedModelSelection;
+  },
+  models: ModelCatalogEntry[],
+): string {
+  const requestedModelKey =
+    input.modelKey ??
+    (input.configuration.routingMode === 'MANUAL_MODEL'
+      ? input.configuration.selectedModel
+      : 'AUTO');
+  return modelSelectionLabel(
+    models,
+    input.selection.routingMode === 'AUTO' ? 'AUTO' : requestedModelKey,
+  );
 }
 
 export class AgentWorkflowService {
@@ -33,28 +52,33 @@ export class AgentWorkflowService {
     const admission = input.admission ?? this.dependencies.captureAdmission();
     this.dependencies.assertAdmission(admission);
     const configuration = this.dependencies.configuration.read();
+    const models = [...this.dependencies.state.snapshot.models];
+    const selection = currentModelSelection(configuration, models, input.modelKey);
     const session = await admission.session;
     this.dependencies.assertAdmission(admission);
     return {
       ...input,
       admission,
       configuration,
-      selection: currentModelSelection(
-        configuration,
-        [...this.dependencies.state.snapshot.models],
-        input.modelKey,
-      ),
+      modelLabel: queuedAgentModelLabel({ ...input, configuration, selection }, models),
+      selection,
       session,
     };
   }
 
-  async prepare(input: QueuedAgentWorkflowInput, requestId: string): Promise<void> {
+  async prepare(input: QueuedAgentWorkflowInput, requestId: string): Promise<string> {
     try {
       this.dependencies.assertAdmission(input.admission);
-      await this.dependencies.conversations.prepare(input.sessionId, requestId, input.content, {
-        threadId: input.admission.threadId,
-      });
+      const sessionId = await this.dependencies.conversations.prepare(
+        input.sessionId,
+        requestId,
+        input.content,
+        {
+          threadId: input.admission.threadId,
+        },
+      );
       this.dependencies.assertAdmission(input.admission);
+      return sessionId;
     } catch (error: unknown) {
       this.dependencies.conversations.forgetRequest(requestId);
       throw error;

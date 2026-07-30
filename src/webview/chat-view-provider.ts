@@ -51,7 +51,7 @@ export interface ChatViewActions {
       requestId: string;
     },
   ): Promise<void>;
-  cancel(): Promise<void>;
+  cancel(requestId?: string): Promise<void>;
   captureAdmission(threadId?: string): RequestAdmission;
   compare(
     input: SessionInput & {
@@ -349,7 +349,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     } else if (request.type === 'logout') {
       await this.actions.logout();
     } else if (request.type === 'cancel') {
-      await this.actions.cancel();
+      await this.actions.cancel(request.requestId);
     } else if (request.type === 'undo') {
       await this.actions.undo();
     } else if (request.type === 'newChat') {

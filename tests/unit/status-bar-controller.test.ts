@@ -14,6 +14,7 @@ function snapshot(patch: Partial<ExtensionSnapshot> = {}): ExtensionSnapshot {
   return {
     agentMode: 'AUTO',
     agentRun: undefined,
+    agentRuns: {},
     approvalRequest: undefined,
     backendStatus: 'disconnected',
     backendUrl: 'https://claw.local',
@@ -21,7 +22,7 @@ function snapshot(patch: Partial<ExtensionSnapshot> = {}): ExtensionSnapshot {
     connected: false,
     contextReceipt: undefined,
     entitlements: undefined,
-    generationQueue: { active: undefined, pending: [] },
+    generationQueue: { active: [], capacity: 2, pending: [] },
     history: [],
     lastError: undefined,
     models: [],

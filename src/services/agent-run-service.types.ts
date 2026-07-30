@@ -20,7 +20,11 @@ export interface AgentRunContextPort {
 }
 
 export interface AgentRunSessionPort {
-  authorize(operation: PermissionOperation, details?: string[]): Promise<boolean>;
+  authorize(
+    operation: PermissionOperation,
+    details?: string[],
+    signal?: AbortSignal,
+  ): Promise<boolean>;
   isPlanMode(): boolean;
   preparePrompt(content: string): string;
 }

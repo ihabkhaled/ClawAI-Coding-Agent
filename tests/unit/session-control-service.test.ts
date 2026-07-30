@@ -90,6 +90,23 @@ describe('SessionControlService', () => {
     expect(approvals.request).toHaveBeenCalledOnce();
   });
 
+  it('forwards a run cancellation signal to an approval request', async () => {
+    const approvals = {
+      request: vi.fn(async () => true),
+    };
+    const service = new SessionControlService(state, configuration, approvals);
+    const controller = new AbortController();
+
+    await expect(service.authorize('workspaceContext', undefined, controller.signal)).resolves.toBe(
+      true,
+    );
+
+    expect(approvals.request).toHaveBeenCalledWith(
+      expect.objectContaining({ kind: 'workspaceContext' }),
+      controller.signal,
+    );
+  });
+
   it('captures agent and permission policy for a queued request', async () => {
     configuration.agentMode = 'PLAN';
     configuration.permissionMode = 'MANUAL';

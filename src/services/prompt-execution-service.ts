@@ -8,7 +8,9 @@ import {
   contextualPrompt,
   currentModelSelection,
   formatCompareResponse,
+  modelSelectionLabel,
 } from './agent-coordinator-prompts';
+import { generationConcurrencyKey } from './generation-scheduler';
 import { buildAnalysisPrompt } from './workflow-service';
 
 import type { ChatPromptInput, CompareInput, RequestAdmission } from './agent-coordinator.types';
@@ -51,13 +53,18 @@ export class PromptExecutionService {
   async send(input: ChatPromptInput): Promise<void> {
     const { admission, session } = await this.admit(input.admission);
     const configuration = this.dependencies.configuration.read();
-    const selection = currentModelSelection(
-      configuration,
-      [...this.dependencies.state.snapshot.models],
-      input.modelKey,
-    );
+    const modelCatalog = [...this.dependencies.state.snapshot.models];
+    const selection = currentModelSelection(configuration, modelCatalog, input.modelKey);
     const requestId = input.requestId ?? randomUUID();
-    await this.prepareConversation(admission, input.sessionId, requestId, input.content);
+    const sessionId = await this.prepareConversation(
+      admission,
+      input.sessionId,
+      requestId,
+      input.content,
+    );
+    const requestedModelKey =
+      input.modelKey ??
+      (configuration.routingMode === 'MANUAL_MODEL' ? configuration.selectedModel : 'AUTO');
     await this.dependencies.generations.enqueue(
       requestId,
       'chat',
@@ -113,7 +120,14 @@ export class PromptExecutionService {
           throw error;
         }
       },
-      totalAttachmentBytes(input.attachments),
+      {
+        concurrencyKey: generationConcurrencyKey(sessionId, admission.threadId),
+        modelLabel: modelSelectionLabel(
+          modelCatalog,
+          selection.routingMode === 'AUTO' ? 'AUTO' : requestedModelKey,
+        ),
+        retainedBytes: totalAttachmentBytes(input.attachments),
+      },
     );
   }
 
@@ -121,18 +135,24 @@ export class PromptExecutionService {
     const { admission, session } = await this.admit(input.admission);
     const configuration = this.dependencies.configuration.read();
     const modelCatalog = [...this.dependencies.state.snapshot.models];
-    const models = input.modelKeys.map((key) => {
+    const selectedModels = input.modelKeys.map((key) => {
       const model = modelCatalog.find((entry) => entry.key === key);
       if (model === undefined) {
         throw new Error(vscode.l10n.t('One of the selected models is no longer available.'));
       }
-      return {
-        provider: model.provider,
-        model: model.model,
-      };
+      return model;
     });
+    const models = selectedModels.map((model) => ({
+      provider: model.provider,
+      model: model.model,
+    }));
     const requestId = input.requestId ?? randomUUID();
-    await this.prepareConversation(admission, input.sessionId, requestId, input.content);
+    const sessionId = await this.prepareConversation(
+      admission,
+      input.sessionId,
+      requestId,
+      input.content,
+    );
     await this.dependencies.generations.enqueue(
       requestId,
       input.judgeEnabled ? 'judge' : 'compare',
@@ -157,6 +177,9 @@ export class PromptExecutionService {
           attachmentLease.accept();
           const threadId = await this.dependencies.conversations.threadForRequest(requestId);
           signal.throwIfAborted();
+          if (threadId !== undefined) {
+            this.dependencies.activateThread(threadId, requestId);
+          }
           const prompt = contextualPrompt(
             session.preparePrompt(input.content),
             collected.files,
@@ -177,7 +200,7 @@ export class PromptExecutionService {
             signal,
           );
           signal.throwIfAborted();
-          this.dependencies.conversations.recordThread(requestId, response.threadId);
+          this.dependencies.activateThread(response.threadId, requestId);
           await this.dependencies.view()?.postResult(
             {
               content: formatCompareResponse(response),
@@ -190,7 +213,11 @@ export class PromptExecutionService {
           throw error;
         }
       },
-      totalAttachmentBytes(input.attachments),
+      {
+        concurrencyKey: generationConcurrencyKey(sessionId, admission.threadId),
+        modelLabel: selectedModels.map((model) => model.displayName).join(' + '),
+        retainedBytes: totalAttachmentBytes(input.attachments),
+      },
     );
   }
 
@@ -202,55 +229,68 @@ export class PromptExecutionService {
   ): Promise<void> {
     const { admission, session } = await this.admit(inputAdmission);
     const configuration = this.dependencies.configuration.read();
-    const selection = currentModelSelection(configuration, [
-      ...this.dependencies.state.snapshot.models,
-    ]);
+    const modelCatalog = [...this.dependencies.state.snapshot.models];
+    const selection = currentModelSelection(configuration, modelCatalog);
     const requestId = randomUUID();
-    await this.prepareConversation(admission, undefined, requestId, request);
-    await this.dependencies.generations.enqueue(requestId, 'chat', request, async (signal) => {
-      this.dependencies.assertAdmission(admission);
-      signal.throwIfAborted();
-      const collected = await this.dependencies.collect(
-        contextMode,
-        configuration,
-        session,
-        signal,
-      );
-      signal.throwIfAborted();
-      const rules = await this.dependencies.projectRules();
-      const prompt = buildAnalysisPrompt({
-        kind,
-        request,
-        context: [],
-        ...(rules.length === 0 ? {} : { rules }),
-      });
-      signal.throwIfAborted();
-      const threadId = await this.dependencies.conversations.threadForRequest(requestId);
-      signal.throwIfAborted();
-      const result = await this.dependencies.chat.send(
-        {
-          content: session.preparePrompt(prompt),
-          context: collected.files,
-          contextReceipt: collected.receipt,
-          ...selection,
-          ...(threadId === undefined ? {} : { threadId }),
-        },
-        (event) => {
-          if (!signal.aborted) {
-            void this.dependencies.view()?.postEvent(event, requestId);
-          }
-        },
-        signal,
-        (threadId) => {
-          this.dependencies.activateThread(threadId, requestId);
-        },
-      );
-      signal.throwIfAborted();
-      if (result.contextReceipt !== undefined) {
-        this.dependencies.state.update({ contextReceipt: result.contextReceipt });
-      }
-      await this.dependencies.view()?.postResult(result, requestId);
-    });
+    const sessionId = await this.prepareConversation(admission, undefined, requestId, request);
+    const requestedModelKey =
+      configuration.routingMode === 'MANUAL_MODEL' ? configuration.selectedModel : 'AUTO';
+    await this.dependencies.generations.enqueue(
+      requestId,
+      'chat',
+      request,
+      async (signal) => {
+        this.dependencies.assertAdmission(admission);
+        signal.throwIfAborted();
+        const collected = await this.dependencies.collect(
+          contextMode,
+          configuration,
+          session,
+          signal,
+        );
+        signal.throwIfAborted();
+        const rules = await this.dependencies.projectRules();
+        const prompt = buildAnalysisPrompt({
+          kind,
+          request,
+          context: [],
+          ...(rules.length === 0 ? {} : { rules }),
+        });
+        signal.throwIfAborted();
+        const threadId = await this.dependencies.conversations.threadForRequest(requestId);
+        signal.throwIfAborted();
+        const result = await this.dependencies.chat.send(
+          {
+            content: session.preparePrompt(prompt),
+            context: collected.files,
+            contextReceipt: collected.receipt,
+            ...selection,
+            ...(threadId === undefined ? {} : { threadId }),
+          },
+          (event) => {
+            if (!signal.aborted) {
+              void this.dependencies.view()?.postEvent(event, requestId);
+            }
+          },
+          signal,
+          (threadId) => {
+            this.dependencies.activateThread(threadId, requestId);
+          },
+        );
+        signal.throwIfAborted();
+        if (result.contextReceipt !== undefined) {
+          this.dependencies.state.update({ contextReceipt: result.contextReceipt });
+        }
+        await this.dependencies.view()?.postResult(result, requestId);
+      },
+      {
+        concurrencyKey: generationConcurrencyKey(sessionId, admission.threadId),
+        modelLabel: modelSelectionLabel(
+          modelCatalog,
+          selection.routingMode === 'AUTO' ? 'AUTO' : requestedModelKey,
+        ),
+      },
+    );
   }
 
   private async admit(input?: RequestAdmission): Promise<{
@@ -269,12 +309,18 @@ export class PromptExecutionService {
     sessionId: string | undefined,
     requestId: string,
     content: string,
-  ): Promise<void> {
+  ): Promise<string> {
     try {
-      await this.dependencies.conversations.prepare(sessionId, requestId, content, {
-        threadId: admission.threadId,
-      });
+      const preparedSessionId = await this.dependencies.conversations.prepare(
+        sessionId,
+        requestId,
+        content,
+        {
+          threadId: admission.threadId,
+        },
+      );
       this.dependencies.assertAdmission(admission);
+      return preparedSessionId;
     } catch (error: unknown) {
       this.dependencies.conversations.forgetRequest(requestId);
       this.dependencies.view()?.releaseRequest(requestId);

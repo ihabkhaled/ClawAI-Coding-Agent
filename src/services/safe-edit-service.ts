@@ -1,3 +1,5 @@
+import { WorkspaceMutationGate } from '../core/workspace-mutation-gate';
+
 import type { SessionControlPort } from './session-control.types';
 import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
 
@@ -20,6 +22,7 @@ export interface WorkspaceEditPort {
   isTrusted(): boolean;
   preview(plan: EditPlan): Promise<EditReview>;
   applyAtomically(plan: EditPlan, review: EditReview, signal?: AbortSignal): Promise<boolean>;
+  undoLast?(): Promise<boolean>;
 }
 
 export interface SafeEditResult {
@@ -57,10 +60,43 @@ export class SafeEditService {
       previews: EditPreview[],
       summary: string,
       session?: SessionControlPort,
+      signal?: AbortSignal,
     ) => Promise<boolean | EditConfirmation>,
+    private readonly mutationGate = new WorkspaceMutationGate(),
   ) {}
 
   async previewAndApply(
+    plan: EditPlan,
+    signal?: AbortSignal,
+    session?: SessionControlPort,
+  ): Promise<SafeEditResult> {
+    const operationSignal = signal ?? new AbortController().signal;
+    return this.mutationGate.runExclusive(operationSignal, () =>
+      this.previewAndApplyExclusive(plan, signal, session),
+    );
+  }
+
+  execute(
+    command: WorkspaceCommand,
+    signal: AbortSignal,
+  ): Promise<{ exitCode: number | undefined }> {
+    return this.mutationGate.runExclusive(signal, () => {
+      if (this.workspace.execute === undefined) {
+        throw new Error('ClawAI command execution is unavailable.');
+      }
+      return this.workspace.execute(command, signal);
+    });
+  }
+
+  undoLast(signal?: AbortSignal): Promise<boolean> {
+    const operationSignal = signal ?? new AbortController().signal;
+    return this.mutationGate.runExclusive(
+      operationSignal,
+      () => this.workspace.undoLast?.() ?? Promise.resolve(false),
+    );
+  }
+
+  private async previewAndApplyExclusive(
     plan: EditPlan,
     signal?: AbortSignal,
     session?: SessionControlPort,
@@ -72,7 +108,7 @@ export class SafeEditService {
     const review = await this.workspace.preview(plan);
     const { previews } = review;
     signal?.throwIfAborted();
-    const confirmation = await this.confirm(previews, plan.summary, session);
+    const confirmation = await this.confirm(previews, plan.summary, session, signal);
     signal?.throwIfAborted();
     const { approved, previewId } = confirmationResult(confirmation);
     if (!approved) {
@@ -84,15 +120,5 @@ export class SafeEditService {
     signal?.throwIfAborted();
     const applied = await this.workspace.applyAtomically(plan, review, signal);
     return editResult(applied, previews, previewId);
-  }
-
-  execute(
-    command: WorkspaceCommand,
-    signal: AbortSignal,
-  ): Promise<{ exitCode: number | undefined }> {
-    if (this.workspace.execute === undefined) {
-      throw new Error('ClawAI command execution is unavailable.');
-    }
-    return this.workspace.execute(command, signal);
   }
 }

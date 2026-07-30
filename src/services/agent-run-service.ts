@@ -2,6 +2,11 @@ import { createAgentRunSnapshot } from '../core/agent-run';
 import { EMPTY_CONTEXT } from '../core/empty-context';
 import { addTokenReceipts } from '../core/token-telemetry';
 
+import {
+  enforcePostEditCancellation,
+  hasNoPlannedActions,
+  shouldRunCommands,
+} from './agent-run-guards';
 import { buildToolResultPrompt, isDiagnosticToolPlan } from './tool-result-prompt';
 import {
   buildAnalysisPrompt,
@@ -22,20 +27,6 @@ import type {
 } from './agent-run-service.types';
 import type { CollectedContext } from '../core/context-collector';
 import type { EditPlan } from '../core/edit-plan';
-
-function hasNoPlannedActions(plan: EditPlan): boolean {
-  return plan.files.length === 0 && (plan.commands?.length ?? 0) === 0;
-}
-
-function enforcePostEditCancellation(signal: AbortSignal, committed: boolean): void {
-  if (signal.aborted && !committed) {
-    signal.throwIfAborted();
-  }
-}
-
-function shouldRunCommands(signal: AbortSignal, plan: EditPlan, applied: boolean): boolean {
-  return !signal.aborted && applied && (plan.commands?.length ?? 0) > 0;
-}
 
 interface CommandExecutionOutcome {
   commandError?: string;
@@ -114,7 +105,10 @@ async function collectContext(
   session: AgentRunSessionPort,
 ): Promise<CollectedContext> {
   const resolvedMode = context.resolve(input.contextMode);
-  if (resolvedMode === 'workspace' && !(await session.authorize('workspaceContext'))) {
+  if (
+    resolvedMode === 'workspace' &&
+    !(await session.authorize('workspaceContext', undefined, input.signal))
+  ) {
     throw new Error('Workspace context access was not approved.');
   }
   input.signal.throwIfAborted();
@@ -158,7 +152,11 @@ export class AgentRunService {
           await prepareFileIds(input),
         );
       }
-      const editGenerationApproved = await session.authorize('editGeneration');
+      const editGenerationApproved = await session.authorize(
+        'editGeneration',
+        undefined,
+        input.signal,
+      );
       input.signal.throwIfAborted();
       if (!editGenerationApproved) {
         callbacks.onPhase(createAgentRunSnapshot('rejected'));
@@ -424,6 +422,7 @@ export class AgentRunService {
     const approved = await session.authorize(
       'commandExecution',
       commands.map((entry) => `${entry.purpose}: ${entry.command}`),
+      signal,
     );
     signal.throwIfAborted();
     if (!approved) {

@@ -1,5 +1,7 @@
 :root {
   --vscode-badge-background: #2d3440;
+  --vscode-charts-blue: #4aa5f0;
+  --vscode-charts-orange: #d67845;
   --vscode-button-background: #ce5d52;
   --vscode-button-foreground: #ffffff;
   --vscode-button-hoverBackground: #df6b5f;
@@ -38,6 +40,8 @@ body[data-theme='light'] {
   --claw-card: #ffffff;
   --claw-muted: #636873;
   --vscode-badge-background: #ececf0;
+  --vscode-charts-blue: #166fad;
+  --vscode-charts-orange: #b9512f;
   --vscode-button-background: #b94e45;
   --vscode-button-foreground: #ffffff;
   --vscode-button-hoverBackground: #a4423a;
@@ -71,6 +75,8 @@ body[data-theme='hc'] {
   --claw-card: #000000;
   --claw-muted: #ffffff;
   --vscode-badge-background: #000000;
+  --vscode-charts-blue: #00ffff;
+  --vscode-charts-orange: #ffff00;
   --vscode-button-background: #ffff00;
   --vscode-button-foreground: #000000;
   --vscode-button-hoverBackground: #ffffff;
@@ -96,7 +102,10 @@ body[data-theme='hc'] {
 body[data-theme='hc'] .connection-card,
 body[data-theme='hc'] .connection-input-row,
 body[data-theme='hc'] .composer-card,
+body[data-theme='hc'] .compare-card,
 body[data-theme='hc'] .message-card,
+body[data-theme='hc'] .run-deck,
+body[data-theme='hc'] .run-lane,
 body[data-theme='hc'] .suggestion-card {
   border-color: #ffffff;
 }

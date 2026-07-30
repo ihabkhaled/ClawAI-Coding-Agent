@@ -47,6 +47,7 @@ test('retries the selected live request with its original execution inputs', asy
   }, firstRequestId);
 
   await page.locator('#runMode').selectOption('chat');
+  await page.locator('#moreSettingsSummary').click();
   await page.locator('#contextMode').selectOption('none');
   await page.locator('#prompt').fill('Explain something else');
   await page.locator('#composer').evaluate((form: HTMLFormElement) => {
@@ -139,6 +140,7 @@ test('preserves Compare and Judge model selections when retrying', async ({ page
     ],
   });
   await page.locator('#runMode').selectOption('judge');
+  await page.locator('#moreSettingsSummary').click();
   await page.locator('#contextMode').selectOption('workspace');
   await page.locator('#modelChecks input').nth(0).check();
   await page.locator('#modelChecks input').nth(1).check();
@@ -223,14 +225,32 @@ test('keeps a request visible when queued removal races it becoming active', asy
   await sendState(page, {
     busy: true,
     generationQueue: {
-      active: { id: first.requestId, kind: 'agent', prompt: 'First request' },
-      pending: [{ id: second.requestId, kind: 'agent', prompt: 'Second request' }],
+      active: [
+        {
+          concurrencyKey: 'chat-a',
+          id: first.requestId,
+          kind: 'agent',
+          modelLabel: 'Qwen 2.5 Coder 7B',
+          prompt: 'First request',
+          startedAt: Date.now(),
+        },
+      ],
+      capacity: 2,
+      pending: [
+        {
+          concurrencyKey: 'chat-a',
+          id: second.requestId,
+          kind: 'agent',
+          modelLabel: 'Qwen 2.5 Coder 7B',
+          prompt: 'Second request',
+        },
+      ],
     },
   });
   await page
-    .locator('.queue-item[data-status="queued"]')
+    .locator('.waiting-run')
     .getByRole('button', {
-      name: 'Remove',
+      name: /Remove waiting request/u,
     })
     .click();
   await expect
@@ -240,7 +260,17 @@ test('keeps a request visible when queued removal races it becoming active', asy
   await sendState(page, {
     busy: true,
     generationQueue: {
-      active: { id: second.requestId, kind: 'agent', prompt: 'Second request' },
+      active: [
+        {
+          concurrencyKey: 'chat-a',
+          id: second.requestId,
+          kind: 'agent',
+          modelLabel: 'Qwen 2.5 Coder 7B',
+          prompt: 'Second request',
+          startedAt: Date.now(),
+        },
+      ],
+      capacity: 2,
       pending: [],
     },
   });

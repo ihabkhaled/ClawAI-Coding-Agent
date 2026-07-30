@@ -5,7 +5,10 @@ vi.mock('vscode', () => ({
   window: {},
 }));
 
-import { currentModelSelection } from '../../src/services/agent-coordinator-prompts';
+import {
+  currentModelSelection,
+  modelSelectionLabel,
+} from '../../src/services/agent-coordinator-prompts';
 
 import type { ModelCatalogEntry } from '../../src/core/model-catalog';
 import type { RuntimeConfiguration } from '../../src/services/configuration-service';
@@ -80,5 +83,10 @@ describe('request model selection', () => {
     expect(currentModelSelection(configuration, models, 'AUTO')).toEqual({
       routingMode: 'AUTO',
     });
+  });
+
+  it('keeps the snapshotted model display label with the scheduled request', () => {
+    expect(modelSelectionLabel(models, 'OLLAMA:qwen3:32b')).toBe('Qwen 3 32B');
+    expect(modelSelectionLabel(models, 'AUTO')).toBe('Automatic routing');
   });
 });

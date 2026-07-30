@@ -62,10 +62,6 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       <div id="workspaceIdentity" class="workspace-identity" hidden>
         <div class="conversation-heading">
           <strong id="conversationTitle">${translated('New ClawAI chat')}</strong>
-          <label class="sr-only" for="historySelect">${translated('Conversation history')}</label>
-          <select id="historySelect" class="history-select" aria-label="${translated('Conversation history')}">
-            <option value="">${translated('Recent conversations')}</option>
-          </select>
         </div>
         <div class="workspace-line">
           <strong id="workspaceName">${translated('No workspace')}</strong>
@@ -74,6 +70,10 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         </div>
       </div>
       <div id="workspaceActions" class="workspace-actions" hidden>
+        <label class="sr-only" for="historySelect">${translated('Conversation history')}</label>
+        <select id="historySelect" class="history-select" aria-label="${translated('Conversation history')}">
+          <option value="">${translated('Recent conversations')}</option>
+        </select>
         <button id="openFolderButton" class="quiet-button" type="button" hidden>${translated('Open folder')}</button>
         <button id="refreshModelsButton" class="icon-button" type="button" title="${translated('Refresh models')}" aria-label="${translated('Refresh models')}">↻</button>
         <button id="newChatButton" class="icon-button" type="button" title="${translated('New conversation')}" aria-label="${translated('New conversation')}">＋</button>
@@ -115,42 +115,38 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     </section>
 
     <div id="authenticatedUi" class="authenticated-ui" hidden>
-    <section class="agent-status" aria-label="${translated('Agent status')}">
-      <button id="routeToggle" class="route-summary" type="button" aria-expanded="false">
-        <span id="backendDot" class="status-shape" aria-hidden="true"></span>
-        <span class="route-copy">
-          <strong id="routeModel">AUTO</strong>
-          <small id="backendLabel">${translated('Disconnected')}</small>
+    <section class="agent-status signal-status" aria-label="${translated('Agent status')}">
+      <div class="status-row">
+        <button id="routeToggle" class="route-summary" type="button" aria-expanded="false" aria-controls="routeRail">
+          <span id="backendDot" class="status-shape" aria-hidden="true"></span>
+          <span class="route-copy">
+            <strong id="routeModel">AUTO</strong>
+            <small id="backendLabel">${translated('Disconnected')}</small>
+          </span>
+          <span class="chevron" aria-hidden="true">⌄</span>
+        </button>
+        <span id="conversationTokenMeter" class="token-chip conversation-token-meter" role="status" aria-live="polite" aria-label="${translated('Conversation token usage')}">
+          <span class="token-symbol" aria-hidden="true">◈</span>
+          <span id="tokenCount">—</span>
         </span>
         <span id="activeModeBadge" class="badge accent-badge">${translated('Auto')}</span>
-        <span class="chevron" aria-hidden="true">⌄</span>
-      </button>
+      </div>
       <dl id="routeRail" class="route-rail" hidden>
         <div><dt>${translated('Route')}</dt><dd id="routeMode">AUTO</dd></div>
         <div><dt>${translated('Context')}</dt><dd id="contextCount">0</dd></div>
-        <div><dt>${translated('Tokens')}</dt><dd id="tokenCount">—</dd></div>
         <div><dt>${translated('Plan')}</dt><dd id="planName">—</dd></div>
       </dl>
       <div id="modelWarnings" class="warning-stack" role="status"></div>
-      <section id="agentRunPanel" class="agent-run-panel" aria-label="${translated('Coding agent activity')}" hidden>
-        <header class="agent-run-header">
-          <span class="agent-run-mark" aria-hidden="true"></span>
-          <strong id="agentRunLabel" aria-live="polite">${translated('Reading workspace')}</strong>
-          <details id="agentRunDetails" class="agent-run-details">
-            <summary id="agentRunFileCount" class="badge">${translated('0 files')}</summary>
-            <div class="agent-run-detail-body">
-              <ul id="agentRunFiles" class="agent-run-files"></ul>
-              <ul id="agentRunCommands" class="agent-run-files agent-run-commands" hidden></ul>
-            </div>
-          </details>
+      <section id="runDeck" class="run-deck" aria-label="${translated('Runs')}" hidden>
+        <header class="run-deck-header">
+          <strong>${translated('Runs')}</strong>
+          <span id="runDeckCount" class="run-count">${translated('0 running')}</span>
         </header>
-      </section>
-      <section id="queuePanel" class="queue-panel" aria-label="${translated('Request queue')}" hidden>
-        <header class="queue-header">
-          <strong>${translated('Request queue')}</strong>
-          <span id="queueCount" class="badge">${translated('0 queued')}</span>
-        </header>
-        <ol id="queueList" class="queue-list"></ol>
+        <ol id="activeRunList" class="active-run-list"></ol>
+        <details id="waitingRuns" class="waiting-runs" hidden>
+          <summary><span>${translated('Waiting')}</span><span id="waitingRunCount" class="badge">${translated('0 waiting')}</span></summary>
+          <ol id="waitingRunList" class="waiting-run-list"></ol>
+        </details>
       </section>
     </section>
 
@@ -179,15 +175,18 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
           </button>
         </div>
       </section>
-      <section id="conversation" class="conversation execution-spine" aria-live="polite" aria-label="${translated('Conversation')}"></section>
+      <section id="conversation" class="conversation execution-spine" aria-label="${translated('Conversation')}"></section>
     </section>
 
     <section id="modelTray" class="model-tray" aria-label="${translated('Compare models')}">
       <div class="section-heading">
         <div><p class="utility-label">${translated('PARALLEL RUN')}</p><strong>${translated('Compare model responses')}</strong></div>
-        <span class="badge">${translated('Choose 2–5')}</span>
+        <span id="selectedModelCount" class="badge" aria-live="polite">${translated('0 of 5 selected')}</span>
       </div>
-      <div id="modelChecks" class="model-checks"></div>
+      <div id="selectedModelStrip" class="selected-model-strip" role="list" aria-label="${translated('Selected comparison models')}"></div>
+      <p id="modelSelectionError" class="model-selection-error" role="alert" tabindex="-1" hidden></p>
+      <div id="modelChecks" class="model-checks" role="group" aria-describedby="modelSelectionHelp modelSelectionError"></div>
+      <p id="modelSelectionHelp" class="model-selection-help">${translated('Choose between 2 and 5 models.')}</p>
     </section>
 
     <form id="composer" class="composer">
@@ -202,39 +201,17 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
           <div id="attachmentList" class="attachment-list" role="list" aria-label="${translated('Attachments')}"></div>
           <p id="attachmentStatus" class="attachment-status" role="status" aria-live="polite"></p>
         </div>
-        <div class="control-rail">
+        <div class="control-rail primary-control-rail">
           <input id="attachmentInput" class="sr-only" type="file" multiple>
           <button id="attachmentButton" class="icon-button attachment-button" type="button" title="${translated('Attach files')}" aria-label="${translated('Attach files')}">
             ${iconMarkup('attach')}
           </button>
-          <label class="compact-control"><span>${translated('Model')}</span>
+          <label class="compact-control model-control"><span>${translated('Model')}</span>
             <select id="modelSelect" aria-label="${translated('Model')}">
               <option value="AUTO">${translated('Automatic routing')}</option>
             </select>
           </label>
-          <label class="compact-control"><span>${translated('Agent')}</span>
-            <select id="agentMode">
-              <option value="AUTO">${translated('Auto')}</option>
-              <option value="PLAN">${translated('Plan mode')}</option>
-            </select>
-          </label>
-          <label class="compact-control"><span>${translated('Approval')}</span>
-            <select id="permissionMode">
-              <option value="MANUAL">${translated('Ask for Approval')}</option>
-              <option value="EDIT_AUTOMATICALLY">${translated('Approve for me')}</option>
-              <option value="BYPASS_PERMISSIONS">${translated('Full Access')}</option>
-            </select>
-          </label>
-          <label class="compact-control"><span>${translated('Context')}</span>
-            <select id="contextMode">
-              <option value="smart">${translated('Smart context')}</option>
-              <option value="file">${translated('Active file')}</option>
-              <option value="selection">${translated('Selection')}</option>
-              <option value="workspace">${translated('Workspace')}</option>
-              <option value="none">${translated('None')}</option>
-            </select>
-          </label>
-          <label class="compact-control"><span>${translated('Run')}</span>
+          <label class="compact-control run-control"><span>${translated('Run')}</span>
             <select id="runMode">
               <option value="agent">${translated('Agent')}</option>
               <option value="chat">${translated('Chat')}</option>
@@ -242,8 +219,34 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
               <option value="judge">${translated('Compare + Judge')}</option>
             </select>
           </label>
+          <details id="moreSettings" class="more-settings">
+            <summary id="moreSettingsSummary">${translated('More settings')}</summary>
+            <div class="secondary-controls">
+              <label class="compact-control"><span>${translated('Agent')}</span>
+                <select id="agentMode">
+                  <option value="AUTO">${translated('Auto')}</option>
+                  <option value="PLAN">${translated('Plan mode')}</option>
+                </select>
+              </label>
+              <label class="compact-control"><span>${translated('Approval')}</span>
+                <select id="permissionMode">
+                  <option value="MANUAL">${translated('Ask for Approval')}</option>
+                  <option value="EDIT_AUTOMATICALLY">${translated('Approve for me')}</option>
+                  <option value="BYPASS_PERMISSIONS">${translated('Full Access')}</option>
+                </select>
+              </label>
+              <label class="compact-control"><span>${translated('Context')}</span>
+                <select id="contextMode">
+                  <option value="smart">${translated('Smart context')}</option>
+                  <option value="file">${translated('Active file')}</option>
+                  <option value="selection">${translated('Selection')}</option>
+                  <option value="workspace">${translated('Workspace')}</option>
+                  <option value="none">${translated('None')}</option>
+                </select>
+              </label>
+            </div>
+          </details>
           <div class="actions">
-            <button id="cancelButton" class="quiet-button" type="button" hidden>${translated('Cancel')}</button>
             <button id="sendButton" class="send-button" type="submit" aria-label="${translated('Send')}"><span>${translated('Send')}</span><b aria-hidden="true">↑</b></button>
           </div>
         </div>
@@ -251,6 +254,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       <p class="composer-footnote">${translated('Ctrl/⌘ + Enter to send · approval follows the selected mode')}</p>
     </form>
     </div>
+    <p id="streamStatus" class="sr-only" role="status" aria-live="polite"></p>
     <p id="announcer" class="sr-only" aria-live="assertive"></p>
   </main>
   <div id="toastStack" class="toast-stack" role="status" aria-live="polite"></div>
@@ -300,11 +304,13 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-attachments="${translated('Attachments')}"
     data-assistant="${translated('CLAWAI')}"
     data-automatic-routing="${translated('Automatic routing')}"
+    data-cancel-run="${translated('Cancel run: {0}')}"
     data-choose-models="${translated('Choose between 2 and 5 models.')}"
     data-connect="${translated('Connect')}"
     data-connect-clawai="${translated('Connect to ClawAI')}"
     data-connected="${translated('Connected')}"
     data-connecting="${translated('Connecting')}"
+    data-compare-results="${translated('Compare results')}"
     data-opening-authorization="${translated('Opening authorization...')}"
     data-completed="${translated('Completed')}"
     data-context-empty="${translated('No workspace context attached')}"
@@ -312,8 +318,10 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-context-selection="${translated('Using the active selection')}"
     data-context-workspace="${translated('Using the trusted workspace')}"
     data-copy="${translated('Copy response')}"
+    data-copy-model="${translated('Copy model response')}"
     data-copied="${translated('Copied')}"
     data-error="${translated('Error')}"
+    data-failed="${translated('Failed')}"
     data-file-changes="${translated('File changes')}"
     data-files="${translated('files')}"
     data-commands="${translated('commands')}"
@@ -331,6 +339,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-prompt-plan="${translated('Create a step-by-step implementation plan for my next change. Do not edit files.')}"
     data-prompt-review="${translated('Review this workspace for correctness, security, and maintainability risks.')}"
     data-prompt-test="${translated('Find the most important missing tests and propose meaningful edge cases.')}"
+    data-judge-model="${translated('Judge: {0}')}"
+    data-models-selected="${translated('{0} of 5 selected')}"
     data-plan-mode="${translated('Plan mode')}"
     data-queue="${translated('Queue')}"
     data-queued="${translated('Queued')}"
@@ -345,19 +355,26 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-review-changes="${translated('Review changes')}"
     data-estimated="${translated('estimated')}"
     data-tokens="${translated('tokens')}"
+    data-token-detail="${translated('Input {0} · Output {1}')}"
+    data-timed-out="${translated('Timed out')}"
     data-warning-llamacpp="${translated('Local llama.cpp models could not be loaded. Refresh to retry.')}"
     data-warning-ollama="${translated('Local Ollama models could not be loaded. Refresh to retry.')}"
     data-workspace-file-activity="${translated('Workspace file change')}"
     data-reject="${translated('Reject')}"
     data-remove="${translated('Remove')}"
+    data-remove-waiting="${translated('Remove waiting request: {0}')}"
     data-retry="${translated('Retry')}"
     data-running="${translated('Running')}"
+    data-running-count="${translated('{0} running')}"
     data-send="${translated('Send')}"
     data-skip-connection="${translated('Skip to connection')}"
     data-skip-composer="${translated('Skip to composer')}"
     data-trusted="${translated('Trusted')}"
     data-undo="${translated('Undo')}"
     data-untrusted="${translated('Restricted')}"
+    data-waiting-capacity="${translated('Waiting for an available run slot')}"
+    data-waiting-conversation="${translated('Waiting for this conversation')}"
+    data-waiting-count="${translated('{0} waiting')}"
     data-you="${translated('YOU')}"></div>
   <script nonce="${escapeHtml(input.nonce)}" src="${escapeHtml(input.scriptUri)}"></script>
 </body>

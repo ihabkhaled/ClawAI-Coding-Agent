@@ -2,6 +2,31 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.11.0
+
+This pre-1.0 minor release adds a backwards-compatible parallel workflow and a
+major workbench redesign.
+
+- Added two independent execution lanes so prompts in separate chat tabs can
+  run at the same time with their own snapshotted models, context, attachments,
+  streams, tokens, threads, and cancellation.
+- Preserved deterministic ordering within one conversation and fair scheduling
+  across conversations, so a queued follow-up cannot block another chat from
+  using an available lane.
+- Isolated backend thread cancellation and visible agent phases per request;
+  cancelling or failing one run no longer interrupts or relabels the other.
+- Serialized workspace previews, approved atomic edits, and development
+  commands behind a cancellable mutation gate while leaving read-only
+  collection, planning, and inference concurrent.
+- Rebuilt the header, run queue, and narrow composer as the responsive Signal
+  Desk workbench with progressive settings, clearer hierarchy, larger type, and
+  request-specific controls.
+- Replaced flattened comparison text with responsive per-model result cards
+  containing provider/model identity, status, latency, copy actions, and token
+  usage.
+- Promoted reported and estimated token telemetry into vivid, accessible
+  conversation, run, response, file, activity, and comparison chips.
+
 ## 0.10.0
 
 This pre-1.0 minor release expands attachment capacity, diagnostic tooling,

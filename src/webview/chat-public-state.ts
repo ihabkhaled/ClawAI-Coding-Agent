@@ -12,6 +12,7 @@ function publicTitle(value: string | null | undefined): string {
 export function toPublicChatState(snapshot: ExtensionSnapshot) {
   return {
     agentRun: snapshot.agentRun,
+    agentRuns: snapshot.agentRuns,
     agentMode: snapshot.agentMode,
     approvalRequest: snapshot.approvalRequest,
     backendStatus: snapshot.backendStatus,

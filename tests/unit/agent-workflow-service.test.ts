@@ -80,6 +80,7 @@ describe('AgentWorkflowService', () => {
       expect.objectContaining({
         admission,
         configuration: testRuntimeConfiguration(),
+        modelLabel: 'Automatic routing',
         selection: { routingMode: 'AUTO' },
         session,
       }),

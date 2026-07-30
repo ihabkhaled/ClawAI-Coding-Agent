@@ -18,7 +18,11 @@ export interface SessionStatePort {
 }
 
 export interface SessionControlPort {
-  authorize(operation: PermissionOperation, details?: string[]): Promise<boolean>;
+  authorize(
+    operation: PermissionOperation,
+    details?: string[],
+    signal?: AbortSignal,
+  ): Promise<boolean>;
   isPlanMode(): boolean;
   preparePrompt(content: string): string;
 }
@@ -28,7 +32,7 @@ export interface SessionPolicySnapshot extends SessionConfiguration {
 }
 
 export interface SessionApprovalPort {
-  request(input: ApprovalRequestInput): Promise<boolean>;
+  request(input: ApprovalRequestInput, signal?: AbortSignal): Promise<boolean>;
 }
 
 export interface SessionApprovalMemoryPort {

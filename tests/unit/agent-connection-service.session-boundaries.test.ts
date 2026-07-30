@@ -35,6 +35,7 @@ function state() {
   return new ExtensionState({
     agentMode: 'AUTO',
     agentRun: undefined,
+    agentRuns: {},
     approvalRequest: undefined,
     backendStatus: 'disconnected',
     backendUrl: configuration.backendUrl,
@@ -42,7 +43,7 @@ function state() {
     connected: false,
     contextReceipt: undefined,
     entitlements: undefined,
-    generationQueue: { active: undefined, pending: [] },
+    generationQueue: { active: [], capacity: 2, pending: [] },
     history: [],
     lastError: undefined,
     modelWarnings: [],

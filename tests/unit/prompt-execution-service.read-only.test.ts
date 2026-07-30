@@ -70,6 +70,10 @@ describe('PromptExecutionService read-only workflows', () => {
       'chat',
       'Find regressions',
       expect.any(Function),
+      {
+        concurrencyKey: 'thread:thread-1',
+        modelLabel: 'Automatic routing',
+      },
     );
     expect(send).toHaveBeenCalledWith(
       expect.objectContaining({

@@ -17,6 +17,7 @@ describe('refreshAgentData', () => {
     const state = new ExtensionState({
       agentMode: 'AUTO',
       agentRun: undefined,
+      agentRuns: {},
       approvalRequest: undefined,
       backendStatus: 'connected',
       backendUrl: 'https://claw.local',
@@ -24,7 +25,7 @@ describe('refreshAgentData', () => {
       connected: true,
       contextReceipt: undefined,
       entitlements: undefined,
-      generationQueue: { active: undefined, pending: [] },
+      generationQueue: { active: [], capacity: 2, pending: [] },
       history: [],
       lastError: undefined,
       modelWarnings: [],
@@ -77,6 +78,7 @@ describe('refreshAgentData', () => {
     const state = new ExtensionState({
       agentMode: 'AUTO',
       agentRun: undefined,
+      agentRuns: {},
       approvalRequest: undefined,
       backendStatus: 'connected',
       backendUrl: 'https://claw.local',
@@ -84,7 +86,7 @@ describe('refreshAgentData', () => {
       connected: true,
       contextReceipt: undefined,
       entitlements: undefined,
-      generationQueue: { active: undefined, pending: [] },
+      generationQueue: { active: [], capacity: 2, pending: [] },
       history: [],
       lastError: undefined,
       modelWarnings: [],
@@ -133,6 +135,7 @@ describe('refreshAgentData', () => {
     const state = new ExtensionState({
       agentMode: 'AUTO',
       agentRun: undefined,
+      agentRuns: {},
       approvalRequest: undefined,
       backendStatus: 'connected',
       backendUrl: 'https://claw.local',
@@ -140,7 +143,7 @@ describe('refreshAgentData', () => {
       connected: true,
       contextReceipt: undefined,
       entitlements: undefined,
-      generationQueue: { active: undefined, pending: [] },
+      generationQueue: { active: [], capacity: 2, pending: [] },
       history: [],
       lastError: undefined,
       modelWarnings: [],
@@ -175,5 +178,74 @@ describe('refreshAgentData', () => {
       usage: undefined,
       user: undefined,
     });
+  });
+
+  it('does not let an older overlapping refresh overwrite newer conversation data', async () => {
+    const firstHistory = deferred<{ id: string; title: string }[]>();
+    const secondHistory = deferred<{ id: string; title: string }[]>();
+    const firstUsage = deferred<{ day: { used: number } }>();
+    const secondUsage = deferred<{ day: { used: number } }>();
+    const backend = {
+      getUsage: vi
+        .fn()
+        .mockReturnValueOnce(firstUsage.promise)
+        .mockReturnValueOnce(secondUsage.promise),
+      listThreads: vi
+        .fn()
+        .mockReturnValueOnce(firstHistory.promise)
+        .mockReturnValueOnce(secondHistory.promise),
+    };
+    const state = new ExtensionState({
+      agentMode: 'AUTO',
+      agentRun: undefined,
+      agentRuns: {},
+      approvalRequest: undefined,
+      backendStatus: 'connected',
+      backendUrl: 'https://claw.local',
+      busy: false,
+      connected: true,
+      contextReceipt: undefined,
+      entitlements: undefined,
+      generationQueue: { active: [], capacity: 2, pending: [] },
+      history: [],
+      lastError: undefined,
+      modelWarnings: [],
+      models: [],
+      permissionMode: 'MANUAL',
+      routingMode: 'AUTO',
+      selectedModel: '',
+      usage: undefined,
+      user: { id: 'user-1' } as never,
+      workspaceReadiness: undefined,
+      workspaceScope: { folders: [] },
+    });
+    const accountEpoch = new AccountEpoch();
+    const refreshEpoch = new AccountEpoch();
+
+    const older = refreshConversationData(
+      backend as never,
+      50,
+      state,
+      accountEpoch,
+      undefined,
+      refreshEpoch,
+    );
+    const newer = refreshConversationData(
+      backend as never,
+      50,
+      state,
+      accountEpoch,
+      undefined,
+      refreshEpoch,
+    );
+    secondHistory.resolve([{ id: 'new-thread', title: 'New' }]);
+    secondUsage.resolve({ day: { used: 2 } });
+    await newer;
+    firstHistory.resolve([{ id: 'old-thread', title: 'Old' }]);
+    firstUsage.resolve({ day: { used: 1 } });
+    await older;
+
+    expect(state.snapshot.history).toEqual([{ id: 'new-thread', title: 'New' }]);
+    expect(state.snapshot.usage).toEqual({ day: { used: 2 } });
   });
 });

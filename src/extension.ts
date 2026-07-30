@@ -108,6 +108,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const workspaceScope = new WorkspaceScopeService();
   const state = new ExtensionState({
     agentRun: undefined,
+    agentRuns: {},
     agentMode: configuration.agentMode,
     approvalRequest: undefined,
     backendUrl: configuration.backendUrl,
@@ -116,7 +117,8 @@ export function activate(context: vscode.ExtensionContext): void {
     connected: false,
     contextReceipt: undefined,
     generationQueue: {
-      active: undefined,
+      active: [],
+      capacity: 2,
       pending: [],
     },
     workspaceReadiness: undefined,
@@ -153,7 +155,7 @@ export function activate(context: vscode.ExtensionContext): void {
   );
   const chatView = new ChatViewProvider(context.extensionUri, state, {
     agent: (input) => coordinator.runAgent(input),
-    cancel: () => coordinator.cancel(),
+    cancel: (requestId) => coordinator.cancel(requestId),
     captureAdmission: (threadId) => coordinator.captureAdmission(threadId),
     compare: (input) => coordinator.compare(input),
     connect: (backendUrl) => coordinator.connect(backendUrl),

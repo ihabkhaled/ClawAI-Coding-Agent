@@ -4,6 +4,7 @@ import { ExtensionState, type ExtensionSnapshot } from '../../src/core/extension
 
 const initialSnapshot: ExtensionSnapshot = {
   agentRun: undefined,
+  agentRuns: {},
   agentMode: 'AUTO',
   approvalRequest: undefined,
   backendUrl: 'https://claw.example',
@@ -11,7 +12,8 @@ const initialSnapshot: ExtensionSnapshot = {
   busy: false,
   connected: false,
   generationQueue: {
-    active: undefined,
+    active: [],
+    capacity: 2,
     pending: [],
   },
   routingMode: 'AUTO',

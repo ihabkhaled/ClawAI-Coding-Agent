@@ -10,12 +10,14 @@ export async function confirmSafeEdits(
   session: SessionControlPort,
   previews: EditPreview[],
   summary: string,
+  signal?: AbortSignal,
 ): Promise<EditConfirmation> {
   const previewId = diffPreview.stage(previews);
-  const approved = await session.authorize('finalDiff', [
-    summary,
-    ...previews.map((preview) => preview.path),
-  ]);
+  const details = [summary, ...previews.map((preview) => preview.path)];
+  const approved =
+    signal === undefined
+      ? await session.authorize('finalDiff', details)
+      : await session.authorize('finalDiff', details, signal);
   return {
     approved,
     previewId,

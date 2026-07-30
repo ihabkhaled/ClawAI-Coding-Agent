@@ -14,6 +14,7 @@ export type BackendStatus = 'connected' | 'disconnected' | 'error' | 'loading';
 
 export interface ExtensionSnapshot {
   agentRun: AgentRunSnapshot | undefined;
+  agentRuns: Record<string, AgentRunSnapshot>;
   agentMode: AgentMode;
   approvalRequest: ApprovalRequest | undefined;
   backendUrl: string;

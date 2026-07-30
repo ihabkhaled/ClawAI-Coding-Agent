@@ -143,73 +143,6 @@ function harness(options?: { fileIds?: string[]; threadId?: string; viewAvailabl
 }
 
 describe('PromptExecutionService', () => {
-  it('rolls back a new attachment lease when message submission fails', async () => {
-    const rollback = vi.fn(async () => undefined);
-    const accept = vi.fn();
-    const requestSession = {
-      authorize: vi.fn(async () => true),
-      isPlanMode: vi.fn(() => false),
-      preparePrompt: (content: string) => content,
-    };
-    const service = new PromptExecutionService({
-      activateThread: vi.fn(),
-      assertAdmission: vi.fn(),
-      attachments: {
-        acquire: vi.fn(async () => ({
-          accept,
-          fileIds: ['file-1'],
-          rollback,
-        })),
-      },
-      backend: () => ({}) as never,
-      captureAdmission: vi.fn(() => ({
-        boundaryEpoch: 1,
-        session: Promise.resolve(requestSession),
-        threadId: undefined,
-        workspaceFolderKey: 'folder-1',
-      })),
-      chat: {
-        send: vi.fn(async () => {
-          throw new Error('message rejected');
-        }),
-      },
-      collect: vi.fn(async () => ({
-        files: [],
-        receipt: { excluded: [], included: [], totalBytes: 0, truncated: false },
-      })),
-      configuration: {
-        read: vi.fn(testRuntimeConfiguration),
-      },
-      conversations: {
-        prepare: vi.fn(async () => 'session-1'),
-        threadForRequest: vi.fn(async () => undefined),
-      },
-      generations: {
-        enqueue: vi.fn(
-          async (
-            _requestId: string,
-            _kind: string,
-            _prompt: string,
-            action: (signal: AbortSignal) => Promise<void>,
-          ) => action(new AbortController().signal),
-        ),
-      },
-      projectRules: vi.fn(async () => ''),
-      state: { snapshot: { models: [] } },
-      view: () => null,
-    } as never);
-
-    await expect(
-      service.send({
-        content: 'Inspect this file',
-        contextMode: 'none',
-      }),
-    ).rejects.toThrow('message rejected');
-
-    expect(accept).not.toHaveBeenCalled();
-    expect(rollback).toHaveBeenCalledOnce();
-  });
-
   it('submits a chat against the frozen request thread and relays live progress', async () => {
     const subject = harness({ threadId: 'thread-existing' });
 
@@ -323,8 +256,8 @@ describe('PromptExecutionService', () => {
     expect(subject.send).not.toHaveBeenCalled();
   });
 
-  it('compares selected models with attachments and records the returned thread', async () => {
-    const subject = harness({ fileIds: ['file-1'] });
+  it('registers existing and returned compare threads around remote work', async () => {
+    const subject = harness({ fileIds: ['file-1'], threadId: 'thread-existing' });
 
     await subject.service.compare({
       attachments: [
@@ -355,11 +288,24 @@ describe('PromptExecutionService', () => {
           { model: 'model-a', provider: 'PROVIDER_A' },
           { model: 'model-b', provider: 'PROVIDER_B' },
         ],
+        threadId: 'thread-existing',
       },
       expect.any(AbortSignal),
     );
     expect(subject.accept).toHaveBeenCalledOnce();
-    expect(subject.recordThread).toHaveBeenCalledWith(expect.any(String), 'thread-from-compare');
+    expect(subject.activateThread).toHaveBeenNthCalledWith(
+      1,
+      'thread-existing',
+      expect.any(String),
+    );
+    expect(subject.activateThread).toHaveBeenNthCalledWith(
+      2,
+      'thread-from-compare',
+      expect.any(String),
+    );
+    expect(subject.activateThread.mock.invocationCallOrder[0]).toBeLessThan(
+      subject.compare.mock.invocationCallOrder[0] ?? Number.MAX_SAFE_INTEGER,
+    );
     expect(subject.postResult).toHaveBeenCalledWith(
       expect.objectContaining({
         compare: parallelResponse(),

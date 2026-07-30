@@ -73,4 +73,29 @@ describe('ApprovalBroker', () => {
     await expect(Promise.all([first, second])).resolves.toEqual([false, false]);
     expect(broker.current).toBeUndefined();
   });
+
+  it('removes an aborted run approval and activates the next request', async () => {
+    const broker = new ApprovalBroker({ update: () => undefined });
+    const controller = new AbortController();
+    const first = broker.request(
+      {
+        kind: 'workspaceContext',
+        message: 'Read files for request A',
+        title: 'Workspace access',
+      },
+      controller.signal,
+    );
+    const second = broker.request({
+      kind: 'workspaceContext',
+      message: 'Read files for request B',
+      title: 'Workspace access',
+    });
+
+    controller.abort();
+
+    await expect(first).resolves.toBe(false);
+    expect(broker.current?.message).toBe('Read files for request B');
+    broker.cancelAll();
+    await expect(second).resolves.toBe(false);
+  });
 });

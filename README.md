@@ -12,8 +12,9 @@ in the ClawAI platform.
 ## Highlights
 
 - Stream responses from local or hosted ClawAI deployments.
-- Keep multiple titled ClawAI chat tabs open, restore backend history in place,
-  and queue follow-up prompts while a coding run is active.
+- Keep multiple titled ClawAI chat tabs open, run two independent chats
+  concurrently with different models, restore backend history in place, and
+  preserve ordered follow-ups within each conversation.
 - Use backend AUTO routing or reliably choose an entitled cloud, Ollama, or
   llama.cpp model manually.
 - Chat from a workspace even when no editor tab is open.
@@ -24,11 +25,13 @@ in the ClawAI platform.
 - Switch between Auto execution and read-only Plan mode.
 - Choose manual approvals, persistent per-workspace routine consent, or Full
   Access while immutable safety boundaries remain enforced.
-- Compare two to five models and optionally request a judge response.
+- Compare two to five models in structured responsive result cards and
+  optionally request a judge response.
 - Ask about a selection, active file, or bounded workspace context.
 - Generate, fix, review, test, document, plan, and audit code.
-- Follow ordered coding activity and reported/estimated token use for prompts,
-  reasoning status, tools, files, responses, and the current conversation.
+- Follow two request-owned run lanes and vivid reported/estimated token use for
+  prompts, reasoning status, tools, files, responses, comparisons, and the
+  current conversation.
 - Approve changes inside the ClawAI workbench and open proposed VS Code diffs
   only when **Review changes** is selected.
 - Run bounded development commands in visible VS Code task terminals after
@@ -155,7 +158,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.9.0` implements the current extension surface from the ClawAI VS
+Version `0.11.0` implements the current extension surface from the ClawAI VS
 Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 

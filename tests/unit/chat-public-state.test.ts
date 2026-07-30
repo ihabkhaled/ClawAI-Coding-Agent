@@ -10,6 +10,13 @@ const snapshot: ExtensionSnapshot = {
     phase: 'reviewing',
     summary: 'Update the app',
   },
+  agentRuns: {
+    'request-1': {
+      files: [{ operation: 'update', path: 'src/app.ts' }],
+      phase: 'reviewing',
+      summary: 'Update the app',
+    },
+  },
   agentMode: 'PLAN',
   approvalRequest: undefined,
   backendStatus: 'connected',
@@ -17,8 +24,26 @@ const snapshot: ExtensionSnapshot = {
   busy: false,
   connected: true,
   generationQueue: {
-    active: { id: 'request-1', kind: 'agent', prompt: 'Create a file' },
-    pending: [{ id: 'request-2', kind: 'chat', prompt: 'Explain the result' }],
+    active: [
+      {
+        concurrencyKey: 'chat-a',
+        id: 'request-1',
+        kind: 'agent',
+        modelLabel: 'Claude Sonnet',
+        prompt: 'Create a file',
+        startedAt: 1,
+      },
+    ],
+    capacity: 2,
+    pending: [
+      {
+        concurrencyKey: 'chat-a',
+        id: 'request-2',
+        kind: 'chat',
+        modelLabel: 'Qwen 3',
+        prompt: 'Explain the result',
+      },
+    ],
   },
   contextReceipt: {
     excluded: [{ path: '.env', reason: 'sensitive' }],

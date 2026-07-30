@@ -53,7 +53,13 @@ export class AgentExecutionPresenter {
         },
         onPhase: (agentRun) => {
           if (!signal.aborted) {
-            this.state.update({ agentRun });
+            this.state.update({
+              agentRun,
+              agentRuns: {
+                ...this.state.snapshot.agentRuns,
+                [requestId]: agentRun,
+              },
+            });
           }
         },
         onThread: (threadId) => {

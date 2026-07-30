@@ -35,6 +35,76 @@ const plan = {
 };
 
 describe('SafeEditService', () => {
+  it('serializes complete preview and apply transactions', async () => {
+    let finishFirstPreview: (() => void) | undefined;
+    let previewCalls = 0;
+    const events: string[] = [];
+    const workspace: WorkspaceEditPort = {
+      isTrusted: () => true,
+      preview: async (): Promise<EditReview> => {
+        previewCalls += 1;
+        events.push(`preview:${String(previewCalls)}`);
+        if (previewCalls === 1) {
+          await new Promise<void>((resolve) => {
+            finishFirstPreview = resolve;
+          });
+        }
+        return {
+          workspaceFolderUri: 'memory:///workspace',
+          previews: [{ path: 'src/a.ts', before: 'old', after: 'new' }],
+        };
+      },
+      applyAtomically: async () => {
+        events.push('apply');
+        return true;
+      },
+    };
+    const service = new SafeEditService(workspace, async () => true);
+
+    const first = service.previewAndApply(plan, new AbortController().signal);
+    const second = service.previewAndApply(plan, new AbortController().signal);
+    await vi.waitFor(() => {
+      expect(events).toEqual(['preview:1']);
+    });
+    finishFirstPreview?.();
+    await Promise.all([first, second]);
+
+    expect(events).toEqual(['preview:1', 'apply', 'preview:2', 'apply']);
+  });
+
+  it('does not undo while another workspace mutation is active', async () => {
+    let finishPreview: (() => void) | undefined;
+    const undoLast = vi.fn(async () => true);
+    const workspace: WorkspaceEditPort = {
+      isTrusted: () => true,
+      preview: async () => {
+        await new Promise<void>((resolve) => {
+          finishPreview = resolve;
+        });
+        return {
+          workspaceFolderUri: 'memory:///workspace',
+          previews: [{ path: 'src/a.ts', before: 'old', after: 'new' }],
+        };
+      },
+      applyAtomically: async () => true,
+      undoLast,
+    };
+    const service = new SafeEditService(workspace, async () => true);
+
+    const applying = service.previewAndApply(plan);
+    await vi.waitFor(() => {
+      expect(finishPreview).toBeTypeOf('function');
+    });
+    const undoing = service.undoLast();
+    await Promise.resolve();
+
+    expect(undoLast).not.toHaveBeenCalled();
+    finishPreview?.();
+    await applying;
+    await expect(undoing).resolves.toBe(true);
+    expect(undoLast).toHaveBeenCalledOnce();
+  });
+
   it('previews first and applies only after an immediate explicit approval', async () => {
     const workspace = workspacePort(true);
     const confirm = vi.fn(async () => true);

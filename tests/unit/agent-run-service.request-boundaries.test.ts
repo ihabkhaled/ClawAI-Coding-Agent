@@ -232,7 +232,7 @@ describe('AgentRunService request boundaries', () => {
       callbacks(),
     );
     await vi.waitFor(() => {
-      expect(authorize).toHaveBeenCalledWith('editGeneration');
+      expect(authorize).toHaveBeenCalledWith('editGeneration', undefined, controller.signal);
     });
 
     controller.abort(cancellation);

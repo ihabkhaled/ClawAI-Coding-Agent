@@ -19,7 +19,7 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
     backendUrl: z.string().trim().min(1).max(2_000),
   }),
   z.object({ type: z.literal('logout') }),
-  z.object({ type: z.literal('cancel') }),
+  z.object({ type: z.literal('cancel'), requestId: z.uuid().optional() }),
   z.object({ type: z.literal('undo') }),
   z.object({ type: z.literal('newChat') }),
   z.object({ type: z.literal('openFolder') }),

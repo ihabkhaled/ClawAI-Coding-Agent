@@ -3,14 +3,9 @@
 const vscode = acquireVsCodeApi();
 const byId = (id) => document.querySelector(`#${id}`);
 const elements = {
+  activeRunList: byId('activeRunList'),
   activeModeBadge: byId('activeModeBadge'),
   agentMode: byId('agentMode'),
-  agentRunCommands: byId('agentRunCommands'),
-  agentRunDetails: byId('agentRunDetails'),
-  agentRunFileCount: byId('agentRunFileCount'),
-  agentRunFiles: byId('agentRunFiles'),
-  agentRunLabel: byId('agentRunLabel'),
-  agentRunPanel: byId('agentRunPanel'),
   announcer: byId('announcer'),
   approvalApprove: byId('approvalApprove'),
   approvalDetails: byId('approvalDetails'),
@@ -28,7 +23,6 @@ const elements = {
   backendDot: byId('backendDot'),
   backendLabel: byId('backendLabel'),
   backendUrlInput: byId('backendUrlInput'),
-  cancelButton: byId('cancelButton'),
   connectButton: byId('connectButton'),
   connectButtonLabel: byId('connectButtonLabel'),
   connectionError: byId('connectionError'),
@@ -40,33 +34,38 @@ const elements = {
   contextHintText: byId('contextHintText'),
   contextMode: byId('contextMode'),
   conversation: byId('conversation'),
+  conversationTokenMeter: byId('conversationTokenMeter'),
   conversationTitle: byId('conversationTitle'),
   disconnectedBrand: byId('disconnectedBrand'),
   emptyState: byId('emptyState'),
   form: byId('composer'),
   authenticatedUi: byId('authenticatedUi'),
   historySelect: byId('historySelect'),
+  modelSelectionError: byId('modelSelectionError'),
   modelChecks: byId('modelChecks'),
   modelSelect: byId('modelSelect'),
   modelTray: byId('modelTray'),
   modelWarnings: byId('modelWarnings'),
+  moreSettings: byId('moreSettings'),
   newChatButton: byId('newChatButton'),
   openFolderButton: byId('openFolderButton'),
   permissionMode: byId('permissionMode'),
   planName: byId('planName'),
   prompt: byId('prompt'),
-  queueCount: byId('queueCount'),
-  queueList: byId('queueList'),
-  queuePanel: byId('queuePanel'),
   refreshModelsButton: byId('refreshModelsButton'),
   routeModel: byId('routeModel'),
   routeMode: byId('routeMode'),
   routeRail: byId('routeRail'),
   routeToggle: byId('routeToggle'),
+  runDeck: byId('runDeck'),
+  runDeckCount: byId('runDeckCount'),
   runMode: byId('runMode'),
+  selectedModelCount: byId('selectedModelCount'),
+  selectedModelStrip: byId('selectedModelStrip'),
   sendButton: byId('sendButton'),
   sessionButton: byId('sessionButton'),
   skipLink: byId('skipLink'),
+  streamStatus: byId('streamStatus'),
   tokenCount: byId('tokenCount'),
   toastStack: byId('toastStack'),
   trustBadge: byId('trustBadge'),
@@ -74,6 +73,9 @@ const elements = {
   workspaceActions: byId('workspaceActions'),
   workspaceIdentity: byId('workspaceIdentity'),
   workspaceSelect: byId('workspaceSelect'),
+  waitingRunCount: byId('waitingRunCount'),
+  waitingRunList: byId('waitingRunList'),
+  waitingRuns: byId('waitingRuns'),
 };
 const labels = byId('i18n').dataset;
 
@@ -93,6 +95,7 @@ let pendingAgentMode = null;
 let pendingModel = null;
 let pendingPermissionMode = null;
 let connectionViewInitialized = false;
+let approvalReturnFocus = null;
 const responseBodies = new Map();
 const streamStates = new Map();
 const activityLists = new Map();
@@ -194,20 +197,31 @@ function tokenLabel(receipt) {
   return `${receipt.total} ${labels.tokens} · ${labels[receipt.source]}`;
 }
 
+function translatedTemplate(template, ...values) {
+  return values.reduce(
+    (result, value, index) => result.replace(`{${String(index)}}`, String(value)),
+    template,
+  );
+}
+
+function tokenChip(receipt, className = '') {
+  const chip = textElement('span', `token-chip ${className}`.trim(), tokenLabel(receipt));
+  chip.dataset.source = receipt.source;
+  chip.title = translatedTemplate(labels.tokenDetail, receipt.input, receipt.output);
+  return chip;
+}
+
 function renderConversationTokenCount() {
   const receipts = [...requestTokens.values()];
   const activeTotal = receipts.reduce((total, receipt) => total + receipt.total, 0);
   const total = historyTokenTotal + activeTotal;
-  if (total === 0) {
-    elements.tokenCount.textContent = '—';
-    return;
-  }
   const allReported =
+    total > 0 &&
     (historyTokenTotal === 0 || historyTokensReported) &&
     receipts.every((receipt) => receipt.source === 'reported');
-  elements.tokenCount.textContent = `${total} ${labels.tokens} · ${
-    allReported ? labels.reported : labels.estimated
-  }`;
+  const source = allReported ? 'reported' : 'estimated';
+  elements.tokenCount.textContent = `${total} ${labels.tokens} · ${labels[source]}`;
+  elements.conversationTokenMeter.dataset.source = source;
 }
 
 function updateRequestMeta(requestId) {
@@ -218,9 +232,12 @@ function updateRequestMeta(requestId) {
   if (!receipt || !meta) {
     return;
   }
-  meta.textContent = [streamState?.provider, streamState?.model, tokenLabel(receipt)]
-    .filter(Boolean)
-    .join(' · ');
+  meta.replaceChildren();
+  const provenance = [streamState?.provider, streamState?.model].filter(Boolean).join(' · ');
+  if (provenance.length > 0) {
+    meta.append(textElement('span', 'message-provenance', `${provenance} · `));
+  }
+  meta.append(tokenChip(receipt, 'message-token-chip'));
 }
 
 function setRequestTokens(requestId, receipt) {
@@ -239,6 +256,7 @@ function setRequestTokens(requestId, receipt) {
   });
   updateRequestMeta(requestId);
   renderConversationTokenCount();
+  renderRunDeck(currentState.generationQueue, currentState.agentRuns);
 }
 
 function appendActivity(requestId, key, title, description = '', tokens = 0) {
@@ -262,7 +280,10 @@ function appendActivity(requestId, key, title, description = '', tokens = 0) {
   item.append(marker, copy);
   if (tokens > 0) {
     item.append(
-      textElement('span', 'activity-token', `${tokens} ${labels.tokens} · ${labels.estimated}`),
+      tokenChip(
+        { input: tokens, output: 0, source: 'estimated', total: tokens },
+        'activity-token token-chip-compact',
+      ),
     );
   }
   list.append(item);
@@ -276,10 +297,11 @@ function updateActivityTokens(requestId, key, tokens) {
   }
   let counter = item.querySelector('.activity-token');
   if (!counter) {
-    counter = textElement('span', 'activity-token', '');
+    counter = textElement('span', 'activity-token token-chip token-chip-compact', '');
     item.append(counter);
   }
   counter.textContent = `${tokens} ${labels.tokens} · ${labels.estimated}`;
+  counter.title = translatedTemplate(labels.tokenDetail, tokens, 0);
 }
 
 function textElement(tag, className, text) {
@@ -413,7 +435,7 @@ function appendMessage(role, content, meta = '', requestId = '', attachments = [
   if (meta.length > 0 || (role === 'assistant' && requestId.length > 0)) {
     header.append(textElement('span', 'message-meta', meta));
   }
-  const body = textElement('pre', 'message-body', content);
+  const body = textElement('div', 'message-body', content);
   if (role === 'assistant') {
     body.dataset.streamPlaceholder = 'true';
   }
@@ -611,23 +633,56 @@ function renderModels(models) {
       group.append(option);
     }
     elements.modelSelect.append(group);
-  }
-  for (const model of models) {
-    const label = document.createElement('label');
-    label.className = 'model-option';
-    const input = document.createElement('input');
-    input.type = 'checkbox';
-    input.value = model.key;
-    input.checked = existing.has(model.key);
-    const details = document.createElement('span');
-    details.append(
-      textElement('strong', '', model.displayName),
-      textElement('small', '', `${model.provider}${model.isLocal ? ` · ${labels.local}` : ''}`),
-    );
-    label.append(input, details);
-    elements.modelChecks.append(label);
+    const modelGroup = document.createElement('section');
+    modelGroup.className = 'model-group';
+    modelGroup.append(textElement('strong', 'model-group-heading', groupName));
+    const options = document.createElement('div');
+    options.className = 'model-group-options';
+    for (const model of groupModels) {
+      const label = document.createElement('label');
+      label.className = 'model-option';
+      const input = document.createElement('input');
+      input.type = 'checkbox';
+      input.value = model.key;
+      input.checked = existing.has(model.key);
+      input.dataset.modelLabel = model.displayName;
+      const details = document.createElement('span');
+      details.append(
+        textElement('strong', '', model.displayName),
+        textElement('small', '', `${model.provider}${model.isLocal ? ` · ${labels.local}` : ''}`),
+      );
+      label.append(input, details);
+      options.append(label);
+    }
+    modelGroup.append(options);
+    elements.modelChecks.append(modelGroup);
   }
   elements.modelSelect.value = activeModelValue();
+  renderSelectedModels();
+}
+
+function renderSelectedModels() {
+  const selected = [...elements.modelChecks.querySelectorAll('input:checked')];
+  elements.selectedModelStrip.replaceChildren();
+  for (const input of selected) {
+    const item = textElement(
+      'span',
+      'selected-model-chip',
+      input.dataset.modelLabel ?? input.value,
+    );
+    item.setAttribute('role', 'listitem');
+    elements.selectedModelStrip.append(item);
+  }
+  elements.selectedModelStrip.hidden = selected.length === 0;
+  elements.selectedModelCount.textContent = translatedTemplate(
+    labels.modelsSelected,
+    selected.length,
+  );
+  const valid = selected.length >= 2 && selected.length <= 5;
+  elements.modelSelectionError.hidden = valid || selected.length === 0;
+  if (!elements.modelSelectionError.hidden) {
+    elements.modelSelectionError.textContent = labels.chooseModels;
+  }
 }
 
 function resolvedContext(readiness) {
@@ -688,11 +743,7 @@ function renderWorkspace(readiness, scope) {
   elements.openFolderButton.hidden = hasWorkspace;
 }
 
-function renderAgentRun(run) {
-  elements.agentRunPanel.hidden = run === undefined;
-  if (run === undefined) {
-    return;
-  }
+function agentPhaseLabel(run) {
   const phaseLabels = {
     applied: labels.agentApplied,
     executing: labels.agentExecuting,
@@ -706,108 +757,296 @@ function renderAgentRun(run) {
     validating: labels.agentValidating,
     verified: labels.agentVerified,
   };
+  return run === undefined ? labels.running : (phaseLabels[run.phase] ?? run.phase);
+}
+
+function elapsedLabel(startedAt) {
+  const elapsed = Date.now() - startedAt;
+  const bounded = Number.isFinite(elapsed) && elapsed >= 0 && elapsed < 86_400_000 ? elapsed : 0;
+  const seconds = Math.floor(bounded / 1000);
+  return `${String(Math.floor(seconds / 60))}:${String(seconds % 60).padStart(2, '0')}`;
+}
+
+function appendRunDetails(item, run) {
+  if (run === undefined) {
+    return;
+  }
   const commands = run.commands ?? [];
-  const requestId = currentState.generationQueue?.active?.id;
-  const phaseLabel = phaseLabels[run.phase] ?? run.phase;
-  elements.agentRunPanel.dataset.phase = run.phase;
-  elements.agentRunLabel.textContent = phaseLabel;
-  elements.agentRunFileCount.textContent =
+  if (run.files.length === 0 && commands.length === 0) {
+    return;
+  }
+  const details = document.createElement('details');
+  details.className = 'run-details';
+  const summary = textElement(
+    'summary',
+    '',
     commands.length === 0
       ? `${run.files.length} ${labels.files}`
-      : `${run.files.length} ${labels.files} · ${commands.length} ${labels.commands}`;
-  elements.agentRunDetails.hidden = run.files.length === 0 && commands.length === 0;
-  elements.agentRunFiles.replaceChildren();
+      : `${run.files.length} ${labels.files} · ${commands.length} ${labels.commands}`,
+  );
+  const list = document.createElement('ul');
+  list.className = 'run-detail-list';
   for (const file of run.files) {
     const item = document.createElement('li');
     item.append(
       textElement('span', 'change-operation', operationLabel(file.operation)),
       textElement('code', '', file.path),
     );
-    elements.agentRunFiles.append(item);
+    list.append(item);
   }
-  elements.agentRunCommands.replaceChildren();
-  elements.agentRunCommands.hidden = commands.length === 0;
   for (const command of commands) {
-    const item = document.createElement('li');
-    item.append(
+    const commandItem = document.createElement('li');
+    commandItem.append(
       textElement('span', 'change-operation command-operation', '›'),
       textElement('code', '', command.command),
       textElement('small', '', command.purpose),
     );
-    elements.agentRunCommands.append(item);
+    list.append(commandItem);
   }
-  if (requestId) {
+  details.append(summary, list);
+  item.append(details);
+}
+
+function publishRunActivity(requestId, run) {
+  if (run === undefined) {
+    return;
+  }
+  const phaseLabel = agentPhaseLabel(run);
+  appendActivity(
+    requestId,
+    `phase:${run.phase}`,
+    phaseLabel,
+    run.summary ?? '',
+    estimateTokens(`${phaseLabel} ${run.summary ?? ''}`),
+  );
+  for (const file of run.files) {
     appendActivity(
       requestId,
-      `phase:${run.phase}`,
-      phaseLabel,
-      run.summary ?? '',
-      estimateTokens(`${phaseLabel} ${run.summary ?? ''}`),
+      `file:${file.operation}:${file.path}`,
+      `${operationLabel(file.operation)} ${file.path}`,
+      labels.workspaceFileActivity,
+      estimateTokens(file.path),
     );
-    for (const file of run.files) {
-      appendActivity(
-        requestId,
-        `file:${file.operation}:${file.path}`,
-        `${operationLabel(file.operation)} ${file.path}`,
-        labels.workspaceFileActivity,
-        estimateTokens(file.path),
-      );
-    }
-    for (const command of commands) {
-      appendActivity(
-        requestId,
-        `command:${command.command}`,
-        labels.commandActivity,
-        command.purpose,
-        estimateTokens(`${command.command} ${command.purpose}`),
-      );
-    }
+  }
+  for (const command of run.commands ?? []) {
+    appendActivity(
+      requestId,
+      `command:${command.command}`,
+      labels.commandActivity,
+      command.purpose,
+      estimateTokens(`${command.command} ${command.purpose}`),
+    );
   }
 }
 
-function renderQueue(queue) {
-  const active = queue?.active;
+function renderRunDeck(queue, agentRuns = {}) {
+  const active = Array.isArray(queue?.active)
+    ? queue.active
+    : queue?.active === undefined
+      ? []
+      : [queue.active];
   const pending = queue?.pending ?? [];
-  elements.queuePanel.hidden = active === undefined && pending.length === 0;
-  elements.queueCount.textContent = `${pending.length} ${labels.queued.toLowerCase()}`;
-  elements.queueList.replaceChildren();
-  const requests = [
-    ...(active === undefined ? [] : [{ ...active, status: labels.running }]),
-    ...pending.map((request) => ({ ...request, status: labels.queued })),
-  ];
-  for (const request of requests) {
+  elements.runDeck.hidden = active.length === 0 && pending.length === 0;
+  elements.runDeckCount.textContent = translatedTemplate(labels.runningCount, active.length);
+  elements.activeRunList.replaceChildren();
+  for (const request of active) {
+    const run = agentRuns?.[request.id];
     const item = document.createElement('li');
-    item.className = 'queue-item';
-    item.dataset.status = request.id === active?.id ? 'active' : 'queued';
+    item.className = 'run-lane';
+    item.dataset.phase = run?.phase ?? 'running';
+    item.dataset.requestId = request.id;
+    const marker = textElement('span', 'run-state-marker', '');
+    marker.setAttribute('aria-hidden', 'true');
     const copy = document.createElement('span');
+    copy.className = 'run-copy';
     copy.append(
-      textElement('strong', '', request.status),
-      textElement('small', '', request.prompt),
+      textElement('strong', 'run-model', request.modelLabel),
+      textElement('span', 'run-prompt', request.prompt),
     );
-    const requestAttachments = requestInputs.get(request.id)?.attachments ?? [];
-    if (requestAttachments.length > 0) {
-      copy.append(textElement('small', 'queue-attachments', attachmentReceipt(requestAttachments)));
-    }
-    item.append(copy);
-    if (request.id !== active?.id) {
-      const remove = textElement('button', 'message-action', labels.remove);
-      remove.type = 'button';
-      remove.addEventListener('click', () => {
-        vscode.postMessage({ type: 'removeQueued', requestId: request.id });
-      });
-      item.append(remove);
-    }
-    elements.queueList.append(item);
+    const meta = document.createElement('span');
+    meta.className = 'run-meta';
+    const elapsed = textElement('time', 'run-elapsed', elapsedLabel(request.startedAt));
+    elapsed.dataset.startedAt = String(request.startedAt);
+    meta.append(
+      textElement('span', 'run-phase', agentPhaseLabel(run)),
+      tokenChip(
+        requestTokens.get(request.id) ?? {
+          input: 0,
+          output: 0,
+          source: 'estimated',
+          total: 0,
+        },
+        'run-token-chip token-chip-compact',
+      ),
+      elapsed,
+    );
+    const cancel = textElement('button', 'run-cancel icon-button', '×');
+    cancel.type = 'button';
+    cancel.setAttribute('aria-label', translatedTemplate(labels.cancelRun, request.modelLabel));
+    cancel.addEventListener('click', () => {
+      vscode.postMessage({ type: 'cancel', requestId: request.id });
+    });
+    item.append(marker, copy, meta, cancel);
+    appendRunDetails(item, run);
+    elements.activeRunList.append(item);
+    publishRunActivity(request.id, run);
   }
+  const hadVisibleWaiting = !elements.waitingRuns.hidden;
+  elements.waitingRuns.hidden = pending.length === 0;
+  if (pending.length > 0 && !hadVisibleWaiting) {
+    elements.waitingRuns.open = true;
+  }
+  elements.waitingRunCount.textContent = translatedTemplate(labels.waitingCount, pending.length);
+  elements.waitingRunList.replaceChildren();
+  for (const request of pending) {
+    const item = document.createElement('li');
+    item.className = 'waiting-run';
+    const blockedByConversation = active.some(
+      (running) => running.concurrencyKey === request.concurrencyKey,
+    );
+    const copy = document.createElement('span');
+    copy.className = 'waiting-run-copy';
+    copy.append(
+      textElement('strong', '', request.modelLabel),
+      textElement('span', '', request.prompt),
+      textElement(
+        'small',
+        'waiting-reason',
+        blockedByConversation ? labels.waitingConversation : labels.waitingCapacity,
+      ),
+    );
+    const attachments = requestInputs.get(request.id)?.attachments ?? [];
+    if (attachments.length > 0) {
+      const bytes = attachments.reduce((total, attachment) => total + attachment.sizeBytes, 0);
+      const noun = attachments.length === 1 ? labels.attachment : labels.attachments.toLowerCase();
+      copy.append(
+        textElement(
+          'small',
+          'waiting-attachments',
+          `${attachments.length} ${noun} · ${formatBytes(bytes)}`,
+        ),
+      );
+    }
+    const remove = textElement('button', 'waiting-remove icon-button', '×');
+    remove.type = 'button';
+    remove.setAttribute('aria-label', translatedTemplate(labels.removeWaiting, request.prompt));
+    remove.addEventListener('click', () => {
+      vscode.postMessage({ type: 'removeQueued', requestId: request.id });
+    });
+    item.append(copy, remove);
+    elements.waitingRunList.append(item);
+  }
+}
+
+function updateRunElapsedTimes() {
+  for (const element of document.querySelectorAll('.run-elapsed[data-started-at]')) {
+    element.textContent = elapsedLabel(Number(element.dataset.startedAt));
+  }
+}
+
+function compareStatusLabel(status) {
+  if (status === 'completed') {
+    return labels.completed;
+  }
+  if (status === 'timeout' || status === 'timed_out') {
+    return labels.timedOut;
+  }
+  return labels.failed;
+}
+
+function compareReceipt(response) {
+  if (Number.isFinite(response.inputTokens) || Number.isFinite(response.outputTokens)) {
+    const input = Number.isFinite(response.inputTokens) ? response.inputTokens : 0;
+    const output = Number.isFinite(response.outputTokens) ? response.outputTokens : 0;
+    return { input, output, source: 'reported', total: input + output };
+  }
+  const output = estimateTokens(response.content || response.errorMessage || '');
+  return { input: 0, output, source: 'estimated', total: output };
+}
+
+function renderStructuredCompare(responseBody, compare, requestId) {
+  const section = document.createElement('section');
+  section.className = 'compare-results';
+  section.setAttribute('aria-label', labels.compareResults);
+  const receipts = [];
+  if (compare.judgeEnabled && typeof compare.judgeModel === 'string') {
+    section.append(
+      textElement('p', 'judge-banner', translatedTemplate(labels.judgeModel, compare.judgeModel)),
+    );
+  }
+  for (const response of compare.responses) {
+    const responseReceipt = compareReceipt(response);
+    receipts.push(responseReceipt);
+    const card = document.createElement('article');
+    card.className = 'compare-card';
+    card.dataset.status = response.status;
+    const header = document.createElement('header');
+    const identity = document.createElement('span');
+    identity.className = 'compare-identity';
+    identity.append(
+      textElement('strong', '', response.provider),
+      textElement('code', '', response.model),
+    );
+    header.append(
+      identity,
+      textElement('span', 'compare-status', compareStatusLabel(response.status)),
+    );
+    const content = textElement(
+      'pre',
+      'compare-content',
+      response.content || response.errorMessage || compareStatusLabel(response.status),
+    );
+    const footer = document.createElement('footer');
+    const receipt = tokenChip(responseReceipt, 'compare-token-chip');
+    const latency = textElement('span', 'compare-latency', `${response.latencyMs} ms`);
+    const copy = textElement('button', 'compare-copy quiet-button', labels.copyModel);
+    copy.type = 'button';
+    copy.addEventListener('click', async () => {
+      await navigator.clipboard.writeText(response.content || response.errorMessage || '');
+      copy.textContent = labels.copied;
+      window.setTimeout(() => {
+        copy.textContent = labels.copyModel;
+      }, 1200);
+    });
+    footer.append(receipt, latency, copy);
+    card.append(header, content);
+    if (response.content && response.errorMessage) {
+      card.append(textElement('p', 'compare-error', response.errorMessage));
+    }
+    card.append(footer);
+    section.append(card);
+  }
+  responseBody.replaceChildren(section);
+  responseBody.dataset.streamPlaceholder = 'false';
+  responseBody.closest('.message-card')?.classList.add('compare-message');
+  const aggregate = receipts.reduce(
+    (total, receipt) => ({
+      input: total.input + receipt.input,
+      output: total.output + receipt.output,
+      source:
+        total.source === 'reported' && receipt.source === 'reported' ? 'reported' : 'estimated',
+      total: total.total + receipt.total,
+    }),
+    { input: 0, output: 0, source: 'reported', total: 0 },
+  );
+  setRequestTokens(requestId, aggregate);
 }
 
 function renderApproval(request) {
+  const wasHidden = elements.approvalPanel.hidden;
   elements.approvalPanel.hidden = request === undefined;
   if (request === undefined) {
     elements.approvalPanel.dataset.requestId = '';
     elements.approvalApprove.textContent = labels.approve;
     elements.approvalReview.hidden = true;
+    if (!wasHidden && approvalReturnFocus?.focus) {
+      approvalReturnFocus.focus();
+    }
+    approvalReturnFocus = null;
     return;
+  }
+  if (wasHidden) {
+    approvalReturnFocus = document.activeElement;
   }
   elements.approvalPanel.dataset.requestId = request.id;
   elements.approvalApprove.textContent =
@@ -822,7 +1061,9 @@ function renderApproval(request) {
   for (const detail of request.details ?? []) {
     elements.approvalDetails.append(textElement('li', '', detail));
   }
-  elements.approvalApprove.focus();
+  if (wasHidden) {
+    elements.approvalApprove.focus();
+  }
 }
 
 function showNotice(message) {
@@ -901,8 +1142,13 @@ function renderState(state) {
   elements.planName.textContent = state.entitlements?.plan?.name ?? '—';
   elements.sessionButton.textContent = state.connected ? labels.logout : labels.connect;
   elements.sendButton.disabled = !state.connected || attachmentsReading;
-  elements.sendButton.querySelector('span').textContent = state.busy ? labels.queue : labels.send;
-  elements.cancelButton.hidden = state.generationQueue?.active === undefined;
+  const activeRequests = state.generationQueue?.active ?? [];
+  const atCapacity = activeRequests.length >= (state.generationQueue?.capacity ?? 2);
+  const conversationBusy = activeRequests.some(
+    (request) => request.concurrencyKey === currentSession?.sessionId,
+  );
+  elements.sendButton.querySelector('span').textContent =
+    atCapacity || conversationBusy ? labels.queue : labels.send;
   elements.prompt.disabled = false;
   elements.modelSelect.disabled = false;
   elements.agentMode.disabled = false;
@@ -914,8 +1160,7 @@ function renderState(state) {
   renderHistory(state.history);
   renderWarnings(state.modelWarnings ?? []);
   renderWorkspace(state.workspaceReadiness, state.workspaceScope);
-  renderAgentRun(state.agentRun);
-  renderQueue(state.generationQueue);
+  renderRunDeck(state.generationQueue, state.agentRuns);
   renderApproval(state.approvalRequest);
   renderContextHint();
   const wasAuthorizing = !previousState.connected && previousState.backendStatus === 'loading';
@@ -1009,12 +1254,6 @@ function setAttachmentStatus(message) {
   elements.attachmentStatus.textContent = message;
   elements.attachmentTray.hidden = composerAttachments.length === 0 && message.length === 0;
   elements.announcer.textContent = message;
-}
-
-function attachmentReceipt(attachments) {
-  const totalBytes = attachments.reduce((total, attachment) => total + attachment.sizeBytes, 0);
-  const noun = attachments.length === 1 ? labels.attachment : labels.attachments.toLowerCase();
-  return `${attachments.length} ${noun} · ${formatBytes(totalBytes)}`;
 }
 
 function composerAttachmentSummary() {
@@ -1277,6 +1516,12 @@ function submitPrompt(retryInput) {
   const modelKey = retryInput?.modelKey ?? activeModelValue();
   const judgeEnabled = retryInput?.judgeEnabled ?? mode === 'judge';
   const attachments = snapshotAttachments(retryInput?.attachments ?? composerAttachments);
+  const activeRequests = currentState.generationQueue?.active ?? [];
+  const atCapacity = activeRequests.length >= (currentState.generationQueue?.capacity ?? 2);
+  const conversationBusy = activeRequests.some(
+    (request) => request.concurrencyKey === currentSession?.sessionId,
+  );
+  const queued = atCapacity || conversationBusy;
   const requestInput = {
     content,
     mode,
@@ -1299,7 +1544,7 @@ function submitPrompt(retryInput) {
   );
   const responseBody = appendMessage(
     'assistant',
-    currentState.busy ? labels.queued : mode === 'agent' ? labels.agentReading : labels.connecting,
+    queued ? labels.queued : mode === 'agent' ? labels.agentReading : labels.connecting,
     '',
     requestId,
   );
@@ -1321,8 +1566,8 @@ function submitPrompt(retryInput) {
   appendActivity(
     requestId,
     'request-accepted',
-    currentState.busy ? labels.queued : labels.requestAccepted,
-    currentState.busy ? labels.waitingTurn : labels.preparingRun,
+    queued ? labels.queued : labels.requestAccepted,
+    queued ? labels.waitingTurn : labels.preparingRun,
     promptTokens,
   );
   if (mode === 'agent' || mode === 'chat') {
@@ -1340,6 +1585,9 @@ function submitPrompt(retryInput) {
   } else {
     if (modelKeys.length < 2 || modelKeys.length > 5) {
       elements.announcer.textContent = labels.chooseModels;
+      elements.modelSelectionError.textContent = labels.chooseModels;
+      elements.modelSelectionError.hidden = false;
+      elements.modelSelectionError.focus();
       responseBody.textContent = labels.chooseModels;
       responseBody.closest('.timeline-item')?.classList.add('message-error');
       responseBodies.delete(requestId);
@@ -1458,10 +1706,6 @@ elements.historySelect.addEventListener('change', () => {
   }
 });
 
-elements.cancelButton.addEventListener('click', () => {
-  vscode.postMessage({ type: 'cancel' });
-});
-
 function resolveApproval(approved) {
   const requestId = elements.approvalPanel.dataset.requestId;
   if (!requestId) {
@@ -1479,12 +1723,37 @@ elements.approvalReview.addEventListener('click', () => {
   vscode.postMessage({ type: 'reviewChanges' });
 });
 
+elements.approvalPanel.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    resolveApproval(false);
+    return;
+  }
+  if (event.key !== 'Tab') {
+    return;
+  }
+  const focusable = [
+    ...elements.approvalPanel.querySelectorAll('button:not([hidden]):not(:disabled)'),
+  ];
+  const first = focusable.at(0);
+  const last = focusable.at(-1);
+  if (event.shiftKey && document.activeElement === first) {
+    event.preventDefault();
+    last?.focus();
+  } else if (!event.shiftKey && document.activeElement === last) {
+    event.preventDefault();
+    first?.focus();
+  }
+});
+
 elements.runMode.addEventListener('change', () => {
   elements.modelTray.classList.toggle(
     'visible',
     elements.runMode.value === 'compare' || elements.runMode.value === 'judge',
   );
 });
+
+elements.modelChecks.addEventListener('change', renderSelectedModels);
 
 elements.modelSelect.addEventListener('change', () => {
   pendingModel = elements.modelSelect.value;
@@ -1659,6 +1928,9 @@ window.addEventListener('message', (event) => {
       return;
     }
     appendStreamActivity(message.requestId, stream);
+    if (stream.type !== 'CONTENT_DELTA' && typeof stream.label === 'string') {
+      elements.streamStatus.textContent = stream.label;
+    }
     if (responseBody && stream.type === 'AGENT_DRAFT_RESET') {
       responseBody.textContent = labels.agentRepairing;
       responseBody.dataset.streamPlaceholder = 'true';
@@ -1696,7 +1968,10 @@ window.addEventListener('message', (event) => {
     if (message.result?.tokens) {
       setRequestTokens(message.requestId, message.result.tokens);
     }
-    if (responseBody && typeof message.result?.content === 'string') {
+    if (responseBody && Array.isArray(message.result?.compare?.responses)) {
+      renderStructuredCompare(responseBody, message.result.compare, message.requestId);
+      updateRequestMeta(message.requestId);
+    } else if (responseBody && typeof message.result?.content === 'string') {
       responseBody.textContent = message.result.content;
       responseBody.dataset.streamPlaceholder = 'false';
       if (message.result.editPlan?.files) {
@@ -1709,6 +1984,7 @@ window.addEventListener('message', (event) => {
       }
       updateRequestMeta(message.requestId);
     }
+    elements.streamStatus.textContent = labels.completed;
     responseBodies.delete(message.requestId);
     streamStates.delete(message.requestId);
     activityLists.delete(message.requestId);
@@ -1738,4 +2014,12 @@ window.addEventListener('message', (event) => {
 
 setConversationVisibility();
 elements.attachmentInput.accept = [...ALLOWED_ATTACHMENT_MIME_TYPES].join(',');
+const runElapsedTimer = window.setInterval(updateRunElapsedTimes, 1000);
+window.addEventListener(
+  'beforeunload',
+  () => {
+    window.clearInterval(runElapsedTimer);
+  },
+  { once: true },
+);
 vscode.postMessage({ type: 'ready' });

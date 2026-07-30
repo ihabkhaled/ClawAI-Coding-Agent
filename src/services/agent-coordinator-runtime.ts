@@ -33,6 +33,7 @@ export function prepareGeneration(state: ExtensionState): Promise<void> {
 export function resetAccountScopedState(state: ExtensionState): void {
   state.update({
     agentRun: undefined,
+    agentRuns: {},
     approvalRequest: undefined,
     backendStatus: 'disconnected',
     busy: false,
@@ -40,7 +41,8 @@ export function resetAccountScopedState(state: ExtensionState): void {
     contextReceipt: undefined,
     entitlements: undefined,
     generationQueue: {
-      active: undefined,
+      active: [],
+      capacity: 2,
       pending: [],
     },
     history: [],
@@ -51,6 +53,16 @@ export function resetAccountScopedState(state: ExtensionState): void {
     selectedModel: '',
     usage: undefined,
     user: undefined,
+  });
+}
+
+export function removeSettledAgentRun(state: ExtensionState, requestId: string): void {
+  const agentRuns = Object.fromEntries(
+    Object.entries(state.snapshot.agentRuns).filter(([id]) => id !== requestId),
+  );
+  state.update({
+    agentRun: Object.values(agentRuns).at(-1),
+    agentRuns,
   });
 }
 
@@ -90,6 +102,24 @@ export async function cancelRemoteGeneration(
   try {
     await backend.cancelStream(threadId);
   } catch (error: unknown) {
-    logger.warn('ClawAI remote generation cancellation failed during workspace change.', error);
+    logger.warn('ClawAI remote generation cancellation failed.', error);
   }
+}
+
+export async function cancelRemoteGenerations(
+  backend: BackendClient,
+  logger: OutputLogger,
+  threadIds: string[],
+): Promise<void> {
+  await Promise.all(threadIds.map((threadId) => cancelRemoteGeneration(backend, logger, threadId)));
+}
+
+export function cancelTargetGeneration(
+  cancel: () => boolean,
+  takeThread: () => string | null,
+  backend: BackendClient,
+  logger: OutputLogger,
+): Promise<void> {
+  cancel();
+  return cancelRemoteGeneration(backend, logger, takeThread());
 }

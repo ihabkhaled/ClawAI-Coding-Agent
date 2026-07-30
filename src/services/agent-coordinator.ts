@@ -8,6 +8,7 @@ import { ApprovalBroker } from '../core/approval-broker';
 import { totalAttachmentBytes } from '../core/chat-attachment';
 import { contextModeForCommand } from '../core/command-context';
 import { type ContextMode } from '../core/context-mode';
+import { GenerationThreadRegistry } from '../core/generation-thread-registry';
 import { cancelRunBoundary, transitionRunBoundary } from '../core/run-boundary';
 import { type OutputLogger } from '../infrastructure/output-logger';
 import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-workspace-edit-adapter';
@@ -15,6 +16,7 @@ import { type DiffPreviewProvider } from '../views/diff-preview-provider';
 import { type ChatViewProvider } from '../webview/chat-view-provider';
 
 import { AgentConnectionService } from './agent-connection-service';
+import { collectAgentContext } from './agent-context-service';
 import {
   pickCompareInput,
   pickModelKey,
@@ -24,8 +26,11 @@ import {
 import {
   applyModelSelection,
   cancelRemoteGeneration,
+  cancelRemoteGenerations,
+  cancelTargetGeneration,
   createBackendClient,
   prepareGeneration,
+  removeSettledAgentRun,
   resetAccountScopedState,
 } from './agent-coordinator-runtime';
 import {
@@ -44,7 +49,7 @@ import { ChatService } from './chat-service';
 import { ClawaiInitializer } from './clawai-initializer';
 import { ConfigurationService } from './configuration-service';
 import { ConversationSessionService } from './conversation-session-service';
-import { GenerationScheduler } from './generation-scheduler';
+import { GenerationScheduler, generationConcurrencyKey } from './generation-scheduler';
 import { ModelService } from './model-service';
 import { PromptExecutionService } from './prompt-execution-service';
 import { RequestAdmissionService } from './request-admission-service';
@@ -53,11 +58,8 @@ import { SafeEditService } from './safe-edit-service';
 import { SessionControlService } from './session-control-service';
 import { type WorkflowKind } from './workflow-service';
 
-import type { RuntimeConfiguration } from './configuration-service';
-import type { SessionControlPort } from './session-control.types';
 import type { WorkspaceContextService } from './workspace-context-service';
 import type { ChatAttachment } from '../core/chat-attachment';
-import type { CollectedContext } from '../core/context-collector';
 import type { ExtensionState } from '../core/extension-state';
 import type { SessionVault } from '../core/session-vault';
 import type { WorkspaceApprovalMemory } from '../core/workspace-approval-memory';
@@ -68,6 +70,7 @@ export class AgentCoordinator implements vscode.Disposable {
   readonly sessionControls: SessionControlService;
   private backend: BackendClient;
   private readonly accountEpoch = new AccountEpoch();
+  private readonly dataRefreshEpoch = new AccountEpoch();
   private readonly runEpoch = new AccountEpoch();
   private readonly approvals: ApprovalBroker;
   private readonly admissions: RequestAdmissionService;
@@ -82,7 +85,7 @@ export class AgentCoordinator implements vscode.Disposable {
   private readonly safeEdits: SafeEditService;
   private readonly generations: GenerationScheduler;
   private readonly conversations: ConversationSessionService;
-  private activeThreadId: string | null = null;
+  private readonly activeThreads = new GenerationThreadRegistry();
   private view: ChatViewProvider | null = null;
 
   constructor(
@@ -112,6 +115,7 @@ export class AgentCoordinator implements vscode.Disposable {
           this.state,
           this.accountEpoch,
           signal,
+          this.dataRefreshEpoch,
         );
       },
       before: () => prepareGeneration(this.state),
@@ -121,12 +125,13 @@ export class AgentCoordinator implements vscode.Disposable {
       failed: (error, requestId) => this.generationFailed(error, requestId),
       queueChanged: (generationQueue) => {
         this.state.update({
-          busy: generationQueue.active !== undefined,
+          busy: generationQueue.active.length > 0,
           generationQueue,
         });
       },
       settled: (requestId) => {
-        this.activeThreadId = null;
+        this.activeThreads.forget(requestId);
+        removeSettledAgentRun(this.state, requestId);
         this.conversations.forgetRequest(requestId);
         this.view?.releaseRequest(requestId);
       },
@@ -161,6 +166,7 @@ export class AgentCoordinator implements vscode.Disposable {
           this.modelService,
           this.state,
           this.accountEpoch,
+          this.dataRefreshEpoch,
         ),
       () => this.view,
       () => this.handleAccountBoundary(),
@@ -178,7 +184,7 @@ export class AgentCoordinator implements vscode.Disposable {
     );
     this.promptExecutions = new PromptExecutionService({
       activateThread: (threadId, requestId) => {
-        this.activeThreadId = threadId;
+        this.activeThreads.record(requestId, threadId);
         this.conversations.recordThread(requestId, threadId);
       },
       assertAdmission: (admission) => {
@@ -189,7 +195,17 @@ export class AgentCoordinator implements vscode.Disposable {
       captureAdmission: (threadId) => this.captureAdmission(threadId),
       chat: this.chat,
       collect: (mode, configuration, session, signal) =>
-        this.collect(mode, configuration, session, signal),
+        collectAgentContext(
+          this.context,
+          this.state,
+          () => {
+            this.refreshWorkspaceReadiness();
+          },
+          mode,
+          configuration,
+          session,
+          signal,
+        ),
       configuration: this.configuration,
       conversations: this.conversations,
       generations: this.generations,
@@ -204,17 +220,28 @@ export class AgentCoordinator implements vscode.Disposable {
       this.context,
       this.chat,
       this.admissions,
+      this.generations,
+      (threadId, requestId) => {
+        this.activeThreads.record(requestId, threadId);
+      },
+      (requestId) => this.cancel(requestId),
       () => this.handleAccountBoundary(),
     );
-    this.safeEdits = new SafeEditService(this.editAdapter, (previews, summary, session) =>
-      confirmSafeEdits(this.diffPreview, session ?? this.sessionControls, previews, summary),
+    this.safeEdits = new SafeEditService(this.editAdapter, (previews, summary, session, signal) =>
+      confirmSafeEdits(
+        this.diffPreview,
+        session ?? this.sessionControls,
+        previews,
+        summary,
+        signal,
+      ),
     );
     const agentExecutions = new AgentExecutionPresenter(
       new AgentRunService(this.context, this.sessionControls, this.chat, this.safeEdits),
       this.state,
       () => this.view,
       (threadId, requestId) => {
-        this.activeThreadId = threadId;
+        this.activeThreads.record(requestId, threadId);
         this.conversations.recordThread(requestId, threadId);
       },
     );
@@ -324,13 +351,17 @@ export class AgentCoordinator implements vscode.Disposable {
       ...input,
       kind: 'generate',
     });
-    await this.agentWorkflows.prepare(queuedInput, requestId);
+    const sessionId = await this.agentWorkflows.prepare(queuedInput, requestId);
     await this.generations.enqueue(
       requestId,
       'agent',
       input.content,
       (signal) => this.agentWorkflows.execute(queuedInput, signal, requestId),
-      totalAttachmentBytes(input.attachments),
+      {
+        concurrencyKey: generationConcurrencyKey(sessionId, queuedInput.admission.threadId),
+        modelLabel: queuedInput.modelLabel,
+        retainedBytes: totalAttachmentBytes(input.attachments),
+      },
     );
   }
 
@@ -392,9 +423,16 @@ export class AgentCoordinator implements vscode.Disposable {
       contextMode,
       kind,
     });
-    await this.agentWorkflows.prepare(queuedInput, requestId);
-    await this.generations.enqueue(requestId, 'agent', request, (signal) =>
-      this.agentWorkflows.execute(queuedInput, signal, requestId),
+    const sessionId = await this.agentWorkflows.prepare(queuedInput, requestId);
+    await this.generations.enqueue(
+      requestId,
+      'agent',
+      request,
+      (signal) => this.agentWorkflows.execute(queuedInput, signal, requestId),
+      {
+        concurrencyKey: generationConcurrencyKey(sessionId, queuedInput.admission.threadId),
+        modelLabel: queuedInput.modelLabel,
+      },
     );
   }
 
@@ -413,21 +451,27 @@ export class AgentCoordinator implements vscode.Disposable {
   }
 
   async undoLastEdit(): Promise<void> {
-    if (await this.editAdapter.undoLast()) {
+    if (await this.safeEdits.undoLast()) {
       await this.view?.postNotice(vscode.l10n.t('ClawAI changes were undone.'));
     }
   }
 
-  async cancel(): Promise<void> {
+  async cancel(requestId?: string): Promise<void> {
+    if (requestId !== undefined) {
+      return cancelTargetGeneration(
+        () => this.generations.cancel(requestId),
+        () => this.activeThreads.take(requestId),
+        this.backend,
+        this.logger,
+      );
+    }
     if (await this.connection.cancelConnection()) {
       return;
     }
     this.approvals.cancelCurrent();
-    this.generations.cancelActive();
-    if (this.activeThreadId !== null) {
-      await this.backend.cancelStream(this.activeThreadId);
-    }
-    this.activeThreadId = null;
+    this.generations.cancelAll();
+    const threadIds = this.activeThreads.takeAll();
+    await cancelRemoteGenerations(this.backend, this.logger, threadIds);
   }
 
   removeQueued = (requestId: string): void => void this.generations.remove(requestId);
@@ -440,28 +484,8 @@ export class AgentCoordinator implements vscode.Disposable {
     return this.admissions.capture(threadId);
   }
 
-  private async collect(
-    mode: ContextMode,
-    configuration: RuntimeConfiguration = this.configuration.read(),
-    session: SessionControlPort = this.sessionControls,
-    signal?: AbortSignal,
-  ): Promise<CollectedContext> {
-    signal?.throwIfAborted();
-    this.refreshWorkspaceReadiness();
-    const resolvedMode = this.context.resolve(mode);
-    if (resolvedMode === 'workspace' && !(await session.authorize('workspaceContext'))) {
-      throw new Error(vscode.l10n.t('Workspace context access was not approved.'));
-    }
-    signal?.throwIfAborted();
-    const result = await this.context.collect(resolvedMode, configuration);
-    signal?.throwIfAborted();
-    this.state.update({ contextReceipt: result.receipt });
-    return result;
-  }
-
   private async generationFailed(error: unknown, requestId: string): Promise<void> {
-    const activeThreadId = this.activeThreadId;
-    this.activeThreadId = null;
+    const activeThreadId = this.activeThreads.take(requestId);
     await cancelRemoteGeneration(this.backend, this.logger, activeThreadId);
     if (error instanceof BackendSessionChangedError) {
       await this.handleAccountBoundary();
@@ -483,23 +507,21 @@ export class AgentCoordinator implements vscode.Disposable {
 
   private async handleAccountBoundary(): Promise<void> {
     const backend = this.backend;
-    const activeThreadId = this.activeThreadId;
+    const activeThreadIds = this.activeThreads.takeAll();
     this.runEpoch.invalidate();
     this.accountEpoch.invalidate();
     cancelRunBoundary(this.generations, this.approvals);
     this.attachmentRequests.resetAccountState();
     this.conversations.resetAccountState();
-    this.activeThreadId = null;
     resetAccountScopedState(this.state);
-    await cancelRemoteGeneration(backend, this.logger, activeThreadId);
+    await cancelRemoteGenerations(backend, this.logger, activeThreadIds);
   }
 
   private handleWorkspaceBoundary(transition: () => void): Promise<void> {
     this.runEpoch.invalidate();
-    const activeThreadId = this.activeThreadId;
-    this.activeThreadId = null;
+    const activeThreadIds = this.activeThreads.takeAll();
     return transitionRunBoundary(this.generations, this.approvals, transition, () =>
-      cancelRemoteGeneration(this.backend, this.logger, activeThreadId),
+      cancelRemoteGenerations(this.backend, this.logger, activeThreadIds),
     );
   }
 

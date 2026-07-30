@@ -1,7 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { MAX_PENDING_GENERATION_BYTES } from '../../src/core/generation-queue';
-import { GenerationScheduler } from '../../src/services/generation-scheduler';
+import {
+  GenerationScheduler,
+  generationConcurrencyKey,
+} from '../../src/services/generation-scheduler';
 
 function harness() {
   const hooks = {
@@ -16,24 +19,74 @@ function harness() {
 }
 
 describe('GenerationScheduler', () => {
+  it('canonicalizes known backend threads across UI sessions', () => {
+    expect(generationConcurrencyKey('tab-a', 'thread-1')).toBe('thread:thread-1');
+    expect(generationConcurrencyKey('tab-b', 'thread-1')).toBe('thread:thread-1');
+    expect(generationConcurrencyKey('tab-a')).toBe('session:tab-a');
+  });
+
+  it('runs two independent conversation keys concurrently', async () => {
+    const subject = harness();
+    let finishFirst: (() => void) | undefined;
+    let finishSecond: (() => void) | undefined;
+    const started: string[] = [];
+    const first = subject.scheduler.enqueue(
+      'request-1',
+      'chat',
+      'First',
+      async () => {
+        started.push('first');
+        await new Promise<void>((resolve) => {
+          finishFirst = resolve;
+        });
+      },
+      { concurrencyKey: 'chat-a', modelLabel: 'Claude Sonnet' },
+    );
+    const second = subject.scheduler.enqueue(
+      'request-2',
+      'chat',
+      'Second',
+      async () => {
+        started.push('second');
+        await new Promise<void>((resolve) => {
+          finishSecond = resolve;
+        });
+      },
+      { concurrencyKey: 'chat-b', modelLabel: 'Qwen 3' },
+    );
+
+    await vi.waitFor(() => {
+      expect(started).toEqual(['first', 'second']);
+    });
+    finishFirst?.();
+    finishSecond?.();
+    await Promise.all([first, second]);
+  });
+
   it('settles a caller-cancelled request without reporting a false generation failure', async () => {
     const subject = harness();
     let started: (() => void) | undefined;
     const running = new Promise<void>((resolve) => {
       started = resolve;
     });
-    const completion = subject.scheduler.enqueue('request-1', 'compare', 'Compare', (signal) => {
-      started?.();
-      return new Promise((_resolve, reject) => {
-        signal.addEventListener(
-          'abort',
-          () => {
-            reject(new Error('request aborted'));
-          },
-          { once: true },
-        );
-      });
-    });
+    const completion = subject.scheduler.enqueue(
+      'request-1',
+      'compare',
+      'Compare',
+      (signal) => {
+        started?.();
+        return new Promise((_resolve, reject) => {
+          signal.addEventListener(
+            'abort',
+            () => {
+              reject(new Error('request aborted'));
+            },
+            { once: true },
+          );
+        });
+      },
+      { concurrencyKey: 'chat-a', modelLabel: 'Compare' },
+    );
     await running;
 
     expect(subject.scheduler.cancelActive()).toBe(true);
@@ -48,9 +101,15 @@ describe('GenerationScheduler', () => {
     const subject = harness();
     const failure = new Error('provider failed');
 
-    await subject.scheduler.enqueue('request-1', 'chat', 'Hello', async () => {
-      throw failure;
-    });
+    await subject.scheduler.enqueue(
+      'request-1',
+      'chat',
+      'Hello',
+      async () => {
+        throw failure;
+      },
+      { concurrencyKey: 'chat-a', modelLabel: 'Claude Sonnet' },
+    );
 
     expect(subject.hooks.failed).toHaveBeenCalledWith(failure, 'request-1');
   });
@@ -74,13 +133,25 @@ describe('GenerationScheduler', () => {
       settled: vi.fn(),
     };
     const scheduler = new GenerationScheduler(hooks);
-    const failed = scheduler.enqueue('request-1', 'chat', 'First', async () => {
-      events.push('first');
-      throw new Error('stream disconnected');
-    });
-    const retry = scheduler.enqueue('request-2', 'chat', 'Retry', async () => {
-      events.push('retry');
-    });
+    const failed = scheduler.enqueue(
+      'request-1',
+      'chat',
+      'First',
+      async () => {
+        events.push('first');
+        throw new Error('stream disconnected');
+      },
+      { concurrencyKey: 'chat-a', modelLabel: 'Claude Sonnet' },
+    );
+    const retry = scheduler.enqueue(
+      'request-2',
+      'chat',
+      'Retry',
+      async () => {
+        events.push('retry');
+      },
+      { concurrencyKey: 'chat-a', modelLabel: 'Claude Sonnet' },
+    );
 
     await vi.waitFor(() => {
       expect(events).toEqual(['first', 'cancel:start']);
@@ -102,8 +173,15 @@ describe('GenerationScheduler', () => {
         new Promise<void>((resolve) => {
           finishActive = resolve;
         }),
+      { concurrencyKey: 'chat-a', modelLabel: 'Claude Sonnet' },
     );
-    const pending = subject.scheduler.enqueue('request-2', 'chat', 'Second', async () => undefined);
+    const pending = subject.scheduler.enqueue(
+      'request-2',
+      'chat',
+      'Second',
+      async () => undefined,
+      { concurrencyKey: 'chat-a', modelLabel: 'Claude Sonnet' },
+    );
     await vi.waitFor(() => {
       expect(finishActive).toBeTypeOf('function');
     });
@@ -131,6 +209,7 @@ describe('GenerationScheduler', () => {
         new Promise<void>((resolve) => {
           finishActive = resolve;
         }),
+      { concurrencyKey: 'chat-a', modelLabel: 'Claude Sonnet' },
     );
     await vi.waitFor(() => {
       expect(finishActive).toBeTypeOf('function');
@@ -142,12 +221,20 @@ describe('GenerationScheduler', () => {
         'agent',
         'Queued',
         async () => undefined,
-        chunk,
+        {
+          concurrencyKey: 'chat-a',
+          modelLabel: 'Claude Sonnet',
+          retainedBytes: chunk,
+        },
       ),
     );
 
     await expect(
-      subject.scheduler.enqueue('overflow', 'agent', 'Overflow', async () => undefined, 1),
+      subject.scheduler.enqueue('overflow', 'agent', 'Overflow', async () => undefined, {
+        concurrencyKey: 'chat-a',
+        modelLabel: 'Claude Sonnet',
+        retainedBytes: 1,
+      }),
     ).rejects.toThrow('queue is full');
     expect(subject.hooks.settled).toHaveBeenCalledWith('overflow');
 
