@@ -101,8 +101,8 @@ const requestInputs = new Map();
 const MAX_RETRY_INPUTS = 25;
 const MAX_RETRY_ATTACHMENT_CHARS = 32 * 1024 * 1024;
 const MAX_ATTACHMENTS = 10;
-const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
-const MAX_TOTAL_ATTACHMENT_BYTES = 10 * 1024 * 1024;
+const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+const MAX_TOTAL_ATTACHMENT_BYTES = 50 * 1024 * 1024;
 const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
   'application/graphql',
   'application/javascript',
@@ -364,14 +364,36 @@ function appendMessageAttachments(card, attachments) {
   for (const attachment of attachments) {
     const item = document.createElement('li');
     item.className = 'message-attachment';
+    const visual = attachment.mimeType.startsWith('image/')
+      ? document.createElement('img')
+      : createFileIcon();
+    if (visual.tagName.toLowerCase() === 'img') {
+      visual.className = 'attachment-thumbnail';
+      visual.src = `data:${attachment.mimeType};base64,${attachment.content}`;
+      visual.alt = '';
+    }
     item.append(
-      textElement('span', 'attachment-file-icon', '◇'),
+      visual,
       textElement('strong', '', attachment.filename),
       textElement('small', '', formatBytes(attachment.sizeBytes)),
     );
     list.append(item);
   }
   card.append(list);
+}
+
+function createFileIcon() {
+  const namespace = 'http://www.w3.org/2000/svg';
+  const icon = document.createElementNS(namespace, 'svg');
+  icon.setAttribute('class', 'attachment-file-icon claw-icon');
+  icon.setAttribute('viewBox', '0 0 16 16');
+  icon.setAttribute('fill', 'none');
+  icon.setAttribute('stroke', 'currentColor');
+  icon.setAttribute('aria-hidden', 'true');
+  const outline = document.createElementNS(namespace, 'path');
+  outline.setAttribute('d', 'M3 1.5h6l4 4v9H3zM9 1.5v4h4M5.5 9h5M5.5 11.5h5');
+  icon.append(outline);
+  return icon;
 }
 
 function appendMessage(role, content, meta = '', requestId = '', attachments = []) {
@@ -1032,7 +1054,7 @@ function renderAttachments() {
       preview.alt = '';
       item.append(preview);
     } else {
-      item.append(textElement('span', 'attachment-file-icon', '◇'));
+      item.append(createFileIcon());
     }
     const details = document.createElement('span');
     details.className = 'attachment-details';

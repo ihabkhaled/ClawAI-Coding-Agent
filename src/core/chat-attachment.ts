@@ -3,8 +3,8 @@ import { Buffer } from 'node:buffer';
 import { z } from 'zod';
 
 export const MAX_ATTACHMENTS = 10;
-export const MAX_ATTACHMENT_BYTES = 5 * 1024 * 1024;
-export const MAX_ATTACHMENT_TOTAL_BYTES = 10 * 1024 * 1024;
+export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
+export const MAX_ATTACHMENT_TOTAL_BYTES = 50 * 1024 * 1024;
 
 const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
   'application/graphql',

@@ -2,6 +2,7 @@ import { createAgentRunSnapshot } from '../core/agent-run';
 import { EMPTY_CONTEXT } from '../core/empty-context';
 import { addTokenReceipts } from '../core/token-telemetry';
 
+import { buildToolResultPrompt, isDiagnosticToolPlan } from './tool-result-prompt';
 import {
   buildAnalysisPrompt,
   buildEditPlanRepairPrompt,
@@ -17,6 +18,7 @@ import type {
   AgentRunInput,
   AgentRunResult,
   AgentRunSessionPort,
+  CommandExecutionResult,
 } from './agent-run-service.types';
 import type { CollectedContext } from '../core/context-collector';
 import type { EditPlan } from '../core/edit-plan';
@@ -40,15 +42,20 @@ interface CommandExecutionOutcome {
   commandsCompleted?: number;
   commandsExecuted?: boolean;
   commandsTotal?: number;
+  commandResults?: CommandExecutionResult[];
 }
 
 function commandMetadata(
   outcome: CommandExecutionOutcome,
 ): Partial<
-  Pick<AgentRunResult, 'commandError' | 'commandsCompleted' | 'commandsExecuted' | 'commandsTotal'>
+  Pick<
+    AgentRunResult,
+    'commandError' | 'commandResults' | 'commandsCompleted' | 'commandsExecuted' | 'commandsTotal'
+  >
 > {
   return {
     ...(outcome.commandError === undefined ? {} : { commandError: outcome.commandError }),
+    ...(outcome.commandResults === undefined ? {} : { commandResults: outcome.commandResults }),
     ...(outcome.commandsCompleted === undefined
       ? {}
       : { commandsCompleted: outcome.commandsCompleted }),
@@ -276,6 +283,53 @@ export class AgentRunService {
       callbacks.onPhase(createAgentRunSnapshot('validating'));
       plan = parseWorkflowEditPlan(response.content);
     }
+    for (let diagnosticRound = 0; diagnosticRound < 2; diagnosticRound += 1) {
+      if (!isDiagnosticToolPlan(plan)) {
+        break;
+      }
+      const diagnostic = await this.completeEditPlan(
+        plan,
+        response.content,
+        response.threadId,
+        tokens,
+        runContext,
+        input.signal,
+        callbacks,
+        session,
+      );
+      if (diagnostic.status !== 'applied' || diagnostic.commandResults === undefined) {
+        return diagnostic;
+      }
+      callbacks.onEvent({ type: 'AGENT_DRAFT_RESET' });
+      const next = await this.send(
+        input,
+        buildToolResultPrompt(input.content, plan.commands ?? [], diagnostic.commandResults),
+        callbacks,
+        session,
+        fileIds,
+        response.threadId,
+      );
+      tokens = combineTokens(tokens, next.tokens);
+      response = next;
+      callbacks.onPhase(createAgentRunSnapshot('validating'));
+      plan = parseWorkflowEditPlan(response.content);
+    }
+    if (isDiagnosticToolPlan(plan)) {
+      callbacks.onPhase(
+        createAgentRunSnapshot(
+          'failed',
+          plan,
+          'ClawAI reached the two-round diagnostic safety limit.',
+        ),
+      );
+      return {
+        status: 'planned',
+        content: 'ClawAI reached the two-round diagnostic safety limit.',
+        context: runContext,
+        editPlan: plan,
+        ...runMetadata(response.threadId, tokens),
+      };
+    }
     return this.completeEditPlan(
       plan,
       response.content,
@@ -381,10 +435,24 @@ export class AgentRunService {
     }
     callbacks.onPhase(createAgentRunSnapshot('executing', plan, plan.summary));
     let commandsCompleted = 0;
+    const commandResults: CommandExecutionResult[] = [];
     try {
       for (const command of commands) {
         signal.throwIfAborted();
+        callbacks.onEvent({
+          type: 'TOOL_STARTED',
+          label: command.purpose,
+          description: command.command,
+        });
         const result = await this.edits.execute(command, signal);
+        commandResults.push(result);
+        callbacks.onEvent({
+          type: 'TOOL_OUTPUT',
+          label: command.purpose,
+          description: [result.stdout, result.stderr].filter(Boolean).join('\n').slice(0, 8_000),
+          exitCode: result.exitCode,
+          truncated: result.truncated,
+        });
         signal.throwIfAborted();
         if (result.exitCode !== 0) {
           return {
@@ -394,6 +462,7 @@ export class AgentRunService {
             commandsCompleted,
             commandsExecuted: false,
             commandsTotal: commands.length,
+            commandResults,
           };
         }
         commandsCompleted += 1;
@@ -411,6 +480,7 @@ export class AgentRunService {
       commandsCompleted,
       commandsExecuted: true,
       commandsTotal: commands.length,
+      commandResults,
     };
   }
 
@@ -427,6 +497,7 @@ export class AgentRunService {
     return this.chat.send(
       {
         content: session.preparePrompt(content),
+        clientIntent: input.content,
         context: context?.files ?? [],
         ...(context === undefined ? {} : { contextReceipt: context.receipt }),
         ...input.selection,

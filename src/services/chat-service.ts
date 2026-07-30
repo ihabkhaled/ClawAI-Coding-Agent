@@ -20,6 +20,7 @@ export interface ChatBackendPort {
     input: {
       threadId: string;
       content: string;
+      clientIntent?: string;
       routingMode: RoutingMode;
       provider?: string;
       model?: string;
@@ -32,6 +33,7 @@ export interface ChatBackendPort {
 
 export interface ChatSendInput {
   content: string;
+  clientIntent?: string;
   context: ContextCandidate[];
   contextReceipt?: ContextReceipt;
   routingMode: RoutingMode;
@@ -95,6 +97,7 @@ function messageRequest(input: ChatSendInput, threadId: string) {
     request: {
       threadId,
       content: prompt.content,
+      clientIntent: (input.clientIntent ?? input.content).slice(0, 20_000),
       routingMode: input.routingMode,
       ...(input.provider === undefined ? {} : { provider: input.provider }),
       ...(input.model === undefined ? {} : { model: input.model }),
@@ -229,6 +232,9 @@ async function consumeStream(
       const events = sseDecoder.push(textDecoder.decode(read.value, { stream: true }));
       for (const event of events) {
         const normalized = normalizeStreamEvent(event);
+        if (normalized.type === 'HEARTBEAT') {
+          continue;
+        }
         onEvent(normalized);
         finished = applyStreamEvent(normalized, accumulator) || finished;
       }

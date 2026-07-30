@@ -15,6 +15,7 @@ const allowedExecutables = new Set([
   'cargo',
   'cmake',
   'deno',
+  'docker',
   'dotnet',
   'eslint',
   'git',
@@ -45,6 +46,18 @@ const allowedExecutables = new Set([
   'yarn.cmd',
 ]);
 const safeGitSubcommands = new Set(['diff', 'log', 'ls-files', 'rev-parse', 'show', 'status']);
+const safeDockerSubcommands = new Set([
+  'images',
+  'info',
+  'inspect',
+  'logs',
+  'network',
+  'port',
+  'ps',
+  'stats',
+  'top',
+  'version',
+]);
 const inlineInterpreterArgumentPatterns = new Map<string, RegExp>([
   ['bun', /^(?:-[^-]*[ep]|--(?:eval|print)(?:=|$))/u],
   ['deno', /^eval$/u],
@@ -59,6 +72,20 @@ function usesInlineInterpreter(executable: string, arguments_: string[]): boolea
     blockedArgumentPattern !== undefined &&
     arguments_.some((argument) => blockedArgumentPattern.test(argument.toLowerCase()))
   );
+}
+
+function invalidDockerCommandReason(subcommand: string, arguments_: string[]): string | undefined {
+  const normalizedSubcommand = subcommand.toLowerCase();
+  if (!safeDockerSubcommands.has(normalizedSubcommand)) {
+    return 'Only read-only Docker diagnostics are allowed.';
+  }
+  if (normalizedSubcommand === 'network' && arguments_[0]?.toLowerCase() !== 'inspect') {
+    return 'Only docker network inspect is allowed.';
+  }
+  if (normalizedSubcommand === 'stats' && !arguments_.includes('--no-stream')) {
+    return 'Docker stats must use --no-stream.';
+  }
+  return undefined;
 }
 
 function unsafeCommandReason(
@@ -93,6 +120,12 @@ function invalidWorkspaceCommandReason(command: string): string | undefined {
   }
   if (normalizedExecutable === 'git' && !safeGitSubcommands.has(subcommand.toLowerCase())) {
     return 'Only read-only Git commands are allowed.';
+  }
+  if (normalizedExecutable === 'docker') {
+    const reason = invalidDockerCommandReason(subcommand, remainingArguments);
+    if (reason !== undefined) {
+      return reason;
+    }
   }
   return unsafeCommandReason(normalizedExecutable, [subcommand, ...remainingArguments], command);
 }

@@ -55,6 +55,7 @@ export interface BackendClientOptions {
 export interface MessageRequest {
   threadId: string;
   content: string;
+  clientIntent?: string;
   routingMode: 'AUTO' | 'MANUAL_MODEL';
   provider?: string;
   model?: string;

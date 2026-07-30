@@ -74,13 +74,13 @@ describe('chatAttachmentsSchema', () => {
   });
 
   it('rejects an aggregate payload above the request byte limit', () => {
-    const content = Buffer.alloc(3_500_000, 1).toString('base64');
+    const content = Buffer.alloc(20_000_000, 1).toString('base64');
     const result = chatAttachmentsSchema.safeParse(
       Array.from({ length: 3 }, (_, index) =>
         attachment({
           clientId: `large-${String(index)}`,
           content,
-          sizeBytes: 3_500_000,
+          sizeBytes: 20_000_000,
         }),
       ),
     );

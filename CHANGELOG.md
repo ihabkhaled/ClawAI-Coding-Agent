@@ -2,6 +2,23 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.10.0
+
+This pre-1.0 minor release expands attachment capacity, diagnostic tooling,
+stream reliability, and the workbench UI without breaking existing settings.
+
+- Preserved the original human request separately from enriched workspace
+  context so attached screenshots are inspected without accidentally invoking
+  image generation.
+- Bounded image-generation prompts at the image-service contract and raised
+  attachment limits to 25 MiB per file and 50 MiB per request.
+- Added invisible 15-second SSE heartbeats for slow local-model responses.
+- Added approved, shell-free, read-only Docker diagnostics with bounded,
+  redacted output streamed into the conversation and returned to the agent for
+  at most two reasoning rounds.
+- Replaced ambiguous diamonds and emoji with theme-aware semantic SVG icons,
+  image thumbnails, and a conventional circular connection indicator.
+
 ## 0.9.0
 
 This is a pre-1.0 minor release because it adds the attachment workflow and

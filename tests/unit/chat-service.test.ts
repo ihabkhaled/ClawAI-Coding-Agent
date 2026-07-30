@@ -93,6 +93,7 @@ describe('ChatService', () => {
     });
     expect(backend.sendMessage).toHaveBeenCalledWith(
       expect.objectContaining({
+        clientIntent: 'Explain this',
         content: expect.stringContaining('src/a.ts'),
       }),
     );

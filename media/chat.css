@@ -625,7 +625,13 @@ textarea:disabled {
   height: 9px;
   flex: 0 0 auto;
   border: 1px solid var(--claw-muted);
-  transform: rotate(45deg);
+  border-radius: 50%;
+}
+
+.claw-icon {
+  width: 16px;
+  height: 16px;
+  display: block;
 }
 
 .status-shape[data-status='connected'] {

@@ -3,6 +3,32 @@ import { describe, expect, it } from 'vitest';
 import { parseEditPlan } from '../../src/core/edit-plan';
 
 describe('edit plan validation', () => {
+  it('allows bounded read-only Docker diagnostics', () => {
+    const plan = parseEditPlan({
+      summary: 'Inspect services',
+      files: [],
+      commands: [
+        { command: 'docker ps', purpose: 'List containers' },
+        { command: 'docker logs claw-file-service --tail 20', purpose: 'Inspect logs' },
+        { command: 'docker inspect claw-image-service', purpose: 'Inspect image service' },
+        { command: 'docker stats --no-stream', purpose: 'Inspect resource use' },
+      ],
+    });
+    expect(plan.commands).toHaveLength(4);
+  });
+
+  it.each(['docker rm claw-file-service', 'docker exec claw-file-service sh', 'docker restart x'])(
+    'drops mutating Docker command %s',
+    (command) => {
+      const plan = parseEditPlan({
+        summary: 'Unsafe',
+        files: [],
+        commands: [{ command, purpose: 'Mutate container' }],
+      });
+      expect(plan.commands).toEqual([]);
+    },
+  );
+
   it('accepts bounded relative workspace edits', () => {
     expect(
       parseEditPlan({

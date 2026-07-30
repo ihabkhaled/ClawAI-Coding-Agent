@@ -36,10 +36,15 @@ export interface AgentRunChatPort {
 }
 
 export interface AgentRunCommandPort {
-  execute(
-    command: WorkspaceCommand,
-    signal: AbortSignal,
-  ): Promise<{ exitCode: number | undefined }>;
+  execute(command: WorkspaceCommand, signal: AbortSignal): Promise<CommandExecutionResult>;
+}
+
+export interface CommandExecutionResult {
+  exitCode: number | undefined;
+  stdout?: string;
+  stderr?: string;
+  durationMs?: number;
+  truncated?: boolean;
 }
 
 export interface AgentRunEditPort extends AgentRunCommandPort {
@@ -80,6 +85,7 @@ export interface AgentRunResult {
   commandsCompleted?: number;
   commandsTotal?: number;
   commandError?: string;
+  commandResults?: CommandExecutionResult[];
   filesApplied?: boolean;
   threadId?: string;
   tokens?: TokenReceipt;

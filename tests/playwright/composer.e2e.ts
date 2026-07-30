@@ -234,11 +234,11 @@ test('rejects oversized attachments before reading their bytes', async ({ page }
   await page.locator('#attachmentInput').setInputFiles({
     name: 'too-large.mp4',
     mimeType: 'video/mp4',
-    buffer: Buffer.alloc(5 * 1024 * 1024 + 1),
+    buffer: Buffer.alloc(25 * 1024 * 1024 + 1),
   });
 
   await expect(page.locator('#attachmentStatus')).toHaveText(
-    'Each attachment must be 5 MiB or smaller.',
+    'Each attachment must be 25 MiB or smaller.',
   );
   await expect(page.locator('#attachmentList')).toBeEmpty();
 });

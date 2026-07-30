@@ -8,6 +8,21 @@ export interface ChatMarkupInput {
   translate(message: string): string;
 }
 
+type ClawIconName = 'attach' | 'explain' | 'plan' | 'review' | 'test';
+
+const iconPaths: Record<ClawIconName, string> = {
+  attach:
+    '<path d="M6 8.5 11.5 3a2.5 2.5 0 0 1 3.5 3.5L8.5 13a4 4 0 0 1-5.5-5.5L9 1.5"/><path d="m5.5 9 6-6"/>',
+  explain: '<circle cx="8" cy="8" r="6"/><path d="M8 11V7.5M8 5h.01"/>',
+  plan: '<path d="M2 4h12M2 8h8M2 12h5"/><path d="m10 12 1.5 1.5L15 10"/>',
+  review: '<path d="m2 8 3 3 7-7"/><path d="M14 8a6 6 0 1 1-3-5.2"/>',
+  test: '<path d="M6 2v4l-4 7a2 2 0 0 0 2 3h8a2 2 0 0 0 2-3l-4-7V2"/><path d="M5 10h6M5 2h6"/>',
+};
+
+export function iconMarkup(name: ClawIconName): string {
+  return `<svg class="claw-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]}</svg>`;
+}
+
 function escapeHtml(value: string): string {
   return value
     .replaceAll('&', '&amp;')
@@ -147,19 +162,19 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         <p>${translated('Ask a question, inspect the workspace, or start with a focused task.')}</p>
         <div class="suggestion-grid" aria-label="${translated('Suggested prompts')}">
           <button class="suggestion-card" type="button" data-prompt-kind="explain">
-            <span class="suggestion-icon" aria-hidden="true">◎</span>
+            <span class="suggestion-icon">${iconMarkup('explain')}</span>
             <span><strong>${translated('Explain')}</strong><small>${translated('Map how this workspace works')}</small></span>
           </button>
           <button class="suggestion-card" type="button" data-prompt-kind="plan">
-            <span class="suggestion-icon" aria-hidden="true">◇</span>
+            <span class="suggestion-icon">${iconMarkup('plan')}</span>
             <span><strong>${translated('Plan')}</strong><small>${translated('Design a safe implementation')}</small></span>
           </button>
           <button class="suggestion-card" type="button" data-prompt-kind="review">
-            <span class="suggestion-icon" aria-hidden="true">△</span>
+            <span class="suggestion-icon">${iconMarkup('review')}</span>
             <span><strong>${translated('Review')}</strong><small>${translated('Find correctness and security risks')}</small></span>
           </button>
           <button class="suggestion-card" type="button" data-prompt-kind="test">
-            <span class="suggestion-icon" aria-hidden="true">□</span>
+            <span class="suggestion-icon">${iconMarkup('test')}</span>
             <span><strong>${translated('Test')}</strong><small>${translated('Strengthen coverage and edge cases')}</small></span>
           </button>
         </div>
@@ -190,7 +205,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         <div class="control-rail">
           <input id="attachmentInput" class="sr-only" type="file" multiple>
           <button id="attachmentButton" class="icon-button attachment-button" type="button" title="${translated('Attach files')}" aria-label="${translated('Attach files')}">
-            <span aria-hidden="true">📎</span>
+            ${iconMarkup('attach')}
           </button>
           <label class="compact-control"><span>${translated('Model')}</span>
             <select id="modelSelect" aria-label="${translated('Model')}">
@@ -276,10 +291,10 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-attachment="${translated('attachment')}"
     data-attaching-files="${translated('Attaching files…')}"
     data-attachment-empty="${translated('Empty files cannot be attached.')}"
-    data-attachment-limit-summary="${translated('{0}/10 attachments · {1}/10 MiB')}"
+    data-attachment-limit-summary="${translated('{0}/10 attachments · {1}/50 MiB')}"
     data-attachment-read-failed="${translated('This file could not be attached.')}"
-    data-attachment-too-large="${translated('Each attachment must be 5 MiB or smaller.')}"
-    data-attachment-total-too-large="${translated('Attachments must total 10 MiB or less.')}"
+    data-attachment-too-large="${translated('Each attachment must be 25 MiB or smaller.')}"
+    data-attachment-total-too-large="${translated('Attachments must total 50 MiB or less.')}"
     data-attachment-too-many="${translated('You can attach up to 10 files.')}"
     data-attachment-type-unsupported="${translated('This file type is not supported.')}"
     data-attachments="${translated('Attachments')}"

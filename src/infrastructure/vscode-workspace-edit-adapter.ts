@@ -8,7 +8,10 @@ import {
   resolveCanonicalWorkspacePath,
 } from '../core/workspace-file-containment';
 
+import { runBoundedCommand } from './bounded-command-runner';
+
 import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
+import type { CommandExecutionResult } from '../services/agent-run-service.types';
 import type { EditPreview, EditReview, WorkspaceEditPort } from '../services/safe-edit-service';
 import type { WorkspaceFolderScopePort } from '../services/workspace-scope-service.types';
 
@@ -139,10 +142,7 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
     return applied;
   }
 
-  async execute(
-    command: WorkspaceCommand,
-    signal: AbortSignal,
-  ): Promise<{ exitCode: number | undefined }> {
+  async execute(command: WorkspaceCommand, signal: AbortSignal): Promise<CommandExecutionResult> {
     if (signal.aborted) {
       throw new Error('ClawAI command execution was cancelled.');
     }
@@ -154,6 +154,21 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
     await this.assertTargetInsideWorkspace(folder.uri, vscode.Uri.file(cwd), false);
     await this.assertCommandPathsInsideWorkspace(folder.uri, command.command);
     signal.throwIfAborted();
+    const [executable, ...arguments_] = tokenizeWorkspaceCommand(command.command) ?? [];
+    if (executable === undefined) {
+      throw new Error('ClawAI could not parse the approved command.');
+    }
+    if (executable.toLowerCase() !== 'docker') {
+      return this.executeVscodeTask(command, cwd, signal);
+    }
+    return runBoundedCommand(executable, arguments_, cwd, signal);
+  }
+
+  private async executeVscodeTask(
+    command: WorkspaceCommand,
+    cwd: string,
+    signal: AbortSignal,
+  ): Promise<CommandExecutionResult> {
     const task = new vscode.Task(
       { type: 'clawai', command: command.command },
       vscode.TaskScope.Workspace,
@@ -161,20 +176,10 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
       'ClawAI',
       new vscode.ShellExecution(command.command, { cwd }),
     );
-    task.presentationOptions = {
-      clear: false,
-      echo: true,
-      focus: false,
-      panel: vscode.TaskPanelKind.Dedicated,
-      reveal: vscode.TaskRevealKind.Always,
-      showReuseMessage: true,
-    };
     const execution = await vscode.tasks.executeTask(task);
     return new Promise((resolve, reject) => {
       const ended = vscode.tasks.onDidEndTaskProcess((event) => {
-        if (event.execution !== execution) {
-          return;
-        }
+        if (event.execution !== execution) return;
         cleanup();
         resolve({ exitCode: event.exitCode });
       });
@@ -188,9 +193,7 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
         signal.removeEventListener('abort', aborted);
       };
       signal.addEventListener('abort', aborted, { once: true });
-      if (signal.aborted) {
-        aborted();
-      }
+      if (signal.aborted) aborted();
     });
   }
 
