@@ -19,6 +19,40 @@ test.beforeEach(async ({ page }) => {
   await sendState(page);
 });
 
+test('keeps settings interactive and dismisses them outside or with Escape', async ({ page }) => {
+  const settings = page.locator('#moreSettings');
+  const settingsSummary = page.locator('#moreSettingsSummary');
+
+  await settingsSummary.click();
+  await expect(settings).toHaveAttribute('open', '');
+  await page.locator('#permissionMode').click();
+  await expect(settings).toHaveAttribute('open', '');
+
+  await page.locator('#workspaceName').click();
+  await expect(settings).not.toHaveAttribute('open', '');
+
+  await settingsSummary.click();
+  await page.keyboard.press('Escape');
+  await expect(settings).not.toHaveAttribute('open', '');
+  await expect(settingsSummary).toBeFocused();
+});
+
+test('uses pointer feedback for enabled interactive controls only', async ({ page }) => {
+  for (const selector of [
+    '#moreSettingsSummary',
+    '#sendButton',
+    '#modelSelect',
+    '[data-prompt-kind="plan"]',
+  ]) {
+    await expect(page.locator(selector)).toHaveCSS('cursor', 'pointer');
+  }
+
+  await page.locator('#sendButton').evaluate((button: HTMLButtonElement) => {
+    button.disabled = true;
+  });
+  await expect(page.locator('#sendButton')).toHaveCSS('cursor', 'default');
+});
+
 test('shows two active runs with independent targeted cancellation', async ({ page }) => {
   await sendState(page, {
     busy: true,

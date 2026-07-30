@@ -161,6 +161,7 @@ test('preserves Compare and Judge model selections when retrying', async ({ page
   await page.locator('#modelChecks input').nth(0).uncheck();
   await page.locator('#modelChecks input').nth(1).uncheck();
   await page.locator('#runMode').selectOption('agent');
+  await page.locator('#moreSettingsSummary').click();
   await page.locator('#contextMode').selectOption('none');
   await page.locator('#prompt').fill('A later request');
   await page.locator('#composer').evaluate((form: HTMLFormElement) => {

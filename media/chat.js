@@ -1818,8 +1818,20 @@ for (const suggestion of document.querySelectorAll('[data-prompt-kind]')) {
 }
 
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && elements.moreSettings.open) {
+    event.preventDefault();
+    elements.moreSettings.open = false;
+    elements.moreSettings.querySelector('summary')?.focus();
+    return;
+  }
   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
     elements.form.requestSubmit();
+  }
+});
+
+document.addEventListener('pointerdown', (event) => {
+  if (elements.moreSettings.open && !elements.moreSettings.contains(event.target)) {
+    elements.moreSettings.open = false;
   }
 });
 

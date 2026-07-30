@@ -2,6 +2,18 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.11.1
+
+This patch makes the composer settings easier to discover and reliably
+dismissible without changing the existing workflow.
+
+- Promoted Settings to a high-contrast accent control while keeping Send as the
+  primary action and preserving the compact narrow layout.
+- Added consistent pointer feedback across enabled buttons, selects, summaries,
+  and other clickable controls.
+- Closed the settings popover on outside interaction or Escape, restored focus
+  after keyboard dismissal, and kept interactions inside the popover open.
+
 ## 0.11.0
 
 This pre-1.0 minor release adds a backwards-compatible parallel workflow and a
