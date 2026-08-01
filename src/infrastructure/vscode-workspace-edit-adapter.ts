@@ -11,6 +11,7 @@ import {
 import { runBoundedCommand } from './bounded-command-runner';
 
 import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
+import type { ExternalOutputGrant } from '../core/external-output-grants';
 import type { CommandExecutionResult } from '../services/agent-run-service.types';
 import type { EditPreview, EditReview, WorkspaceEditPort } from '../services/safe-edit-service';
 import type { WorkspaceFolderScopePort } from '../services/workspace-scope-service.types';
@@ -20,10 +21,17 @@ interface EditBackup {
   review: EditReview;
 }
 
+interface ExternalOutputGrantResolver {
+  resolve(rootKey: string): ExternalOutputGrant | undefined;
+}
+
 export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
   private lastBackup: EditBackup | null = null;
 
-  constructor(private readonly scope: WorkspaceFolderScopePort) {}
+  constructor(
+    private readonly scope: WorkspaceFolderScopePort,
+    private readonly externalOutputs?: ExternalOutputGrantResolver,
+  ) {}
 
   isTrusted(): boolean {
     return vscode.workspace.isTrusted;
@@ -42,7 +50,12 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
     signal?.throwIfAborted();
     this.assertReviewMatchesPlan(plan, review);
     const folderUri = vscode.Uri.parse(review.workspaceFolderUri);
-    const targetUris = plan.files.map((file) => this.targetUri(folderUri, file.path));
+    const targetUris = plan.files.map((file, index) =>
+      this.targetUri(
+        this.reviewedRootUri(file.rootKey, review.previews[index], folderUri),
+        file.path,
+      ),
+    );
     const reviewState = { bufferChanged: false };
     const watchedTargets = new Set(targetUris.map((uri) => uri.toString()));
     const changed = vscode.workspace.onDidChangeTextDocument((event) => {
@@ -83,7 +96,7 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
       }
       signal?.throwIfAborted();
       const applied = await vscode.workspace.applyEdit(edit);
-      if (applied) {
+      if (applied && plan.files.every((file) => file.rootKey === undefined)) {
         this.lastBackup = { plan, review };
       }
       return applied;
@@ -204,11 +217,15 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
   private async previewInFolder(plan: EditPlan, folderUri: vscode.Uri): Promise<EditReview> {
     const previews: EditPreview[] = [];
     for (const file of plan.files) {
-      const uri = this.targetUri(folderUri, file.path);
-      await this.assertTargetInsideWorkspace(folderUri, uri, file.operation === 'create');
+      const rootUri = this.currentRootUri(file.rootKey, folderUri);
+      const uri = this.targetUri(rootUri, file.path);
+      await this.assertTargetInsideWorkspace(rootUri, uri, file.operation === 'create');
       const before = await this.readOptional(uri);
       previews.push({
         path: file.path,
+        ...(file.rootKey === undefined
+          ? {}
+          : { rootKey: file.rootKey, rootUri: rootUri.toString() }),
         before,
         after: file.operation === 'delete' ? null : (file.content ?? null),
       });
@@ -228,6 +245,7 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
           return true;
         }
         return (
+          preview.rootKey !== file.rootKey ||
           preview.path !== file.path ||
           preview.after !== (file.operation === 'delete' ? null : (file.content ?? null))
         );
@@ -247,8 +265,9 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
       if (preview === undefined) {
         throw new Error(vscode.l10n.t('The reviewed file changes are no longer available.'));
       }
-      const uri = this.targetUri(folderUri, file.path);
-      await this.assertTargetInsideWorkspace(folderUri, uri, file.operation === 'create');
+      const rootUri = this.reviewedRootUri(file.rootKey, preview, folderUri);
+      const uri = this.targetUri(rootUri, file.path);
+      await this.assertTargetInsideWorkspace(rootUri, uri, file.operation === 'create');
       if ((await this.readOptional(uri)) !== preview.before) {
         throw this.staleReviewError();
       }
@@ -265,6 +284,29 @@ export class VscodeWorkspaceEditAdapter implements WorkspaceEditPort {
 
   private targetUri(folderUri: vscode.Uri, relativePath: string): vscode.Uri {
     return vscode.Uri.joinPath(folderUri, ...relativePath.replaceAll('\\', '/').split('/'));
+  }
+
+  private currentRootUri(rootKey: string | undefined, workspaceUri: vscode.Uri): vscode.Uri {
+    if (rootKey === undefined) return workspaceUri;
+    const grant = this.externalOutputs?.resolve(rootKey);
+    if (grant === undefined) {
+      throw new Error(
+        vscode.l10n.t('The external output folder permission is no longer available.'),
+      );
+    }
+    return vscode.Uri.parse(grant.uri);
+  }
+
+  private reviewedRootUri(
+    rootKey: string | undefined,
+    preview: EditPreview | undefined,
+    workspaceUri: vscode.Uri,
+  ): vscode.Uri {
+    const current = this.currentRootUri(rootKey, workspaceUri);
+    if (rootKey !== undefined && preview?.rootUri !== current.toString()) {
+      throw new Error(vscode.l10n.t('The external output folder changed during review.'));
+    }
+    return current;
   }
 
   private async assertTargetInsideWorkspace(

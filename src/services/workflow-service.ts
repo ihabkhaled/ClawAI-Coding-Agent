@@ -10,6 +10,20 @@ export interface WorkflowPromptInput {
   context: ContextCandidate[];
   diagnostics?: string[];
   rules?: string;
+  externalOutputRoots?: readonly { rootKey: string; label: string }[];
+}
+
+function externalOutputRootBlock(
+  roots: readonly { rootKey: string; label: string }[] | undefined,
+): string {
+  if (roots === undefined || roots.length === 0) return '';
+  return [
+    'Approved external output folders:',
+    ...roots.map((root) => `- { "rootKey": "${root.rootKey}", "label": "${root.label}" }`),
+    'To write there, include that rootKey on a file entry and keep path relative to that folder.',
+    'External output roots allow create and update only; never delete from them.',
+    'Commands always run in the source workspace and cannot use external output roots.',
+  ].join('\n');
 }
 
 const workflowInstructions: Record<WorkflowKind, string> = {
@@ -51,6 +65,7 @@ export function buildWorkflowPrompt(input: WorkflowPromptInput): string {
     '  "commands": []',
     '}',
     'Valid delete file entry: { "path": "relative/obsolete.js", "operation": "delete" }',
+    externalOutputRootBlock(input.externalOutputRoots),
     input.rules === undefined ? '' : `Project rules:\n${input.rules}`,
     input.diagnostics === undefined
       ? ''
@@ -83,6 +98,7 @@ export function buildAnalysisPrompt(input: WorkflowPromptInput): string {
 export function buildEditPlanRepairPrompt(
   originalRequest: string,
   previousResponse: string,
+  externalOutputRoots?: readonly { rootKey: string; label: string }[],
 ): string {
   return [
     'The previous assistant response was not a valid ClawAI edit plan.',
@@ -94,6 +110,7 @@ export function buildEditPlanRepairPrompt(
     '{"summary":"Create the requested file","files":[{"path":"relative/file.js","operation":"create","content":"complete final file content"}],"commands":[]}',
     'Valid delete file entry: {"path":"relative/obsolete.js","operation":"delete"}',
     "Use only safe relative workspace paths. Create and update require full file content. Delete must omit content. Commands must be executable bounded development tools with no chaining or redirection. Command paths are relative to cwd; if the command already includes a path like 'app/file.js', omit cwd or use '.'.",
+    externalOutputRootBlock(externalOutputRoots),
     '<previous-response>',
     previousResponse,
     '</previous-response>',
@@ -118,6 +135,9 @@ function jsonPayload(value: string): string {
   return value.slice(objectStart, objectEnd + 1);
 }
 
-export function parseWorkflowEditPlan(value: string): EditPlan {
-  return parseEditPlan(JSON.parse(jsonPayload(value)));
+export function parseWorkflowEditPlan(
+  value: string,
+  externalRoots: readonly { rootKey: string; uri: string }[] = [],
+): EditPlan {
+  return parseEditPlan(JSON.parse(jsonPayload(value)), { externalRoots });
 }

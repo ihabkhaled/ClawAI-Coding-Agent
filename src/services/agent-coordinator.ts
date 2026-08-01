@@ -39,6 +39,7 @@ import {
 import {
   type ChatPromptInput,
   type CompareInput,
+  type ExternalOutputGrantStore,
   type RequestAdmission,
 } from './agent-coordinator.types';
 import { refreshAgentData, refreshConversationData } from './agent-data-service';
@@ -99,6 +100,7 @@ export class AgentCoordinator implements vscode.Disposable {
     private readonly diffPreview: DiffPreviewProvider,
     private readonly context: WorkspaceContextService,
     approvalMemory: WorkspaceApprovalMemory,
+    externalOutputs: ExternalOutputGrantStore,
   ) {
     this.backend = createBackendClient(this.configuration.read(), this.sessionVault);
     this.attachmentRequests = new AttachmentRequestService(
@@ -184,6 +186,7 @@ export class AgentCoordinator implements vscode.Disposable {
       this.runEpoch,
       this.context,
       this.sessionControls,
+      externalOutputs,
     );
     this.promptExecutions = new PromptExecutionService({
       activateThread: (threadId, requestId) => {
@@ -484,7 +487,9 @@ export class AgentCoordinator implements vscode.Disposable {
     void this.approvals.resolve(requestId, approved);
 
   captureAdmission(threadId?: string): RequestAdmission {
-    this.assertConnected();
+    if (!this.state.snapshot.connected) {
+      throw new Error(vscode.l10n.t('Connect to ClawAI before sending a request.'));
+    }
     return this.admissions.capture(threadId);
   }
 
@@ -525,11 +530,5 @@ export class AgentCoordinator implements vscode.Disposable {
     return transitionRunBoundary(this.generations, this.approvals, transition, () =>
       cancelRemoteGenerations(this.backend, this.logger, activeThreadIds),
     );
-  }
-
-  private assertConnected(): void {
-    if (!this.state.snapshot.connected) {
-      throw new Error(vscode.l10n.t('Connect to ClawAI before sending a request.'));
-    }
   }
 }

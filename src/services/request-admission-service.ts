@@ -4,12 +4,14 @@ import type { RequestAdmission } from './agent-coordinator.types';
 import type { SessionControlService } from './session-control-service';
 import type { WorkspaceContextService } from './workspace-context-service';
 import type { AccountEpoch } from '../core/account-epoch';
+import type { ExternalOutputGrantStore } from '../core/external-output-grants';
 
 export class RequestAdmissionService {
   constructor(
     private readonly boundary: AccountEpoch,
     private readonly context: WorkspaceContextService,
     private readonly sessions: SessionControlService,
+    private readonly externalOutputs?: ExternalOutputGrantStore,
   ) {}
 
   capture(threadId?: string): RequestAdmission {
@@ -20,6 +22,7 @@ export class RequestAdmissionService {
       session: this.sessions.capture(),
       threadId,
       workspaceFolderKey: this.context.scopeSnapshot().selectedFolderKey,
+      externalOutputRoots: this.externalOutputs?.snapshot() ?? Object.freeze([]),
     });
   }
 

@@ -254,6 +254,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
                   <option value="SEARCH_EXTRACT">${translated('Search + extract')}</option>
                 </select>
               </label>
+              <button id="externalOutputButton" class="quiet-button external-output-button" type="button">${translated('Output folders')}</button>
             </div>
           </details>
           <div class="actions">

@@ -84,6 +84,19 @@ bounded and redacted. Requests have timeouts and cancellation. Proposed
 commands are treated as untrusted until strict local validation and the active
 permission policy allow them.
 
+### External output folders
+
+An external output folder is not a second source workspace. The user grants it
+with the native folder picker and may revoke it from **More settings → Output
+folders**. Grants are stored in VS Code's workspace-scoped state and frozen into
+each admitted request. Plans address them by an opaque `rootKey` plus a safe
+relative path; absolute paths are normalized only when underneath a granted
+root. Real-path containment is checked again at preview and apply time.
+
+External roots allow create and update only. They cannot provide model context,
+host commands, delete files, or participate in automatic undo. Every external
+final diff requires explicit approval, including in Full Access mode.
+
 ## Residual risks
 
 Approved generated code can still be incorrect. Users must review diffs and run

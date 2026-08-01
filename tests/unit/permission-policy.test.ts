@@ -3,6 +3,20 @@ import { describe, expect, it } from 'vitest';
 import { decidePermission } from '../../src/core/permission-policy';
 
 describe('permission policy', () => {
+  it.each(['MANUAL', 'EDIT_AUTOMATICALLY', 'BYPASS_PERMISSIONS'] as const)(
+    'requires explicit approval for external output diffs in %s mode',
+    (permissionMode) => {
+      expect(
+        decidePermission({
+          agentMode: 'AUTO',
+          operation: 'externalFinalDiff',
+          permissionMode,
+          sensitive: false,
+          trusted: true,
+        }),
+      ).toEqual({ outcome: 'ask', reason: 'externalFinalDiffRequired' });
+    },
+  );
   it('asks in Manual mode and pre-approves routine actions in higher modes', () => {
     expect(
       decidePermission({

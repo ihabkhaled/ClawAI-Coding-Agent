@@ -30,6 +30,20 @@ describe('code workflow protocol', () => {
     expect(prompt).toContain('src/a.ts');
   });
 
+  it('identifies admitted external output roots without exposing them as command roots', () => {
+    const prompt = buildWorkflowPrompt({
+      kind: 'plan',
+      request: 'Write the plan in my plans folder',
+      context: [],
+      externalOutputRoots: [{ rootKey: 'output-a1', label: 'Packs, Plans, And Prompts' }],
+    });
+
+    expect(prompt).toContain('"rootKey": "output-a1"');
+    expect(prompt).toContain('Packs, Plans, And Prompts');
+    expect(prompt).toContain('Commands always run in the source workspace');
+    expect(prompt).toContain('External output roots allow create and update only');
+  });
+
   it('grounds a repair in the original request without repeating the ambiguous union', () => {
     const prompt = buildEditPlanRepairPrompt(
       'Create app/for-loop.js with a loop from 0 through 10.',

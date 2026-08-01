@@ -3,6 +3,81 @@ import { describe, expect, it } from 'vitest';
 import { parseEditPlan } from '../../src/core/edit-plan';
 
 describe('edit plan validation', () => {
+  it('accepts create and update operations only for admitted external output roots', () => {
+    expect(
+      parseEditPlan(
+        {
+          summary: 'Write the requested plan',
+          files: [
+            {
+              rootKey: 'output-plans',
+              path: 'stripe-integration-plan.md',
+              operation: 'create',
+              content: '# Stripe integration\n',
+            },
+          ],
+        },
+        { externalRootKeys: ['output-plans'] },
+      ).files,
+    ).toEqual([
+      {
+        rootKey: 'output-plans',
+        path: 'stripe-integration-plan.md',
+        operation: 'create',
+        content: '# Stripe integration\n',
+      },
+    ]);
+
+    expect(() =>
+      parseEditPlan(
+        {
+          summary: 'Write elsewhere',
+          files: [
+            { rootKey: 'not-admitted', path: 'plan.md', operation: 'create', content: '# Plan\n' },
+          ],
+        },
+        { externalRootKeys: ['output-plans'] },
+      ),
+    ).toThrow('not an admitted external output folder');
+
+    expect(() =>
+      parseEditPlan(
+        {
+          summary: 'Delete external content',
+          files: [{ rootKey: 'output-plans', path: 'old.md', operation: 'delete' }],
+        },
+        { externalRootKeys: ['output-plans'] },
+      ),
+    ).toThrow('cannot delete');
+  });
+
+  it('normalizes an absolute path under an admitted output folder to rootKey plus relative path', () => {
+    const plan = parseEditPlan(
+      {
+        summary: 'Write the plan where requested',
+        files: [
+          {
+            path: 'D:\\Freelance\\Packs, Plans, And Prompts\\stripe-integration-plan.md',
+            operation: 'create',
+            content: '# Stripe integration\n',
+          },
+        ],
+      },
+      {
+        externalRoots: [
+          {
+            rootKey: 'output-plans',
+            uri: 'file:///D:/Freelance/Packs,%20Plans,%20And%20Prompts',
+          },
+        ],
+      },
+    );
+
+    expect(plan.files[0]).toMatchObject({
+      rootKey: 'output-plans',
+      path: 'stripe-integration-plan.md',
+    });
+  });
   it('allows bounded read-only Docker diagnostics', () => {
     const plan = parseEditPlan({
       summary: 'Inspect services',

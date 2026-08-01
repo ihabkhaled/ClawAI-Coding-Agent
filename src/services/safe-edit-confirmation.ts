@@ -13,11 +13,19 @@ export async function confirmSafeEdits(
   signal?: AbortSignal,
 ): Promise<EditConfirmation> {
   const previewId = diffPreview.stage(previews);
-  const details = [summary, ...previews.map((preview) => preview.path)];
+  const details = [
+    summary,
+    ...previews.map((preview) =>
+      preview.rootKey === undefined ? preview.path : `${preview.rootKey}/${preview.path}`,
+    ),
+  ];
+  const operation = previews.some((preview) => preview.rootKey !== undefined)
+    ? 'externalFinalDiff'
+    : 'finalDiff';
   const approved =
     signal === undefined
-      ? await session.authorize('finalDiff', details)
-      : await session.authorize('finalDiff', details, signal);
+      ? await session.authorize(operation, details)
+      : await session.authorize(operation, details, signal);
   return {
     approved,
     previewId,

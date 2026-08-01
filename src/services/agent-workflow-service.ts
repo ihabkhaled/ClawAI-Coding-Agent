@@ -105,6 +105,7 @@ export class AgentWorkflowService {
           ...(input.researchMode === undefined ? {} : { researchMode: input.researchMode }),
           selection: input.selection,
           session: input.session,
+          externalOutputRoots: input.admission.externalOutputRoots,
           ...(input.attachments === undefined || input.attachments.length === 0
             ? {}
             : {

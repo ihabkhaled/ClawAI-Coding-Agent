@@ -39,6 +39,7 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('id="permissionMode"');
     expect(html).toContain('id="contextMode"');
     expect(html).toContain('id="researchMode"');
+    expect(html).toContain('id="externalOutputButton"');
     expect(html).toContain('value="NONE"');
     expect(html).toContain('id="selectedModelStrip"');
     expect(html).toContain('id="historySelect"');

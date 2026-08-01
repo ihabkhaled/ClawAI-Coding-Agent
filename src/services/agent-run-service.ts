@@ -249,6 +249,9 @@ export class AgentRunService {
         context: [],
         kind: input.kind ?? 'generate',
         request: input.content,
+        ...(input.externalOutputRoots === undefined
+          ? {}
+          : { externalOutputRoots: input.externalOutputRoots }),
         ...(rules.length === 0 ? {} : { rules }),
       }),
       callbacks,
@@ -263,14 +266,14 @@ export class AgentRunService {
     let tokens: AgentRunResult['tokens'] = response.tokens;
     callbacks.onPhase(createAgentRunSnapshot('validating'));
     try {
-      plan = parseWorkflowEditPlan(response.content);
+      plan = parseWorkflowEditPlan(response.content, input.externalOutputRoots);
     } catch {
       callbacks.onPhase(createAgentRunSnapshot('repairing'));
       callbacks.onEvent({ type: 'AGENT_DRAFT_RESET' });
       const malformed = response;
       response = await this.send(
         input,
-        buildEditPlanRepairPrompt(input.content, malformed.content),
+        buildEditPlanRepairPrompt(input.content, malformed.content, input.externalOutputRoots),
         callbacks,
         session,
         fileIds,
@@ -279,7 +282,7 @@ export class AgentRunService {
       input.signal.throwIfAborted();
       tokens = combineTokens(malformed.tokens, response.tokens);
       callbacks.onPhase(createAgentRunSnapshot('validating'));
-      plan = parseWorkflowEditPlan(response.content);
+      plan = parseWorkflowEditPlan(response.content, input.externalOutputRoots);
     }
     for (let diagnosticRound = 0; diagnosticRound < 2; diagnosticRound += 1) {
       if (!isDiagnosticToolPlan(plan)) {
@@ -310,7 +313,7 @@ export class AgentRunService {
       tokens = combineTokens(tokens, next.tokens);
       response = next;
       callbacks.onPhase(createAgentRunSnapshot('validating'));
-      plan = parseWorkflowEditPlan(response.content);
+      plan = parseWorkflowEditPlan(response.content, input.externalOutputRoots);
     }
     if (isDiagnosticToolPlan(plan)) {
       callbacks.onPhase(

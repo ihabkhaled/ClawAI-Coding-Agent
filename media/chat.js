@@ -39,6 +39,7 @@ const elements = {
   conversationTitle: byId('conversationTitle'),
   disconnectedBrand: byId('disconnectedBrand'),
   emptyState: byId('emptyState'),
+  externalOutputButton: byId('externalOutputButton'),
   form: byId('composer'),
   authenticatedUi: byId('authenticatedUi'),
   historySelect: byId('historySelect'),
@@ -1715,6 +1716,10 @@ elements.newChatButton.addEventListener('click', () => {
 
 elements.languageButton.addEventListener('click', () => {
   vscode.postMessage({ type: 'configureLanguage' });
+});
+
+elements.externalOutputButton.addEventListener('click', () => {
+  vscode.postMessage({ type: 'manageExternalOutputFolders' });
 });
 
 elements.historySelect.addEventListener('change', () => {

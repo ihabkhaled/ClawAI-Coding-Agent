@@ -33,6 +33,7 @@ describe('RequestAdmissionService', () => {
       session: requestSession,
       threadId: 'thread-a',
       workspaceFolderKey: 'folder-a',
+      externalOutputRoots: [],
     });
     expect(Object.isFrozen(admission)).toBe(true);
     expect(admission.boundarySignal.aborted).toBe(false);

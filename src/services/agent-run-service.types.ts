@@ -6,6 +6,7 @@ import type { AgentRunSnapshot } from '../core/agent-run';
 import type { CollectedContext } from '../core/context-collector';
 import type { ContextMode } from '../core/context-mode';
 import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
+import type { ExternalOutputGrant } from '../core/external-output-grants';
 import type { ResolvedModelSelection } from '../core/model-catalog';
 import type { PermissionOperation } from '../core/permission-policy.types';
 import type { ResearchMode } from '../core/research-mode';
@@ -73,6 +74,7 @@ export interface AgentRunInput {
   onAccepted?: () => void;
   researchMode?: ResearchMode;
   threadId?: string;
+  externalOutputRoots?: readonly ExternalOutputGrant[];
 }
 
 export interface AgentRunCallbacks {

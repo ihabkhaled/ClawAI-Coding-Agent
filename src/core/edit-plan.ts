@@ -1,3 +1,6 @@
+import path from 'node:path';
+import { fileURLToPath } from 'node:url';
+
 import { z } from 'zod';
 
 import { tokenizeWorkspaceCommand } from './command-tokenizer';
@@ -132,6 +135,7 @@ function invalidWorkspaceCommandReason(command: string): string | undefined {
 
 const editFileSchema = z
   .object({
+    rootKey: z.string().min(1).max(100).optional(),
     path: z.string().min(1).max(1_000),
     operation: z.enum(['create', 'update', 'delete']),
     content: z.string().max(1_000_000).optional(),
@@ -163,6 +167,7 @@ const editFileSchema = z
 
 const editFileInputSchema = z
   .object({
+    rootKey: z.string().min(1).max(100).optional(),
     path: z.string().min(1).max(1_000),
     operation: z.enum(['create', 'update', 'delete']),
     content: z.string().max(1_000_000).optional(),
@@ -179,13 +184,13 @@ const editFileInputSchema = z
     }
   })
   .transform((file) => ({
+    ...(file.rootKey === undefined ? {} : { rootKey: file.rootKey }),
     path: file.path,
     operation: file.operation,
     ...(file.content === undefined && file.contents === undefined
       ? {}
       : { content: file.content ?? file.contents }),
-  }))
-  .pipe(editFileSchema);
+  }));
 
 const workspaceCommandSchema = z
   .object({
@@ -231,6 +236,36 @@ const editPlanInputSchema = z
 export type EditPlan = z.infer<typeof editPlanSchema>;
 export type WorkspaceCommand = z.infer<typeof workspaceCommandSchema>;
 
+interface EditPlanParseOptions {
+  externalRootKeys?: readonly string[];
+  externalRoots?: readonly { rootKey: string; uri: string }[];
+}
+
+function normalizeExternalAbsolutePath(
+  file: z.infer<typeof editFileInputSchema>,
+  roots: readonly { rootKey: string; uri: string }[],
+): z.infer<typeof editFileInputSchema> {
+  if (file.rootKey !== undefined) return file;
+  const flavor = path.win32.isAbsolute(file.path)
+    ? path.win32
+    : path.posix.isAbsolute(file.path)
+      ? path.posix
+      : undefined;
+  if (flavor === undefined) return file;
+  for (const root of roots) {
+    const rootPath = fileURLToPath(root.uri);
+    const relative = flavor.relative(rootPath, file.path);
+    if (
+      relative !== '..' &&
+      !relative.startsWith(`..${flavor.sep}`) &&
+      !flavor.isAbsolute(relative)
+    ) {
+      return { ...file, rootKey: root.rootKey, path: relative.replaceAll('\\', '/') };
+    }
+  }
+  return file;
+}
+
 function normalizeWorkspaceCommand(command: WorkspaceCommand): WorkspaceCommand {
   const cwd = command.cwd
     ?.replaceAll('\\', '/')
@@ -257,8 +292,27 @@ function normalizeWorkspaceCommand(command: WorkspaceCommand): WorkspaceCommand 
   return workspaceRootCommand;
 }
 
-export function parseEditPlan(value: unknown): EditPlan {
-  const input = editPlanInputSchema.parse(value);
+export function parseEditPlan(value: unknown, options: EditPlanParseOptions = {}): EditPlan {
+  const parsedInput = editPlanInputSchema.parse(value);
+  const input = {
+    ...parsedInput,
+    files: parsedInput.files.map((file) =>
+      normalizeExternalAbsolutePath(file, options.externalRoots ?? []),
+    ),
+  };
+  const admittedRoots = new Set([
+    ...(options.externalRootKeys ?? []),
+    ...(options.externalRoots?.map((root) => root.rootKey) ?? []),
+  ]);
+  for (const file of input.files) {
+    if (file.rootKey === undefined) continue;
+    if (!admittedRoots.has(file.rootKey)) {
+      throw new Error(`The rootKey "${file.rootKey}" is not an admitted external output folder.`);
+    }
+    if (file.operation === 'delete') {
+      throw new Error('External output folders cannot delete files.');
+    }
+  }
   const commands = (input.commands ?? []).flatMap((command) => {
     const parsed = workspaceCommandSchema.safeParse(command);
     return parsed.success ? [normalizeWorkspaceCommand(parsed.data)] : [];

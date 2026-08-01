@@ -2,12 +2,14 @@ import * as vscode from 'vscode';
 
 import { contextModeForCommand } from './core/command-context';
 import { ExtensionState } from './core/extension-state';
+import { ExternalOutputGrantStore } from './core/external-output-grants';
 import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
 import { OutputLogger } from './infrastructure/output-logger';
 import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-edit-adapter';
 import { AgentCoordinator } from './services/agent-coordinator';
 import { ConfigurationService } from './services/configuration-service';
+import { ExternalOutputGrantService } from './services/external-output-grant-service';
 import { GlobalContextService } from './services/global-context-service';
 import { WorkspaceContextService } from './services/workspace-context-service';
 import { WorkspaceScopeService } from './services/workspace-scope-service';
@@ -135,7 +137,9 @@ export function activate(context: vscode.ExtensionContext): void {
     workspaceScope: workspaceScope.snapshot(),
   });
   const logger = new OutputLogger(vscode.window.createOutputChannel('ClawAI'));
-  const editAdapter = new VscodeWorkspaceEditAdapter(workspaceScope);
+  const externalOutputStore = new ExternalOutputGrantStore(context.workspaceState);
+  const externalOutputGrants = new ExternalOutputGrantService(externalOutputStore);
+  const editAdapter = new VscodeWorkspaceEditAdapter(workspaceScope, externalOutputStore);
   const diffPreview = new DiffPreviewProvider();
   const sessionVault = new SessionVault(context.secrets);
   const approvalMemory = new WorkspaceApprovalMemory(
@@ -152,6 +156,7 @@ export function activate(context: vscode.ExtensionContext): void {
     diffPreview,
     workspaceContext,
     approvalMemory,
+    externalOutputStore,
   );
   const chatView = new ChatViewProvider(context.extensionUri, state, {
     agent: (input) => coordinator.runAgent(input),
@@ -163,6 +168,7 @@ export function activate(context: vscode.ExtensionContext): void {
       await vscode.commands.executeCommand('workbench.action.configureLocale');
     },
     logout: () => coordinator.logout(),
+    manageExternalOutputFolders: () => externalOutputGrants.manage(),
     openThread: (input) => coordinator.openThread(input),
     openFolder: async () => {
       await vscode.commands.executeCommand('workbench.action.files.openFolder');

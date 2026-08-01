@@ -109,6 +109,12 @@
 
 ## Accessibility and presentation
 
+- [ ] Grant an external output folder from More settings, request a Markdown
+      deliverable at its absolute path, and verify a final-diff approval appears
+      even in Full Access mode.
+- [ ] Revoke that grant and verify queued writes fail. Verify external deletes,
+      external commands, traversal, sensitive names, and symlink escapes fail.
+
 - [ ] The Marketplace listing uses the cat-with-laptop icon.
 - [ ] The Activity Bar and editor-title action use the three-scratch mark,
       render white on dark themes and dark on light themes, and

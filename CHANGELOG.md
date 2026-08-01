@@ -2,6 +2,21 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.16.0
+
+- Adds workspace-scoped, revocable external output-folder permissions so a
+  model can create or update requested deliverables outside the source
+  workspace after the user selects a folder with the native picker.
+- Freezes allowed output roots with each admitted request, supports both the
+  explicit `rootKey` plan contract and safe normalization of absolute paths
+  under a granted root, and rejects unknown roots, traversal, secrets, deletes,
+  commands, and symlink escapes.
+- Requires a separate final-diff approval for every external write, including
+  in Full Access mode, and keeps external outputs ineligible for automatic undo
+  because that would require an external delete.
+- Adds an Output folders control under More settings for granting and revoking
+  access, with localized permission and safety guidance.
+
 ## 0.15.0
 
 - Treats a rejected refresh token as a terminal expired-session boundary,

@@ -5,6 +5,8 @@ import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
 
 export interface EditPreview {
   path: string;
+  rootKey?: string;
+  rootUri?: string;
   before: string | null;
   after: string | null;
 }

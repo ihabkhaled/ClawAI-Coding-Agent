@@ -215,6 +215,37 @@ describe('VscodeWorkspaceEditAdapter workspace scope', () => {
     );
   });
 
+  it('writes an admitted external output file while preserving the reviewed canonical root', async () => {
+    const adapter = new VscodeWorkspaceEditAdapter(
+      { selectedFolder: () => ({ uri: vscode.Uri.file('/workspace/source') }) },
+      {
+        resolve: (rootKey: string) =>
+          rootKey === 'output-plans'
+            ? { rootKey, label: 'Plans', uri: 'file:///external/plans' }
+            : undefined,
+      },
+    );
+    const plan = {
+      summary: 'Create the requested plan',
+      files: [
+        {
+          rootKey: 'output-plans',
+          path: 'stripe-plan.md',
+          operation: 'create' as const,
+          content: '# Stripe plan\n',
+        },
+      ],
+    };
+
+    const review = await adapter.preview(plan);
+    await expect(adapter.applyAtomically(plan, review)).resolves.toBe(true);
+
+    expect(review.previews[0]).toMatchObject({ rootKey: 'output-plans' });
+    expect(vscodeEnvironment.appliedEdit?.creates).toEqual([
+      { path: '/external/plans/stripe-plan.md', content: '# Stripe plan\n' },
+    ]);
+  });
+
   it('rejects an approved edit when the current buffer changed during review', async () => {
     const target = vscode.Uri.file('/workspace/web/src/app.ts');
     vscodeEnvironment.files.set(target.path, 'const value = 1;\n');

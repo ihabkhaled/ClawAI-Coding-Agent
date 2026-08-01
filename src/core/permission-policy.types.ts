@@ -2,11 +2,12 @@ import type { AgentMode } from './agent-mode.types';
 
 export type PermissionMode = 'BYPASS_PERMISSIONS' | 'EDIT_AUTOMATICALLY' | 'MANUAL';
 export type PermissionOperation =
-  'commandExecution' | 'editGeneration' | 'finalDiff' | 'workspaceContext';
+  'commandExecution' | 'editGeneration' | 'externalFinalDiff' | 'finalDiff' | 'workspaceContext';
 export type PermissionOutcome = 'allow' | 'ask' | 'deny';
 export type PermissionReason =
   | 'commandReviewRequired'
   | 'finalDiffRequired'
+  | 'externalFinalDiffRequired'
   | 'fullAccess'
   | 'manualApproval'
   | 'planReadOnly'

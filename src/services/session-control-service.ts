@@ -15,6 +15,11 @@ import type { AgentMode } from '../core/agent-mode.types';
 import type { PermissionMode, PermissionOperation } from '../core/permission-policy.types';
 
 function approvalMessage(operation: PermissionOperation): string {
+  if (operation === 'externalFinalDiff') {
+    return vscode.l10n.t(
+      'Allow ClawAI to write the reviewed files to an approved folder outside this workspace?',
+    );
+  }
   if (operation === 'workspaceContext' || operation === 'editGeneration') {
     return vscode.l10n.t(
       'Allow ClawAI to read non-sensitive workspace files and generate proposed edits here without asking again? Final file changes and commands still require review.',
@@ -27,6 +32,9 @@ function approvalMessage(operation: PermissionOperation): string {
 }
 
 function approvalTitle(operation: PermissionOperation): string {
+  if (operation === 'externalFinalDiff') {
+    return vscode.l10n.t('Write to external output folder');
+  }
   if (operation === 'workspaceContext' || operation === 'editGeneration') {
     return vscode.l10n.t('Enable routine workspace access');
   }

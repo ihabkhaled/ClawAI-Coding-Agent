@@ -1,5 +1,15 @@
 import type { PermissionDecision, PermissionInput } from './permission-policy.types';
 
+function finalDiffDecision(input: PermissionInput): PermissionDecision | undefined {
+  if (input.operation === 'externalFinalDiff') {
+    return { outcome: 'ask', reason: 'externalFinalDiffRequired' };
+  }
+  if (input.operation !== 'finalDiff') return undefined;
+  return input.permissionMode === 'BYPASS_PERMISSIONS'
+    ? { outcome: 'allow', reason: 'fullAccess' }
+    : { outcome: 'ask', reason: 'finalDiffRequired' };
+}
+
 export function decidePermission(input: PermissionInput): PermissionDecision {
   if (input.sensitive) {
     return { outcome: 'deny', reason: 'sensitivePath' };
@@ -13,11 +23,8 @@ export function decidePermission(input: PermissionInput): PermissionDecision {
   ) {
     return { outcome: 'deny', reason: 'planReadOnly' };
   }
-  if (input.operation === 'finalDiff') {
-    return input.permissionMode === 'BYPASS_PERMISSIONS'
-      ? { outcome: 'allow', reason: 'fullAccess' }
-      : { outcome: 'ask', reason: 'finalDiffRequired' };
-  }
+  const diffDecision = finalDiffDecision(input);
+  if (diffDecision !== undefined) return diffDecision;
   if (input.operation === 'commandExecution') {
     return { outcome: 'ask', reason: 'commandReviewRequired' };
   }
