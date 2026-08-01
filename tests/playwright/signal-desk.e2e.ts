@@ -42,6 +42,7 @@ test('uses pointer feedback for enabled interactive controls only', async ({ pag
     '#moreSettingsSummary',
     '#sendButton',
     '#modelSelect',
+    '#languageButton',
     '[data-prompt-kind="plan"]',
   ]) {
     await expect(page.locator(selector)).toHaveCSS('cursor', 'pointer');
@@ -51,6 +52,30 @@ test('uses pointer feedback for enabled interactive controls only', async ({ pag
     button.disabled = true;
   });
   await expect(page.locator('#sendButton')).toHaveCSS('cursor', 'default');
+});
+
+test('explains the current model, routing, context, and coding behavior without backend jargon', async ({
+  page,
+}) => {
+  await sendState(page, {
+    agentMode: 'AUTO',
+    contextReceipt: {
+      excluded: [],
+      included: ['src/extension.ts', 'src/webview/chat.js'],
+      totalBytes: 3_072,
+      truncated: false,
+    },
+    routingMode: 'MANUAL_MODEL',
+    selectedModel: localModel.key,
+  });
+
+  await expect(page.locator('.route-eyebrow')).toHaveText('Current model');
+  await expect(page.locator('#routeModel')).toHaveText(localModel.displayName);
+  await page.locator('#routeToggle').click();
+  await expect(page.locator('#routeMode')).toHaveText('Selected by you');
+  await expect(page.locator('#contextCount')).toHaveText('2 files · 3.0 KiB');
+  await expect(page.locator('#agentBehavior')).toHaveText('Coding automatically');
+  await expect(page.locator('#routeRail')).not.toContainText('MANUAL_MODEL');
 });
 
 test('shows two active runs with independent targeted cancellation', async ({ page }) => {

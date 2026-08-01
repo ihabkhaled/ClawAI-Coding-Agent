@@ -68,6 +68,7 @@ export interface ChatViewActions {
     },
   ): Promise<void>;
   connect(backendUrl: string): Promise<void>;
+  configureLanguage(): Promise<void>;
   logout(): Promise<void>;
   openFolder(): Promise<void>;
   openThread(input: SessionInput & { threadId: string }): Promise<void>;
@@ -376,7 +377,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   }
 
   private async handleSelectionControl(request: ControlMessage): Promise<void> {
-    if (request.type === 'selectModel') {
+    if (request.type === 'configureLanguage') {
+      await this.actions.configureLanguage();
+    } else if (request.type === 'selectModel') {
       await this.actions.selectModel(request.modelKey);
     } else if (request.type === 'selectAgentMode') {
       await this.actions.selectAgentMode(request.mode);

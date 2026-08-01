@@ -26,6 +26,7 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('newChat') }),
   z.object({ type: z.literal('openFolder') }),
   z.object({ type: z.literal('refreshModels') }),
+  z.object({ type: z.literal('configureLanguage') }),
   z.object({
     type: z.literal('reviewChanges'),
     previewId: z.uuid().optional(),

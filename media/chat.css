@@ -27,7 +27,7 @@ body {
       transparent 310px
     ),
     var(--vscode-editor-background);
-  font-family: var(--vscode-font-family);
+  font-family: 'Segoe UI Variable Text', 'Segoe UI', Inter, system-ui, sans-serif;
   font-size: var(--vscode-font-size);
 }
 
@@ -2516,5 +2516,131 @@ textarea:disabled {
   .run-state-marker {
     background: Highlight;
     box-shadow: none;
+  }
+}
+
+/* ClawAI cockpit — the current model is the primary navigation signal. */
+.workspace-bar {
+  border-block-end-color: color-mix(in srgb, var(--claw-telemetry) 32%, var(--claw-border));
+  box-shadow: 0 1px 0 color-mix(in srgb, var(--claw-telemetry) 9%, transparent);
+}
+
+.workspace-identity {
+  gap: 4px;
+}
+
+.workspace-line,
+.workspace-actions {
+  gap: 9px;
+}
+
+.language-button {
+  display: inline-flex;
+  min-width: 46px;
+  align-items: center;
+  justify-content: center;
+  gap: 5px;
+  border-color: color-mix(in srgb, var(--claw-telemetry) 38%, var(--claw-border));
+  color: color-mix(in srgb, var(--claw-telemetry) 76%, var(--vscode-foreground));
+  background: color-mix(in srgb, var(--claw-telemetry) 9%, transparent);
+  font-weight: 750;
+  letter-spacing: 0.05em;
+}
+
+.language-button:hover {
+  border-color: var(--claw-telemetry);
+  background: color-mix(in srgb, var(--claw-telemetry) 17%, var(--claw-card));
+}
+
+.signal-status {
+  padding: 9px 12px 0;
+}
+
+.status-row {
+  gap: 10px;
+}
+
+.route-summary {
+  min-height: 48px;
+  padding: 5px 8px;
+  border: 1px solid color-mix(in srgb, var(--claw-telemetry) 42%, var(--claw-border));
+  border-radius: 9px;
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--claw-telemetry) 12%, var(--claw-card)),
+    color-mix(in srgb, var(--claw-coral) 5%, var(--claw-card))
+  );
+  box-shadow: inset 3px 0 0 var(--claw-telemetry);
+}
+
+.route-summary:hover {
+  border-color: color-mix(in srgb, var(--claw-telemetry) 70%, var(--claw-border));
+  background: linear-gradient(
+    100deg,
+    color-mix(in srgb, var(--claw-telemetry) 17%, var(--claw-card)),
+    color-mix(in srgb, var(--claw-coral) 7%, var(--claw-card))
+  );
+}
+
+.route-copy {
+  grid-template-columns: minmax(0, 1fr) auto;
+  align-items: baseline;
+  column-gap: 8px;
+}
+
+.route-copy .route-eyebrow {
+  grid-column: 1 / -1;
+  color: var(--claw-telemetry);
+  font-size: 9px;
+  font-weight: 800;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
+}
+
+.route-copy strong {
+  font-size: 13px;
+  letter-spacing: -0.01em;
+}
+
+.route-copy #backendLabel {
+  color: var(--claw-success);
+  font-size: 10px;
+  font-weight: 700;
+}
+
+.route-rail {
+  gap: 8px;
+  margin-block: 8px 0;
+  padding: 8px;
+  border: 1px solid var(--claw-line-soft);
+  border-radius: 8px 8px 0 0;
+  background: color-mix(in srgb, var(--claw-card) 95%, var(--claw-telemetry) 5%);
+}
+
+.route-rail div {
+  display: grid;
+  gap: 4px;
+  padding-inline: 8px;
+  border-inline-start: 2px solid color-mix(in srgb, var(--claw-telemetry) 38%, transparent);
+}
+
+.route-rail dd {
+  font-size: 12px;
+  font-weight: 720;
+}
+
+.conversation-token-meter {
+  font-weight: 800;
+  letter-spacing: 0.015em;
+}
+
+@media (max-width: 560px) {
+  .language-button {
+    min-width: 34px;
+    padding-inline: 7px;
+  }
+
+  .language-button span:last-child {
+    display: none;
   }
 }

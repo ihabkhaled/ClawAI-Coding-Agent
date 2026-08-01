@@ -159,6 +159,9 @@ export function activate(context: vscode.ExtensionContext): void {
     captureAdmission: (threadId) => coordinator.captureAdmission(threadId),
     compare: (input) => coordinator.compare(input),
     connect: (backendUrl) => coordinator.connect(backendUrl),
+    configureLanguage: async () => {
+      await vscode.commands.executeCommand('workbench.action.configureLocale');
+    },
     logout: () => coordinator.logout(),
     openThread: (input) => coordinator.openThread(input),
     openFolder: async () => {

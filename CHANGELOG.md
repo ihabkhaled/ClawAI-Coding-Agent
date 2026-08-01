@@ -2,6 +2,25 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.14.0
+
+This pre-1.0 minor release redesigns the coding workbench as a clearer,
+more energetic model cockpit.
+
+- Rebuilt the status surface around a vivid **Current model** signal with
+  human-readable routing, context, and agent-behavior labels.
+- Replaced the ambiguous account-plan value and raw `MANUAL_MODEL` contract
+  with coding state that reflects what the agent will actually do.
+- Made context usage visible as both file count and collected bytes, including
+  an honest pre-run state instead of a misleading zero.
+- Added a prominent language control wired to VS Code's locale selector and
+  translated the new cockpit vocabulary across all 12 supported non-English
+  locales.
+- Refined typography, spacing, tokens, focus, responsive layouts, and visual
+  hierarchy while retaining VS Code theme and forced-color compatibility.
+- Regenerated dark, light, narrow, parallel-run, and comparison snapshots and
+  expanded browser regression coverage for the new semantics.
+
 ## 0.13.0
 
 This pre-1.0 minor release hardens first-run connectivity and makes browser

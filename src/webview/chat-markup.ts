@@ -33,7 +33,7 @@ function escapeHtml(value: string): string {
 
 export function renderChatMarkup(input: ChatMarkupInput): string {
   const translated = (message: string): string => escapeHtml(input.translate(message));
-  const locale = input.language.split('-')[0];
+  const locale = input.language.split('-')[0] ?? 'en';
   const direction = locale === 'ar' || locale === 'fa' ? 'rtl' : 'ltr';
   const csp = [
     "default-src 'none'",
@@ -77,6 +77,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         <button id="openFolderButton" class="quiet-button" type="button" hidden>${translated('Open folder')}</button>
         <button id="refreshModelsButton" class="icon-button" type="button" title="${translated('Refresh models')}" aria-label="${translated('Refresh models')}">↻</button>
         <button id="newChatButton" class="icon-button" type="button" title="${translated('New conversation')}" aria-label="${translated('New conversation')}">＋</button>
+        <button id="languageButton" class="quiet-button language-button" type="button" title="${translated('Change display language')}" aria-label="${translated('Change display language')}"><span aria-hidden="true">◎</span><span>${escapeHtml(locale.toUpperCase())}</span></button>
         <button id="sessionButton" class="quiet-button" type="button">${translated('Connect')}</button>
       </div>
     </header>
@@ -120,6 +121,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         <button id="routeToggle" class="route-summary" type="button" aria-expanded="false" aria-controls="routeRail">
           <span id="backendDot" class="status-shape" aria-hidden="true"></span>
           <span class="route-copy">
+            <small class="route-eyebrow">${translated('Current model')}</small>
             <strong id="routeModel">AUTO</strong>
             <small id="backendLabel">${translated('Disconnected')}</small>
           </span>
@@ -132,9 +134,9 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         <span id="activeModeBadge" class="badge accent-badge">${translated('Auto')}</span>
       </div>
       <dl id="routeRail" class="route-rail" hidden>
-        <div><dt>${translated('Route')}</dt><dd id="routeMode">AUTO</dd></div>
-        <div><dt>${translated('Context')}</dt><dd id="contextCount">0</dd></div>
-        <div><dt>${translated('Plan')}</dt><dd id="planName">—</dd></div>
+        <div><dt>${translated('Routing')}</dt><dd id="routeMode">${translated('Automatic')}</dd></div>
+        <div><dt>${translated('Context used')}</dt><dd id="contextCount">${translated('Not collected yet')}</dd></div>
+        <div><dt>${translated('Agent behavior')}</dt><dd id="agentBehavior">${translated('Coding automatically')}</dd></div>
       </dl>
       <div id="modelWarnings" class="warning-stack" role="status"></div>
       <section id="runDeck" class="run-deck" aria-label="${translated('Runs')}" hidden>
@@ -283,6 +285,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
   </section>
   <div id="i18n" hidden
     data-auto="${translated('Auto')}"
+    data-agent-behavior-coding="${translated('Coding automatically')}"
+    data-agent-behavior-planning="${translated('Planning only')}"
     data-agent="${translated('Agent')}"
     data-agent-applied="${translated('Applied file changes')}"
     data-agent-executing="${translated('Running development commands')}"
@@ -312,6 +316,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-attachments="${translated('Attachments')}"
     data-assistant="${translated('CLAWAI')}"
     data-automatic-routing="${translated('Automatic routing')}"
+    data-route-automatic="${translated('Automatic')}"
+    data-route-selected="${translated('Selected by you')}"
     data-cancel-run="${translated('Cancel run: {0}')}"
     data-choose-models="${translated('Choose between 2 and 5 models.')}"
     data-connect="${translated('Connect')}"
@@ -325,6 +331,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-context-file="${translated('Using the active file')}"
     data-context-selection="${translated('Using the active selection')}"
     data-context-workspace="${translated('Using the trusted workspace')}"
+    data-context-not-collected="${translated('Not collected yet')}"
+    data-context-summary="${translated('{0} files · {1}')}"
     data-copy="${translated('Copy response')}"
     data-copy-model="${translated('Copy model response')}"
     data-copied="${translated('Copied')}"

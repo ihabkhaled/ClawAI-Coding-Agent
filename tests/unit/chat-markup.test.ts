@@ -18,6 +18,12 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('class="brand-logo"');
     expect(html).toContain('vscode-webview://test/icon.png');
     expect(html).toContain('id="conversationTokenMeter"');
+    expect(html).toContain('id="languageButton"');
+    expect(html).toContain('aria-label="Change display language"');
+    expect(html).toContain('Current model');
+    expect(html).toContain('Context used');
+    expect(html).toContain('Agent behavior');
+    expect(html).not.toContain('<dt>Plan</dt>');
     expect(html).toContain('id="runDeck"');
     expect(html).toContain('id="runDeckCount"');
     expect(html).toContain('id="activeRunList"');

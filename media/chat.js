@@ -6,6 +6,7 @@ const elements = {
   activeRunList: byId('activeRunList'),
   activeModeBadge: byId('activeModeBadge'),
   agentMode: byId('agentMode'),
+  agentBehavior: byId('agentBehavior'),
   announcer: byId('announcer'),
   approvalApprove: byId('approvalApprove'),
   approvalDetails: byId('approvalDetails'),
@@ -41,6 +42,7 @@ const elements = {
   form: byId('composer'),
   authenticatedUi: byId('authenticatedUi'),
   historySelect: byId('historySelect'),
+  languageButton: byId('languageButton'),
   modelSelectionError: byId('modelSelectionError'),
   modelChecks: byId('modelChecks'),
   modelSelect: byId('modelSelect'),
@@ -50,7 +52,6 @@ const elements = {
   newChatButton: byId('newChatButton'),
   openFolderButton: byId('openFolderButton'),
   permissionMode: byId('permissionMode'),
-  planName: byId('planName'),
   prompt: byId('prompt'),
   refreshModelsButton: byId('refreshModelsButton'),
   researchMode: byId('researchMode'),
@@ -1132,15 +1133,25 @@ function renderState(state) {
   elements.connectionError.hidden = connectionError.length === 0;
   elements.backendLabel.textContent = backendStatusLabel(state.backendStatus);
   elements.backendDot.dataset.status = state.backendStatus;
-  elements.routeMode.textContent = state.routingMode;
+  elements.routeMode.textContent =
+    state.routingMode === 'AUTO' ? labels.routeAutomatic : labels.routeSelected;
   const active = state.models.find((model) => model.key === state.selectedModel);
   elements.routeModel.textContent =
     state.routingMode === 'AUTO' ? 'AUTO' : (active?.displayName ?? state.selectedModel);
   elements.activeModeBadge.textContent =
     (pendingAgentMode ?? state.agentMode) === 'PLAN' ? labels.planMode : labels.auto;
-  elements.contextCount.textContent = String(state.contextReceipt?.included?.length ?? 0);
+  const contextReceipt = state.contextReceipt;
+  elements.contextCount.textContent =
+    contextReceipt === undefined
+      ? labels.contextNotCollected
+      : labels.contextSummary
+          .replace('{0}', String(contextReceipt.included?.length ?? 0))
+          .replace('{1}', formatBytes(contextReceipt.totalBytes ?? 0));
   renderConversationTokenCount();
-  elements.planName.textContent = state.entitlements?.plan?.name ?? '—';
+  elements.agentBehavior.textContent =
+    (pendingAgentMode ?? state.agentMode) === 'PLAN'
+      ? labels.agentBehaviorPlanning
+      : labels.agentBehaviorCoding;
   elements.sessionButton.textContent = state.connected ? labels.logout : labels.connect;
   elements.sendButton.disabled = !state.connected || attachmentsReading;
   const activeRequests = state.generationQueue?.active ?? [];
@@ -1702,6 +1713,10 @@ elements.newChatButton.addEventListener('click', () => {
   vscode.postMessage({ type: 'newChat' });
 });
 
+elements.languageButton.addEventListener('click', () => {
+  vscode.postMessage({ type: 'configureLanguage' });
+});
+
 elements.historySelect.addEventListener('change', () => {
   if (elements.historySelect.value.length > 0) {
     vscode.postMessage({
@@ -1769,6 +1784,8 @@ elements.agentMode.addEventListener('change', () => {
   pendingAgentMode = elements.agentMode.value;
   elements.activeModeBadge.textContent =
     pendingAgentMode === 'PLAN' ? labels.planMode : labels.auto;
+  elements.agentBehavior.textContent =
+    pendingAgentMode === 'PLAN' ? labels.agentBehaviorPlanning : labels.agentBehaviorCoding;
   vscode.postMessage({ type: 'selectAgentMode', mode: pendingAgentMode });
 });
 

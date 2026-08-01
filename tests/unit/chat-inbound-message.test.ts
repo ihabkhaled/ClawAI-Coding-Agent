@@ -26,6 +26,12 @@ describe('promptRequestId', () => {
 });
 
 describe('inboundMessageSchema', () => {
+  it('accepts the bounded display-language control', () => {
+    expect(inboundMessageSchema.parse({ type: 'configureLanguage' })).toEqual({
+      type: 'configureLanguage',
+    });
+  });
+
   it('accepts a request-scoped cancellation and rejects a malformed target', () => {
     const requestId = '11c89732-7559-42d5-9ab1-c752ee98ea0d';
     expect(inboundMessageSchema.parse({ type: 'cancel', requestId })).toEqual({
