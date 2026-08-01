@@ -1,11 +1,39 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BACKEND_LOCAL_URL,
+  FRONTEND_CLOUD_URL,
+  FRONTEND_LOCAL_URL,
+  resolveConnectionEndpoint,
+  normalizeFrontendUrl,
   mergeConfiguration,
   normalizeBackendUrl,
   normalizeRoutingMode,
   parseWorkspaceConfiguration,
 } from '../../src/core/configuration';
+
+describe('connection environments', () => {
+  it('resolves local and custom endpoints while keeping cloud unavailable', () => {
+    expect(resolveConnectionEndpoint('backend', 'LOCAL', '')).toBe(BACKEND_LOCAL_URL);
+    expect(resolveConnectionEndpoint('frontend', 'LOCAL', '')).toBe(FRONTEND_LOCAL_URL);
+    expect(resolveConnectionEndpoint('backend', 'CUSTOM', 'https://api.example.com/')).toBe(
+      'https://api.example.com',
+    );
+    expect(resolveConnectionEndpoint('frontend', 'CUSTOM', 'https://app.example.com/')).toBe(
+      'https://app.example.com',
+    );
+    expect(() => resolveConnectionEndpoint('backend', 'CLOUD', '')).toThrow(/not available/iu);
+    expect(() => resolveConnectionEndpoint('frontend', 'CLOUD', FRONTEND_CLOUD_URL)).toThrow(
+      /not available/iu,
+    );
+  });
+
+  it('normalizes safe frontend origins and rejects unsafe hosted URLs', () => {
+    expect(normalizeFrontendUrl('https://claw.local/')).toBe('https://claw.local');
+    expect(normalizeFrontendUrl('https://claw.example/app/')).toBe('https://claw.example/app');
+    expect(() => normalizeFrontendUrl('http://claw.example')).toThrow();
+  });
+});
 
 describe('backend URL normalization', () => {
   it('normalizes a local origin without losing a configured base path', () => {

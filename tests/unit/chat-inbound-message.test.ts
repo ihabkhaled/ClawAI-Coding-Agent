@@ -32,6 +32,23 @@ describe('inboundMessageSchema', () => {
     });
   });
 
+  it('accepts only selectable local and custom connection profiles', () => {
+    const custom = {
+      type: 'configureConnections',
+      backendEnvironment: 'CUSTOM',
+      backendCustomUrl: 'https://api.example.com',
+      frontendEnvironment: 'CUSTOM',
+      frontendCustomUrl: 'https://app.example.com',
+    };
+    expect(inboundMessageSchema.safeParse(custom).success).toBe(true);
+    expect(
+      inboundMessageSchema.safeParse({
+        ...custom,
+        backendEnvironment: 'CLOUD',
+      }).success,
+    ).toBe(false);
+  });
+
   it('accepts a request-scoped cancellation and rejects a malformed target', () => {
     const requestId = '11c89732-7559-42d5-9ab1-c752ee98ea0d';
     expect(inboundMessageSchema.parse({ type: 'cancel', requestId })).toEqual({

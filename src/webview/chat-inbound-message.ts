@@ -13,13 +13,22 @@ const contextModeSchema: z.ZodType<ContextMode> = z.enum([
   'workspace',
 ]);
 const researchModeSchema = z.enum(RESEARCH_MODES).default('NONE');
+const selectableEnvironmentSchema = z.enum(['LOCAL', 'CUSTOM']);
+const connectionProfileSchema = z.object({
+  backendEnvironment: selectableEnvironmentSchema,
+  backendCustomUrl: z.string().trim().max(2_000),
+  frontendEnvironment: selectableEnvironmentSchema,
+  frontendCustomUrl: z.string().trim().max(2_000),
+});
 
 export const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('ready') }),
-  z.object({
-    type: z.literal('connect'),
-    backendUrl: z.string().trim().min(1).max(2_000),
-  }),
+  z
+    .object({
+      type: z.literal('connect'),
+    })
+    .extend(connectionProfileSchema.shape),
+  z.object({ type: z.literal('configureConnections') }).extend(connectionProfileSchema.shape),
   z.object({ type: z.literal('logout') }),
   z.object({ type: z.literal('cancel'), requestId: z.uuid().optional() }),
   z.object({ type: z.literal('undo') }),

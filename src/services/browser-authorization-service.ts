@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { type BackendClient } from '../backend/backend-client';
+import { joinAppUrl } from '../core/configuration';
 import { LoopbackAuthorizationServer } from '../core/loopback-authorization';
 import { createVscodeAuthorizationRequest } from '../core/vscode-authorization';
 
@@ -50,6 +51,7 @@ const defaultCallbackFactory: AuthorizationCallbackFactory = {
 export class BrowserAuthorizationService implements vscode.Disposable {
   private attempt: AuthorizationAttempt | null = null;
   private signInPromise: Promise<AuthorizedSession> | null = null;
+  private frontendUrl = 'https://claw.local';
 
   constructor(
     private backend: BackendClient,
@@ -59,6 +61,10 @@ export class BrowserAuthorizationService implements vscode.Disposable {
 
   setBackend(backend: BackendClient): void {
     this.backend = backend;
+  }
+
+  setFrontendUrl(frontendUrl: string): void {
+    this.frontendUrl = frontendUrl;
   }
 
   signIn(backend: BackendClient = this.backend): Promise<AuthorizedSession> {
@@ -152,7 +158,7 @@ export class BrowserAuthorizationService implements vscode.Disposable {
       this.throwIfTerminated(attempt);
       const codePromise = callback.waitForCallback();
       const opened = vscode.env.openExternal(
-        vscode.Uri.parse(backend.authorizationUrl(initialized.authorizationPath)),
+        vscode.Uri.parse(joinAppUrl(this.frontendUrl, initialized.authorizationPath)),
       );
       const code = await Promise.race([
         codePromise,

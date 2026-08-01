@@ -81,6 +81,7 @@ function harness() {
   const authorization = {
     cancel: vi.fn(() => false),
     setBackend: vi.fn(),
+    setFrontendUrl: vi.fn(),
     signIn: vi.fn(async () => ({ tokens: authorizedTokens, user: { id: 'user-1' } })),
   };
   const createBackend = vi.fn(() => candidateBackend);

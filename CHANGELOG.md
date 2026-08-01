@@ -2,6 +2,20 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.17.0
+
+- Separates Backend and Frontend connection profiles so API traffic and browser
+  authorization can target independent Local or Custom ClawAI deployments.
+- Adds persistent, validated environment controls to first-run connection and
+  authenticated settings, with safe session-boundary handling when the backend
+  changes and immediate frontend-link updates without logging out.
+- Shows Cloud for both endpoints as a visibly disabled coming-soon option until
+  the hosted endpoints are finalized.
+- Opens authorization pages on the selected Frontend while token exchange,
+  models, chat, and agent operations remain bound to the selected Backend.
+- Adds localized UI, keyboard-accessible dialogs, disabled-state coverage, and
+  end-to-end regression tests for connection profiles.
+
 ## 0.16.1
 
 - Fixes external output-folder labels on Linux and macOS runners when a saved

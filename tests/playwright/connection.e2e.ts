@@ -31,8 +31,12 @@ test('shows a focused backend connection gateway before revealing the workbench'
   await expect(page.locator('#authenticatedUi')).toBeHidden();
   await expect(page.locator('#workspaceIdentity')).toBeHidden();
   await expect(page.locator('#workspaceActions')).toBeHidden();
-  await expect(page.locator('#backendUrlInput')).toHaveValue('https://claw.local');
-  await expect(page.locator('#backendUrlInput')).toBeFocused();
+  await expect(page.locator('#backendEnvironmentLocal')).toBeChecked();
+  await expect(page.locator('#frontendEnvironmentLocal')).toBeChecked();
+  await expect(page.locator('#backendEnvironmentCloud')).toBeDisabled();
+  await expect(page.locator('#frontendEnvironmentCloud')).toBeDisabled();
+  await expect(page.locator('#backendUrlInput')).toBeHidden();
+  await expect(page.locator('#connectButton')).toBeFocused();
   await expectWindowsScreenshot(page, 'connect-gateway-dark.png');
 
   await page.evaluate(() => {
@@ -50,11 +54,18 @@ test('shows a focused backend connection gateway before revealing the workbench'
     delete document.body.dataset.theme;
   });
 
+  await page.locator('#backendEnvironmentCustom').check();
   await page.locator('#backendUrlInput').fill('https://localhost/');
   await page.locator('#connectButton').click();
   await expect
     .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
-    .toEqual({ type: 'connect', backendUrl: 'https://localhost/' });
+    .toEqual({
+      type: 'connect',
+      backendCustomUrl: 'https://localhost/',
+      backendEnvironment: 'CUSTOM',
+      frontendCustomUrl: '',
+      frontendEnvironment: 'LOCAL',
+    });
 
   await sendState(page, {
     backendStatus: 'loading',
@@ -72,6 +83,8 @@ test('shows a focused backend connection gateway before revealing the workbench'
 
   await sendState(page, {
     backendStatus: 'error',
+    backendCustomUrl: 'https://localhost',
+    backendEnvironment: 'CUSTOM',
     connected: false,
     lastError: 'The backend could not be reached.',
   });
@@ -103,6 +116,35 @@ test('shows a focused backend connection gateway before revealing the workbench'
   await expect(page.locator('#emptyState')).toBeVisible();
 
   await sendState(page, { backendStatus: 'disconnected', connected: false });
-  await expect(page.locator('#backendUrlInput')).toBeFocused();
+  await expect(page.locator('#connectButton')).toBeFocused();
   expect(browserIssues).toEqual([]);
+});
+
+test('updates separate app connections from the authenticated settings dialog', async ({
+  page,
+}) => {
+  await page.goto('/');
+  await sendState(page);
+  await page.locator('#moreSettingsSummary').click();
+  await page.locator('#connectionSettingsButton').click();
+
+  await expect(page.locator('#connectionSettingsPanel')).toBeVisible();
+  await expect(page.locator('#settingsBackendCloud')).toBeDisabled();
+  await expect(page.locator('#settingsFrontendCloud')).toBeDisabled();
+  await page.locator('#settingsBackendCustom').check();
+  await page.locator('#settingsBackendUrl').fill('https://api.example.com/');
+  await page.locator('#settingsFrontendCustom').check();
+  await page.locator('#settingsFrontendUrl').fill('https://app.example.com/');
+  await page.locator('#connectionSettingsForm button[type="submit"]').click();
+
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({
+      type: 'configureConnections',
+      backendCustomUrl: 'https://api.example.com/',
+      backendEnvironment: 'CUSTOM',
+      frontendCustomUrl: 'https://app.example.com/',
+      frontendEnvironment: 'CUSTOM',
+    });
+  await expect(page.locator('#connectionSettingsPanel')).toBeHidden();
 });

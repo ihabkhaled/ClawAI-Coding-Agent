@@ -1,8 +1,13 @@
 import * as vscode from 'vscode';
 
 import {
+  BACKEND_LOCAL_URL,
+  connectionEnvironmentSchema,
   normalizeBackendUrl,
   normalizeRoutingMode,
+  resolveConnectionEndpoint,
+  type ConnectionEnvironment,
+  type ConnectionProfile,
   type GlobalConfiguration,
 } from '../core/configuration';
 
@@ -11,7 +16,12 @@ import type { PermissionMode } from '../core/permission-policy.types';
 
 export interface RuntimeConfiguration extends GlobalConfiguration {
   agentMode: AgentMode;
+  backendCustomUrl?: string;
+  backendEnvironment?: ConnectionEnvironment;
   backendUrl: string;
+  frontendCustomUrl?: string;
+  frontendEnvironment?: ConnectionEnvironment;
+  frontendUrl?: string;
   historyLimit: number;
   permissionMode: PermissionMode;
   requestTimeoutMs: number;
@@ -50,13 +60,73 @@ export class ConfigurationService {
     return normalized;
   }
 
+  async saveConnectionProfile(profile: ConnectionProfile): Promise<RuntimeConfiguration> {
+    const backendUrl = resolveConnectionEndpoint(
+      'backend',
+      profile.backendEnvironment,
+      profile.backendCustomUrl,
+    );
+    const frontendUrl = resolveConnectionEndpoint(
+      'frontend',
+      profile.frontendEnvironment,
+      profile.frontendCustomUrl,
+    );
+    const configuration = vscode.workspace.getConfiguration('clawAI');
+    const backendCustomUrl =
+      profile.backendEnvironment === 'CUSTOM'
+        ? backendUrl
+        : (configuration.get<string>('backendCustomUrl') ?? '');
+    const frontendCustomUrl =
+      profile.frontendEnvironment === 'CUSTOM'
+        ? frontendUrl
+        : (configuration.get<string>('frontendCustomUrl') ?? '');
+    await configuration.update(
+      'backendCustomUrl',
+      backendCustomUrl,
+      vscode.ConfigurationTarget.Global,
+    );
+    await configuration.update(
+      'frontendCustomUrl',
+      frontendCustomUrl,
+      vscode.ConfigurationTarget.Global,
+    );
+    await configuration.update(
+      'backendEnvironment',
+      profile.backendEnvironment,
+      vscode.ConfigurationTarget.Global,
+    );
+    await configuration.update(
+      'frontendEnvironment',
+      profile.frontendEnvironment,
+      vscode.ConfigurationTarget.Global,
+    );
+    await configuration.update('backendUrl', backendUrl, vscode.ConfigurationTarget.Global);
+    return this.read();
+  }
+
   read(): RuntimeConfiguration {
     const configuration = vscode.workspace.getConfiguration('clawAI');
+    const legacyBackendUrl = normalizeBackendUrl(
+      configuration.get<string>('backendUrl') ?? BACKEND_LOCAL_URL,
+    );
+    const backendEnvironment = connectionEnvironmentSchema
+      .catch(legacyBackendUrl === BACKEND_LOCAL_URL ? 'LOCAL' : 'CUSTOM')
+      .parse(configuration.get<unknown>('backendEnvironment'));
+    const frontendEnvironment = connectionEnvironmentSchema
+      .catch('LOCAL')
+      .parse(configuration.get<unknown>('frontendEnvironment'));
+    const backendCustomUrl =
+      configuration.get<string>('backendCustomUrl') ??
+      (backendEnvironment === 'CUSTOM' ? legacyBackendUrl : '');
+    const frontendCustomUrl = configuration.get<string>('frontendCustomUrl') ?? '';
     return {
       agentMode: configuration.get<AgentMode>('agentMode') ?? 'AUTO',
-      backendUrl: normalizeBackendUrl(
-        configuration.get<string>('backendUrl') ?? 'https://claw.local',
-      ),
+      backendCustomUrl,
+      backendEnvironment,
+      backendUrl: resolveConnectionEndpoint('backend', backendEnvironment, backendCustomUrl),
+      frontendCustomUrl,
+      frontendEnvironment,
+      frontendUrl: resolveConnectionEndpoint('frontend', frontendEnvironment, frontendCustomUrl),
       requestTimeoutMs: numberSetting(configuration, 'requestTimeoutMs', 60_000),
       routingMode: normalizeRoutingMode(configuration.get<unknown>('routingMode') ?? 'AUTO'),
       selectedModel: configuration.get<string>('selectedModel') ?? '',

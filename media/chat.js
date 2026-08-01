@@ -24,6 +24,7 @@ const elements = {
   backendDot: byId('backendDot'),
   backendLabel: byId('backendLabel'),
   backendUrlInput: byId('backendUrlInput'),
+  frontendUrlInput: byId('frontendUrlInput'),
   connectButton: byId('connectButton'),
   connectButtonLabel: byId('connectButtonLabel'),
   connectionError: byId('connectionError'),
@@ -31,6 +32,14 @@ const elements = {
   connectionGate: byId('connectionGate'),
   connectionCancelButton: byId('connectionCancelButton'),
   connectionProgress: byId('connectionProgress'),
+  connectionSettingsButton: byId('connectionSettingsButton'),
+  connectionSettingsCancel: byId('connectionSettingsCancel'),
+  connectionSettingsForm: byId('connectionSettingsForm'),
+  connectionSettingsPanel: byId('connectionSettingsPanel'),
+  settingsBackendCustomWrap: byId('settingsBackendCustomWrap'),
+  settingsBackendUrl: byId('settingsBackendUrl'),
+  settingsFrontendCustomWrap: byId('settingsFrontendCustomWrap'),
+  settingsFrontendUrl: byId('settingsFrontendUrl'),
   contextCount: byId('contextCount'),
   contextHintText: byId('contextHintText'),
   contextMode: byId('contextMode'),
@@ -99,6 +108,7 @@ let pendingModel = null;
 let pendingPermissionMode = null;
 let connectionViewInitialized = false;
 let approvalReturnFocus = null;
+let connectionSettingsReturnFocus = null;
 const responseBodies = new Map();
 const streamStates = new Map();
 const activityLists = new Map();
@@ -1103,6 +1113,89 @@ function reconcilePending(state) {
   }
 }
 
+function checkedValue(name, root = document) {
+  return root.querySelector(`input[name="${name}"]:checked`)?.value ?? 'LOCAL';
+}
+
+function toggleCustomEndpoint(name, input) {
+  const custom = checkedValue(name) === 'CUSTOM';
+  const wrapper = input.closest('label');
+  wrapper.hidden = !custom;
+  input.required = custom;
+  return custom;
+}
+
+function connectionProfile(root = document, prefix = '') {
+  const backendEnvironment = checkedValue(
+    prefix === 'settings' ? 'settingsBackendEnvironment' : 'backendEnvironment',
+    root,
+  );
+  const frontendEnvironment = checkedValue(
+    prefix === 'settings' ? 'settingsFrontendEnvironment' : 'frontendEnvironment',
+    root,
+  );
+  const backendInput =
+    prefix === 'settings' ? elements.settingsBackendUrl : elements.backendUrlInput;
+  const frontendInput =
+    prefix === 'settings' ? elements.settingsFrontendUrl : elements.frontendUrlInput;
+  return {
+    backendCustomUrl: backendEnvironment === 'CUSTOM' ? backendInput.value.trim() : '',
+    backendEnvironment,
+    frontendCustomUrl: frontendEnvironment === 'CUSTOM' ? frontendInput.value.trim() : '',
+    frontendEnvironment,
+  };
+}
+
+function syncRadio(name, value, root = document) {
+  const radio = root.querySelector(`input[name="${name}"][value="${value}"]`);
+  if (radio && !radio.disabled) {
+    radio.checked = true;
+  }
+}
+
+function syncConnectionControls(state, authorizing) {
+  if (!elements.connectionForm.contains(document.activeElement) && !authorizing) {
+    syncRadio('backendEnvironment', state.backendEnvironment ?? 'LOCAL');
+    syncRadio('frontendEnvironment', state.frontendEnvironment ?? 'LOCAL');
+    elements.backendUrlInput.value = state.backendCustomUrl ?? '';
+    elements.frontendUrlInput.value = state.frontendCustomUrl ?? '';
+  }
+  toggleCustomEndpoint('backendEnvironment', elements.backendUrlInput);
+  toggleCustomEndpoint('frontendEnvironment', elements.frontendUrlInput);
+  for (const control of elements.connectionForm.querySelectorAll('input')) {
+    control.disabled = authorizing || control.value === 'CLOUD';
+  }
+}
+
+function connectionFocusTarget() {
+  if (checkedValue('backendEnvironment') === 'CUSTOM') {
+    return elements.backendUrlInput;
+  }
+  return elements.connectButton;
+}
+
+function openConnectionSettings() {
+  connectionSettingsReturnFocus = document.activeElement;
+  syncRadio('settingsBackendEnvironment', currentState.backendEnvironment ?? 'LOCAL');
+  syncRadio('settingsFrontendEnvironment', currentState.frontendEnvironment ?? 'LOCAL');
+  elements.settingsBackendUrl.value = currentState.backendCustomUrl ?? '';
+  elements.settingsFrontendUrl.value = currentState.frontendCustomUrl ?? '';
+  elements.settingsBackendCustomWrap.hidden =
+    checkedValue('settingsBackendEnvironment') !== 'CUSTOM';
+  elements.settingsFrontendCustomWrap.hidden =
+    checkedValue('settingsFrontendEnvironment') !== 'CUSTOM';
+  elements.settingsBackendUrl.required = !elements.settingsBackendCustomWrap.hidden;
+  elements.settingsFrontendUrl.required = !elements.settingsFrontendCustomWrap.hidden;
+  elements.connectionSettingsPanel.hidden = false;
+  elements.connectionSettingsForm.querySelector('input:checked')?.focus();
+}
+
+function closeConnectionSettings() {
+  elements.connectionSettingsPanel.hidden = true;
+  connectionSettingsReturnFocus?.focus?.();
+  connectionSettingsReturnFocus = null;
+}
+
 function renderState(state) {
   const previousState = currentState;
   currentState = state;
@@ -1115,10 +1208,7 @@ function renderState(state) {
   elements.workspaceActions.hidden = !state.connected;
   elements.skipLink.href = state.connected ? '#prompt' : '#backendUrlInput';
   elements.skipLink.textContent = state.connected ? labels.skipComposer : labels.skipConnection;
-  if (document.activeElement !== elements.backendUrlInput && !authorizing) {
-    elements.backendUrlInput.value = state.backendUrl || 'https://claw.local';
-  }
-  elements.backendUrlInput.disabled = authorizing;
+  syncConnectionControls(state, authorizing);
   elements.connectButton.disabled = authorizing;
   elements.connectionForm.setAttribute('aria-busy', authorizing ? 'true' : 'false');
   elements.connectButtonLabel.textContent = authorizing
@@ -1180,12 +1270,12 @@ function renderState(state) {
   if (!connectionViewInitialized) {
     connectionViewInitialized = true;
     if (!state.connected && !authorizing) {
-      elements.backendUrlInput.focus();
+      connectionFocusTarget().focus();
     }
   } else if (authorizing && !wasAuthorizing) {
     elements.connectionCancelButton.focus();
   } else if (!state.connected && !authorizing && (wasAuthorizing || previousState.connected)) {
-    elements.backendUrlInput.focus();
+    connectionFocusTarget().focus();
   } else if (state.connected && !previousState.connected) {
     elements.announcer.textContent = labels.connectionReady;
     elements.prompt.focus();
@@ -1679,13 +1769,19 @@ elements.form.addEventListener('drop', (event) => {
 
 elements.connectionForm.addEventListener('submit', (event) => {
   event.preventDefault();
-  const backendUrl = elements.backendUrlInput.value.trim();
-  if (backendUrl.length === 0) {
+  if (!elements.connectionForm.reportValidity()) {
     return;
   }
   elements.connectionError.hidden = true;
-  vscode.postMessage({ type: 'connect', backendUrl });
+  vscode.postMessage({ type: 'connect', ...connectionProfile() });
 });
+
+for (const radio of elements.connectionForm.querySelectorAll('input[type="radio"]')) {
+  radio.addEventListener('change', () => {
+    toggleCustomEndpoint('backendEnvironment', elements.backendUrlInput);
+    toggleCustomEndpoint('frontendEnvironment', elements.frontendUrlInput);
+  });
+}
 
 elements.connectionCancelButton.addEventListener('click', () => {
   vscode.postMessage({ type: 'cancel' });
@@ -1720,6 +1816,33 @@ elements.languageButton.addEventListener('click', () => {
 
 elements.externalOutputButton.addEventListener('click', () => {
   vscode.postMessage({ type: 'manageExternalOutputFolders' });
+});
+
+elements.connectionSettingsButton.addEventListener('click', openConnectionSettings);
+elements.connectionSettingsCancel.addEventListener('click', closeConnectionSettings);
+elements.connectionSettingsForm.addEventListener('change', () => {
+  const backendCustom = checkedValue('settingsBackendEnvironment') === 'CUSTOM';
+  const frontendCustom = checkedValue('settingsFrontendEnvironment') === 'CUSTOM';
+  elements.settingsBackendCustomWrap.hidden = !backendCustom;
+  elements.settingsFrontendCustomWrap.hidden = !frontendCustom;
+  elements.settingsBackendUrl.required = backendCustom;
+  elements.settingsFrontendUrl.required = frontendCustom;
+});
+elements.connectionSettingsForm.addEventListener('submit', (event) => {
+  event.preventDefault();
+  if (!elements.connectionSettingsForm.reportValidity()) {
+    return;
+  }
+  vscode.postMessage({
+    type: 'configureConnections',
+    ...connectionProfile(elements.connectionSettingsForm, 'settings'),
+  });
+  closeConnectionSettings();
+});
+elements.connectionSettingsPanel.addEventListener('pointerdown', (event) => {
+  if (event.target === elements.connectionSettingsPanel) {
+    closeConnectionSettings();
+  }
 });
 
 elements.historySelect.addEventListener('change', () => {
@@ -1845,6 +1968,11 @@ for (const suggestion of document.querySelectorAll('[data-prompt-kind]')) {
 }
 
 document.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape' && !elements.connectionSettingsPanel.hidden) {
+    event.preventDefault();
+    closeConnectionSettings();
+    return;
+  }
   if (event.key === 'Escape' && elements.moreSettings.open) {
     event.preventDefault();
     elements.moreSettings.open = false;

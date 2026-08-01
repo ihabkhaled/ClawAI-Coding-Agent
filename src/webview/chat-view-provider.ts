@@ -20,14 +20,9 @@ import { toPublicChatState } from './chat-public-state';
 import { ChatSessionRegistry } from './chat-session-registry';
 import { runPromptAdmissionFlow } from './prompt-admission-flow';
 
+import type { ChatViewActions } from './chat-view-actions';
 import type { ChatMessage } from '../backend/contracts';
-import type { AgentMode } from '../core/agent-mode.types';
-import type { ChatAttachment } from '../core/chat-attachment';
-import type { ContextMode } from '../core/context-mode';
 import type { ExtensionState } from '../core/extension-state';
-import type { PermissionMode } from '../core/permission-policy.types';
-import type { ResearchMode } from '../core/research-mode';
-import type { RequestAdmission } from '../services/agent-coordinator.types';
 
 const SIDEBAR_SESSION_ID = 'sidebar';
 
@@ -35,64 +30,6 @@ class RequestBindingError extends Error {}
 
 function isPromptMessage(request: InboundMessage): request is PromptMessage {
   return request.type === 'agent' || request.type === 'compare' || request.type === 'send';
-}
-
-interface SessionInput {
-  sessionId: string;
-}
-
-export interface ChatViewActions {
-  agent(
-    input: SessionInput & {
-      admission: RequestAdmission;
-      content: string;
-      attachments: ChatAttachment[];
-      contextMode: ContextMode;
-      modelKey: string;
-      researchMode: ResearchMode;
-      requestId: string;
-    },
-  ): Promise<void>;
-  cancel(requestId?: string): Promise<void>;
-  captureAdmission(threadId?: string): RequestAdmission;
-  compare(
-    input: SessionInput & {
-      admission: RequestAdmission;
-      content: string;
-      attachments: ChatAttachment[];
-      contextMode: ContextMode;
-      modelKeys: string[];
-      researchMode: ResearchMode;
-      judgeEnabled: boolean;
-      requestId: string;
-    },
-  ): Promise<void>;
-  connect(backendUrl: string): Promise<void>;
-  configureLanguage(): Promise<void>;
-  manageExternalOutputFolders(): Promise<void>;
-  logout(): Promise<void>;
-  openFolder(): Promise<void>;
-  openThread(input: SessionInput & { threadId: string }): Promise<void>;
-  refreshModels(): Promise<void>;
-  reviewChanges(previewId?: string): Promise<void>;
-  removeQueued(requestId: string): Promise<void>;
-  resolveApproval(requestId: string, approved: boolean): Promise<void>;
-  selectAgentMode(mode: AgentMode): Promise<void>;
-  selectModel(modelKey: string): Promise<void>;
-  selectPermissionMode(mode: PermissionMode): Promise<boolean>;
-  selectWorkspaceFolder(folderKey: string): Promise<void>;
-  send(
-    input: SessionInput & {
-      admission: RequestAdmission;
-      content: string;
-      attachments: ChatAttachment[];
-      contextMode: ContextMode;
-      modelKey: string;
-      researchMode: ResearchMode;
-      requestId: string;
-    },
-  ): Promise<void>;
-  undo(): Promise<void>;
 }
 
 export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
@@ -351,7 +288,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     sourceSessionId: string,
   ): Promise<void> {
     if (request.type === 'connect') {
-      await this.actions.connect(request.backendUrl);
+      await this.actions.connect(request);
     } else if (request.type === 'logout') {
       await this.actions.logout();
     } else if (request.type === 'cancel') {
@@ -380,6 +317,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   private async handleSelectionControl(request: ControlMessage): Promise<void> {
     if (request.type === 'configureLanguage') {
       await this.actions.configureLanguage();
+    } else if (request.type === 'configureConnections') {
+      await this.actions.configureConnections(request);
     } else if (request.type === 'manageExternalOutputFolders') {
       await this.actions.manageExternalOutputFolders();
     } else if (request.type === 'selectModel') {

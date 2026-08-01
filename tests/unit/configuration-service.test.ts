@@ -87,6 +87,51 @@ describe('ConfigurationService model selection', () => {
   });
 
   it('uses the local ClawAI origin as the first-run default', () => {
-    expect(new ConfigurationService().read().backendUrl).toBe('https://claw.local');
+    expect(new ConfigurationService().read()).toMatchObject({
+      backendEnvironment: 'LOCAL',
+      backendUrl: 'https://claw.local',
+      frontendEnvironment: 'LOCAL',
+      frontendUrl: 'https://claw.local',
+    });
+  });
+
+  it('persists custom backend and frontend connection profiles before exposing them', async () => {
+    await new ConfigurationService().saveConnectionProfile({
+      backendEnvironment: 'CUSTOM',
+      backendCustomUrl: 'https://api.example.com/',
+      frontendEnvironment: 'CUSTOM',
+      frontendCustomUrl: 'https://app.example.com/',
+    });
+
+    expect(vscodeConfiguration.updates).toEqual([
+      'backendCustomUrl:https://api.example.com',
+      'frontendCustomUrl:https://app.example.com',
+      'backendEnvironment:CUSTOM',
+      'frontendEnvironment:CUSTOM',
+      'backendUrl:https://api.example.com',
+    ]);
+    expect(new ConfigurationService().read()).toMatchObject({
+      backendEnvironment: 'CUSTOM',
+      backendUrl: 'https://api.example.com',
+      frontendEnvironment: 'CUSTOM',
+      frontendUrl: 'https://app.example.com',
+    });
+  });
+
+  it('keeps custom URLs available when switching back to local without exposing an invalid intermediate state', async () => {
+    vscodeConfiguration.values.set('backendCustomUrl', 'https://api.example.com');
+    vscodeConfiguration.values.set('frontendCustomUrl', 'https://app.example.com');
+
+    await new ConfigurationService().saveConnectionProfile({
+      backendEnvironment: 'LOCAL',
+      backendCustomUrl: '',
+      frontendEnvironment: 'LOCAL',
+      frontendCustomUrl: '',
+    });
+
+    expect(vscodeConfiguration.updates.slice(0, 2)).toEqual([
+      'backendCustomUrl:https://api.example.com',
+      'frontendCustomUrl:https://app.example.com',
+    ]);
   });
 });

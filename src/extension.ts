@@ -106,17 +106,23 @@ function registerChatParticipant(
 }
 
 export function activate(context: vscode.ExtensionContext): void {
-  const configuration = new ConfigurationService().read();
+  const connectionConfiguration = new ConfigurationService();
+  const configuration = connectionConfiguration.read();
   const workspaceScope = new WorkspaceScopeService();
   const state = new ExtensionState({
     agentRun: undefined,
     agentRuns: {},
     agentMode: configuration.agentMode,
     approvalRequest: undefined,
+    backendCustomUrl: configuration.backendCustomUrl,
+    backendEnvironment: configuration.backendEnvironment,
     backendUrl: configuration.backendUrl,
     backendStatus: 'loading',
     busy: false,
     connected: false,
+    frontendCustomUrl: configuration.frontendCustomUrl,
+    frontendEnvironment: configuration.frontendEnvironment,
+    frontendUrl: configuration.frontendUrl,
     contextReceipt: undefined,
     generationQueue: {
       active: [],
@@ -163,7 +169,15 @@ export function activate(context: vscode.ExtensionContext): void {
     cancel: (requestId) => coordinator.cancel(requestId),
     captureAdmission: (threadId) => coordinator.captureAdmission(threadId),
     compare: (input) => coordinator.compare(input),
-    connect: (backendUrl) => coordinator.connect(backendUrl),
+    configureConnections: async (profile) => {
+      await connectionConfiguration.saveConnectionProfile(profile);
+      await coordinator.configurationChanged();
+    },
+    connect: async (profile) => {
+      const updated = await connectionConfiguration.saveConnectionProfile(profile);
+      await coordinator.configurationChanged();
+      await coordinator.connect(updated.backendUrl);
+    },
     configureLanguage: async () => {
       await vscode.commands.executeCommand('workbench.action.configureLocale');
     },

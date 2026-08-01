@@ -38,6 +38,9 @@ export class AgentConnectionService {
   ) {}
 
   async initialize(): Promise<void> {
+    this.authorization.setFrontendUrl(
+      this.configuration.read().frontendUrl ?? 'https://claw.local',
+    );
     await this.run(async () => {
       await this.sessionVault.clearLegacy();
     });
@@ -88,11 +91,17 @@ export class AgentConnectionService {
     }
     this.replaceBackend(configuration);
     this.authorization.setBackend(this.backend());
+    this.authorization.setFrontendUrl(configuration.frontendUrl ?? 'https://claw.local');
     this.chat.setBackend(this.backend());
     this.models.setBackend(this.backend());
     this.state.update({
       agentMode: configuration.agentMode,
+      backendCustomUrl: configuration.backendCustomUrl,
+      backendEnvironment: configuration.backendEnvironment,
       backendUrl: configuration.backendUrl,
+      frontendCustomUrl: configuration.frontendCustomUrl,
+      frontendEnvironment: configuration.frontendEnvironment,
+      frontendUrl: configuration.frontendUrl,
       ...(endpointChanged
         ? {
             agentRun: undefined,

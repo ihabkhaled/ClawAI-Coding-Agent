@@ -4,13 +4,18 @@ The extension delegates login and consent to the configured ClawAI web app. It
 never asks for or receives the account password.
 
 Before authentication, the webview renders only its connection gateway. The
-user may keep the `https://claw.local` default or edit the app origin, then
-starts authorization from the in-extension Connect button. History, models,
+user independently selects Local or Custom Backend and Frontend origins, then
+starts authorization from the in-extension Connect button. Local resolves both
+origins to `https://claw.local`; the visible Cloud choices remain disabled until
+the hosted endpoints are finalized. History, models,
 workspace context, and the composer are not rendered as available controls
 until the session is authenticated. Connection progress and failures remain
 inside the webview instead of opening VS Code input or warning dialogs.
 
-Connect creates a PKCE verifier and a one-shot HTTP callback bound to
+API calls, token exchange, models, chat, and agent runs use the Backend origin.
+The browser authorization page uses the Frontend origin, so split deployments
+do not incorrectly open a backend-hosted web route. Connect creates a PKCE
+verifier and a one-shot HTTP callback bound to
 `127.0.0.1` on a random unprivileged port. The backend authorization request
 contains that exact callback, a cryptographic state value, and the PKCE
 challenge. After the user approves the request in ClawAI, the browser redirects

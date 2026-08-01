@@ -47,6 +47,14 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('aria-label="Conversation history"');
     expect(html).toContain('id="connectionGate"');
     expect(html).toContain('id="backendUrlInput"');
+    expect(html).toContain('name="backendEnvironment"');
+    expect(html).toContain('name="frontendEnvironment"');
+    expect(html).toContain('id="backendEnvironmentCloud"');
+    expect(html).toContain('id="frontendEnvironmentCloud"');
+    expect(html).toMatch(/id="backendEnvironmentCloud"[^>]*disabled/iu);
+    expect(html).toMatch(/id="frontendEnvironmentCloud"[^>]*disabled/iu);
+    expect(html).toContain('Coming soon');
+    expect(html).toContain('id="connectionSettingsButton"');
     expect(html).toContain('id="connectButton"');
     expect(html).toContain('id="authenticatedUi"');
     expect(html).toContain('id="approvalReview"');

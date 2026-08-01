@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.16.1",
+  "version": "0.17.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -184,6 +184,38 @@
           "default": "https://claw.local",
           "scope": "machine",
           "description": "%config.backendUrl%"
+        },
+        "clawAI.backendEnvironment": {
+          "type": "string",
+          "enum": [
+            "LOCAL",
+            "CUSTOM"
+          ],
+          "default": "LOCAL",
+          "scope": "machine",
+          "description": "%config.backendEnvironment%"
+        },
+        "clawAI.backendCustomUrl": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "%config.backendCustomUrl%"
+        },
+        "clawAI.frontendEnvironment": {
+          "type": "string",
+          "enum": [
+            "LOCAL",
+            "CUSTOM"
+          ],
+          "default": "LOCAL",
+          "scope": "machine",
+          "description": "%config.frontendEnvironment%"
+        },
+        "clawAI.frontendCustomUrl": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "%config.frontendCustomUrl%"
         },
         "clawAI.requestTimeoutMs": {
           "type": "number",

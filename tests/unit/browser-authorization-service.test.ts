@@ -70,6 +70,7 @@ describe('BrowserAuthorizationService', () => {
       })),
     };
     const service = new BrowserAuthorizationService(backend as never, callbackFactory);
+    service.setFrontendUrl('https://app.example.com');
     const signIn = service.signIn();
 
     await vi.waitFor(() => {
@@ -87,6 +88,9 @@ describe('BrowserAuthorizationService', () => {
       expect.any(AbortSignal),
     );
     expect(callback.confirmAuthorization).toHaveBeenCalledOnce();
+    expect((vscodeMocks.openExternal.mock.calls[0]?.[0] as { toString(): string }).toString()).toBe(
+      'https://app.example.com/authorize/vscode?requestId=request-1',
+    );
     expect(callback.rejectAuthorization).not.toHaveBeenCalled();
     expect(callback.dispose).toHaveBeenCalledOnce();
   });
@@ -324,10 +328,9 @@ describe('BrowserAuthorizationService', () => {
           toString: expect.any(Function),
         }),
       );
-      expect(backend.authorizationUrl).toHaveBeenNthCalledWith(
-        2,
-        '/authorize/vscode?requestId=request-2',
-      );
+      expect(
+        (vscodeMocks.openExternal.mock.calls[1]?.[0] as { toString(): string }).toString(),
+      ).toBe('https://claw.local/authorize/vscode?requestId=request-2');
       expect(callbackFactory.open).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();

@@ -266,7 +266,94 @@ textarea:disabled {
 
 .connection-form {
   display: grid;
+  gap: 14px;
+}
+
+.endpoint-fieldset {
+  display: grid;
+  min-width: 0;
+  margin: 0;
+  padding: 12px;
   gap: 8px;
+  border: 1px solid var(--claw-border);
+  border-radius: 9px;
+  background: color-mix(in srgb, var(--claw-accent) 3%, transparent);
+}
+
+.endpoint-fieldset legend {
+  padding-inline: 5px;
+  font-size: 0.82rem;
+  font-weight: 750;
+}
+
+.endpoint-fieldset > small {
+  color: var(--claw-muted);
+  font-size: 0.69rem;
+}
+
+.environment-options {
+  display: grid;
+  grid-template-columns: repeat(3, minmax(0, 1fr));
+  gap: 6px;
+}
+
+.environment-options label {
+  display: flex;
+  min-width: 0;
+  min-height: 50px;
+  align-items: flex-start;
+  padding: 8px;
+  gap: 6px;
+  border: 1px solid var(--claw-border);
+  border-radius: 7px;
+  cursor: pointer;
+}
+
+.environment-options label:has(input:checked) {
+  border-color: var(--claw-accent);
+  background: color-mix(in srgb, var(--claw-accent) 10%, transparent);
+}
+
+.environment-options label.environment-disabled {
+  cursor: not-allowed;
+  opacity: 0.48;
+}
+
+.environment-options span,
+.custom-endpoint {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.environment-options small {
+  overflow: hidden;
+  color: var(--claw-muted);
+  font-size: 0.62rem;
+  text-overflow: ellipsis;
+}
+
+.custom-endpoint {
+  color: var(--claw-muted);
+  font-size: 0.68rem;
+  font-weight: 650;
+}
+
+.custom-endpoint input {
+  width: 100%;
+  margin-block-start: 4px;
+  padding: 8px 10px;
+  border: 1px solid var(--vscode-input-border, var(--claw-border));
+  border-radius: 6px;
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  font-family: var(--vscode-editor-font-family);
+}
+
+.connection-settings-card {
+  width: min(600px, calc(100vw - 24px));
+  max-height: calc(100vh - 24px);
+  overflow: auto;
 }
 
 .connection-form > label {
