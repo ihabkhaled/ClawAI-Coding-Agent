@@ -89,6 +89,32 @@ jobs:
           unzip -qq "${ARTIFACT}" -d "${RUNNER_TEMP}/fresh-vsix"
           diff -qr "${RUNNER_TEMP}/committed-vsix" "${RUNNER_TEMP}/fresh-vsix"
 
+      - name: Build full release notes
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          awk -v heading="## ${VERSION}" '
+            $0 == heading { found = 1; print; next }
+            found && /^## / { exit }
+            found { print }
+          ' CHANGELOG.md > "${RUNNER_TEMP}/release-notes.md"
+          if ! grep -q "^## ${VERSION}$" "${RUNNER_TEMP}/release-notes.md"; then
+            echo "::error::CHANGELOG.md has no release notes for ${VERSION}."
+            exit 1
+          fi
+          cat >> "${RUNNER_TEMP}/release-notes.md" <<EOF
+
+          ## Verified release
+
+          - Quality, unit, integration, extension-host, browser, dependency, and packaging gates passed for commit \`${GITHUB_SHA}\`.
+          - The attached VSIX was reproduced during this workflow and compared with the committed artifact before publication.
+
+          ## Installation
+
+          Download \`clawai-coding-agent-${VERSION}.vsix\`, run **Extensions: Install from VSIX…** in VS Code, select the file, and reload the window.
+          EOF
+
       - name: Create GitHub Release
         env:
           GH_TOKEN: ${{ github.token }}
@@ -98,4 +124,4 @@ jobs:
             "builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix" \
             --target "${GITHUB_SHA}" \
             --title "ClawAI Coding Agent ${{ steps.version.outputs.version }}" \
-            --generate-notes
+            --notes-file "${RUNNER_TEMP}/release-notes.md"

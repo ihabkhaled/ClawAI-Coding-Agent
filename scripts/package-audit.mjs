@@ -138,6 +138,16 @@ assert.match(
 );
 assert.match(
   releaseWorkflow,
+  /--notes-file\s+"\$\{RUNNER_TEMP\}\/release-notes\.md"/u,
+  'release workflow must publish full versioned release notes',
+);
+assert.doesNotMatch(
+  releaseWorkflow,
+  /--generate-notes/u,
+  'release workflow must not replace curated release notes with generated notes',
+);
+assert.match(
+  releaseWorkflow,
   /builds\/clawai-coding-agent-\$\{\{ steps\.version\.outputs\.version \}\}\.vsix/u,
   'release workflow must attach the versioned VSIX',
 );

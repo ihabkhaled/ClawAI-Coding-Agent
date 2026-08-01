@@ -2,6 +2,15 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.14.2
+
+- Made every automated GitHub Release publish the complete matching changelog
+  section instead of sparse generated commit notes.
+- Added verified-gate, reproducible-artifact, and VSIX installation details to
+  every future release description.
+- Added a packaging regression gate that rejects release workflows which omit
+  curated versioned notes or revert to generated-only notes.
+
 ## 0.14.1
 
 - Fixed the Linux extension-host and release workflows by validating the
