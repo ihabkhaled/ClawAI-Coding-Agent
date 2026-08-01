@@ -1,6 +1,6 @@
 import * as vscode from 'vscode';
 
-import { BackendSessionChangedError } from '../backend/backend-client';
+import { BackendRequestError, BackendSessionChangedError } from '../backend/backend-client';
 import { normalizeBackendUrl } from '../core/configuration';
 
 import { AuthorizationCancelledError } from './browser-authorization-service';
@@ -277,7 +277,13 @@ export class AgentConnectionService {
         return;
       }
       const message =
-        error instanceof Error ? error.message : vscode.l10n.t('ClawAI operation failed.');
+        error instanceof BackendRequestError && error.status === 0
+          ? vscode.l10n.t(
+              'ClawAI backend is unavailable. Check the app address or start the services, then retry.',
+            )
+          : error instanceof Error
+            ? error.message
+            : vscode.l10n.t('ClawAI operation failed.');
       this.logger.error('ClawAI operation failed.', error);
       this.state.update({
         backendStatus: this.state.snapshot.connected ? 'connected' : 'error',

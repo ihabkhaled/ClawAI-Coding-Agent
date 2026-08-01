@@ -56,6 +56,7 @@
   "ClawAI attachment upload did not resolve a file ID.": "ClawAI attachment upload did not resolve a file ID.",
   "ClawAI attachment upload did not return a file ID.": "ClawAI attachment upload did not return a file ID.",
   "ClawAI authorization timed out. Please try again.": "ClawAI の認証がタイムアウトしました。もう一度お試しください。",
+  "ClawAI backend is unavailable. Check the app address or start the services, then retry.": "ClawAI backend is unavailable. Check the app address or start the services, then retry.",
   "ClawAI changes were undone.": "ClawAI changes were undone.",
   "ClawAI Coding Agent": "ClawAI Coding Agent",
   "ClawAI could not complete the request: {0}": "ClawAI could not complete the request: {0}",

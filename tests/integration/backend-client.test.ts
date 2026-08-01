@@ -501,6 +501,7 @@ describe('BackendClient', () => {
     const { client: networkClient } = await authenticatedClient(networkFetcher);
     const error = await networkClient.getUsage().catch((reason: unknown) => reason);
     expect(error).toMatchObject({ status: 0, retryable: true });
+    expect(String(error)).toContain('ClawAI backend is unavailable');
     expect(String(error)).not.toContain('abc.def.secret');
   });
 });

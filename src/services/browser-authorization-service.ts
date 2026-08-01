@@ -9,7 +9,9 @@ import type { TokenPair } from '../core/session-vault';
 
 export interface AuthorizationCallback {
   readonly callbackUri: string;
+  confirmAuthorization(): void;
   dispose(): void;
+  rejectAuthorization(): void;
   waitForCallback(): Promise<string>;
 }
 
@@ -173,8 +175,10 @@ export class BrowserAuthorizationService implements vscode.Disposable {
         attempt.controller.signal,
       );
       this.throwIfTerminated(attempt);
+      callback.confirmAuthorization();
       return { tokens, user };
     } catch (error: unknown) {
+      callback.rejectAuthorization();
       this.throwIfTerminated(attempt);
       throw error;
     } finally {

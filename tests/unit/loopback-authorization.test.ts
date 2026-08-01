@@ -11,12 +11,45 @@ describe('LoopbackAuthorizationServer', () => {
       expect(wrong.status).toBe(400);
 
       const completion = server.waitForCallback();
-      const response = await fetch(
+      const responsePromise = fetch(
         `${server.callbackUri}?code=authorization-code&state=expected-state`,
       );
-      expect(response.status).toBe(200);
-      expect(await response.text()).toContain('Authorization complete');
       await expect(completion).resolves.toBe('authorization-code');
+      const earlyResponse = await Promise.race([
+        responsePromise.then(() => 'responded'),
+        new Promise<string>((resolve) =>
+          setTimeout(() => {
+            resolve('pending');
+          }, 20),
+        ),
+      ]);
+      expect(earlyResponse).toBe('pending');
+
+      server.confirmAuthorization();
+      const response = await responsePromise;
+      expect(response.status).toBe(200);
+      const body = await response.text();
+      expect(body).toContain('Connected to ClawAI');
+      expect(body).toContain('close automatically');
+    } finally {
+      server.dispose();
+    }
+  });
+
+  it('shows a safe failure page when candidate credentials cannot be verified', async () => {
+    const server = await LoopbackAuthorizationServer.open('expected-state', 2_000);
+    try {
+      const completion = server.waitForCallback();
+      const responsePromise = fetch(
+        `${server.callbackUri}?code=authorization-code&state=expected-state`,
+      );
+      await expect(completion).resolves.toBe('authorization-code');
+
+      server.rejectAuthorization();
+
+      const response = await responsePromise;
+      expect(response.status).toBe(400);
+      expect(await response.text()).toContain('Sign-in was not completed');
     } finally {
       server.dispose();
     }

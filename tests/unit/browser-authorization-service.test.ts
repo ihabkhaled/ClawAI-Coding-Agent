@@ -40,7 +40,9 @@ describe('BrowserAuthorizationService', () => {
     let completeCallback: ((code: string) => void) | undefined;
     const callback = {
       callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      confirmAuthorization: vi.fn(),
       dispose: vi.fn(),
+      rejectAuthorization: vi.fn(),
       waitForCallback: vi.fn(
         () =>
           new Promise<string>((resolve) => {
@@ -84,6 +86,37 @@ describe('BrowserAuthorizationService', () => {
       expect.any(String),
       expect.any(AbortSignal),
     );
+    expect(callback.confirmAuthorization).toHaveBeenCalledOnce();
+    expect(callback.rejectAuthorization).not.toHaveBeenCalled();
+    expect(callback.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('shows callback failure when candidate profile verification fails', async () => {
+    const callback = {
+      callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      confirmAuthorization: vi.fn(),
+      dispose: vi.fn(),
+      rejectAuthorization: vi.fn(),
+      waitForCallback: vi.fn(async () => 'authorization-code'),
+    };
+    vscodeMocks.openExternal.mockResolvedValue(true);
+    const backend = {
+      authorizationUrl: () => 'https://claw.local/authorize/vscode?requestId=request-1',
+      exchangeVscodeAuthorization: vi.fn(async () => tokens),
+      getProfileWithAccessToken: vi.fn(async () => {
+        throw new Error('profile rejected');
+      }),
+      initializeVscodeAuthorization: vi.fn(async () => ({
+        authorizationPath: '/authorize/vscode?requestId=request-1',
+      })),
+    };
+    const service = new BrowserAuthorizationService(backend as never, {
+      open: vi.fn(async () => callback),
+    });
+
+    await expect(service.signIn()).rejects.toThrow('profile rejected');
+    expect(callback.confirmAuthorization).not.toHaveBeenCalled();
+    expect(callback.rejectAuthorization).toHaveBeenCalledOnce();
     expect(callback.dispose).toHaveBeenCalledOnce();
   });
 
@@ -91,7 +124,9 @@ describe('BrowserAuthorizationService', () => {
     let completeCallback: ((code: string) => void) | undefined;
     const callback = {
       callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      confirmAuthorization: vi.fn(),
       dispose: vi.fn(),
+      rejectAuthorization: vi.fn(),
       waitForCallback: vi.fn(
         () =>
           new Promise<string>((resolve) => {
@@ -130,7 +165,9 @@ describe('BrowserAuthorizationService', () => {
   it('closes the callback when the browser cannot open', async () => {
     const callback = {
       callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      confirmAuthorization: vi.fn(),
       dispose: vi.fn(),
+      rejectAuthorization: vi.fn(),
       waitForCallback: vi.fn(() => new Promise<string>(() => undefined)),
     };
     vscodeMocks.openExternal.mockResolvedValue(false);
@@ -152,7 +189,9 @@ describe('BrowserAuthorizationService', () => {
     let completeCallback: ((code: string) => void) | undefined;
     const callback = {
       callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      confirmAuthorization: vi.fn(),
       dispose: vi.fn(),
+      rejectAuthorization: vi.fn(),
       waitForCallback: vi.fn(
         () =>
           new Promise<string>((resolve) => {
@@ -187,7 +226,9 @@ describe('BrowserAuthorizationService', () => {
   it('cancels an authorization before the loopback callback finishes opening', async () => {
     const callback = {
       callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      confirmAuthorization: vi.fn(),
       dispose: vi.fn(),
+      rejectAuthorization: vi.fn(),
       waitForCallback: vi.fn(async () => 'authorization-code'),
     };
     const callbackFactory = {
@@ -229,12 +270,16 @@ describe('BrowserAuthorizationService', () => {
     try {
       const firstCallback = {
         callbackUri: 'http://127.0.0.1:49152/auth/callback',
+        confirmAuthorization: vi.fn(),
         dispose: vi.fn(),
+        rejectAuthorization: vi.fn(),
         waitForCallback: vi.fn(() => new Promise<string>(() => undefined)),
       };
       const secondCallback = {
         callbackUri: 'http://127.0.0.1:49153/auth/callback',
+        confirmAuthorization: vi.fn(),
         dispose: vi.fn(),
+        rejectAuthorization: vi.fn(),
         waitForCallback: vi.fn(async () => 'authorization-code'),
       };
       const callbackFactory = {
@@ -293,7 +338,9 @@ describe('BrowserAuthorizationService', () => {
     let completeExchange: ((value: typeof tokens) => void) | undefined;
     const callback = {
       callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      confirmAuthorization: vi.fn(),
       dispose: vi.fn(),
+      rejectAuthorization: vi.fn(),
       waitForCallback: vi.fn(async () => 'authorization-code'),
     };
     vscodeMocks.openExternal.mockResolvedValue(true);
@@ -329,7 +376,9 @@ describe('BrowserAuthorizationService', () => {
     let completeProfile: ((value: { id: string }) => void) | undefined;
     const callback = {
       callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      confirmAuthorization: vi.fn(),
       dispose: vi.fn(),
+      rejectAuthorization: vi.fn(),
       waitForCallback: vi.fn(async () => 'authorization-code'),
     };
     vscodeMocks.openExternal.mockResolvedValue(true);

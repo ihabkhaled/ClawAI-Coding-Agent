@@ -1,3 +1,4 @@
+import { randomBytes } from 'node:crypto';
 import { createServer, type ServerResponse } from 'node:http';
 
 import { parseVscodeAuthorizationCallback } from './vscode-authorization';
@@ -6,23 +7,11 @@ import type { Server } from 'node:http';
 
 const CALLBACK_PATH = '/auth/callback';
 const LOOPBACK_HOST = '127.0.0.1';
-const COMPLETE_PAGE = `<!doctype html>
-<html lang="en">
-<head>
-  <meta charset="utf-8">
-  <meta http-equiv="Content-Security-Policy" content="default-src 'none'; style-src 'unsafe-inline'">
-  <meta name="viewport" content="width=device-width,initial-scale=1">
-  <title>ClawAI authorization complete</title>
-  <style>body{font:16px system-ui;max-width:620px;margin:12vh auto;padding:24px;color:#e8e8e8;background:#181818}main{padding:24px;border:1px solid #444;border-radius:12px}h1{font-size:1.35rem}</style>
-</head>
-<body><main><h1>Authorization complete</h1><p>ClawAI is connected. You can close this tab and return to VS Code.</p></main></body>
-</html>`;
-
-function respond(response: ServerResponse, status: number, body: string): void {
+function respond(response: ServerResponse, status: number, body: string, csp?: string): void {
   response.writeHead(status, {
     'Cache-Control': 'no-store',
     'Content-Length': Buffer.byteLength(body),
-    'Content-Security-Policy': "default-src 'none'; frame-ancestors 'none'",
+    'Content-Security-Policy': csp ?? "default-src 'none'; frame-ancestors 'none'",
     'Content-Type': 'text/html; charset=utf-8',
     Pragma: 'no-cache',
     'X-Content-Type-Options': 'nosniff',
@@ -31,11 +20,27 @@ function respond(response: ServerResponse, status: number, body: string): void {
   response.end(body);
 }
 
+function authorizationPage(success: boolean): { body: string; csp: string } {
+  const nonce = randomBytes(16).toString('base64');
+  const title = success ? 'Connected to ClawAI' : 'Sign-in was not completed';
+  const message = success
+    ? 'Your identity was verified. Return to VS Code to start building.'
+    : 'ClawAI could not verify this sign-in. Return to VS Code and try again.';
+  const status = success ? 'SECURE SESSION READY' : 'VERIFICATION FAILED';
+  const tone = success ? '#3ddc97' : '#ff6b7a';
+  const body = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style nonce="${nonce}">:root{color-scheme:dark}*{box-sizing:border-box}body{min-height:100vh;margin:0;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 20% 10%,#17344a 0,transparent 38%),#080b10;color:#f4f7fb;font:16px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}main{width:min(560px,100%);padding:42px;border:1px solid #294257;border-radius:24px;background:linear-gradient(145deg,rgba(24,35,48,.96),rgba(10,14,20,.98));box-shadow:0 24px 80px #0009}.mark{display:grid;place-items:center;width:52px;height:52px;margin-bottom:26px;border:1px solid ${tone};border-radius:16px;color:${tone};font-size:24px;box-shadow:0 0 32px ${tone}33}.eyebrow{color:${tone};font:700 12px/1.2 ui-monospace,monospace;letter-spacing:.13em}h1{margin:12px 0 10px;font-size:clamp(28px,6vw,40px);line-height:1.08}p{margin:0;color:#b9c6d3}.hint{margin-top:28px;padding-top:20px;border-top:1px solid #263543;color:#8fa0b1;font-size:14px}button{margin-top:22px;padding:11px 18px;border:1px solid #45647d;border-radius:10px;background:#172534;color:#f4f7fb;font:inherit;cursor:pointer}</style></head><body><main><div class="mark" aria-hidden="true">${success ? '&#10003;' : '!'}</div><div class="eyebrow">${status}</div><h1>${title}</h1><p>${message}</p><p class="hint">${success ? 'This tab will close automatically. If it stays open, you can close it safely.' : 'No session was saved.'}</p><button id="close" type="button">Close this tab</button></main><script nonce="${nonce}">document.getElementById('close').addEventListener('click',()=>window.close());${success ? 'setTimeout(()=>window.close(),1400);' : ''}</script></body></html>`;
+  return {
+    body,
+    csp: `default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; frame-ancestors 'none'`,
+  };
+}
+
 export class LoopbackAuthorizationServer {
   private callbackUriValue = '';
   private readonly completion: Promise<string>;
   private rejectCompletion: ((error: Error) => void) | undefined;
   private resolveCompletion: ((code: string) => void) | undefined;
+  private pendingResponse: ServerResponse | undefined;
   private settled = false;
   private timeout: NodeJS.Timeout | undefined;
 
@@ -71,7 +76,16 @@ export class LoopbackAuthorizationServer {
     return this.completion;
   }
 
+  confirmAuthorization(): void {
+    this.finishAuthorization(true);
+  }
+
+  rejectAuthorization(): void {
+    this.finishAuthorization(false);
+  }
+
   dispose(): void {
+    this.rejectAuthorization();
     if (!this.settled) {
       this.settled = true;
       this.rejectCompletion?.(new Error('ClawAI authorization was cancelled.'));
@@ -125,12 +139,22 @@ export class LoopbackAuthorizationServer {
       }
       this.settled = true;
       this.clearTimeout();
+      this.pendingResponse = response;
       this.resolveCompletion?.(parsed.code);
-      respond(response, 200, COMPLETE_PAGE);
-      this.server.close();
     } catch {
       respond(response, 400, 'Authorization could not be verified.');
     }
+  }
+
+  private finishAuthorization(success: boolean): void {
+    const response = this.pendingResponse;
+    if (response === undefined) {
+      return;
+    }
+    this.pendingResponse = undefined;
+    const page = authorizationPage(success);
+    respond(response, success ? 200 : 400, page.body, page.csp);
+    this.server.close();
   }
 
   private clearTimeout(): void {

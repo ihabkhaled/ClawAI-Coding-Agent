@@ -4,6 +4,7 @@ vi.mock('vscode', () => ({
   l10n: { t: (message: string) => message },
 }));
 
+import { BackendRequestError } from '../../src/backend/backend-client';
 import { ExtensionState } from '../../src/core/extension-state';
 import { AgentConnectionService } from '../../src/services/agent-connection-service';
 
@@ -198,6 +199,24 @@ describe('AgentConnectionService', () => {
       connected: false,
       lastError: 'SecretStorage unavailable',
     });
+  });
+
+  it('replaces raw first-open network failures with a safe retry message', async () => {
+    const subject = harness();
+    subject.sessionVault.migrateLegacy.mockResolvedValueOnce(authorizedTokens);
+    subject.activeBackend.getProfile.mockRejectedValueOnce(
+      new BackendRequestError('fetch failed', 0, true),
+    );
+
+    await subject.service.initialize();
+
+    expect(subject.extensionState.snapshot).toMatchObject({
+      backendStatus: 'error',
+      connected: false,
+      lastError:
+        'ClawAI backend is unavailable. Check the app address or start the services, then retry.',
+    });
+    expect(subject.extensionState.snapshot.lastError).not.toContain('fetch failed');
   });
 
   it('authorizes a candidate and persists the endpoint only after success', async () => {

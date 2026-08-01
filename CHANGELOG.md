@@ -2,6 +2,20 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.13.0
+
+This pre-1.0 minor release hardens first-run connectivity and makes browser
+authorization truthful, secure, and release-ready.
+
+- Replaced raw transport errors such as `fetch failed` with an actionable,
+  localized ClawAI backend availability message.
+- Deferred the loopback success response until the authorization code,
+  candidate tokens, and authenticated profile have all been verified.
+- Added a polished, CSP-nonce-protected callback experience with explicit
+  success and failure states, safe automatic tab closing, and no remote assets.
+- Preserved cancellation, timeout, PKCE, origin-scoped session, and concurrent
+  sign-in protections with new lifecycle regression coverage.
+
 ## 0.12.0
 
 This pre-1.0 minor release adds an explicit, quota-safe online research

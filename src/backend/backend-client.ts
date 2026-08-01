@@ -100,6 +100,13 @@ export class BackendSessionChangedError extends BackendRequestError {
   }
 }
 
+function transportFailureMessage(error: unknown, timedOut: boolean): string {
+  if (!timedOut) {
+    return 'ClawAI backend is unavailable. Check the app address or start the services, then retry.';
+  }
+  return error instanceof Error ? redactText(error.message) : 'ClawAI request timed out.';
+}
+
 export class BackendClient {
   private readonly backendUrl: string;
   private readonly clientName: string;
@@ -465,8 +472,7 @@ export class BackendClient {
     } catch (error: unknown) {
       clearTimeout(timeout);
       options.signal?.throwIfAborted();
-      const message =
-        error instanceof Error ? redactText(error.message) : 'Backend request failed.';
+      const message = transportFailureMessage(error, timeoutController.signal.aborted);
       throw new BackendRequestError(message, 0, true);
     }
   }
