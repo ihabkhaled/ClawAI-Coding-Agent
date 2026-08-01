@@ -2,6 +2,13 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.14.1
+
+- Fixed the Linux extension-host and release workflows by validating the
+  activated extension against the current package manifest instead of a stale
+  hard-coded `0.12.0` version.
+- Prevented future version bumps from failing an otherwise healthy release gate.
+
 ## 0.14.0
 
 This pre-1.0 minor release redesigns the coding workbench as a clearer,

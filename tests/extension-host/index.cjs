@@ -1,10 +1,15 @@
 const assert = require('node:assert/strict');
 const vscode = require('vscode');
+const manifest = require('../../package.json');
 
 async function run() {
   const extension = vscode.extensions.getExtension('clawai.clawai-coding-agent');
   assert.ok(extension, 'ClawAI extension is installed in the test host');
-  assert.equal(extension.packageJSON.version, '0.12.0', 'the v0.12.0 release activates');
+  assert.equal(
+    extension.packageJSON.version,
+    manifest.version,
+    `the v${manifest.version} release activates`,
+  );
 
   const start = Date.now();
   await extension.activate();
