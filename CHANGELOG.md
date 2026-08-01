@@ -2,6 +2,12 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.16.1
+
+- Fixes external output-folder labels on Linux and macOS runners when a saved
+  grant originated from a Windows path, restoring cross-platform CI and VSIX
+  publication without changing the permission boundary.
+
 ## 0.16.0
 
 - Adds workspace-scoped, revocable external output-folder permissions so a

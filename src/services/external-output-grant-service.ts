@@ -59,7 +59,9 @@ export class ExternalOutputGrantService {
     if (uri?.scheme !== 'file') return;
     await this.grants.grant({
       rootKey: `output-${randomUUID()}`,
-      label: path.basename(uri.fsPath),
+      label: path.win32.isAbsolute(uri.fsPath)
+        ? path.win32.basename(uri.fsPath)
+        : path.basename(uri.fsPath),
       uri: uri.toString(),
     });
     await vscode.window.showInformationMessage(
