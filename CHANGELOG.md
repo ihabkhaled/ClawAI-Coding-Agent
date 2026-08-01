@@ -2,6 +2,18 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.15.0
+
+- Treats a rejected refresh token as a terminal expired-session boundary,
+  securely clearing only the matching account session instead of leaving the
+  extension falsely connected and trapped in repeated 401 responses.
+- Returns editor chats, native Chat, queued generations, attachments, and
+  account-scoped state to a safe disconnected state with a localized reconnect
+  message when refresh credentials expire or are revoked.
+- Adds regression coverage proving a refresh 401 clears the poisoned session
+  and never retries the original protected request.
+- Includes the full-release-notes publication gate introduced in 0.14.2.
+
 ## 0.14.2
 
 - Made every automated GitHub Release publish the complete matching changelog

@@ -5,6 +5,11 @@ import { redactText } from '../core/redaction';
 import { type SessionVault, type TokenPair } from '../core/session-vault';
 
 import {
+  BackendRequestError,
+  BackendSessionChangedError,
+  BackendSessionExpiredError,
+} from './backend-errors';
+import {
   connectorModelSchema,
   entitlementsSchema,
   localFrontierListSchema,
@@ -42,6 +47,12 @@ import {
 import type { ChatAttachment } from '../core/chat-attachment';
 import type { ResearchMode } from '../core/research-mode';
 
+export {
+  BackendRequestError,
+  BackendSessionChangedError,
+  BackendSessionExpiredError,
+} from './backend-errors';
+
 const MAX_ERROR_BODY_BYTES = 64_000;
 const MAX_SUCCESS_BODY_BYTES = 8_000_000;
 
@@ -76,28 +87,6 @@ export interface CompareRequest {
   judgeModel?: string | null;
   fileIds?: string[];
   researchMode?: ResearchMode;
-}
-
-export class BackendRequestError extends Error {
-  constructor(
-    message: string,
-    readonly status: number,
-    readonly retryable: boolean,
-  ) {
-    super(message);
-    this.name = 'BackendRequestError';
-  }
-}
-
-export class BackendSessionChangedError extends BackendRequestError {
-  constructor() {
-    super(
-      'The ClawAI account changed in another VS Code window. Reconnect to continue.',
-      401,
-      false,
-    );
-    this.name = 'BackendSessionChangedError';
-  }
 }
 
 function transportFailureMessage(error: unknown, timedOut: boolean): string {
@@ -398,15 +387,26 @@ export class BackendClient {
       this.backendUrl,
       signal,
       async (tokens) => {
-        const response = await this.send('/auth/refresh', {
-          auth: false,
-          body: {
-            refreshToken: tokens.refreshToken,
-          },
-          method: 'POST',
-          signal,
-        });
-        const result = await this.parse(response, refreshResultSchema);
+        let result;
+        try {
+          const response = await this.send('/auth/refresh', {
+            auth: false,
+            body: {
+              refreshToken: tokens.refreshToken,
+            },
+            method: 'POST',
+            signal,
+          });
+          result = await this.parse(response, refreshResultSchema);
+        } catch (error) {
+          if (error instanceof BackendRequestError && error.status === 401) {
+            if (this.boundSessionId !== null) {
+              await this.sessionVault.clearIfSession(this.backendUrl, this.boundSessionId);
+            }
+            throw new BackendSessionExpiredError();
+          }
+          throw error;
+        }
         signal.throwIfAborted();
         return result.tokens;
       },

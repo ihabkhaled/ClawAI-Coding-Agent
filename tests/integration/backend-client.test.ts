@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { BackendClient, BackendRequestError } from '../../src/backend/backend-client';
+import {
+  BackendClient,
+  BackendRequestError,
+  BackendSessionExpiredError,
+} from '../../src/backend/backend-client';
 import { SessionVault, type SecretStoragePort } from '../../src/core/session-vault';
 
 const BACKEND_URL = 'https://client.claw.example';
@@ -182,6 +186,26 @@ describe('BackendClient', () => {
       }),
     });
     await expect(vault.load(BACKEND_URL)).resolves.toEqual(rotatedTokens);
+  });
+
+  it('clears a terminally expired session when the refresh token is rejected', async () => {
+    const storage = new MemorySecretStorage();
+    const vault = new SessionVault(storage);
+    await vault.save(BACKEND_URL, initialTokens);
+    const fetcher = vi
+      .fn<typeof fetch>()
+      .mockResolvedValueOnce(new Response('expired access', { status: 401 }))
+      .mockResolvedValueOnce(new Response('expired refresh', { status: 401 }));
+    const client = new BackendClient({
+      backendUrl: BACKEND_URL,
+      fetcher,
+      sessionVault: vault,
+      timeoutMs: 1_000,
+    });
+
+    await expect(client.getProfile()).rejects.toBeInstanceOf(BackendSessionExpiredError);
+    await expect(vault.load(BACKEND_URL)).resolves.toBeNull();
+    expect(fetcher).toHaveBeenCalledTimes(2);
   });
 
   it('stages browser authorization tokens until the validated candidate is committed', async () => {

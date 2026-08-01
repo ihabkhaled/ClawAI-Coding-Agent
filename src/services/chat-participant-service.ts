@@ -2,7 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import * as vscode from 'vscode';
 
-import { BackendSessionChangedError } from '../backend/backend-client';
+import { sessionBoundaryMessage } from '../backend/backend-error-message';
+import { isBackendSessionBoundaryError } from '../backend/backend-errors';
 
 import { currentModelSelection, modelSelectionLabel } from './agent-coordinator-prompts';
 
@@ -154,9 +155,9 @@ export class ChatParticipantService {
     response: vscode.ChatResponseStream,
   ): Promise<void> {
     let message: string;
-    if (error instanceof BackendSessionChangedError) {
+    if (isBackendSessionBoundaryError(error)) {
       await this.accountBoundary();
-      message = error.message;
+      message = sessionBoundaryMessage(error);
     } else if (admission.boundarySignal.aborted) {
       message = vscode.l10n.t(
         'ClawAI request was cancelled because the account or workspace changed.',

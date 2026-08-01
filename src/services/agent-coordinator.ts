@@ -2,7 +2,9 @@ import { randomUUID } from 'node:crypto';
 
 import * as vscode from 'vscode';
 
-import { BackendSessionChangedError, type BackendClient } from '../backend/backend-client';
+import { type BackendClient } from '../backend/backend-client';
+import { agentOperationErrorMessage } from '../backend/backend-error-message';
+import { isBackendSessionBoundaryError } from '../backend/backend-errors';
 import { AccountEpoch } from '../core/account-epoch';
 import { ApprovalBroker } from '../core/approval-broker';
 import { totalAttachmentBytes } from '../core/chat-attachment';
@@ -489,19 +491,17 @@ export class AgentCoordinator implements vscode.Disposable {
   private async generationFailed(error: unknown, requestId: string): Promise<void> {
     const activeThreadId = this.activeThreads.take(requestId);
     await cancelRemoteGeneration(this.backend, this.logger, activeThreadId);
-    if (error instanceof BackendSessionChangedError) {
+    if (isBackendSessionBoundaryError(error)) {
       await this.handleAccountBoundary();
     }
-    const message =
-      error instanceof Error ? error.message : vscode.l10n.t('ClawAI operation failed.');
+    const message = agentOperationErrorMessage(error);
     this.logger.error('ClawAI generation failed.', error);
     this.state.update({
-      backendStatus:
-        error instanceof BackendSessionChangedError
-          ? 'disconnected'
-          : this.state.snapshot.connected
-            ? 'connected'
-            : 'error',
+      backendStatus: isBackendSessionBoundaryError(error)
+        ? 'disconnected'
+        : this.state.snapshot.connected
+          ? 'connected'
+          : 'error',
       lastError: message,
     });
     await this.view?.postError(message, requestId);

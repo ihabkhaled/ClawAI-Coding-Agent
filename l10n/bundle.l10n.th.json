@@ -251,5 +251,6 @@
   "Workspace file change": "Workspace file change",
   "WORKSPACE-READY AGENT": "WORKSPACE-READY AGENT",
   "YOU": "YOU",
-  "You can attach up to 10 files.": "คุณสามารถแนบไฟล์ได้สูงสุด 10 ไฟล์"
+  "You can attach up to 10 files.": "คุณสามารถแนบไฟล์ได้สูงสุด 10 ไฟล์",
+  "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue."
 }
