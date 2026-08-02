@@ -1,4 +1,6 @@
-import { describe, expect, it } from 'vitest';
+import { describe, expect, it, vi } from 'vitest';
+
+vi.mock('vscode', () => ({}));
 
 import {
   buildRuntimeCapabilityManifest,
@@ -11,7 +13,7 @@ import type { RuntimeHostProbe } from '../../src/infrastructure/vscode-runtime-t
 const localProbe: RuntimeHostProbe = {
   architecture: 'x64',
   extensionKind: 'workspace',
-  extensionVersion: '0.18.0',
+  extensionVersion: '0.40.0',
   platform: 'win32',
   remoteName: undefined,
   shell: 'C:\\Windows\\System32\\WindowsPowerShell\\v1.0\\powershell.exe',
@@ -95,7 +97,7 @@ describe('VS Code runtime target adapter', () => {
       'workspace-1',
       'workspace-2',
     ]);
-    expect(target.id).toBe('target:primary');
+    expect(target.id).toBe('target:workspace');
     expect(target.id).not.toContain('private');
   });
 
@@ -106,8 +108,31 @@ describe('VS Code runtime target adapter', () => {
     });
 
     expect(manifest.extension.hostKind).toBe('desktop-local');
-    expect(manifest.targets).toHaveLength(1);
-    expect(manifest.tools.map((tool) => tool.name)).toEqual(['legacy.chat', 'legacy.edit-plan']);
+    expect(manifest.targets.map((target) => target.id)).toEqual([
+      'target:workspace',
+      'target:container',
+      'target:database',
+      'target:browser',
+    ]);
+    expect(manifest.tools.map((tool) => tool.name)).toEqual(
+      expect.arrayContaining([
+        'legacy.chat',
+        'legacy.edit-plan',
+        'workspace.files',
+        'workspace.command',
+        'workspace.process',
+        'workspace.git',
+        'workspace.quality',
+        'workspace.intelligence',
+        'workspace.planning',
+        'runtime.journal',
+        'runtime.evidence',
+        'workspace.services',
+        'workspace.container',
+        'workspace.database',
+        'workspace.browser',
+      ]),
+    );
     expect(JSON.stringify(manifest)).not.toContain('System32');
   });
 });

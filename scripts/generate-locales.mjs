@@ -1515,8 +1515,84 @@ const environmentTranslations = {
   },
 };
 
+const runtimeV2Translations = {
+  ar: {
+    'Coding agent activity': 'نشاط وكيل البرمجة',
+    '{0} turns · {1} retries': '{0} جولات · {1} إعادات محاولة',
+    truncated: 'مقتطع',
+    redacted: 'محجوب',
+  },
+  de: {
+    'Coding agent activity': 'Aktivität des Coding-Agenten',
+    '{0} turns · {1} retries': '{0} Durchläufe · {1} Wiederholungen',
+    truncated: 'gekürzt',
+    redacted: 'geschwärzt',
+  },
+  es: {
+    'Coding agent activity': 'Actividad del agente de código',
+    '{0} turns · {1} retries': '{0} turnos · {1} reintentos',
+    truncated: 'truncado',
+    redacted: 'ocultado',
+  },
+  fa: {
+    'Coding agent activity': 'فعالیت عامل برنامه‌نویسی',
+    '{0} turns · {1} retries': '{0} نوبت · {1} تلاش مجدد',
+    truncated: 'کوتاه‌شده',
+    redacted: 'پوشانده‌شده',
+  },
+  fr: {
+    'Coding agent activity': 'Activité de l’agent de programmation',
+    '{0} turns · {1} retries': '{0} tours · {1} nouvelles tentatives',
+    truncated: 'tronqué',
+    redacted: 'masqué',
+  },
+  hi: {
+    'Coding agent activity': 'कोडिंग एजेंट गतिविधि',
+    '{0} turns · {1} retries': '{0} चरण · {1} पुनः प्रयास',
+    truncated: 'संक्षिप्त',
+    redacted: 'छिपाया गया',
+  },
+  it: {
+    'Coding agent activity': 'Attività dell’agente di programmazione',
+    '{0} turns · {1} retries': '{0} turni · {1} nuovi tentativi',
+    truncated: 'troncato',
+    redacted: 'oscurato',
+  },
+  ja: {
+    'Coding agent activity': 'コーディングエージェントのアクティビティ',
+    '{0} turns · {1} retries': '{0} ターン · {1} 回再試行',
+    truncated: '省略',
+    redacted: '秘匿済み',
+  },
+  pt: {
+    'Coding agent activity': 'Atividade do agente de programação',
+    '{0} turns · {1} retries': '{0} turnos · {1} novas tentativas',
+    truncated: 'truncado',
+    redacted: 'ocultado',
+  },
+  ru: {
+    'Coding agent activity': 'Активность агента программирования',
+    '{0} turns · {1} retries': '{0} этапов · {1} повторных попыток',
+    truncated: 'сокращено',
+    redacted: 'скрыто',
+  },
+  th: {
+    'Coding agent activity': 'กิจกรรมของเอเจนต์เขียนโค้ด',
+    '{0} turns · {1} retries': '{0} รอบ · ลองใหม่ {1} ครั้ง',
+    truncated: 'ตัดทอนแล้ว',
+    redacted: 'ปกปิดแล้ว',
+  },
+  zh: {
+    'Coding agent activity': '编程智能体活动',
+    '{0} turns · {1} retries': '{0} 轮 · {1} 次重试',
+    truncated: '已截断',
+    redacted: '已隐藏',
+  },
+};
+
 function translate(locale, message) {
   return (
+    runtimeV2Translations[locale][message] ??
     environmentTranslations[locale][message] ??
     cockpitTranslations[locale][message] ??
     v090Translations[locale][message] ??

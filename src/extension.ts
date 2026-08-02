@@ -192,6 +192,8 @@ export function activate(context: vscode.ExtensionContext): void {
     workspaceContext,
     approvalMemory,
     externalOutputStore,
+    context,
+    workspaceScope,
   );
   const chatView = new ChatViewProvider(context.extensionUri, state, {
     agent: (input) => coordinator.runAgent(input),

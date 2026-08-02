@@ -1,6 +1,14 @@
 import type { AgentMode } from './agent-mode.types';
 
-export type PermissionMode = 'BYPASS_PERMISSIONS' | 'EDIT_AUTOMATICALLY' | 'MANUAL';
+export type PermissionMode =
+  | 'PLAN'
+  | 'ASK'
+  | 'AUTO_EDIT'
+  | 'AUTONOMOUS_SCOPED'
+  | 'ENTERPRISE_LOCKED'
+  | 'BYPASS_PERMISSIONS'
+  | 'EDIT_AUTOMATICALLY'
+  | 'MANUAL';
 export type PermissionOperation =
   'commandExecution' | 'editGeneration' | 'externalFinalDiff' | 'finalDiff' | 'workspaceContext';
 export type PermissionOutcome = 'allow' | 'ask' | 'deny';

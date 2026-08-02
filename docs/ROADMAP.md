@@ -12,15 +12,12 @@
 
 ## Runtime release train
 
-- **0.18.0 shipped:** strict runtime contracts, truthful host manifest,
-  canonical event reducer, authenticated V2 negotiation, deterministic V1
-  fallback.
-- **0.19.0 next:** provider-neutral bounded tool loop and normalized tool
-  results. The 0.18 release does not execute V2 tools.
-- Later releases proceed sequentially through policy, transactional files,
-  commands, processes, Git, containers, databases, quality, browser,
-  intelligence, planning, multi-agent orchestration, durability, evidence,
-  hardening, flagship delivery, and GA certification.
+- **0.40.0 release candidate:** consolidated model-neutral Runtime V2 studio,
+  including guarded tools, targets, browser, planning, services, durable runs,
+  evidence, enterprise policy, migration, and GA documentation.
+- **0.41+ backlog:** only evidence-backed follow-ups discovered by the final
+  cross-platform UAT and installed-VSIX verification; no unverified marketing
+  commitments.
 
 ## Candidate next increments
 

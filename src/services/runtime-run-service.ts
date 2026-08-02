@@ -32,6 +32,14 @@ export interface RuntimeRunStart {
   readonly epochs: ToolInvocation['epochs'];
   readonly runId: string;
   readonly turnId: string;
+  readonly threadId: string;
+  readonly clientRequestId: string;
+  readonly idempotencyKey: string;
+  readonly prompt: string;
+  readonly manifestHash: string;
+  readonly toolCatalogHash: string;
+  readonly provider: string;
+  readonly model: string;
 }
 
 export interface RuntimeRunStartReceipt {
@@ -176,9 +184,9 @@ export class RuntimeRunService {
     try {
       const receipt = await this.dependencies.transport.start(input);
       remotelyAdmittedRunId = receipt.runId;
-      if (receipt.runId !== input.runId) {
-        throw new Error('Runtime transport returned a mismatched run');
-      }
+      if (receipt.runId !== input.runId)
+        throw new Error('Runtime transport acknowledged a mismatched run identifier');
+      const admittedInput = { ...input, runId: receipt.runId };
       this.assertCurrentEpochs(input.epochs);
       const controller = new AbortController();
       this.completed = undefined;
@@ -189,20 +197,20 @@ export class RuntimeRunService {
           budget: input.budget,
           consumeModelLifecycleBudget: false,
           currentEpochs: this.dependencies.currentEpochs,
-          definitions: input.definitions,
-          epochs: input.epochs,
+          definitions: admittedInput.definitions,
+          epochs: admittedInput.epochs,
           executor: this.dependencies.executor,
           now: () => this.dependencies.clock.now(),
           policy: this.dependencies.policy,
           receiptId: this.dependencies.receiptId,
-          runId: input.runId,
+          runId: admittedInput.runId,
           startedAtMs: this.dependencies.clock.now(),
-          turnId: input.turnId,
+          turnId: admittedInput.turnId,
         }),
         nextSequence: 0,
         snapshot: createRuntimeSnapshot(),
-        start: input,
-        steering: createSteeringQueue(input.runId, input.epochs),
+        start: admittedInput,
+        steering: createSteeringQueue(admittedInput.runId, admittedInput.epochs),
       };
       admittedActive = this.active;
       const active = this.requireActive();

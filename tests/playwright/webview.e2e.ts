@@ -62,12 +62,12 @@ test('submits coding prompts to the agent execution path by default', async ({ p
     });
 });
 
-test('handles Full Access and file approvals inside the workbench', async ({ page }) => {
+test('handles Autonomous Scoped and file approvals inside the workbench', async ({ page }) => {
   await page.locator('#moreSettingsSummary').click();
-  await page.locator('#permissionMode').selectOption('BYPASS_PERMISSIONS');
+  await page.locator('#permissionMode').selectOption('AUTONOMOUS_SCOPED');
   await expect
     .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
-    .toEqual({ type: 'selectPermissionMode', mode: 'BYPASS_PERMISSIONS' });
+    .toEqual({ type: 'selectPermissionMode', mode: 'AUTONOMOUS_SCOPED' });
 
   await sendState(page, {
     approvalRequest: {
@@ -422,9 +422,9 @@ test('keeps manual model and mode selections stable through state round trips', 
 
   await page.locator('#moreSettingsSummary').click();
   await page.locator('#agentMode').selectOption('PLAN');
-  await page.locator('#permissionMode').selectOption('EDIT_AUTOMATICALLY');
+  await page.locator('#permissionMode').selectOption('AUTO_EDIT');
   await expect(page.locator('#activeModeBadge')).toHaveText('Plan mode');
-  await expect(page.locator('#permissionMode')).toHaveValue('EDIT_AUTOMATICALLY');
+  await expect(page.locator('#permissionMode')).toHaveValue('AUTO_EDIT');
 });
 
 test('supports narrow responsive use, suggestions, streaming, success, and errors', async ({

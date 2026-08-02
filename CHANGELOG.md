@@ -2,6 +2,50 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.40.0
+
+This consolidated pre-1.0 release advances the model-neutral Runtime Protocol
+V2 foundation through the Autonomous Studio GA architecture while retaining the
+supported V1 compatibility path.
+
+- Adds schema-validated, cancellable, budgeted tool execution with ordered
+  events, idempotent replay, epoch-bound targets, one-shot approvals, bounded
+  results, redaction, and explicit terminal states.
+- Adds transactional workspace files; direct structured commands; owned PTY
+  processes; guarded Git and worktree operations; ownership-labelled Docker and
+  Podman operations; secret-backed database profiles; and dependency-ordered
+  quality gates with root-cause retry budgets.
+- Adds isolated Playwright browser sessions with semantic locators, origin
+  policy, user takeover, readiness waits, screenshots, PDF, traces,
+  accessibility/layout evidence, and download limits.
+- Adds incremental workspace intelligence, evidence-backed implementation
+  plans, bounded multi-agent DAGs and file leases, development-service
+  discovery/control, and target-aware WSL/SSH/Dev Container semantics.
+- Adds encrypted durable run journals, context-compaction references,
+  drift-aware resume, sanitized deterministic evidence ZIP/Markdown exports,
+  local-first observability, signed enterprise policy contracts, and SBOM
+  generation.
+- Rebuilds the Agent Cockpit around a vivid ordered activity timeline,
+  inspectable tool receipts, visible token/budget meters, native-language
+  selection, stronger typography, responsive spacing, pointer affordances, and
+  accessible status semantics.
+- Documents onboarding, supported/preview/best-effort targets, privacy,
+  migration from prior runtime generations, rollback, immutable safety rails,
+  and the Runtime V2 threat model.
+
+### Security and compatibility
+
+- Backend identity, entitlement, provider credentials, inference, routing, and
+  research remain backend-authoritative; local effects remain
+  extension-authoritative.
+- Commit, push, deployment, publication, production mutation, and elevation
+  remain separate effects. No autonomous scope can grant arbitrary shell or
+  native elevation.
+- Attachments and research retain the compatible V1 payload lane when Runtime
+  V2 cannot represent them, preventing silent request data loss.
+- Cloud connection options remain visibly unavailable until their endpoints are
+  finalized; Local and explicit Custom endpoints remain supported.
+
 ## 0.18.0
 
 - Establishes a strict, model-neutral Runtime Protocol V2 foundation while

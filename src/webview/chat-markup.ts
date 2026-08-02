@@ -35,6 +35,22 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
   const translated = (message: string): string => escapeHtml(input.translate(message));
   const locale = input.language.split('-')[0] ?? 'en';
   const direction = locale === 'ar' || locale === 'fa' ? 'rtl' : 'ltr';
+  const languageNames: Readonly<Record<string, string>> = {
+    en: 'English',
+    ar: 'العربية',
+    de: 'Deutsch',
+    es: 'Español',
+    fa: 'فارسی',
+    fr: 'Français',
+    hi: 'हिन्दी',
+    it: 'Italiano',
+    ja: '日本語',
+    pt: 'Português',
+    ru: 'Русский',
+    th: 'ไทย',
+    zh: '简体中文',
+  };
+  const languageName = languageNames[locale] ?? locale.toUpperCase();
   const csp = [
     "default-src 'none'",
     `img-src ${input.cspSource} data: blob:`,
@@ -77,7 +93,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         <button id="openFolderButton" class="quiet-button" type="button" hidden>${translated('Open folder')}</button>
         <button id="refreshModelsButton" class="icon-button" type="button" title="${translated('Refresh models')}" aria-label="${translated('Refresh models')}">↻</button>
         <button id="newChatButton" class="icon-button" type="button" title="${translated('New conversation')}" aria-label="${translated('New conversation')}">＋</button>
-        <button id="languageButton" class="quiet-button language-button" type="button" title="${translated('Change display language')}" aria-label="${translated('Change display language')}"><span aria-hidden="true">◎</span><span>${escapeHtml(locale.toUpperCase())}</span></button>
+        <button id="languageButton" class="quiet-button language-button" type="button" title="${translated('Change display language')}" aria-label="${translated('Change display language')}"><span aria-hidden="true">文</span><span>${escapeHtml(languageName)}</span><span aria-hidden="true">⌄</span></button>
         <button id="sessionButton" class="quiet-button" type="button">${translated('Connect')}</button>
       </div>
     </header>
@@ -195,6 +211,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
           </button>
         </div>
       </section>
+      <section id="runtimeTimeline" class="runtime-timeline" aria-label="${translated('Coding agent activity')}" aria-live="polite" hidden></section>
       <section id="conversation" class="conversation execution-spine" aria-label="${translated('Conversation')}"></section>
     </section>
 
@@ -250,9 +267,11 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
               </label>
               <label class="compact-control"><span>${translated('Approval')}</span>
                 <select id="permissionMode">
-                  <option value="MANUAL">${translated('Ask for Approval')}</option>
-                  <option value="EDIT_AUTOMATICALLY">${translated('Approve for me')}</option>
-                  <option value="BYPASS_PERMISSIONS">${translated('Full Access')}</option>
+                  <option value="PLAN">${translated('Plan')}</option>
+                  <option value="ASK">${translated('Ask for Approval')}</option>
+                  <option value="AUTO_EDIT">${translated('Auto Edit')}</option>
+                  <option value="AUTONOMOUS_SCOPED">${translated('Autonomous Scoped')}</option>
+                  <option value="ENTERPRISE_LOCKED">${translated('Enterprise Locked')}</option>
                 </select>
               </label>
               <label class="compact-control"><span>${translated('Context')}</span>
@@ -364,6 +383,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-compare-results="${translated('Compare results')}"
     data-opening-authorization="${translated('Opening authorization...')}"
     data-completed="${translated('Completed')}"
+    data-cancelled="${translated('Cancelled')}"
     data-context-empty="${translated('No workspace context attached')}"
     data-context-file="${translated('Using the active file')}"
     data-context-selection="${translated('Using the active selection')}"
@@ -419,6 +439,9 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-retry="${translated('Retry')}"
     data-running="${translated('Running')}"
     data-running-count="${translated('{0} running')}"
+    data-runtime-turns="${translated('{0} turns · {1} retries')}"
+    data-truncated="${translated('truncated')}"
+    data-redacted="${translated('redacted')}"
     data-send="${translated('Send')}"
     data-skip-connection="${translated('Skip to connection')}"
     data-skip-composer="${translated('Skip to composer')}"

@@ -25,9 +25,11 @@ async function run() {
   }
   assert.deepEqual(configuration['clawAI.agentMode'].enum, ['AUTO', 'PLAN']);
   assert.deepEqual(configuration['clawAI.permissionMode'].enum, [
-    'MANUAL',
-    'EDIT_AUTOMATICALLY',
-    'BYPASS_PERMISSIONS',
+    'PLAN',
+    'ASK',
+    'AUTO_EDIT',
+    'AUTONOMOUS_SCOPED',
+    'ENTERPRISE_LOCKED',
   ]);
   assert.ok(
     !extension.packageJSON.activationEvents.includes('onUri'),

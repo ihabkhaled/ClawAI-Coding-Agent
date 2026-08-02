@@ -150,15 +150,19 @@ export class SessionControlService {
 
   selectPermissionMode(mode: PermissionMode): Promise<boolean> {
     return this.enqueueMutation(async () => {
+      const autonomousRequested = mode === 'AUTONOMOUS_SCOPED' || mode === 'BYPASS_PERMISSIONS';
+      const autonomousActive = ['AUTONOMOUS_SCOPED', 'BYPASS_PERMISSIONS'].includes(
+        this.configuration.read().permissionMode,
+      );
       if (
-        mode === 'BYPASS_PERMISSIONS' &&
-        this.configuration.read().permissionMode !== 'BYPASS_PERMISSIONS' &&
+        autonomousRequested &&
+        !autonomousActive &&
         !(await this.approvals.request({
           kind: 'enableFullAccess',
           message: vscode.l10n.t(
-            'Full Access applies safe file changes automatically and skips routine workspace prompts. Development commands still require approval. Workspace Trust, secret exclusions, path boundaries, and blocked-command rules remain enforced.',
+            'Autonomous Scoped mode can apply approved low-risk effects inside the current workspace. Elevation, production, destructive, publication, Workspace Trust, secret exclusions, path boundaries, and stale-state checks remain protected.',
           ),
-          title: vscode.l10n.t('Enable Full Access'),
+          title: vscode.l10n.t('Enable Autonomous Scoped mode'),
         }))
       ) {
         return false;

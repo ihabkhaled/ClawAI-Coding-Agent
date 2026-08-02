@@ -4,6 +4,20 @@ import {
   type ExecutionTarget,
 } from '../core/runtime/capability-manifest';
 
+import { browserToolDefinition } from './browser-tool-executor';
+import { containerToolDefinition } from './container-tool-executor';
+import { databaseToolDefinition } from './database-tool-executor';
+import { developmentServiceToolDefinition } from './development-service-tool-executor';
+import { evidenceToolDefinition } from './evidence-tool-executor';
+import { gitToolDefinition } from './git-tool-executor';
+import { intelligenceToolDefinition } from './intelligence-tool-executor';
+import { planningToolDefinition } from './planning-tool-executor';
+import { processSupervisorToolDefinition } from './process-supervisor-tool-executor';
+import { qualityToolDefinition } from './quality-tool-executor';
+import { runJournalToolDefinition } from './run-journal-tool-executor';
+import { structuredCommandToolDefinition } from './structured-command-tool-executor';
+import { workspaceFilesystemToolDefinition } from './vscode-filesystem-tool-executor';
+
 import type {
   ExtensionHostDescriptor,
   RuntimeArchitecture,
@@ -78,7 +92,7 @@ export function describeRuntimeTarget(probe: RuntimeHostProbe): ExecutionTarget 
     probe.workspaceFolders.every((folder) => folder.scheme === 'file');
 
   return {
-    id: 'target:primary',
+    id: 'target:workspace',
     kind: targetKindFor(host.hostKind),
     label: 'Current VS Code workspace',
     hostKind: host.hostKind,
@@ -120,6 +134,61 @@ export function buildRuntimeCapabilityManifest(
     });
   }
 
+  const targets: ExecutionTarget[] = [target];
+  if (probe.workspaceTrusted && target.workspaceRoots.length > 0) {
+    const localDefinitions = [
+      workspaceFilesystemToolDefinition,
+      structuredCommandToolDefinition,
+      processSupervisorToolDefinition,
+      gitToolDefinition,
+      qualityToolDefinition,
+      intelligenceToolDefinition,
+      planningToolDefinition,
+      runJournalToolDefinition,
+      evidenceToolDefinition,
+      developmentServiceToolDefinition,
+    ];
+    target.capabilities.push(...localDefinitions.map(({ name }) => name));
+    tools.push(
+      ...localDefinitions.map(({ description, inputSchema, schemaVersion, ...definition }) => {
+        void description;
+        void inputSchema;
+        void schemaVersion;
+        return definition;
+      }),
+    );
+    const specializedTargets = [
+      {
+        id: 'target:container',
+        label: 'Workspace container engine',
+        definition: containerToolDefinition,
+      },
+      {
+        id: 'target:database',
+        label: 'Approved database profiles',
+        definition: databaseToolDefinition,
+      },
+      {
+        id: 'target:browser',
+        label: 'Isolated Playwright browser',
+        definition: browserToolDefinition,
+      },
+    ] as const;
+    for (const specialized of specializedTargets) {
+      targets.push({
+        ...target,
+        id: specialized.id,
+        label: specialized.label,
+        capabilities: [specialized.definition.name],
+      });
+      const { description, inputSchema, schemaVersion, ...definition } = specialized.definition;
+      void description;
+      void inputSchema;
+      void schemaVersion;
+      tools.push(definition);
+    }
+  }
+
   return buildCapabilityManifest({
     protocolVersion: '2.0',
     manifestId: identity.manifestId,
@@ -130,7 +199,7 @@ export function buildRuntimeCapabilityManifest(
       vscodeVersion: probe.vscodeVersion,
       hostKind: target.hostKind,
     },
-    targets: [target],
+    targets,
     tools,
     policy: {
       mode: 'manual',

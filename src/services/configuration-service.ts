@@ -14,6 +14,19 @@ import {
 import type { AgentMode } from '../core/agent-mode.types';
 import type { PermissionMode } from '../core/permission-policy.types';
 
+function normalizePermissionMode(value: unknown): PermissionMode {
+  if (
+    value === 'AUTO_EDIT' ||
+    value === 'AUTONOMOUS_SCOPED' ||
+    value === 'ENTERPRISE_LOCKED' ||
+    value === 'PLAN' ||
+    value === 'ASK'
+  )
+    return value;
+  if (value === 'EDIT_AUTOMATICALLY') return 'AUTO_EDIT';
+  return 'ASK';
+}
+
 export interface RuntimeConfiguration extends GlobalConfiguration {
   agentMode: AgentMode;
   backendCustomUrl?: string;
@@ -134,7 +147,7 @@ export class ConfigurationService {
       maxContextFiles: numberSetting(configuration, 'maxContextFiles', 40),
       exclude: configuration.get<string[]>('exclude') ?? DEFAULT_EXCLUDES,
       historyLimit: numberSetting(configuration, 'historyLimit', 50),
-      permissionMode: configuration.get<PermissionMode>('permissionMode') ?? 'MANUAL',
+      permissionMode: normalizePermissionMode(configuration.get<unknown>('permissionMode')),
     };
   }
 
