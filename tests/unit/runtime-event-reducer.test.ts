@@ -43,6 +43,11 @@ describe('runtime event reducer', () => {
       activeRunId: undefined,
       capabilityManifest: undefined,
       eventIds: {},
+      protocolSelection: {
+        mode: 'legacy-v1',
+        reason: 'endpoint-unavailable',
+        version: '1.0',
+      },
       runs: {},
     });
     expect(created.runs['run-id-0001']).toMatchObject({

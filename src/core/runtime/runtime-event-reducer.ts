@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { runtimeProtocolFallback, type RuntimeProtocolSelection } from './runtime-negotiation';
+
 import type { CapabilityManifest } from './capability-manifest';
 import type { RuntimeEvent } from './runtime-protocol.schemas';
 
@@ -24,6 +26,7 @@ export interface RuntimeSnapshot {
   readonly activeRunId: string | undefined;
   readonly capabilityManifest: CapabilityManifest | undefined;
   readonly eventIds: Readonly<Record<string, RuntimeEventIdentity>>;
+  readonly protocolSelection: RuntimeProtocolSelection;
   readonly runs: Readonly<Record<string, RuntimeRunSnapshot>>;
 }
 
@@ -35,11 +38,15 @@ const terminalStatuses: Readonly<Record<string, RuntimeRunStatus>> = {
   'run.failed': 'failed',
 };
 
-export function createRuntimeSnapshot(capabilityManifest?: CapabilityManifest): RuntimeSnapshot {
+export function createRuntimeSnapshot(
+  capabilityManifest?: CapabilityManifest,
+  protocolSelection: RuntimeProtocolSelection = runtimeProtocolFallback('endpoint-unavailable'),
+): RuntimeSnapshot {
   return {
     activeRunId: undefined,
     capabilityManifest,
     eventIds: {},
+    protocolSelection,
     runs: {},
   };
 }
@@ -160,6 +167,7 @@ export function reduceRuntimeEvent(
         sequence: event.sequence,
       },
     },
+    protocolSelection: snapshot.protocolSelection,
     runs: {
       ...snapshot.runs,
       [event.runId]: nextRun,

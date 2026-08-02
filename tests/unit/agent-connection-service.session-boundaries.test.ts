@@ -128,6 +128,7 @@ function harness() {
     () => selectedBackend as never,
     createBackend as never,
     replaceBackend,
+    { negotiate: vi.fn(async () => state().snapshot.runtime.protocolSelection) } as never,
     refreshData,
     () => null,
     accountBoundary,

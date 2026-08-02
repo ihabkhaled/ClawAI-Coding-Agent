@@ -15,6 +15,7 @@ import type { WorkspaceReadiness } from './context-mode';
 import type { GenerationQueueSnapshot } from './generation-queue';
 import type { ModelCatalogEntry } from './model-catalog';
 import type { PermissionMode } from './permission-policy.types';
+import type { RuntimeProtocolSelection } from './runtime/runtime-negotiation';
 import type { WorkspaceScopeSnapshot } from './workspace-scope.types';
 import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contracts';
 
@@ -83,6 +84,14 @@ export class ExtensionState {
     this.snapshotValue = {
       ...this.snapshotValue,
       runtime: createRuntimeSnapshot(this.snapshotValue.runtime.capabilityManifest),
+    };
+    this.publish();
+  }
+
+  setRuntimeProtocolSelection(protocolSelection: RuntimeProtocolSelection): void {
+    this.snapshotValue = {
+      ...this.snapshotValue,
+      runtime: { ...this.snapshotValue.runtime, protocolSelection },
     };
     this.publish();
   }

@@ -109,4 +109,31 @@ describe('ExtensionState', () => {
     expect(state.snapshot.runtime).toEqual(createRuntimeSnapshot());
     expect(listener).toHaveBeenCalledTimes(3);
   });
+
+  it('stores negotiated protocol state and resets it to legacy at an account boundary', () => {
+    const state = new ExtensionState(initialSnapshot);
+    state.setRuntimeProtocolSelection({
+      descriptor: {
+        versions: ['2.0', '1.0'],
+        preferred: '2.0',
+        transports: ['sse'],
+        features: {
+          capabilityManifest: true,
+          orderedRunEvents: true,
+          toolExecution: false,
+        },
+        limits: { maxEventBytes: 1_048_576, maxActiveRuns: 8 },
+      },
+      mode: 'runtime-v2',
+      version: '2.0',
+    });
+
+    expect(state.snapshot.runtime.protocolSelection.mode).toBe('runtime-v2');
+    state.resetRuntime();
+    expect(state.snapshot.runtime.protocolSelection).toEqual({
+      mode: 'legacy-v1',
+      reason: 'endpoint-unavailable',
+      version: '1.0',
+    });
+  });
 });
