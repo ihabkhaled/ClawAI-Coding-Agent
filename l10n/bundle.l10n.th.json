@@ -36,6 +36,7 @@
   "Approval": "Approval",
   "Approval required": "Approval required",
   "Approve": "Approve",
+  "Approve administrator operation": "อนุมัติการดำเนินการของผู้ดูแลระบบ",
   "Approve agent effect": "Approve agent effect",
   "Approve browser navigation": "Approve browser navigation",
   "Approve database change": "Approve database change",
@@ -74,6 +75,7 @@
   "Choose your ClawAI app address, then authorize securely in your browser.": "Choose your ClawAI app address, then authorize securely in your browser.",
   "CLAWAI": "CLAWAI",
   "ClawAI {0}": "ClawAI {0}",
+  "ClawAI administrator consent": "ความยินยอมของผู้ดูแลระบบ ClawAI",
   "ClawAI attachment upload did not resolve a file ID.": "ClawAI attachment upload did not resolve a file ID.",
   "ClawAI attachment upload did not return a file ID.": "ClawAI attachment upload did not return a file ID.",
   "ClawAI authorization timed out. Please try again.": "การอนุญาต ClawAI หมดเวลา โปรดลองอีกครั้ง",
@@ -298,5 +300,6 @@
   "Write to external output folder": "Write to external output folder",
   "YOU": "YOU",
   "You can attach up to 10 files.": "คุณสามารถแนบไฟล์ได้สูงสุด 10 ไฟล์",
-  "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue."
+  "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue.",
+  "Your operating system will show native administrator consent.": "ระบบปฏิบัติการจะแสดงคำขอความยินยอมของผู้ดูแลระบบแบบเนทีฟ"
 }

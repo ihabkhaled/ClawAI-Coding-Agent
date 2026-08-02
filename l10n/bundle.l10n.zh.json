@@ -36,6 +36,7 @@
   "Approval": "Approval",
   "Approval required": "Approval required",
   "Approve": "Approve",
+  "Approve administrator operation": "批准管理员操作",
   "Approve agent effect": "Approve agent effect",
   "Approve browser navigation": "Approve browser navigation",
   "Approve database change": "Approve database change",
@@ -74,6 +75,7 @@
   "Choose your ClawAI app address, then authorize securely in your browser.": "Choose your ClawAI app address, then authorize securely in your browser.",
   "CLAWAI": "CLAWAI",
   "ClawAI {0}": "ClawAI {0}",
+  "ClawAI administrator consent": "ClawAI 管理员授权",
   "ClawAI attachment upload did not resolve a file ID.": "ClawAI attachment upload did not resolve a file ID.",
   "ClawAI attachment upload did not return a file ID.": "ClawAI attachment upload did not return a file ID.",
   "ClawAI authorization timed out. Please try again.": "ClawAI 授权已超时。请重试。",
@@ -298,5 +300,6 @@
   "Write to external output folder": "Write to external output folder",
   "YOU": "YOU",
   "You can attach up to 10 files.": "最多可以附加 10 个文件。",
-  "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue."
+  "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue.",
+  "Your operating system will show native administrator consent.": "操作系统将显示原生管理员授权提示。"
 }
