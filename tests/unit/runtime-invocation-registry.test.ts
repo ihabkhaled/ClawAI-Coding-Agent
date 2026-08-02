@@ -423,6 +423,22 @@ describe('runtime invocation registry', () => {
     }
   });
 
+  it('rejects an invocation from a different turn before admission', () => {
+    const turnBoundRegistry = createRuntimeInvocationRegistry({
+      runId: invocation.runId,
+      turnId: invocation.turnId,
+      epochs,
+      definitions: [definition],
+    });
+
+    expect(() =>
+      admitRuntimeInvocation(turnBoundRegistry, {
+        ...invocation,
+        turnId: 'turn_01K11111111111111111111111',
+      }),
+    ).toThrow(/another turn/i);
+  });
+
   it.each(['completed', 'failed', 'blocked', 'cancelled'] as const)(
     'rejects admission after the run is %s',
     (status) => {

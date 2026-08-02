@@ -3,6 +3,9 @@ import { z } from 'zod';
 import { RUNTIME_ID_PATTERN, RUNTIME_PROTOCOL_V2 } from './runtime-protocol.constants';
 
 const MAX_STEERING_MESSAGE_BYTES = 32_768;
+const MAX_STEERING_ENTRIES = 32;
+const MAX_PENDING_STEERING = 8;
+const MAX_STEERING_HISTORY_BYTES = 131_072;
 const safeBoundaries = ['model-turn-boundary', 'tool-result-boundary'] as const;
 
 const steeringEpochsSchema = z
@@ -42,6 +45,7 @@ export type SteeringRunLifecycle = 'active' | 'completed' | 'failed' | 'cancelle
 export type SteeringRejectionReason = 'stale-epochs' | 'run-cancelled' | 'run-terminal';
 
 export interface SteeringQueueEntry {
+  readonly byteLength: number;
   readonly fingerprint: string;
   readonly message: SteeringMessage;
   readonly rejectionReason?: SteeringRejectionReason;
@@ -53,6 +57,7 @@ export interface SteeringQueueSnapshot {
   readonly epochs: SteeringMessage['epochs'];
   readonly idempotencyFingerprints: Readonly<Record<string, string>>;
   readonly lifecycle: SteeringRunLifecycle;
+  readonly historyBytes: number;
   readonly nextSequence: number;
   readonly pending: readonly string[];
   readonly runId: string;
@@ -71,6 +76,7 @@ export function createSteeringQueue(
     epochs: parsedEpochs,
     idempotencyFingerprints: {},
     lifecycle: 'active',
+    historyBytes: 0,
     nextSequence: 0,
     pending: [],
     runId: parsedRunId,
@@ -92,6 +98,47 @@ function fingerprint(message: SteeringMessage): string {
   return JSON.stringify(message);
 }
 
+function messageBytes(message: SteeringMessage): number {
+  return new TextEncoder().encode(fingerprint(message)).byteLength;
+}
+
+function compact(snapshot: SteeringQueueSnapshot): SteeringQueueSnapshot {
+  const entries = [...snapshot.entries];
+  while (entries.length >= MAX_STEERING_ENTRIES) {
+    const index = entries.findIndex(
+      (entry) => entry.status === 'applied' || entry.status === 'rejected',
+    );
+    if (index < 0) break;
+    entries.splice(index, 1);
+  }
+  while (
+    entries.reduce((total, entry) => total + entry.byteLength, 0) > MAX_STEERING_HISTORY_BYTES
+  ) {
+    const index = entries.findIndex(
+      (entry) => entry.status === 'applied' || entry.status === 'rejected',
+    );
+    if (index < 0) break;
+    entries.splice(index, 1);
+  }
+  if (entries.length === snapshot.entries.length) return snapshot;
+  const idempotencyFingerprints: Record<string, string> = {};
+  const sequenceFingerprints: Record<number, string> = {};
+  const steeringFingerprints: Record<string, string> = {};
+  for (const entry of entries) {
+    idempotencyFingerprints[entry.message.idempotencyKey] = entry.fingerprint;
+    sequenceFingerprints[entry.message.sequence] = entry.fingerprint;
+    steeringFingerprints[entry.message.steeringId] = entry.fingerprint;
+  }
+  return {
+    ...snapshot,
+    entries,
+    historyBytes: entries.reduce((total, entry) => total + entry.byteLength, 0),
+    idempotencyFingerprints,
+    sequenceFingerprints,
+    steeringFingerprints,
+  };
+}
+
 function rejectionFor(
   snapshot: SteeringQueueSnapshot,
   message: SteeringMessage,
@@ -108,45 +155,56 @@ function rejectionFor(
   return undefined;
 }
 
-export function receiveSteering(
+function assertReplayOrConflict(
   snapshot: SteeringQueueSnapshot,
+  message: SteeringMessage,
+  digest: string,
+): boolean {
+  const records: readonly [string | undefined, string, string][] = [
+    [snapshot.sequenceFingerprints[message.sequence], 'sequence', String(message.sequence)],
+    [
+      snapshot.idempotencyFingerprints[message.idempotencyKey],
+      'idempotency key',
+      message.idempotencyKey,
+    ],
+    [snapshot.steeringFingerprints[message.steeringId], 'identifier', message.steeringId],
+  ];
+  for (const [existing, label, value] of records) {
+    if (existing === undefined) continue;
+    if (existing === digest) return true;
+    throw new Error(`Steering ${label} ${value} conflicts with an earlier message`);
+  }
+  return false;
+}
+
+export function receiveSteering(
+  current: SteeringQueueSnapshot,
   value: unknown,
 ): SteeringQueueSnapshot {
+  const snapshot = compact(current);
   const message = steeringMessageSchema.parse(value);
   const digest = fingerprint(message);
-  const sequenceDigest = snapshot.sequenceFingerprints[message.sequence];
-  if (sequenceDigest !== undefined) {
-    if (sequenceDigest === digest) {
-      return snapshot;
-    }
-    throw new Error(
-      `Steering sequence ${String(message.sequence)} conflicts with an earlier message`,
-    );
-  }
-  const idempotencyDigest = snapshot.idempotencyFingerprints[message.idempotencyKey];
-  if (idempotencyDigest !== undefined) {
-    if (idempotencyDigest === digest) {
-      return snapshot;
-    }
-    throw new Error(
-      `Steering idempotency key ${message.idempotencyKey} conflicts with an earlier message`,
-    );
-  }
-  const steeringDigest = snapshot.steeringFingerprints[message.steeringId];
-  if (steeringDigest !== undefined) {
-    if (steeringDigest === digest) {
-      return snapshot;
-    }
-    throw new Error(`Steering identifier ${message.steeringId} conflicts with an earlier message`);
-  }
+  if (assertReplayOrConflict(snapshot, message, digest)) return snapshot;
   if (message.sequence !== snapshot.nextSequence) {
     throw new Error(
       `Steering sequence must be ${String(snapshot.nextSequence)} for run ${snapshot.runId}`,
     );
   }
 
+  const byteLength = messageBytes(message);
+  if (snapshot.pending.length >= MAX_PENDING_STEERING && snapshot.lifecycle === 'active') {
+    throw new Error('Steering pending queue is full');
+  }
+  if (
+    snapshot.entries.length >= MAX_STEERING_ENTRIES ||
+    snapshot.historyBytes + byteLength > MAX_STEERING_HISTORY_BYTES
+  ) {
+    throw new Error('Steering history capacity is full');
+  }
+
   const rejectionReason = rejectionFor(snapshot, message);
   const entry: SteeringQueueEntry = {
+    byteLength,
     fingerprint: digest,
     message,
     ...(rejectionReason === undefined ? {} : { rejectionReason }),
@@ -155,6 +213,7 @@ export function receiveSteering(
   return {
     ...snapshot,
     entries: [...snapshot.entries, entry],
+    historyBytes: snapshot.historyBytes + byteLength,
     idempotencyFingerprints: {
       ...snapshot.idempotencyFingerprints,
       [message.idempotencyKey]: digest,

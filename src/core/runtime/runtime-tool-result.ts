@@ -1,6 +1,6 @@
 import { createHash } from 'node:crypto';
 
-import { redactValue } from '../redaction';
+import { redactText, redactValue } from '../redaction';
 
 import { runtimeJsonObjectSchema, type RuntimeJsonObject } from './runtime-json-value';
 import {
@@ -11,6 +11,14 @@ import {
   type ToolInvocation,
   type ToolResult,
 } from './runtime-tool-contracts';
+
+function freezeDeep<T>(value: T): T {
+  if (value !== null && typeof value === 'object') {
+    for (const entry of Object.values(value)) freezeDeep(entry);
+    Object.freeze(value);
+  }
+  return value;
+}
 
 export interface RuntimeToolResultInput {
   readonly invocation: ToolInvocation;
@@ -52,13 +60,68 @@ function utf8Bytes(value: string): number {
   return new TextEncoder().encode(value).byteLength;
 }
 
+function truncateText(value: string, maxBytes: number): string {
+  let output = '';
+  for (const character of value) {
+    if (utf8Bytes(output + character) > maxBytes) return `${output}…`;
+    output += character;
+  }
+  return output;
+}
+
+function sanitizeError(error: ToolError | undefined): ToolError | undefined {
+  if (error === undefined) return undefined;
+  const message = redactText(error.message);
+  const details =
+    error.details === undefined
+      ? undefined
+      : runtimeJsonObjectSchema.parse(redactValue(error.details));
+  const redactionApplied =
+    message !== error.message ||
+    (error.details !== undefined && canonicalJson(error.details) !== canonicalJson(details));
+  return {
+    code: error.code,
+    message: truncateText(message, 512),
+    retryable: error.retryable,
+    redactionApplied,
+    ...(details === undefined ? {} : { details }),
+  };
+}
+
+function sanitizeOutput(
+  structured: RuntimeJsonObject | undefined,
+  modelText: string | undefined,
+  error: ToolError | undefined,
+): {
+  readonly error: ToolError | undefined;
+  readonly modelText: string | undefined;
+  readonly redactionApplied: boolean;
+  readonly structured: RuntimeJsonObject | undefined;
+} {
+  const safeStructured =
+    structured === undefined ? undefined : runtimeJsonObjectSchema.parse(redactValue(structured));
+  const safeText = modelText === undefined ? undefined : redactText(modelText);
+  const safeError = sanitizeError(error);
+  return {
+    structured: safeStructured,
+    modelText: safeText,
+    error: safeError,
+    redactionApplied:
+      (structured !== undefined && canonicalJson(structured) !== canonicalJson(safeStructured)) ||
+      safeText !== modelText ||
+      (error !== undefined && safeError?.redactionApplied === true),
+  };
+}
+
 function boundedOutput(
   structured: RuntimeJsonObject | undefined,
   modelText: string | undefined,
+  error: ToolError | undefined,
   maxOutputBytes: number,
 ): {
   readonly structured: RuntimeJsonObject | undefined;
   readonly modelText: string | undefined;
+  readonly error: ToolError | undefined;
   readonly outputBytes: number;
   readonly redactionApplied: boolean;
   readonly truncated: boolean;
@@ -66,22 +129,42 @@ function boundedOutput(
   if (!Number.isInteger(maxOutputBytes) || maxOutputBytes < 1_024) {
     throw new Error('Runtime tool result output limit must be an integer of at least 1024 bytes');
   }
-  const redacted =
-    structured === undefined ? undefined : runtimeJsonObjectSchema.parse(redactValue(structured));
-  const redactionApplied =
-    structured !== undefined && canonicalJson(structured) !== canonicalJson(redacted);
+  const sanitized = sanitizeOutput(structured, modelText, error);
   const outputBytes = utf8Bytes(
-    canonicalJson({ structured: redacted ?? null, modelText: modelText ?? null }),
+    canonicalJson({
+      structured: sanitized.structured ?? null,
+      modelText: sanitized.modelText ?? null,
+      error: sanitized.error ?? null,
+    }),
   );
   if (outputBytes <= maxOutputBytes) {
-    return { structured: redacted, modelText, outputBytes, redactionApplied, truncated: false };
+    return {
+      structured: sanitized.structured,
+      modelText: sanitized.modelText,
+      error: sanitized.error,
+      outputBytes,
+      redactionApplied: sanitized.redactionApplied,
+      truncated: false,
+    };
   }
   const marker: RuntimeJsonObject = { truncated: true };
+  const truncationError =
+    sanitized.error === undefined
+      ? undefined
+      : {
+          ...sanitized.error,
+          details: undefined,
+          message: 'Tool outcome was truncated.',
+          redactionApplied: true,
+        };
   return {
     structured: marker,
     modelText: undefined,
-    outputBytes: utf8Bytes(canonicalJson({ structured: marker, modelText: null })),
-    redactionApplied,
+    error: truncationError,
+    outputBytes: utf8Bytes(
+      canonicalJson({ structured: marker, modelText: null, error: truncationError ?? null }),
+    ),
+    redactionApplied: sanitized.redactionApplied,
     truncated: true,
   };
 }
@@ -97,32 +180,39 @@ export function buildRuntimeToolResult(input: RuntimeToolResultInput): ToolResul
   ) {
     throw new Error('Runtime tool result time range is invalid');
   }
-  const output = boundedOutput(input.structured, input.modelText, input.maxOutputBytes);
+  const output = boundedOutput(
+    input.structured,
+    input.modelText,
+    input.error,
+    input.maxOutputBytes,
+  );
   const resultBody = {
     structured: output.structured ?? null,
     modelText: output.modelText ?? null,
-    error: input.error ?? null,
+    error: output.error ?? null,
   };
-  return parseToolResult({
-    schemaVersion: '2.0',
-    invocationId: invocation.invocationId,
-    status: input.status,
-    ...(output.structured === undefined ? {} : { structured: output.structured }),
-    ...(output.modelText === undefined ? {} : { modelText: output.modelText }),
-    ...(input.error === undefined ? {} : { error: input.error }),
-    receipt: {
+  return freezeDeep(
+    parseToolResult({
       schemaVersion: '2.0',
-      receiptId: input.receiptId,
       invocationId: invocation.invocationId,
-      argumentHash: sha256(invocation.arguments),
-      resultHash: sha256(resultBody),
-      startedAt: input.startedAt,
-      completedAt: input.completedAt,
-      durationMs: completedAtMs - startedAtMs,
-      outputBytes: output.outputBytes,
-      truncated: output.truncated,
-      redactionApplied: output.redactionApplied || input.error?.redactionApplied === true,
-    },
-    continuation: input.continuation,
-  });
+      status: input.status,
+      ...(output.structured === undefined ? {} : { structured: output.structured }),
+      ...(output.modelText === undefined ? {} : { modelText: output.modelText }),
+      ...(output.error === undefined ? {} : { error: output.error }),
+      receipt: {
+        schemaVersion: '2.0',
+        receiptId: input.receiptId,
+        invocationId: invocation.invocationId,
+        argumentHash: sha256(invocation.arguments),
+        resultHash: sha256(resultBody),
+        startedAt: input.startedAt,
+        completedAt: input.completedAt,
+        durationMs: completedAtMs - startedAtMs,
+        outputBytes: output.outputBytes,
+        truncated: output.truncated,
+        redactionApplied: output.redactionApplied,
+      },
+      continuation: input.continuation,
+    }),
+  );
 }

@@ -65,6 +65,68 @@ describe('runtime tool result builder', () => {
     expect(JSON.stringify(result)).not.toContain('sensitive-value');
   });
 
+  it('redacts model text and error details and counts them in the bounded receipt', () => {
+    const result = buildRuntimeToolResult({
+      ...base,
+      status: 'failed',
+      modelText: 'Bearer model-secret',
+      error: {
+        code: 'TOOL_EXECUTION_FAILED',
+        message: 'Bearer error-secret',
+        retryable: false,
+        redactionApplied: false,
+        details: { apiKey: 'details-secret' },
+      },
+    });
+
+    expect(result.modelText).toBe('Bearer [REDACTED]');
+    expect(result.error).toMatchObject({
+      message: 'Bearer [REDACTED]',
+      details: { apiKey: '[REDACTED]' },
+      redactionApplied: true,
+    });
+    expect(result.receipt.outputBytes).toBeGreaterThan(100);
+  });
+
+  it('includes safe error details in receipt byte accounting', () => {
+    const concise = buildRuntimeToolResult({
+      ...base,
+      status: 'failed',
+      error: {
+        code: 'TOOL_EXECUTION_FAILED',
+        message: 'The trusted tool executor failed.',
+        retryable: false,
+        redactionApplied: false,
+      },
+    });
+    const detailed = buildRuntimeToolResult({
+      ...base,
+      status: 'failed',
+      error: {
+        code: 'TOOL_EXECUTION_FAILED',
+        message: 'The trusted tool executor failed.',
+        retryable: false,
+        redactionApplied: false,
+        details: { reason: 'x'.repeat(300) },
+      },
+    });
+
+    expect(detailed.receipt.outputBytes).toBeGreaterThan(concise.receipt.outputBytes);
+  });
+
+  it('returns an immutable result snapshot', () => {
+    const result = buildRuntimeToolResult({
+      ...base,
+      status: 'succeeded',
+      structured: { nested: { files: ['a.ts'] } },
+    });
+
+    expect(Object.isFrozen(result)).toBe(true);
+    expect(Object.isFrozen(result.receipt)).toBe(true);
+    expect(Object.isFrozen(result.structured)).toBe(true);
+    expect(Object.isFrozen(result.structured?.nested)).toBe(true);
+  });
+
   it('replaces oversized output with a bounded truncation marker', () => {
     const result = buildRuntimeToolResult({
       ...base,
