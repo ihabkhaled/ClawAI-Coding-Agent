@@ -73,6 +73,67 @@ describe('RuntimeEventStreamService backend event integration', () => {
       expect.objectContaining({ action: 'continue' }),
     );
   });
+
+  it('continues consuming steering while a long-running tool remains active', async () => {
+    let completeDispatch: (() => void) | undefined;
+    const dispatch = vi.fn(
+      () =>
+        new Promise<void>((resolve) => {
+          completeDispatch = resolve;
+        }),
+    );
+    const invocation = {
+      schemaVersion: '2.0' as const,
+      invocationId: 'invocation-id-steering',
+      runId: 'run-id-0001',
+      turnId: 'turn-id-steering',
+      toolName: 'runtime.flagship',
+      toolVersion: '2.0.0',
+      operation: 'run',
+      arguments: { request: {} },
+      targetId: 'target:workspace',
+      epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
+      idempotencyKey: 'invocation-key-steering',
+      requestedAt: '2026-08-02T10:00:01.000Z',
+    };
+    const response = new Response(
+      [
+        event(0, 'tool.requested', { invocation, invocationId: invocation.invocationId }),
+        event(1, 'steering.received', { message: 'Prioritize the regression.' }),
+        event(2, 'run.completed', {}),
+      ]
+        .map((candidate) => `data: ${JSON.stringify(candidate)}\n\n`)
+        .join(''),
+    );
+    const binding: RuntimeCommandBinding = {
+      threadId: 'thread-id-0001',
+      runId: 'run-id-0001',
+      generation: 'generation-id-0001',
+      epochs: invocation.epochs,
+    };
+    const transport = new BackendRuntimeTransport(
+      () => ({
+        cancelRuntime: vi.fn(),
+        startRuntime: vi.fn(),
+        steerRuntime: vi.fn(),
+        submitRuntimeResult: vi.fn(),
+        openRuntimeStream: vi.fn(async () => response),
+      }),
+      { delete: async () => undefined, load: async () => binding, save: async () => undefined },
+    );
+    const observed = vi.fn();
+    const following = new RuntimeEventStreamService(transport).follow(
+      invocation.runId,
+      { beginModelTurn: vi.fn(), dispatch },
+      { onEvent: observed },
+      new AbortController().signal,
+    );
+
+    await new Promise<void>((resolve) => setImmediate(resolve));
+    expect(observed).toHaveBeenCalledTimes(3);
+    completeDispatch?.();
+    await following;
+  });
 });
 
 function event(sequence: number, type: string, payload: Record<string, unknown>): object {

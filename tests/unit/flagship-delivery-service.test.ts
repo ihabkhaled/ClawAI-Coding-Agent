@@ -17,18 +17,12 @@ const request = {
     maxStageAttempts: 2,
     maxModelTurns: 20,
     maxToolCalls: 100,
-    maxSubAgents: 5,
-  },
-  effects: {
-    commitAuthorized: false,
-    pushAuthorized: false,
-    deployAuthorized: false,
-    publishAuthorized: false,
+    maxSubAgents: 20,
   },
 };
 
 describe('FlagshipDeliveryService', () => {
-  it('runs the complete bounded sequence and skips an unauthorized commit', async () => {
+  it('runs the complete bounded sequence while effect policy remains host-owned', async () => {
     const executed: FlagshipStage[] = [];
     const stage = {
       execute: vi.fn(async (current: FlagshipStage) => {
@@ -55,6 +49,7 @@ describe('FlagshipDeliveryService', () => {
       'integrate',
       'verify',
       'review',
+      'commit',
       'publish-ready',
       'report',
     ]);

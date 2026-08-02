@@ -10,7 +10,7 @@ const descriptor = {
   features: {
     capabilityManifest: true,
     orderedRunEvents: true,
-    toolExecution: false,
+    toolExecution: true,
   },
   limits: { maxEventBytes: 1_048_576, maxActiveRuns: 8 },
 };

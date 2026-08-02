@@ -1,3 +1,5 @@
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
+
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { BrowserControllerService } from '../services/browser-controller-service';
 import type {
@@ -73,4 +75,3 @@ export class BrowserToolExecutor implements RuntimeToolExecutorPort {
     return { structured: { evidence: result.evidence, result: result.structured } };
   }
 }
-import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';

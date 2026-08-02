@@ -19,6 +19,18 @@ export interface RuntimeStreamRuntimePort {
   dispatch(invocation: ToolInvocation, continuation: Continuation): Promise<unknown>;
 }
 
+function isTerminalEvent(event: RuntimeEvent): boolean {
+  return ['run.completed', 'run.failed', 'run.cancelled'].includes(event.type);
+}
+
+function errorFrom(value: unknown): Error {
+  return value instanceof Error ? value : new Error(String(value));
+}
+
+function throwDispatchFailure(state: { readonly failure?: unknown }): void {
+  if (state.failure !== undefined) throw errorFrom(state.failure);
+}
+
 export class RuntimeEventStreamService {
   constructor(private readonly transport: BackendRuntimeTransport) {}
 
@@ -57,6 +69,8 @@ export class RuntimeEventStreamService {
     const reader = response.body.getReader();
     const decoder = new TextDecoder();
     const events = new SseDecoder();
+    const pendingDispatches = new Set<Promise<void>>();
+    const dispatchState: { failure?: unknown } = {};
     let cursor = initialCursor;
     try {
       while (!signal.aborted) {
@@ -67,26 +81,36 @@ export class RuntimeEventStreamService {
           const event = parseRuntimeEvent(candidate);
           if (event.sequence <= cursor) continue;
           cursor = event.sequence;
+          throwDispatchFailure(dispatchState);
           await observer.onEvent(event);
           if (event.type === 'tool.requested') {
             const invocation = parseToolInvocation(event.payload.invocation);
             runtime.beginModelTurn(false, invocation.turnId);
-            await runtime.dispatch(invocation, {
-              action: 'continue',
-              nextTurnId: `turn_${randomUUID()}`,
-            });
+            const dispatch = runtime
+              .dispatch(invocation, {
+                action: 'continue',
+                nextTurnId: `turn_${randomUUID()}`,
+              })
+              .then(() => undefined)
+              .catch((error: unknown) => {
+                dispatchState.failure = error;
+              })
+              .finally(() => {
+                pendingDispatches.delete(dispatch);
+              });
+            pendingDispatches.add(dispatch);
           }
-          if (
-            event.type === 'run.completed' ||
-            event.type === 'run.failed' ||
-            event.type === 'run.cancelled'
-          )
+          if (isTerminalEvent(event)) {
+            await Promise.all(pendingDispatches);
+            throwDispatchFailure(dispatchState);
             return { cursor, terminal: true };
+          }
         }
       }
       signal.throwIfAborted();
       return { cursor, terminal: false };
     } finally {
+      await Promise.all(pendingDispatches);
       await reader.cancel().catch(() => undefined);
     }
   }

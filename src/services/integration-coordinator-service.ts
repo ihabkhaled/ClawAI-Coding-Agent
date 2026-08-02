@@ -24,12 +24,19 @@ const integrationRequestSchema = z
 
 export interface IntegrationGitPort {
   workingFingerprint(worktreeId: string): Promise<string>;
+  verifyCommit(
+    worktreeId: string,
+    commit: string,
+    changedPaths: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<boolean>;
   cherryPick(
     worktreeId: string,
     commit: string,
     signal?: AbortSignal,
   ): Promise<{ readonly conflicts: readonly string[] }>;
   abortCherryPick(worktreeId: string): Promise<void>;
+  releaseWorktree(worktreeId: string): Promise<void>;
 }
 
 export interface IntegrationQualityPort {
@@ -59,6 +66,10 @@ export class IntegrationCoordinatorService {
     const request = integrationRequestSchema.parse(candidate);
     let expectedFingerprint = await this.git.workingFingerprint(request.targetWorktreeId);
     const integrated: string[] = [];
+    for (const item of request.commits) {
+      if (!(await this.git.verifyCommit(item.worktreeId, item.commit, item.changedPaths, signal)))
+        throw new Error(`Integration commit provenance is invalid for task ${item.taskId}`);
+    }
     const semanticConflicts = this.semanticConflicts(request.commits);
     if (semanticConflicts.length > 0) {
       return {
@@ -89,6 +100,7 @@ export class IntegrationCoordinatorService {
         };
       }
       integrated.push(item.commit);
+      await this.git.releaseWorktree(item.worktreeId);
       expectedFingerprint = await this.git.workingFingerprint(request.targetWorktreeId);
     }
     const gates = await this.quality.run(

@@ -2,18 +2,185 @@ import type { RuntimeJsonObject } from './runtime-tool-contracts';
 
 const text = { type: 'string', maxLength: 1_048_576 } as const;
 const integer = { type: 'integer', minimum: 0, maximum: 16_777_216 } as const;
+const wideInteger = { type: 'integer', minimum: 0, maximum: 1_000_000_000 } as const;
 const flag = { type: 'boolean' } as const;
 const opaque = { type: 'object', properties: {}, additionalProperties: true } as const;
 const texts = { type: 'array', items: text, maxItems: 10_000 } as const;
 const integers = { type: 'array', items: integer, maxItems: 1_000 } as const;
 const objects = { type: 'array', items: opaque, maxItems: 1_000 } as const;
 
-function strict(properties: RuntimeJsonObject): RuntimeJsonObject {
-  return { type: 'object', properties, additionalProperties: false, maxProperties: 64 };
+function strict(
+  properties: RuntimeJsonObject,
+  required: readonly string[] = [],
+): RuntimeJsonObject {
+  return { type: 'object', properties, required, additionalProperties: false, maxProperties: 64 };
 }
 
+const identifier = { type: 'string', minLength: 2, maxLength: 200 } as const;
+const shortText = { type: 'string', minLength: 1, maxLength: 2_000 } as const;
+const epochs = strict({ account: integer, workspace: integer, target: integer, policy: integer }, [
+  'account',
+  'workspace',
+  'target',
+  'policy',
+]);
+const modelPolicy = strict(
+  {
+    allowedProviders: texts,
+    allowedModels: texts,
+    localPreferred: flag,
+    minimumContextTokens: integer,
+  },
+  ['allowedProviders', 'allowedModels', 'localPreferred', 'minimumContextTokens'],
+);
+const taskBudget = strict(
+  { maxTokens: integer, maxToolCalls: integer, maxRuntimeMs: wideInteger, maxRetries: integer },
+  ['maxTokens', 'maxToolCalls', 'maxRuntimeMs', 'maxRetries'],
+);
+const subAgentTask = strict(
+  {
+    taskId: identifier,
+    role: {
+      type: 'string',
+      enum: [
+        'explorer',
+        'implementer',
+        'tester',
+        'reviewer',
+        'security-reviewer',
+        'documenter',
+        'integrator',
+      ],
+    },
+    goal: text,
+    modelPolicy,
+    contextNodeIds: texts,
+    dependencies: texts,
+    writeSet: texts,
+    integrationSeams: texts,
+    worktreeId: identifier,
+    budget: taskBudget,
+    tools: texts,
+    riskCeiling: { type: 'string', enum: ['R0', 'R1', 'R2', 'R3'] },
+    acceptanceChecks: texts,
+    mandatoryGateIds: texts,
+    epochs,
+  },
+  [
+    'taskId',
+    'role',
+    'goal',
+    'modelPolicy',
+    'contextNodeIds',
+    'dependencies',
+    'writeSet',
+    'integrationSeams',
+    'worktreeId',
+    'budget',
+    'tools',
+    'riskCeiling',
+    'acceptanceChecks',
+    'epochs',
+  ],
+);
+const subAgentGraph = strict(
+  {
+    graphId: identifier,
+    parentRunId: identifier,
+    tasks: { type: 'array', items: subAgentTask, minItems: 1, maxItems: 1_000 },
+    maxConcurrency: integer,
+  },
+  ['graphId', 'parentRunId', 'tasks', 'maxConcurrency'],
+);
+const integrationCommit = strict(
+  {
+    taskId: identifier,
+    worktreeId: identifier,
+    commit: text,
+    changedPaths: texts,
+    integrationSeams: texts,
+  },
+  ['taskId', 'worktreeId', 'commit', 'changedPaths', 'integrationSeams'],
+);
+const integrationRequest = strict(
+  {
+    integrationId: identifier,
+    targetWorktreeId: identifier,
+    commits: { type: 'array', items: integrationCommit, minItems: 1, maxItems: 1_000 },
+    mandatoryGateIds: texts,
+  },
+  ['integrationId', 'targetWorktreeId', 'commits', 'mandatoryGateIds'],
+);
+const flagshipBudget = strict(
+  {
+    maxRuntimeMs: wideInteger,
+    maxStageAttempts: integer,
+    maxModelTurns: integer,
+    maxToolCalls: integer,
+    maxSubAgents: integer,
+  },
+  ['maxRuntimeMs', 'maxStageAttempts', 'maxModelTurns', 'maxToolCalls', 'maxSubAgents'],
+);
+const flagshipRequest = strict(
+  {
+    deliveryId: identifier,
+    runId: identifier,
+    goal: text,
+    strategy: {
+      type: 'string',
+      enum: [
+        'cross-stack-feature',
+        'incident-fix',
+        'architecture-refactor',
+        'mobile-web-backend',
+        'prompt-pack-audit',
+      ],
+    },
+    repositories: texts,
+    writeSet: texts,
+    acceptanceChecks: texts,
+    budget: flagshipBudget,
+  },
+  ['deliveryId', 'runId', 'goal', 'strategy', 'repositories', 'budget'],
+);
+const elevationCommand = strict(
+  {
+    executable: text,
+    arguments: texts,
+    cwdRootKey: identifier,
+    cwd: text,
+    environment: opaque,
+    timeoutMs: integer,
+    outputLimitBytes: integer,
+    expectedEffect: text,
+    targetId: identifier,
+    elevation: flag,
+  },
+  [
+    'executable',
+    'arguments',
+    'cwdRootKey',
+    'cwd',
+    'environment',
+    'timeoutMs',
+    'outputLimitBytes',
+    'expectedEffect',
+    'targetId',
+    'elevation',
+  ],
+);
+const elevationRecipe = strict(
+  {
+    recipeId: text,
+    command: elevationCommand,
+    explanation: shortText,
+    verification: elevationCommand,
+  },
+  ['recipeId', 'command', 'explanation', 'verification'],
+);
+
 export const runtimeToolInputSchemas = {
-  agents: strict({ graph: opaque }),
+  agents: strict({ graph: subAgentGraph }, ['graph']),
   browser: strict({
     sessionId: text,
     contextId: text,
@@ -79,7 +246,8 @@ export const runtimeToolInputSchemas = {
     backupAcknowledged: flag,
   }),
   evidence: strict({ input: opaque, bundle: opaque, output: opaque }),
-  flagship: strict({ request: opaque }),
+  elevation: strict({ recipe: elevationRecipe }, ['recipe']),
+  flagship: strict({ request: flagshipRequest }, ['request']),
   files: strict({
     rootKey: text,
     path: text,
@@ -109,7 +277,7 @@ export const runtimeToolInputSchemas = {
     name: text,
     target: text,
   }),
-  integration: strict({ request: opaque }),
+  integration: strict({ request: integrationRequest }, ['request']),
   intelligence: strict({ identity: opaque, query: text, nodeIds: texts, paths: texts }),
   journal: strict({ journal: opaque, query: text, runId: text }),
   planning: strict({ plan: opaque, output: opaque }),

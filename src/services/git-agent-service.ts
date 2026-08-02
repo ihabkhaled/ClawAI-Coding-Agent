@@ -54,6 +54,34 @@ export class GitAgentService {
     await this.git(root.fsPath, ['cherry-pick', '--abort'], signal);
   }
 
+  async verifyCommit(
+    rootKey: string,
+    commit: string,
+    declaredPaths: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    const operation = gitOperationSchema.parse({ rootKey, operation: 'log', ref: commit });
+    const root = this.files.workspaceRootUri(operation.rootKey);
+    try {
+      await this.git(root.fsPath, ['cat-file', '-e', `${commit}^{commit}`], signal);
+      await this.git(root.fsPath, ['merge-base', '--is-ancestor', commit, 'HEAD'], signal);
+      const output = await this.git(
+        root.fsPath,
+        ['diff-tree', '--no-commit-id', '--name-only', '-r', commit],
+        signal,
+      );
+      const actual = output
+        .split(/\r?\n/u)
+        .map((value) => value.trim())
+        .filter(Boolean)
+        .sort();
+      const declared = [...declaredPaths].sort();
+      return JSON.stringify(actual) === JSON.stringify(declared);
+    } catch {
+      return false;
+    }
+  }
+
   private arguments(operation: GitOperation): string[] {
     const readOperations = new Set([
       'status',

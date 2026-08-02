@@ -1,9 +1,14 @@
-import { describe, expect, it, vi } from 'vitest';
+import { mkdir, mkdtemp, rm } from 'node:fs/promises';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
+import { afterEach, describe, expect, it, vi } from 'vitest';
 
 vi.mock('vscode', () => ({}));
 
 import {
   buildRuntimeCapabilityManifest,
+  detectRuntimePrerequisites,
   describeExtensionHost,
   describeRuntimeTarget,
 } from '../../src/infrastructure/vscode-runtime-target-adapter';
@@ -21,9 +26,33 @@ const localProbe: RuntimeHostProbe = {
   vscodeVersion: '1.110.0',
   workspaceFolders: [{ name: 'ClawAI', scheme: 'file', uri: 'file:///D:/Freelance/Claw' }],
   workspaceTrusted: true,
+  prerequisites: {
+    browser: true,
+    container: true,
+    database: true,
+    elevation: true,
+    git: true,
+    process: true,
+  },
 };
 
+const temporaryDirectories: string[] = [];
+
+afterEach(async () => {
+  for (const directory of temporaryDirectories.splice(0)) {
+    await rm(directory, { force: true, recursive: true });
+  }
+});
+
 describe('VS Code runtime target adapter', () => {
+  it('does not advertise browser control when only the bundled library exists', async () => {
+    const extensionRoot = await mkdtemp(path.join(tmpdir(), 'clawai-browser-probe-'));
+    temporaryDirectories.push(extensionRoot);
+    await mkdir(path.join(extensionRoot, 'node_modules', 'playwright-core'), { recursive: true });
+
+    expect(detectRuntimePrerequisites(extensionRoot).browser).toBe(false);
+  });
+
   it.each([
     [{}, 'desktop-local', 'local'],
     [{ platform: 'darwin' }, 'desktop-local', 'local'],
@@ -134,5 +163,37 @@ describe('VS Code runtime target adapter', () => {
       ]),
     );
     expect(JSON.stringify(manifest)).not.toContain('System32');
+  });
+
+  it('omits specialized and orchestrator capabilities when prerequisites are unavailable', () => {
+    const manifest = buildRuntimeCapabilityManifest(
+      {
+        ...localProbe,
+        prerequisites: {
+          browser: false,
+          container: false,
+          database: false,
+          elevation: false,
+          git: false,
+          process: false,
+        },
+      },
+      { generatedAt: '2026-08-02T03:00:00.000Z', manifestId: 'manifest:degraded' },
+    );
+
+    expect(manifest.targets.map(({ id }) => id)).toEqual(['target:workspace']);
+    expect(manifest.tools.map(({ name }) => name)).not.toEqual(
+      expect.arrayContaining([
+        'workspace.git',
+        'workspace.process',
+        'workspace.container',
+        'workspace.database',
+        'workspace.browser',
+        'runtime.agents',
+        'runtime.integration',
+        'runtime.flagship',
+        'runtime.elevation',
+      ]),
+    );
   });
 });

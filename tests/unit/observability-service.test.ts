@@ -19,7 +19,9 @@ describe('LocalObservabilityService', () => {
     service.emit(span);
     expect(local.emit).toHaveBeenCalledWith(span);
     expect(remote.emit).not.toHaveBeenCalled();
-    expect(() => service.setRemoteExport(true, false)).toThrow('explicit approval');
+    expect(() => {
+      service.setRemoteExport(true, false);
+    }).toThrow('explicit approval');
 
     service.setRemoteExport(true, true);
     service.emit(span);

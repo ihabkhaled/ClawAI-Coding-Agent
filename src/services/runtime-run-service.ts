@@ -48,6 +48,7 @@ export interface RuntimeRunStartReceipt {
 
 export interface RuntimeRunTransportPort {
   cancel(runId: string): Promise<void>;
+  release?(runId: string): Promise<void>;
   start(input: RuntimeRunStart): Promise<RuntimeRunStartReceipt>;
   submitResult(runId: string, result: ToolResult, signal: AbortSignal): Promise<void>;
 }
@@ -184,8 +185,6 @@ export class RuntimeRunService {
     try {
       const receipt = await this.dependencies.transport.start(input);
       remotelyAdmittedRunId = receipt.runId;
-      if (receipt.runId !== input.runId)
-        throw new Error('Runtime transport acknowledged a mismatched run identifier');
       const admittedInput = { ...input, runId: receipt.runId };
       this.assertCurrentEpochs(input.epochs);
       const controller = new AbortController();
@@ -319,6 +318,11 @@ export class RuntimeRunService {
       );
       this.completed = active;
       this.active = undefined;
+      try {
+        await this.dependencies.transport.release?.(active.start.runId);
+      } catch {
+        // A durable binding may be retried and evicted later; terminal run truth is preserved.
+      }
     }
     return result;
   }

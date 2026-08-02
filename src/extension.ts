@@ -9,7 +9,10 @@ import { createRuntimeSnapshot } from './core/runtime/runtime-event-reducer';
 import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
 import { OutputLogger } from './infrastructure/output-logger';
-import { buildRuntimeCapabilityManifest } from './infrastructure/vscode-runtime-target-adapter';
+import {
+  buildRuntimeCapabilityManifest,
+  detectRuntimePrerequisites,
+} from './infrastructure/vscode-runtime-target-adapter';
 import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-edit-adapter';
 import { AgentCoordinator } from './services/agent-coordinator';
 import { ConfigurationService } from './services/configuration-service';
@@ -131,6 +134,7 @@ export function activate(context: vscode.ExtensionContext): void {
         uri: folder.uri.toString(),
       })),
       workspaceTrusted: vscode.workspace.isTrusted,
+      prerequisites: detectRuntimePrerequisites(context.extensionUri.fsPath),
     },
     {
       generatedAt: new Date().toISOString(),
@@ -233,6 +237,10 @@ export function activate(context: vscode.ExtensionContext): void {
       coordinator.resolveApproval(requestId, approved);
       return Promise.resolve();
     },
+    runtimePause: () => coordinator.runtimeControl('pause'),
+    runtimeResume: () => coordinator.runtimeControl('resume'),
+    runtimeSteer: (message) => coordinator.runtimeSteer(message),
+    runtimeStop: () => coordinator.cancel(),
     undo: () => coordinator.undoLastEdit(),
     selectAgentMode: (mode) => coordinator.sessionControls.selectAgentMode(mode),
     selectModel: (modelKey) => coordinator.selectModel(modelKey),

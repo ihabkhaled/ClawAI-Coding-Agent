@@ -21,6 +21,16 @@ export interface SubAgentCoordinatorObserver {
   outcome(outcome: SubAgentOutcome): void;
 }
 
+export interface SubAgentWorkspacePort {
+  prepare(task: SubAgentTask, signal: AbortSignal): Promise<void>;
+  finalize(
+    task: SubAgentTask,
+    outcome: SubAgentOutcome,
+    signal: AbortSignal,
+  ): Promise<SubAgentOutcome>;
+  abandon(task: SubAgentTask): Promise<void>;
+}
+
 interface TaskRuntime {
   readonly task: SubAgentTask;
   readonly controller: AbortController;
@@ -51,6 +61,7 @@ export class SubAgentCoordinatorService {
     private readonly leases: FileLeaseManager,
     private readonly currentEpochs: () => SubAgentTask['epochs'],
     private readonly observer: SubAgentCoordinatorObserver,
+    private readonly workspaces?: SubAgentWorkspacePort,
   ) {}
 
   async run(candidate: unknown, signal?: AbortSignal): Promise<readonly SubAgentOutcome[]> {
@@ -148,7 +159,11 @@ export class SubAgentCoordinatorService {
       this.finish(runtime, this.blocked(runtime, 'Runtime identity changed after task admission'));
       return;
     }
+    runtime.status = 'running';
+    runtime.attempts += 1;
+    this.observer.status(runtime.task.taskId, 'running');
     try {
+      await this.workspaces?.prepare(runtime.task, runtime.controller.signal);
       this.leases.acquire(
         runtime.task.taskId,
         runtime.task.worktreeId,
@@ -156,15 +171,13 @@ export class SubAgentCoordinatorService {
         runtime.task.integrationSeams,
       );
     } catch (error) {
+      await this.workspaces?.abandon(runtime.task);
       this.finish(
         runtime,
         this.blocked(runtime, error instanceof Error ? error.message : 'Lease rejected'),
       );
       return;
     }
-    runtime.status = 'running';
-    runtime.attempts += 1;
-    this.observer.status(runtime.task.taskId, 'running');
     try {
       const timeout = setTimeout(() => {
         runtime.controller.abort(new Error('Sub-agent runtime budget exhausted'));
@@ -179,19 +192,13 @@ export class SubAgentCoordinatorService {
       } finally {
         clearTimeout(timeout);
       }
+      if (outcome.status === 'succeeded' && this.workspaces !== undefined) {
+        outcome = await this.workspaces.finalize(runtime.task, outcome, runtime.controller.signal);
+      }
       this.assertOutcome(runtime, outcome);
       this.finish(runtime, outcome);
     } catch (error) {
-      if (
-        !runtime.controller.signal.aborted &&
-        runtime.attempts <= runtime.task.budget.maxRetries
-      ) {
-        runtime.status = 'queued';
-        this.leases.release(runtime.task.taskId);
-        this.observer.status(runtime.task.taskId, 'queued', 'Retry scheduled');
-        this.changed();
-        return;
-      }
+      await this.workspaces?.abandon(runtime.task);
       this.finish(runtime, {
         taskId: runtime.task.taskId,
         status: runtime.controller.signal.aborted ? 'cancelled' : 'failed',

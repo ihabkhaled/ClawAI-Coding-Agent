@@ -24,6 +24,7 @@ const textDecoder = new TextDecoder('utf-8', { fatal: true });
 export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
   private readonly createdDirectories = new Map<string, vscode.Uri[]>();
   private readonly committed = new Set<string>();
+  private readonly runtimeRoots = new Map<string, vscode.Uri>();
 
   constructor(private readonly externalOutputs?: ExternalOutputResolver) {}
 
@@ -44,11 +45,22 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
   }
 
   workspaceRootUri(rootKey: string): vscode.Uri {
+    const runtime = this.runtimeRoots.get(rootKey);
+    if (runtime !== undefined) return runtime;
     const workspace = (vscode.workspace.workspaceFolders ?? []).find(
       (folder) => workspaceFolderKey(folder.uri.toString()) === rootKey,
     );
     if (workspace === undefined) throw new Error('Command roots must be workspace folders');
     return workspace.uri;
+  }
+
+  registerRuntimeRoot(rootKey: string, rootPath: string): void {
+    if (this.runtimeRoots.has(rootKey)) throw new Error('Runtime root is already registered');
+    this.runtimeRoots.set(rootKey, vscode.Uri.file(rootPath));
+  }
+
+  unregisterRuntimeRoot(rootKey: string): void {
+    this.runtimeRoots.delete(rootKey);
   }
 
   async snapshot(operation: FileTransactionOperation, signal?: AbortSignal): Promise<FileSnapshot> {
@@ -211,6 +223,8 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
   }
 
   private root(rootKey: string, operation: FileTransactionOperation['kind'] | 'read'): vscode.Uri {
+    const runtime = this.runtimeRoots.get(rootKey);
+    if (runtime !== undefined) return runtime;
     const workspace = (vscode.workspace.workspaceFolders ?? []).find(
       (folder) => workspaceFolderKey(folder.uri.toString()) === rootKey,
     );

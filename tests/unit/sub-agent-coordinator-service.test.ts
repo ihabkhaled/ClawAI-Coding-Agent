@@ -7,11 +7,11 @@ import {
 } from '../../src/services/runtime-sub-agent-executor';
 import { SubAgentCoordinatorService } from '../../src/services/sub-agent-coordinator-service';
 
+import type { SubAgentOutcome, SubAgentTask } from '../../src/core/multi-agent-dag';
 import type {
   RuntimeJsonObject,
   ToolInvocation,
 } from '../../src/core/runtime/runtime-tool-contracts';
-import type { SubAgentTask } from '../../src/core/multi-agent-dag';
 
 const epochs = { account: 1, workspace: 1, target: 1, policy: 1 };
 
@@ -65,6 +65,7 @@ describe('SubAgentCoordinatorService', () => {
       artifacts: new Set<string>(),
       tokens: 0,
       toolCalls: 0,
+      modelTurns: 0,
       status: 'failed' as const,
     };
     const executor = new ScopedSubAgentExecutor(
@@ -87,6 +88,13 @@ describe('SubAgentCoordinatorService', () => {
       executor.execute(invocation('workspace.files', 'read', { rootKey: 'another-worktree' })),
     ).rejects.toThrow(/leave its worktree/iu);
     await expect(
+      executor.execute(
+        invocation('workspace.files', 'read', {
+          command: { cwdRootKey: 'another-worktree' },
+        }),
+      ),
+    ).rejects.toThrow(/leave its worktree/iu);
+    await expect(
       executor.execute(invocation('workspace.git', 'commit', { rootKey: 'workspace-root' })),
     ).rejects.toThrow(/integrator/iu);
     expect(delegate.execute).not.toHaveBeenCalled();
@@ -107,6 +115,75 @@ describe('SubAgentCoordinatorService', () => {
       message: 'Risk ceiling exceeded',
     });
     expect(delegate.evaluate).not.toHaveBeenCalled();
+  });
+
+  it('does not retry an ambiguous failed task with a fresh idempotency key', async () => {
+    const executor = { execute: vi.fn(async () => Promise.reject(new Error('response lost'))) };
+    const coordinator = new SubAgentCoordinatorService(
+      executor,
+      new FileLeaseManager(),
+      () => epochs,
+      { status: () => undefined, outcome: () => undefined },
+    );
+    const retryingTask = task('effectful-task', [], ['src/effect.ts'], 'implementer');
+
+    const [outcome] = await coordinator.run({
+      graphId: 'graph-no-unsafe-retry',
+      parentRunId: 'runtime-parent-0001',
+      maxConcurrency: 1,
+      tasks: [{ ...retryingTask, budget: { ...retryingTask.budget, maxRetries: 3 } }],
+    });
+
+    expect(executor.execute).toHaveBeenCalledTimes(1);
+    expect(outcome?.status).toBe('failed');
+  });
+
+  it('provisions an isolated worktree and returns only host-verified provenance', async () => {
+    const isolated = {
+      ...task('implement-ui', [], ['src/ui.ts'], 'implementer'),
+      worktreeId: 'agent-ui',
+    };
+    const workspace = {
+      prepare: vi.fn(async () => undefined),
+      finalize: vi.fn(async (_task: SubAgentTask, outcome: SubAgentOutcome) => ({
+        ...outcome,
+        commit: '0123456789abcdef0123456789abcdef01234567',
+        changedPaths: ['src/ui.ts'],
+      })),
+      abandon: vi.fn(async () => undefined),
+    };
+    const executor = {
+      execute: vi.fn(async () => ({
+        taskId: isolated.taskId,
+        status: 'succeeded' as const,
+        changedPaths: [],
+        tokens: 4,
+        toolCalls: 1,
+        artifacts: [],
+      })),
+    };
+    const coordinator = new SubAgentCoordinatorService(
+      executor,
+      new FileLeaseManager(),
+      () => epochs,
+      { status: () => undefined, outcome: () => undefined },
+      workspace,
+    );
+
+    const [outcome] = await coordinator.run({
+      graphId: 'graph-isolated-worktree',
+      parentRunId: 'runtime-parent-0001',
+      maxConcurrency: 1,
+      tasks: [isolated],
+    });
+
+    expect(workspace.prepare).toHaveBeenCalledWith(isolated, expect.any(AbortSignal));
+    expect(workspace.finalize).toHaveBeenCalled();
+    expect(workspace.abandon).not.toHaveBeenCalled();
+    expect(outcome).toMatchObject({
+      commit: '0123456789abcdef0123456789abcdef01234567',
+      changedPaths: ['src/ui.ts'],
+    });
   });
 });
 

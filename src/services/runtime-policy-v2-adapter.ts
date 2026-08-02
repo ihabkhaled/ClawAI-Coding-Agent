@@ -2,9 +2,9 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { evaluatePolicyV2, OneShotCapabilityIssuer, type PolicyRequest } from '../core/policy-v2';
 
-import type { ProjectPolicyService } from './project-policy-service';
 import type { RuntimeToolPolicyDecision, RuntimeToolPolicyPort } from './runtime-tool-dispatcher';
 import type { PermissionMode } from '../core/permission-policy.types';
+import type { ProjectPolicy } from '../core/policy-v2';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 
 interface RuntimePolicyContext {
@@ -16,6 +16,10 @@ interface RuntimePolicyContext {
   readonly workspaceTrusted: () => boolean;
   readonly userPresent: () => boolean;
   readonly approve: (request: PolicyRequest, signal?: AbortSignal) => Promise<boolean>;
+}
+
+export interface RuntimeProjectPolicyPort {
+  load(): Promise<ProjectPolicy>;
 }
 
 const mode = (value: PermissionMode): PolicyRequest['mode'] => {
@@ -30,28 +34,92 @@ function classify(
   invocation: ToolInvocation,
 ): Pick<PolicyRequest, 'effect' | 'risk' | 'reversible'> {
   const operation = `${invocation.toolName}.${invocation.operation}`.toLowerCase();
-  if (/elevat|admin|sudo|root/u.test(operation))
+  if (invocation.toolName === 'runtime.elevation')
     return { effect: 'elevation', risk: 'R4', reversible: false };
-  if (/production|prod\b/u.test(operation))
-    return { effect: 'production', risk: 'R4', reversible: false };
-  if (/delete|destroy|drop|prune|reset|force/u.test(operation))
-    return { effect: 'destructive', risk: 'R4', reversible: false };
-  if (/publish|push|release|deploy/u.test(operation))
+  if (invocation.toolName === 'runtime.integration' || invocation.toolName === 'runtime.flagship')
+    return { effect: 'local-mutation', risk: 'R3', reversible: false };
+  if (invocation.toolName === 'workspace.git') return classifyGit(invocation.operation);
+  if (invocation.toolName === 'workspace.files') return classifyFiles(invocation.operation);
+  return classifyOperation(invocation, operation);
+}
+
+type Classification = Pick<PolicyRequest, 'effect' | 'risk' | 'reversible'>;
+
+const gitReadOperations = new Set([
+  'status',
+  'diff',
+  'log',
+  'blame',
+  'branches',
+  'tags',
+  'remotes',
+  'worktrees',
+  'conflicts',
+  'submodules',
+  'topology',
+]);
+
+function classifyGit(operation: string): Classification {
+  if (operation === 'push' || operation === 'tag') {
     return { effect: 'publication', risk: 'R3', reversible: false };
-  if (/network-write|http-post|webhook/u.test(operation))
-    return { effect: 'network-write', risk: 'R3', reversible: false };
+  }
+  if (operation === 'fetch') return { effect: 'read', risk: 'R2', reversible: true };
+  if (gitReadOperations.has(operation)) return { effect: 'read', risk: 'R0', reversible: true };
+  return { effect: 'local-mutation', risk: 'R3', reversible: false };
+}
+
+const fileWriteOperations = new Set([
+  'create',
+  'update',
+  'patch',
+  'rename',
+  'copy',
+  'mkdir',
+  'artifact',
+]);
+
+function classifyFiles(operation: string): Classification {
+  if (operation === 'delete') return { effect: 'destructive', risk: 'R4', reversible: false };
+  if (fileWriteOperations.has(operation)) {
+    return { effect: 'workspace-write', risk: 'R1', reversible: true };
+  }
+  return { effect: 'read', risk: 'R0', reversible: true };
+}
+
+const operationRules: readonly (readonly [RegExp, Classification])[] = [
+  [/elevat|admin|sudo|root/u, { effect: 'elevation', risk: 'R4', reversible: false }],
+  [/production|prod\b/u, { effect: 'production', risk: 'R4', reversible: false }],
+  [
+    /delete|destroy|drop|prune|reset|force/u,
+    { effect: 'destructive', risk: 'R4', reversible: false },
+  ],
+  [/publish|push|release|deploy/u, { effect: 'publication', risk: 'R3', reversible: false }],
+  [/network-write|http-post|webhook/u, { effect: 'network-write', risk: 'R3', reversible: false }],
+  [/fetch|crawl|search/u, { effect: 'read', risk: 'R2', reversible: true }],
+  [
+    /write|edit|patch|create|rename|move|export|save|persist/u,
+    { effect: 'workspace-write', risk: 'R1', reversible: true },
+  ],
+  [
+    /run|exec|process|container|database/u,
+    { effect: 'local-mutation', risk: 'R2', reversible: false },
+  ],
+];
+
+function classifyOperation(invocation: ToolInvocation, operation: string): Classification {
   if (
     invocation.toolName === 'workspace.browser' &&
     /^(?:click|fill|select|keyboard|drag|upload|download)$/u.test(invocation.operation)
-  )
+  ) {
     return { effect: 'network-write', risk: 'R3', reversible: false };
-  if (/fetch|crawl|search/u.test(operation))
-    return { effect: 'read', risk: 'R2', reversible: true };
-  if (/write|edit|patch|create|rename|move|export|save|persist/u.test(operation))
-    return { effect: 'workspace-write', risk: 'R1', reversible: true };
-  if (/run|exec|process|container|database/u.test(operation))
-    return { effect: 'local-mutation', risk: 'R2', reversible: false };
-  return { effect: 'read', risk: 'R0', reversible: true };
+  }
+  return (
+    operationRules.find(([pattern]) => pattern.test(operation))?.[1] ?? {
+      effect: 'read',
+      risk: 'R0',
+      reversible: true,
+    }
+  );
 }
 
 export class RuntimePolicyV2Adapter implements RuntimeToolPolicyPort {
@@ -60,7 +128,7 @@ export class RuntimePolicyV2Adapter implements RuntimeToolPolicyPort {
 
   constructor(
     private readonly context: RuntimePolicyContext,
-    private readonly projectPolicy: ProjectPolicyService,
+    private readonly projectPolicy: RuntimeProjectPolicyPort,
   ) {}
 
   async evaluate(

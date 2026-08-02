@@ -113,6 +113,7 @@ export interface SubAgentOutcome {
   readonly changedPaths: readonly string[];
   readonly tokens: number;
   readonly toolCalls: number;
+  readonly modelTurns?: number;
   readonly artifacts: readonly string[];
   readonly blocker?: string;
 }

@@ -1,13 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import { fileTransactionSchema } from '../core/file-transaction';
-import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
-import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
-import type { SubAgentOutcome, SubAgentTask } from '../core/multi-agent-dag';
-import type { BackendClient } from '../backend/backend-client';
-import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
-import type { SubAgentExecutionPort } from './sub-agent-coordinator-service';
+
 import { RuntimeRunService } from './runtime-run-service';
+
 import type { RuntimeEventStreamService } from './runtime-event-stream-service';
 import type {
   RuntimeToolExecutionOutput,
@@ -15,6 +11,12 @@ import type {
   RuntimeToolPolicyDecision,
   RuntimeToolPolicyPort,
 } from './runtime-tool-dispatcher';
+import type { SubAgentExecutionPort } from './sub-agent-coordinator-service';
+import type { BackendClient } from '../backend/backend-client';
+import type { SubAgentOutcome, SubAgentTask } from '../core/multi-agent-dag';
+import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
+import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
 interface RuntimeSubAgentDependencies {
   readonly backend: () => BackendClient;
@@ -31,6 +33,7 @@ interface SubAgentTelemetry {
   artifacts: Set<string>;
   tokens: number;
   toolCalls: number;
+  modelTurns: number;
   status: SubAgentOutcome['status'];
   blocker?: string;
 }
@@ -78,7 +81,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       epochs: task.epochs,
       definitions,
       budget: {
-        maxModelTurns: Math.min(100, Math.max(1, task.budget.maxToolCalls + 1)),
+        maxModelTurns: Math.min(100, Math.max(1, Math.ceil(task.budget.maxTokens / 4_096))),
         maxToolCalls: task.budget.maxToolCalls,
         maxToolRounds: Math.min(100, task.budget.maxToolCalls),
         maxRepairAttempts: 1,
@@ -124,6 +127,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       changedPaths: [...telemetry.changedPaths],
       tokens: telemetry.tokens,
       toolCalls: telemetry.toolCalls,
+      modelTurns: telemetry.modelTurns,
       artifacts: [...telemetry.artifacts],
       ...(telemetry.blocker === undefined ? {} : { blocker: telemetry.blocker }),
     };
@@ -137,7 +141,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
         (definition) =>
           allowed.has(definition.name) &&
           !/(?:elevat|publish)/iu.test(definition.name) &&
-          definition.name !== 'runtime.agents',
+          !['runtime.agents', 'runtime.integration', 'runtime.flagship'].includes(definition.name),
       );
   }
 
@@ -176,6 +180,12 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
     const outputTokens = event.payload.outputTokens;
     if (typeof inputTokens === 'number') telemetry.tokens += inputTokens;
     if (typeof outputTokens === 'number') telemetry.tokens += outputTokens;
+    const usage = event.payload.usage;
+    if (usage !== null && typeof usage === 'object' && 'modelTurns' in usage) {
+      const modelTurns = usage.modelTurns;
+      if (typeof modelTurns === 'number')
+        telemetry.modelTurns = Math.max(telemetry.modelTurns, modelTurns);
+    }
     if (event.type === 'run.completed') telemetry.status = 'succeeded';
     if (event.type === 'run.cancelled') telemetry.status = 'cancelled';
     if (event.type === 'run.failed') {
@@ -190,6 +200,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       artifacts: new Set(),
       tokens: 0,
       toolCalls: 0,
+      modelTurns: 0,
       status: 'failed',
     };
   }
@@ -256,9 +267,24 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
   }
 
   private assertRoot(invocation: ToolInvocation): void {
-    const rootKey = invocation.arguments.rootKey;
-    if (typeof rootKey === 'string' && rootKey !== this.task.worktreeId) {
-      throw new Error('Sub-agent attempted to leave its worktree');
+    this.assertBoundRoots(invocation.arguments);
+  }
+
+  private assertBoundRoots(value: unknown): void {
+    if (Array.isArray(value)) {
+      for (const item of value) this.assertBoundRoots(item);
+      return;
+    }
+    if (value === null || typeof value !== 'object') return;
+    for (const [key, child] of Object.entries(value)) {
+      if (
+        ['rootKey', 'cwdRootKey', 'targetWorktreeId'].includes(key) &&
+        typeof child === 'string' &&
+        child !== this.task.worktreeId
+      ) {
+        throw new Error('Sub-agent attempted to leave its worktree');
+      }
+      this.assertBoundRoots(child);
     }
   }
 

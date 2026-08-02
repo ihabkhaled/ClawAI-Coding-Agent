@@ -388,7 +388,7 @@ describe('RuntimeRunService security boundaries', () => {
     expect(events[0]).toMatchObject({ sequence: 0, type: 'run.created' });
   });
 
-  it('preserves the start error when compensation fails and permits an exact retry', async () => {
+  it('uses a fresh authoritative server identifier for each admitted run', async () => {
     let attempts = 0;
     const service = new RuntimeRunService({
       clock: { now: () => 1_000 },
@@ -400,18 +400,17 @@ describe('RuntimeRunService security boundaries', () => {
       },
       receiptId: () => 'receipt_01JZZZZZZZZZZZZZZZZZZZZZ',
       transport: {
-        cancel: async () => {
-          throw new Error('compensation failed');
-        },
-        start: async (input) => {
+        cancel: async () => undefined,
+        start: async (_input) => {
           attempts += 1;
-          return { runId: attempts === 1 ? 'run-id-other' : input.runId };
+          return { runId: `run-id-server-${String(attempts)}` };
         },
         submitResult: async () => undefined,
       },
     });
 
-    await expect(service.start(start)).rejects.toThrow(/mismatched run/i);
-    await expect(service.start(start)).resolves.toEqual({ runId: start.runId });
+    await expect(service.start(start)).resolves.toEqual({ runId: 'run-id-server-1' });
+    await service.cancel();
+    await expect(service.start(start)).resolves.toEqual({ runId: 'run-id-server-2' });
   });
 });
