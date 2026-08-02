@@ -20,7 +20,7 @@ function event(
     eventId: `event-id-${String(sequence)}`,
     runId: 'run-id-0001',
     sequence,
-    timestamp: `2026-08-02T10:00:0${String(sequence)}.000Z`,
+    timestamp: `2026-08-02T10:00:${String(sequence).padStart(2, '0')}.000Z`,
     type,
     visibility: 'user',
     sensitivity: 'workspace',
@@ -31,13 +31,327 @@ function event(
 }
 
 describe('runtime event reducer', () => {
+  it('reduces every canonical projection lifecycle without retaining raw tool content', () => {
+    const created = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
+    const turn = reduceRuntimeEvent(
+      created,
+      event(1, 'model.turn.started', { turnId: 'turn-id-0001' }, { turnId: 'turn-id-0001' }),
+    );
+    const delta = reduceRuntimeEvent(
+      turn,
+      event(
+        2,
+        'model.delta',
+        { text: 'hello', turnId: 'turn-id-0001' },
+        { turnId: 'turn-id-0001' },
+      ),
+    );
+    const summary = reduceRuntimeEvent(
+      delta,
+      event(
+        3,
+        'model.summary',
+        { summary: 'Complete.', turnId: 'turn-id-0001' },
+        { turnId: 'turn-id-0001' },
+      ),
+    );
+    const requested = reduceRuntimeEvent(
+      summary,
+      event(4, 'tool.requested', {
+        invocationId: 'invocation-id-0001',
+        operation: 'read',
+        toolName: 'fixture.workspace-summary',
+      }),
+    );
+    const started = reduceRuntimeEvent(
+      requested,
+      event(5, 'tool.started', { invocationId: 'invocation-id-0001' }),
+    );
+    const completed = reduceRuntimeEvent(
+      started,
+      event(6, 'tool.completed', {
+        invocationId: 'invocation-id-0001',
+        receipt: {
+          durationMs: 1,
+          outputBytes: 5,
+          receiptId: 'receipt-id-0001',
+          redactionApplied: false,
+          truncated: false,
+        },
+        status: 'succeeded',
+      }),
+    );
+    const steeringReceived = reduceRuntimeEvent(
+      completed,
+      event(7, 'run.steering.received', { sequence: 0, steeringId: 'steering-id-0001' }),
+    );
+    const steeringApplied = reduceRuntimeEvent(
+      steeringReceived,
+      event(8, 'run.steering.applied', { sequence: 0, steeringId: 'steering-id-0001' }),
+    );
+    const steeringRejected = reduceRuntimeEvent(
+      steeringApplied,
+      event(9, 'run.steering.rejected', {
+        reason: 'run-terminal',
+        sequence: 1,
+        steeringId: 'steering-id-0002',
+      }),
+    );
+    const budget = reduceRuntimeEvent(
+      steeringRejected,
+      event(10, 'run.budget.updated', {
+        limits: {
+          maxModelTurns: 2,
+          maxOutputBytes: 4096,
+          maxRepairAttempts: 1,
+          maxRuntimeMs: 10_000,
+          maxToolCalls: 2,
+          maxToolResultBytes: 2048,
+          maxToolRounds: 2,
+        },
+        usage: {
+          modelTurns: 1,
+          outputBytes: 5,
+          repairAttempts: 0,
+          toolCalls: 1,
+          toolResultBytes: 5,
+          toolRounds: 1,
+        },
+      }),
+    );
+    const phased = reduceRuntimeEvent(budget, event(11, 'run.phase', { phase: 'finalizing' }));
+
+    expect(phased.runs['run-id-0001']).toMatchObject({
+      budget: { usage: { toolCalls: 1 } },
+      invocations: { 'invocation-id-0001': { status: 'succeeded' } },
+      phase: 'finalizing',
+      steering: {
+        'steering-id-0001': { status: 'applied' },
+        'steering-id-0002': { reason: 'run-terminal', status: 'rejected' },
+      },
+      turns: { 'turn-id-0001': { status: 'completed', textBytes: 5 } },
+    });
+    expect(JSON.stringify(phased.runs['run-id-0001']?.invocations)).not.toContain('arguments');
+  });
+
+  it('rejects invalid canonical lifecycle ordering and deterministically falls back to another live run', () => {
+    const created = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
+    expect(() =>
+      reduceRuntimeEvent(created, event(1, 'tool.started', { invocationId: 'invocation-id-0001' })),
+    ).toThrow(/invalid payload/i);
+    expect(() =>
+      reduceRuntimeEvent(
+        created,
+        event(
+          1,
+          'model.summary',
+          { summary: 'Impossible.', turnId: 'turn-id-0001' },
+          { turnId: 'turn-id-0001' },
+        ),
+      ),
+    ).toThrow(/invalid payload/i);
+    expect(() =>
+      reduceRuntimeEvent(
+        created,
+        event(1, 'tool.completed', {
+          invocationId: 'invocation-id-0001',
+          receipt: {
+            durationMs: 1,
+            outputBytes: 1,
+            receiptId: 'receipt-id-0001',
+            redactionApplied: false,
+            truncated: false,
+          },
+          status: 'failed',
+        }),
+      ),
+    ).toThrow(/invalid payload/i);
+    expect(() =>
+      reduceRuntimeEvent(
+        created,
+        event(1, 'run.steering.applied', { sequence: 0, steeringId: 'steering-id-0001' }),
+      ),
+    ).toThrow(/invalid payload/i);
+
+    const streaming = reduceRuntimeEvent(
+      created,
+      event(1, 'model.turn.started', { turnId: 'turn-id-0001' }, { turnId: 'turn-id-0001' }),
+    );
+    const maxDelta = reduceRuntimeEvent(
+      streaming,
+      event(
+        2,
+        'model.delta',
+        { text: 'x'.repeat(65_536), turnId: 'turn-id-0001' },
+        { turnId: 'turn-id-0001' },
+      ),
+    );
+    expect(() =>
+      reduceRuntimeEvent(
+        maxDelta,
+        event(3, 'model.delta', { text: 'x', turnId: 'turn-id-0001' }, { turnId: 'turn-id-0001' }),
+      ),
+    ).toThrow(/invalid payload/i);
+
+    const requested = reduceRuntimeEvent(
+      created,
+      event(1, 'tool.requested', {
+        invocationId: 'invocation-id-0001',
+        operation: 'read',
+        toolName: 'fixture.workspace-summary',
+      }),
+    );
+    expect(() =>
+      reduceRuntimeEvent(
+        requested,
+        event(2, 'tool.requested', {
+          invocationId: 'invocation-id-0001',
+          operation: 'read',
+          toolName: 'fixture.workspace-summary',
+        }),
+      ),
+    ).toThrow(/invalid payload/i);
+
+    const receivedSteering = reduceRuntimeEvent(
+      created,
+      event(1, 'run.steering.received', { sequence: 0, steeringId: 'steering-id-0001' }),
+    );
+    expect(() =>
+      reduceRuntimeEvent(
+        receivedSteering,
+        event(2, 'run.steering.received', { sequence: 0, steeringId: 'steering-id-0001' }),
+      ),
+    ).toThrow(/invalid payload/i);
+    expect(() =>
+      reduceRuntimeEvent(
+        created,
+        event(1, 'run.steering.received', { sequence: 2, steeringId: 'steering-id-0002' }),
+      ),
+    ).toThrow(/invalid payload/i);
+    expect(() =>
+      reduceRuntimeEvent(
+        receivedSteering,
+        event(2, 'run.steering.received', { sequence: 0, steeringId: 'steering-id-0002' }),
+      ),
+    ).toThrow(/invalid payload/i);
+    const appliedSteering = reduceRuntimeEvent(
+      receivedSteering,
+      event(2, 'run.steering.applied', { sequence: 0, steeringId: 'steering-id-0001' }),
+    );
+    expect(() =>
+      reduceRuntimeEvent(
+        appliedSteering,
+        event(3, 'run.steering.rejected', {
+          reason: 'run-terminal',
+          sequence: 0,
+          steeringId: 'steering-id-0001',
+        }),
+      ),
+    ).toThrow(/invalid payload/i);
+    expect(() =>
+      reduceRuntimeEvent(
+        receivedSteering,
+        event(2, 'run.steering.applied', { sequence: 1, steeringId: 'steering-id-0001' }),
+      ),
+    ).toThrow(/invalid payload/i);
+    expect(() =>
+      reduceRuntimeEvent(
+        receivedSteering,
+        event(2, 'run.steering.rejected', {
+          reason: 'stale-epochs',
+          sequence: 1,
+          steeringId: 'steering-id-0001',
+        }),
+      ),
+    ).toThrow(/invalid payload/i);
+
+    const second = reduceRuntimeEvent(
+      created,
+      event(0, 'run.created', {}, { eventId: 'second-event-0', runId: 'run-id-0002' }),
+    );
+    const closed = reduceRuntimeEvent(
+      second,
+      event(1, 'run.failed', {}, { eventId: 'second-event-1', runId: 'run-id-0002' }),
+    );
+    expect(closed.activeRunId).toBe('run-id-0001');
+
+    const third = reduceRuntimeEvent(
+      second,
+      event(0, 'run.created', {}, { eventId: 'third-event-0', runId: 'run-id-0003' }),
+    );
+    const activeSecond = reduceRuntimeEvent(
+      third,
+      event(
+        1,
+        'run.phase',
+        { phase: 'working' },
+        { eventId: 'second-event-1', runId: 'run-id-0002' },
+      ),
+    );
+    const terminalSecond = reduceRuntimeEvent(
+      activeSecond,
+      event(2, 'run.failed', {}, { eventId: 'second-event-2', runId: 'run-id-0002' }),
+    );
+    expect(terminalSecond.activeRunId).toBe('run-id-0001');
+  });
+
+  it('rejects malformed and mismatched known event payloads before publishing state', () => {
+    const created = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
+
+    expect(() =>
+      reduceRuntimeEvent(
+        created,
+        event(1, 'tool.requested', { invocationId: 'invocation-id-0001' }),
+      ),
+    ).toThrow(/invalid payload/i);
+    expect(() =>
+      reduceRuntimeEvent(
+        created,
+        event(
+          1,
+          'tool.requested',
+          {
+            invocationId: 'invocation-id-0001',
+            operation: 'read',
+            toolName: 'fixture.workspace-summary',
+          },
+          { correlation: { invocationId: 'invocation-id-other' } },
+        ),
+      ),
+    ).toThrow(/invocation/i);
+    expect(() =>
+      reduceRuntimeEvent(
+        created,
+        event(1, 'model.turn.started', { turnId: 'turn-id-0001' }, { turnId: 'turn-id-other' }),
+      ),
+    ).toThrow(/turn/i);
+    expect(() =>
+      reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created', { ignored: true })),
+    ).toThrow(/invalid payload/i);
+    expect(() => reduceRuntimeEvent(created, event(1, 'run.completed', { ignored: true }))).toThrow(
+      /invalid payload/i,
+    );
+  });
+
+  it('keeps another running run active when an interleaved run becomes terminal', () => {
+    const first = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
+    const second = reduceRuntimeEvent(
+      first,
+      event(0, 'run.created', {}, { eventId: 'second-event-0', runId: 'run-id-0002' }),
+    );
+    const firstRunning = reduceRuntimeEvent(second, event(1, 'run.phase', { phase: 'executing' }));
+    const closedSecond = reduceRuntimeEvent(
+      firstRunning,
+      event(1, 'run.completed', {}, { eventId: 'second-event-1', runId: 'run-id-0002' }),
+    );
+
+    expect(closedSecond.activeRunId).toBe('run-id-0001');
+  });
+
   it('derives ordered run state without mutating earlier snapshots', () => {
     const empty = createRuntimeSnapshot();
     const created = reduceRuntimeEvent(empty, event(0, 'run.created'));
-    const running = reduceRuntimeEvent(
-      created,
-      event(1, 'run.phase.changed', { phase: 'planning' }),
-    );
+    const running = reduceRuntimeEvent(created, event(1, 'run.phase', { phase: 'planning' }));
 
     expect(empty).toEqual({
       activeRunId: undefined,
@@ -63,6 +377,17 @@ describe('runtime event reducer', () => {
     expect(running.runs['run-id-0001']?.timeline).toHaveLength(2);
   });
 
+  it('normalizes the legacy phase event to the V2 run.phase taxonomy', () => {
+    const created = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
+    const projected = reduceRuntimeEvent(
+      created,
+      event(1, 'run.phase.changed', { phase: 'planning' }),
+    );
+
+    expect(projected.runs['run-id-0001']?.phase).toBe('planning');
+    expect(projected.runs['run-id-0001']?.timeline.at(-1)?.type).toBe('run.phase');
+  });
+
   it('treats an identical event replay as idempotent', () => {
     const value = event(0, 'run.created');
     const once = reduceRuntimeEvent(createRuntimeSnapshot(), value);
@@ -72,7 +397,7 @@ describe('runtime event reducer', () => {
 
   it('rejects a conflicting duplicate event identifier', () => {
     const once = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
-    const conflict = event(1, 'run.phase.changed', { phase: 'coding' }, { eventId: 'event-id-0' });
+    const conflict = event(1, 'run.phase', { phase: 'coding' }, { eventId: 'event-id-0' });
 
     expect(() => reduceRuntimeEvent(once, conflict)).toThrow(
       'Runtime event event-id-0 conflicts with an earlier event',
@@ -80,11 +405,8 @@ describe('runtime event reducer', () => {
   });
 
   it.each([
-    ['gap', event(2, 'run.phase.changed', { phase: 'coding' })],
-    [
-      'out of order',
-      event(0, 'run.phase.changed', { phase: 'coding' }, { eventId: 'event-id-other' }),
-    ],
+    ['gap', event(2, 'run.phase', { phase: 'coding' })],
+    ['out of order', event(0, 'run.phase', { phase: 'coding' }, { eventId: 'event-id-other' })],
   ])('rejects a sequence %s', (_label, nextEvent) => {
     const once = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
 
@@ -134,38 +456,6 @@ describe('runtime event reducer', () => {
     expect(() => reduceRuntimeEvent(createRuntimeSnapshot(), firstEvent)).toThrow();
   });
 
-  it('tracks interleaved runs independently while enforcing global event identifiers', () => {
-    const firstRun = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
-    const secondRunCreated = event(
-      0,
-      'run.created',
-      {},
-      {
-        eventId: 'second-event-0',
-        runId: 'run-id-0002',
-      },
-    );
-    const interleaved = reduceRuntimeEvent(firstRun, secondRunCreated);
-    const firstRunAdvanced = reduceRuntimeEvent(interleaved, event(1, 'model.turn.started'));
-
-    expect(firstRunAdvanced.runs['run-id-0001']?.lastSequence).toBe(1);
-    expect(firstRunAdvanced.runs['run-id-0002']?.lastSequence).toBe(0);
-    expect(() =>
-      reduceRuntimeEvent(
-        firstRunAdvanced,
-        event(
-          1,
-          'model.turn.started',
-          {},
-          {
-            eventId: 'event-id-0',
-            runId: 'run-id-0002',
-          },
-        ),
-      ),
-    ).toThrow('Runtime event event-id-0 conflicts with an earlier event');
-  });
-
   it('rejects epoch drift and malformed known-event payloads', () => {
     const created = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
     const drifted = event(
@@ -180,23 +470,67 @@ describe('runtime event reducer', () => {
     expect(() => reduceRuntimeEvent(created, drifted)).toThrow(
       'Runtime event epochs changed for run run-id-0001',
     );
-    expect(() => reduceRuntimeEvent(created, event(1, 'run.phase.changed', { phase: 42 }))).toThrow(
-      'Runtime event run.phase.changed has an invalid payload',
+    expect(() => reduceRuntimeEvent(created, event(1, 'run.phase', { phase: 42 }))).toThrow(
+      'Runtime event run.phase has an invalid payload',
     );
   });
 
-  it('fingerprints nested JSON consistently and rejects non-JSON payload values', () => {
-    const nested = event(0, 'run.created', {
+  it('fingerprints nested unknown-event JSON consistently and rejects non-JSON payload values', () => {
+    const created = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
+    const nested = event(1, 'future.created', {
       values: [true, null, 'text', 42, { nested: false }],
     });
-    const created = reduceRuntimeEvent(createRuntimeSnapshot(), nested);
+    const projected = reduceRuntimeEvent(created, nested);
 
-    expect(reduceRuntimeEvent(created, nested)).toBe(created);
+    expect(reduceRuntimeEvent(projected, nested)).toBe(projected);
     expect(() =>
-      reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created', { value: Number.NaN })),
+      reduceRuntimeEvent(created, event(1, 'future.created', { value: Number.NaN })),
     ).toThrow('Runtime event contains a non-finite number');
     expect(() =>
-      reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created', { value: undefined })),
+      reduceRuntimeEvent(created, event(1, 'future.created', { value: undefined })),
     ).toThrow('Runtime event contains a non-serializable value');
+  });
+
+  it('rejects budget usage beyond limits and regressing budget projections', () => {
+    const created = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
+    const limits = {
+      maxModelTurns: 2,
+      maxOutputBytes: 1_024,
+      maxRepairAttempts: 1,
+      maxRuntimeMs: 1_000,
+      maxToolCalls: 2,
+      maxToolResultBytes: 1_024,
+      maxToolRounds: 2,
+    };
+    const withinLimits = {
+      modelTurns: 1,
+      outputBytes: 1,
+      repairAttempts: 0,
+      toolCalls: 1,
+      toolResultBytes: 1,
+      toolRounds: 1,
+    };
+    expect(() =>
+      reduceRuntimeEvent(
+        created,
+        event(1, 'run.budget.updated', {
+          limits,
+          usage: { ...withinLimits, toolCalls: 3 },
+        }),
+      ),
+    ).toThrow(/invalid payload/i);
+    const updated = reduceRuntimeEvent(
+      created,
+      event(1, 'run.budget.updated', { limits, usage: withinLimits }),
+    );
+    expect(() =>
+      reduceRuntimeEvent(
+        updated,
+        event(2, 'run.budget.updated', {
+          limits,
+          usage: { ...withinLimits, modelTurns: 0 },
+        }),
+      ),
+    ).toThrow(/invalid payload/i);
   });
 });

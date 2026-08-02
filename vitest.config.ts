@@ -19,6 +19,7 @@ export default defineConfig({
         'src/core/model-catalog.ts',
         'src/core/runtime/capability-manifest.ts',
         'src/core/runtime/runtime-invocation-registry.ts',
+        'src/core/runtime/runtime-event-reducer-budget.ts',
         'src/core/runtime/runtime-event-reducer.ts',
         'src/core/runtime/runtime-json-value.ts',
         'src/core/runtime/runtime-negotiation.ts',
@@ -56,6 +57,8 @@ export default defineConfig({
         'src/services/workflow-service.ts',
         'src/infrastructure/vscode-workspace-edit-adapter.ts',
         'src/infrastructure/vscode-runtime-target-adapter.ts',
+        'src/infrastructure/safe-runtime-fixture-executor.ts',
+        'src/services/runtime-run-service.ts',
       ],
       thresholds: {
         branches: 85,

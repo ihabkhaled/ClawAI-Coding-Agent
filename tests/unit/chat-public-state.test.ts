@@ -1,7 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { createRuntimeSnapshot } from '../../src/core/runtime/runtime-event-reducer';
-import { toPublicChatState } from '../../src/webview/chat-public-state';
+import {
+  createRuntimeSnapshot,
+  reduceRuntimeEvent,
+} from '../../src/core/runtime/runtime-event-reducer';
+import { parseRuntimeEvent } from '../../src/core/runtime/runtime-protocol.schemas';
+import { toPublicChatState, toPublicRuntimeState } from '../../src/webview/chat-public-state';
 
 import type { ExtensionSnapshot } from '../../src/core/extension-state';
 
@@ -92,6 +96,83 @@ const snapshot: ExtensionSnapshot = {
 };
 
 describe('toPublicChatState', () => {
+  it('allow-lists bounded runtime metadata without raw timeline or capability data', () => {
+    const runtime = reduceRuntimeEvent(
+      reduceRuntimeEvent(
+        reduceRuntimeEvent(
+          createRuntimeSnapshot(),
+          parseRuntimeEvent({
+            schemaVersion: '2.0',
+            eventId: 'event-id-0001',
+            runId: 'run-id-0001',
+            sequence: 0,
+            timestamp: '2026-08-02T10:00:00.000Z',
+            type: 'run.created',
+            visibility: 'user',
+            sensitivity: 'workspace',
+            epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
+            payload: {},
+          }),
+        ),
+        parseRuntimeEvent({
+          schemaVersion: '2.0',
+          eventId: 'event-id-0002',
+          runId: 'run-id-0001',
+          sequence: 1,
+          timestamp: '2026-08-02T10:00:01.000Z',
+          type: 'tool.requested',
+          visibility: 'user',
+          sensitivity: 'workspace',
+          epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
+          payload: {
+            invocationId: 'invocation-id-0001',
+            operation: 'read',
+            toolName: 'fixture.workspace-summary',
+          },
+        }),
+      ),
+      parseRuntimeEvent({
+        schemaVersion: '2.0',
+        eventId: 'event-id-0003',
+        runId: 'run-id-0001',
+        sequence: 2,
+        timestamp: '2026-08-02T10:00:02.000Z',
+        type: 'tool.completed',
+        visibility: 'user',
+        sensitivity: 'workspace',
+        epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
+        payload: {
+          invocationId: 'invocation-id-0001',
+          status: 'succeeded',
+          receipt: {
+            receiptId: 'receipt-id-0001',
+            durationMs: 12,
+            outputBytes: 42,
+            truncated: false,
+            redactionApplied: true,
+          },
+        },
+      }),
+    );
+
+    const publicRuntime = toPublicRuntimeState(runtime);
+    expect(publicRuntime).toMatchObject({
+      activeRunId: 'run-id-0001',
+      runs: {
+        'run-id-0001': {
+          invocations: {
+            'invocation-id-0001': { receipt: { outputBytes: 42 }, status: 'succeeded' },
+          },
+        },
+      },
+    });
+    const serialized = JSON.stringify(publicRuntime);
+    expect(serialized).not.toContain('capabilityManifest');
+    expect(serialized).not.toContain('timeline');
+    expect(serialized).not.toContain('arguments');
+    expect(serialized).not.toContain('resultHash');
+  });
+
   it('exposes the workbench state and sanitized conversation history needed by the webview', () => {
     expect(toPublicChatState(snapshot)).toMatchObject({
       agentRun: {
