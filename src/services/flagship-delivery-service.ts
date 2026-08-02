@@ -184,11 +184,18 @@ export class FlagshipDeliveryService {
 
   private mergeResult(result: FlagshipStageResult): void {
     const snapshot = this.requireActive().snapshot;
+    const resolved = new Set(result.resolvedClaims ?? []);
     this.update({
       evidenceReferences: [
         ...new Set([...snapshot.evidenceReferences, ...result.evidenceReferences]),
       ],
-      unverifiedClaims: [...new Set([...snapshot.unverifiedClaims, ...result.unverifiedClaims])],
+      unverifiedClaims: [
+        ...new Set(
+          [...snapshot.unverifiedClaims, ...result.unverifiedClaims].filter(
+            (claim) => !resolved.has(claim),
+          ),
+        ),
+      ],
     });
   }
 

@@ -241,7 +241,11 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
         'conflicts',
         'submodules',
         'topology',
-      ].includes(invocation.operation)
+      ].includes(invocation.operation) &&
+      !(
+        this.task.role === 'integrator' &&
+        ['stage', 'unstage', 'commit'].includes(invocation.operation)
+      )
     ) {
       throw new Error('Sub-agent Git mutation must be performed by the integrator');
     }

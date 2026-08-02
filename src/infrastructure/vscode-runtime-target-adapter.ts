@@ -9,6 +9,7 @@ import { containerToolDefinition } from './container-tool-executor';
 import { databaseToolDefinition } from './database-tool-executor';
 import { developmentServiceToolDefinition } from './development-service-tool-executor';
 import { evidenceToolDefinition } from './evidence-tool-executor';
+import { flagshipToolDefinition } from './flagship-tool-executor';
 import { gitToolDefinition } from './git-tool-executor';
 import { intelligenceToolDefinition } from './intelligence-tool-executor';
 import { integrationToolDefinition } from './integration-tool-executor';
@@ -151,6 +152,7 @@ export function buildRuntimeCapabilityManifest(
       developmentServiceToolDefinition,
       subAgentToolDefinition,
       integrationToolDefinition,
+      flagshipToolDefinition,
     ];
     target.capabilities.push(...localDefinitions.map(({ name }) => name));
     tools.push(

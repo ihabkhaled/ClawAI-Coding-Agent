@@ -7,6 +7,7 @@ import { containerToolDefinition } from '../../src/infrastructure/container-tool
 import { databaseToolDefinition } from '../../src/infrastructure/database-tool-executor';
 import { developmentServiceToolDefinition } from '../../src/infrastructure/development-service-tool-executor';
 import { evidenceToolDefinition } from '../../src/infrastructure/evidence-tool-executor';
+import { flagshipToolDefinition } from '../../src/infrastructure/flagship-tool-executor';
 import { gitToolDefinition } from '../../src/infrastructure/git-tool-executor';
 import { intelligenceToolDefinition } from '../../src/infrastructure/intelligence-tool-executor';
 import { integrationToolDefinition } from '../../src/infrastructure/integration-tool-executor';
@@ -37,6 +38,7 @@ describe('production Runtime V2 tool catalog', () => {
       developmentServiceToolDefinition,
       subAgentToolDefinition,
       integrationToolDefinition,
+      flagshipToolDefinition,
     ];
 
     expect(() =>
