@@ -9,6 +9,7 @@ import { developmentServiceToolDefinition } from '../../src/infrastructure/devel
 import { evidenceToolDefinition } from '../../src/infrastructure/evidence-tool-executor';
 import { gitToolDefinition } from '../../src/infrastructure/git-tool-executor';
 import { intelligenceToolDefinition } from '../../src/infrastructure/intelligence-tool-executor';
+import { integrationToolDefinition } from '../../src/infrastructure/integration-tool-executor';
 import { planningToolDefinition } from '../../src/infrastructure/planning-tool-executor';
 import { processSupervisorToolDefinition } from '../../src/infrastructure/process-supervisor-tool-executor';
 import { qualityToolDefinition } from '../../src/infrastructure/quality-tool-executor';
@@ -35,6 +36,7 @@ describe('production Runtime V2 tool catalog', () => {
       evidenceToolDefinition,
       developmentServiceToolDefinition,
       subAgentToolDefinition,
+      integrationToolDefinition,
     ];
 
     expect(() =>

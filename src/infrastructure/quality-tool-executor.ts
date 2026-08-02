@@ -63,7 +63,7 @@ export class QualityToolExecutor implements RuntimeToolExecutorPort {
     if (invocation.toolName !== qualityToolDefinition.name) throw new Error('Unknown quality tool');
     const input = inputSchema.parse(invocation.arguments);
     if (invocation.operation === 'discover') {
-      return { structured: { projects: await this.discover(input.rootKey, signal) } };
+      return { structured: { projects: await this.discoverProjects(input.rootKey, signal) } };
     }
     const projects = z.array(qualityProjectSchema).parse(input.projects ?? []);
     const plan = planQualityExecution(projects, input.scope);
@@ -72,10 +72,10 @@ export class QualityToolExecutor implements RuntimeToolExecutorPort {
       throw new Error('Quality run requires gateId');
     const gate = plan.gates.find((candidate) => candidate.gateId === input.gateId);
     if (gate === undefined) throw new Error('Quality gate is outside the selected plan');
-    return this.run(gate, signal);
+    return this.runGate(gate, signal);
   }
 
-  private async discover(
+  async discoverProjects(
     rootKey: string,
     signal?: AbortSignal,
   ): Promise<readonly QualityProject[]> {
@@ -158,7 +158,7 @@ export class QualityToolExecutor implements RuntimeToolExecutorPort {
     }));
   }
 
-  private async run(gate: QualityGate, signal?: AbortSignal): Promise<RuntimeToolExecutionOutput> {
+  async runGate(gate: QualityGate, signal?: AbortSignal): Promise<RuntimeToolExecutionOutput> {
     const root = this.files.workspaceRootUri(gate.command.cwdRootKey);
     const cwd = vscode.Uri.joinPath(root, gate.command.cwd);
     const result = await runCommandSpec(gate.command, cwd.fsPath, signal);

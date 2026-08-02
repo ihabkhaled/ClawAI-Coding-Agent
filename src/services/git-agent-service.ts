@@ -49,6 +49,11 @@ export class GitAgentService {
     };
   }
 
+  async abortCherryPick(rootKey: string, signal?: AbortSignal): Promise<void> {
+    const root = this.files.workspaceRootUri(rootKey);
+    await this.git(root.fsPath, ['cherry-pick', '--abort'], signal);
+  }
+
   private arguments(operation: GitOperation): string[] {
     const readOperations = new Set([
       'status',

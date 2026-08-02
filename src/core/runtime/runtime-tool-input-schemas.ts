@@ -108,6 +108,7 @@ export const runtimeToolInputSchemas = {
     name: text,
     target: text,
   }),
+  integration: strict({ request: opaque }),
   intelligence: strict({ identity: opaque, query: text, nodeIds: texts, paths: texts }),
   journal: strict({ journal: opaque, query: text, runId: text }),
   planning: strict({ plan: opaque, output: opaque }),

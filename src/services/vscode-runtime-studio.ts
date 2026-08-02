@@ -31,6 +31,12 @@ import {
   intelligenceToolDefinition,
 } from '../infrastructure/intelligence-tool-executor';
 import {
+  IntegrationToolExecutor,
+  RuntimeIntegrationGitAdapter,
+  RuntimeIntegrationQualityAdapter,
+  integrationToolDefinition,
+} from '../infrastructure/integration-tool-executor';
+import {
   PlanningToolExecutor,
   planningToolDefinition,
 } from '../infrastructure/planning-tool-executor';
@@ -88,6 +94,7 @@ import { ExecutionTargetRegistry } from './execution-target-registry';
 import { FileTransactionService } from './file-transaction-service';
 import { FileLeaseManager } from './file-lease-manager';
 import { GitAgentService } from './git-agent-service';
+import { IntegrationCoordinatorService } from './integration-coordinator-service';
 import { LocalObservabilityService } from './observability-service';
 import { ProcessSupervisorService } from './process-supervisor-service';
 import { ProjectPolicyService } from './project-policy-service';
@@ -297,6 +304,11 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       () => this.epochs,
       { status: () => undefined, outcome: () => undefined },
     );
+    const quality = new QualityToolExecutor(this.files);
+    const integration = new IntegrationCoordinatorService(
+      new RuntimeIntegrationGitAdapter(git),
+      new RuntimeIntegrationQualityAdapter(quality),
+    );
     const registrations = [
       {
         definition: workspaceFilesystemToolDefinition,
@@ -320,7 +332,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         definition: databaseToolDefinition,
         executor: new DatabaseToolExecutor(profiles, databases, this.files),
       },
-      { definition: qualityToolDefinition, executor: new QualityToolExecutor(this.files) },
+      { definition: qualityToolDefinition, executor: quality },
       { definition: browserToolDefinition, executor: new BrowserToolExecutor(browser, readiness) },
       {
         definition: intelligenceToolDefinition,
@@ -340,6 +352,10 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         ),
       },
       { definition: subAgentToolDefinition, executor: new SubAgentToolExecutor(subAgents) },
+      {
+        definition: integrationToolDefinition,
+        executor: new IntegrationToolExecutor(integration),
+      },
     ];
     this.router = new RuntimeToolRouter(registrations, this.policy);
   }

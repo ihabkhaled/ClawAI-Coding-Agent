@@ -11,6 +11,7 @@ import { developmentServiceToolDefinition } from './development-service-tool-exe
 import { evidenceToolDefinition } from './evidence-tool-executor';
 import { gitToolDefinition } from './git-tool-executor';
 import { intelligenceToolDefinition } from './intelligence-tool-executor';
+import { integrationToolDefinition } from './integration-tool-executor';
 import { planningToolDefinition } from './planning-tool-executor';
 import { processSupervisorToolDefinition } from './process-supervisor-tool-executor';
 import { qualityToolDefinition } from './quality-tool-executor';
@@ -149,6 +150,7 @@ export function buildRuntimeCapabilityManifest(
       evidenceToolDefinition,
       developmentServiceToolDefinition,
       subAgentToolDefinition,
+      integrationToolDefinition,
     ];
     target.capabilities.push(...localDefinitions.map(({ name }) => name));
     tools.push(
