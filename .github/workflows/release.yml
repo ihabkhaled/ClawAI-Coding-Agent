@@ -103,16 +103,39 @@ jobs:
           unzip -qq "${RUNNER_TEMP}/committed-release/$(basename "${ARTIFACT}")" -d "${RUNNER_TEMP}/committed-vsix"
           unzip -qq "${ARTIFACT}" -d "${RUNNER_TEMP}/fresh-vsix"
           diff -qr "${RUNNER_TEMP}/committed-vsix" "${RUNNER_TEMP}/fresh-vsix"
+
+          # VSIX archives contain ZIP timestamps, so two archives with identical
+          # extracted content can have different byte hashes. Validate each
+          # archive and its provenance independently, while comparing deterministic
+          # SBOMs and extracted package content above.
+          (cd "${RUNNER_TEMP}/committed-release" && sha256sum -c "$(basename "${RELEASE_BASE}").vsix.sha256")
+          (cd builds && sha256sum -c "$(basename "${RELEASE_BASE}").vsix.sha256")
           for asset in \
-            "${RELEASE_BASE}.vsix.sha256" \
             "${RELEASE_BASE}.cdx.json" \
             "${RELEASE_BASE}.cdx.json.sha256" \
             "${RELEASE_BASE}.spdx.json" \
-            "${RELEASE_BASE}.spdx.json.sha256" \
-            "${RELEASE_BASE}.provenance.json" \
-            "${RELEASE_BASE}.provenance.json.sha256"; do
+            "${RELEASE_BASE}.spdx.json.sha256"; do
             diff -q "${RUNNER_TEMP}/committed-release/$(basename "${asset}")" "${asset}"
           done
+          (cd "${RUNNER_TEMP}/committed-release" && sha256sum -c "$(basename "${RELEASE_BASE}").provenance.json.sha256")
+          (cd builds && sha256sum -c "$(basename "${RELEASE_BASE}").provenance.json.sha256")
+          node --input-type=module - \
+            "${RUNNER_TEMP}/committed-release/$(basename "${ARTIFACT}")" \
+            "${RUNNER_TEMP}/committed-release/$(basename "${RELEASE_BASE}").provenance.json" \
+            "${ARTIFACT}" \
+            "${RELEASE_BASE}.provenance.json" <<'NODE'
+          import { createHash } from 'node:crypto';
+          import { readFile } from 'node:fs/promises';
+
+          for (let index = 2; index < process.argv.length; index += 2) {
+            const artifact = await readFile(process.argv[index]);
+            const provenance = JSON.parse(await readFile(process.argv[index + 1], 'utf8'));
+            const actual = createHash('sha256').update(artifact).digest('hex');
+            if (provenance.subject?.[0]?.digest?.sha256 !== actual) {
+              throw new Error(`Provenance digest mismatch for ${process.argv[index]}`);
+            }
+          }
+          NODE
 
       - name: Build full release notes
         env:
