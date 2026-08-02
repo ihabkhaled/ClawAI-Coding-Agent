@@ -50,12 +50,24 @@ const invocation = {
 function registry() {
   return createRuntimeInvocationRegistry({
     runId: invocation.runId,
+    turnId: invocation.turnId,
     epochs,
     definitions: [definition],
   });
 }
 
 describe('runtime invocation registry', () => {
+  it('rejects an empty current turn when creating an active registry', () => {
+    expect(() =>
+      createRuntimeInvocationRegistry({
+        runId: invocation.runId,
+        turnId: '',
+        epochs,
+        definitions: [definition],
+      }),
+    ).toThrow(/turn/i);
+  });
+
   it('admits a valid invocation immutably against the exact catalog definition', () => {
     const initial = registry();
     const result = admitRuntimeInvocation(initial, invocation);
@@ -96,6 +108,7 @@ describe('runtime invocation registry', () => {
     expect(() =>
       createRuntimeInvocationRegistry({
         runId: invocation.runId,
+        turnId: invocation.turnId,
         epochs,
         definitions: [
           {
@@ -207,6 +220,7 @@ describe('runtime invocation registry', () => {
     expect(() =>
       createRuntimeInvocationRegistry({
         runId: invocation.runId,
+        turnId: invocation.turnId,
         epochs,
         definitions: [{ ...definition, inputSchema }],
       }),
@@ -226,6 +240,7 @@ describe('runtime invocation registry', () => {
     expect(() =>
       createRuntimeInvocationRegistry({
         runId: invocation.runId,
+        turnId: invocation.turnId,
         epochs,
         definitions: [{ ...definition, inputSchema: { type: 'string' } }],
       }),
@@ -233,6 +248,7 @@ describe('runtime invocation registry', () => {
     expect(() =>
       createRuntimeInvocationRegistry({
         runId: invocation.runId,
+        turnId: invocation.turnId,
         epochs,
         definitions: [{ ...definition, inputSchema: nestedSchema }],
       }),
@@ -265,6 +281,7 @@ describe('runtime invocation registry', () => {
     };
     const typedRegistry = createRuntimeInvocationRegistry({
       runId: invocation.runId,
+      turnId: invocation.turnId,
       epochs,
       definitions: [typedDefinition],
     });
@@ -309,6 +326,7 @@ describe('runtime invocation registry', () => {
     };
     const boundedRegistry = createRuntimeInvocationRegistry({
       runId: invocation.runId,
+      turnId: invocation.turnId,
       epochs,
       definitions: [boundedDefinition],
     });
@@ -344,6 +362,7 @@ describe('runtime invocation registry', () => {
     };
     const unboundedRegistry = createRuntimeInvocationRegistry({
       runId: invocation.runId,
+      turnId: invocation.turnId,
       epochs,
       definitions: [unboundedDefinition],
     });
@@ -358,6 +377,7 @@ describe('runtime invocation registry', () => {
     };
     const maxedRegistry = createRuntimeInvocationRegistry({
       runId: invocation.runId,
+      turnId: invocation.turnId,
       epochs,
       definitions: [maxedDefinition],
     });
@@ -461,6 +481,7 @@ describe('runtime invocation registry', () => {
     expect(() =>
       createRuntimeInvocationRegistry({
         runId: invocation.runId,
+        turnId: invocation.turnId,
         epochs,
         definitions: [definition, definition],
       }),
