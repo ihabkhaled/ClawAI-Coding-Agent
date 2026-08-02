@@ -3,6 +3,7 @@ import { z } from 'zod';
 import { planQualityExecution } from '../core/quality-graph';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
+import type { QualityToolExecutor } from './quality-tool-executor';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { GitAgentService } from '../services/git-agent-service';
 import type {
@@ -10,7 +11,6 @@ import type {
   IntegrationQualityPort,
   IntegrationCoordinatorService,
 } from '../services/integration-coordinator-service';
-import type { QualityToolExecutor } from './quality-tool-executor';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
@@ -19,7 +19,7 @@ import type {
 const toolInputSchema = z.object({ request: z.unknown() }).strict();
 const qualityResultSchema = z
   .object({ gateId: z.string(), status: z.enum(['passed', 'failed']) })
-  .passthrough();
+  .loose();
 
 export const integrationToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',
@@ -51,11 +51,23 @@ export class IntegrationToolExecutor implements RuntimeToolExecutorPort {
 }
 
 export class RuntimeIntegrationGitAdapter implements IntegrationGitPort {
-  constructor(private readonly git: GitAgentService) {}
+  constructor(
+    private readonly git: GitAgentService,
+    private readonly worktrees: { release(worktreeId: string): Promise<void> },
+  ) {}
 
   async workingFingerprint(worktreeId: string): Promise<string> {
     const receipt = await this.git.execute({ rootKey: worktreeId, operation: 'status' });
     return `${receipt.afterHead ?? 'unborn'}:${receipt.afterWorkingTreeHash}`;
+  }
+
+  verifyCommit(
+    worktreeId: string,
+    commit: string,
+    changedPaths: readonly string[],
+    signal?: AbortSignal,
+  ): Promise<boolean> {
+    return this.git.verifyCommit(worktreeId, commit, changedPaths, signal);
   }
 
   async cherryPick(
@@ -85,6 +97,10 @@ export class RuntimeIntegrationGitAdapter implements IntegrationGitPort {
 
   abortCherryPick(worktreeId: string): Promise<void> {
     return this.git.abortCherryPick(worktreeId);
+  }
+
+  releaseWorktree(worktreeId: string): Promise<void> {
+    return this.worktrees.release(worktreeId);
   }
 }
 

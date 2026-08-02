@@ -287,13 +287,9 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     request: ControlMessage,
     sourceSessionId: string,
   ): Promise<void> {
-    if (request.type === 'connect') {
-      await this.actions.connect(request);
-    } else if (request.type === 'logout') {
-      await this.actions.logout();
-    } else if (request.type === 'cancel') {
-      await this.actions.cancel(request.requestId);
-    } else if (request.type === 'undo') {
+    if (await this.handleRuntimeControl(request)) return;
+    if (await this.handleSessionControl(request)) return;
+    if (request.type === 'undo') {
       await this.actions.undo();
     } else if (request.type === 'newChat') {
       await this.reveal();
@@ -312,6 +308,23 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     } else {
       await this.handleSelectionControl(request);
     }
+  }
+
+  private async handleSessionControl(request: ControlMessage): Promise<boolean> {
+    if (request.type === 'connect') await this.actions.connect(request);
+    else if (request.type === 'logout') await this.actions.logout();
+    else if (request.type === 'cancel') await this.actions.cancel(request.requestId);
+    else return false;
+    return true;
+  }
+
+  private async handleRuntimeControl(request: ControlMessage): Promise<boolean> {
+    if (request.type === 'runtimePause') await this.actions.runtimePause();
+    else if (request.type === 'runtimeResume') await this.actions.runtimeResume();
+    else if (request.type === 'runtimeStop') await this.actions.runtimeStop();
+    else if (request.type === 'runtimeSteer') await this.actions.runtimeSteer(request.message);
+    else return false;
+    return true;
   }
 
   private async handleSelectionControl(request: ControlMessage): Promise<void> {

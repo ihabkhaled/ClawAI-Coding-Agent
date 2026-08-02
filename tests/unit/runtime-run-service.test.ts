@@ -110,11 +110,12 @@ describe('RuntimeRunService', () => {
     await expect(service.cancel()).rejects.toThrow(/no runtime run/i);
   });
 
-  it('fails closed when the transport acknowledges a different run', async () => {
+  it('adopts the authoritative server-generated run identifier', async () => {
     const { cancelled, service } = harness({ startReceipt: { runId: 'run-id-other' } });
 
-    await expect(service.start(start)).rejects.toThrow(/mismatched run/i);
-    expect(cancelled).toEqual(['run-id-other']);
+    await expect(service.start(start)).resolves.toEqual({ runId: 'run-id-other' });
+    expect(service.snapshot.runs['run-id-other']?.status).toBe('running');
+    expect(cancelled).toEqual([]);
   });
 
   it('compensates a remotely admitted run when epochs change during start', async () => {

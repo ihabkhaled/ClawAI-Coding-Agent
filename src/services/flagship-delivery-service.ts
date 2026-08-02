@@ -68,6 +68,9 @@ export class FlagshipDeliveryService {
         evidenceReferences: [],
         unverifiedClaims: [],
         steering: [],
+        stageSummaries: {},
+        usage: { modelTurns: 0, toolCalls: 0, subAgents: 0 },
+        commits: [],
         startedAt: new Date(startedAtMs).toISOString(),
         updatedAt: new Date(startedAtMs).toISOString(),
       },
@@ -107,10 +110,6 @@ export class FlagshipDeliveryService {
       if (currentStage === undefined) return;
       await this.waitIfPaused(signal);
       this.assertBudget(startedAtMs, request);
-      if (currentStage === 'commit' && !request.effects.commitAuthorized) {
-        index = stages.indexOf('publish-ready') - 1;
-        continue;
-      }
       this.update({ stage: currentStage });
       if (await this.executeStage(currentStage, request, signal))
         index = Math.max(-1, stages.indexOf('plan') - 1);
@@ -138,6 +137,7 @@ export class FlagshipDeliveryService {
         signal,
       );
       this.mergeResult(result);
+      this.assertUsage(request);
       this.observer.update(this.requireActive().snapshot, result);
       if (result.status === 'succeeded') return false;
       if (result.status === 'recoverable-failure' && attempts < request.budget.maxStageAttempts) {
@@ -163,6 +163,12 @@ export class FlagshipDeliveryService {
   steer(message: string): void {
     const active = this.requireActive();
     this.update({ steering: [...active.snapshot.steering, message.slice(0, 20_000)] });
+  }
+
+  steerIfActive(message: string): boolean {
+    if (this.active === undefined) return false;
+    this.steer(message);
+    return true;
   }
 
   pause(): void {
@@ -196,12 +202,30 @@ export class FlagshipDeliveryService {
           ),
         ),
       ],
+      usage: {
+        modelTurns: snapshot.usage.modelTurns + (result.usage?.modelTurns ?? 0),
+        toolCalls: snapshot.usage.toolCalls + (result.usage?.toolCalls ?? 0),
+        subAgents: snapshot.usage.subAgents + (result.usage?.subAgents ?? 0),
+      },
+      commits: result.clearCommits ? [] : [...snapshot.commits, ...(result.commits ?? [])],
+      stageSummaries: { ...snapshot.stageSummaries, [snapshot.stage]: result.summary },
     });
   }
 
   private assertBudget(startedAtMs: number, request: FlagshipRequest): void {
     if (this.now() - startedAtMs > request.budget.maxRuntimeMs)
       throw new Error('Flagship runtime budget exhausted');
+  }
+
+  private assertUsage(request: FlagshipRequest): void {
+    const usage = this.requireActive().snapshot.usage;
+    if (
+      usage.modelTurns > request.budget.maxModelTurns ||
+      usage.toolCalls > request.budget.maxToolCalls ||
+      usage.subAgents > request.budget.maxSubAgents
+    ) {
+      throw new Error('Flagship aggregate execution budget exhausted');
+    }
   }
 
   private async waitIfPaused(signal: AbortSignal): Promise<void> {

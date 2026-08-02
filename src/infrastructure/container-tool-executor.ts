@@ -1,3 +1,5 @@
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
+
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { ContainerEngineService } from '../services/container-engine-service';
 import type {
@@ -56,4 +58,3 @@ export class ContainerToolExecutor implements RuntimeToolExecutorPort {
     return { structured: { receipt } };
   }
 }
-import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';

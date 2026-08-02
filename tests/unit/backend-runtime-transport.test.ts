@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { BackendRuntimeTransport } from '../../src/infrastructure/backend-runtime-transport';
+import { VscodeRuntimeBindingStore } from '../../src/infrastructure/vscode-runtime-binding-store';
 
 import type { RuntimeCommandBinding } from '../../src/backend/backend-client.types';
 
@@ -104,4 +105,80 @@ describe('BackendRuntimeTransport durable bindings', () => {
       expect.any(AbortSignal),
     );
   });
+
+  it('compensates a server-admitted run when durable binding persistence fails', async () => {
+    const acknowledgement = {
+      runId: 'runtime:backend-save-failure',
+      generation: 'generation:save-failure',
+      messageId: 'message:save-failure',
+      sequence: 1,
+      replayed: false,
+    };
+    const backend = {
+      cancelRuntime: vi.fn(async () => ({ ...acknowledgement, eventId: 'event:cancelled' })),
+      startRuntime: vi.fn(async () => acknowledgement),
+      openRuntimeStream: vi.fn(),
+      steerRuntime: vi.fn(),
+      submitRuntimeResult: vi.fn(),
+    };
+    const transport = new BackendRuntimeTransport(() => backend, {
+      load: async () => undefined,
+      save: async () => Promise.reject(new Error('workspace state unavailable')),
+      delete: async () => undefined,
+    });
+
+    await expect(transport.start(runtimeStart())).rejects.toThrow(/workspace state unavailable/iu);
+    expect(backend.cancelRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: acknowledgement.runId }),
+      `cancel:${acknowledgement.runId}:binding-save`,
+    );
+  });
+
+  it('evicts the oldest completed binding before the durable limit is exceeded', async () => {
+    let value: unknown = [];
+    const state = {
+      get: () => value,
+      update: async (_key: string, next: unknown) => {
+        value = next;
+      },
+    };
+    const store = new VscodeRuntimeBindingStore(state);
+    for (let index = 0; index < 101; index += 1) {
+      await store.save({
+        threadId: `thread:${String(index).padStart(3, '0')}`,
+        runId: `runtime:${String(index).padStart(3, '0')}`,
+        generation: `generation:${String(index).padStart(3, '0')}`,
+        epochs: { account: 1, workspace: 1, target: 1, policy: 1 },
+      });
+    }
+
+    await expect(store.load('runtime:000')).resolves.toBeUndefined();
+    await expect(store.load('runtime:100')).resolves.toMatchObject({ runId: 'runtime:100' });
+  });
 });
+
+function runtimeStart() {
+  return {
+    runId: 'runtime:client-save-failure',
+    turnId: 'turn:client-save-failure',
+    threadId: 'thread:client-save-failure',
+    clientRequestId: 'request:client-save-failure',
+    idempotencyKey: 'request:client-save-failure',
+    prompt: 'Start a durable run.',
+    manifestHash: `sha256:${'a'.repeat(64)}`,
+    toolCatalogHash: `sha256:${'b'.repeat(64)}`,
+    provider: 'AUTO',
+    model: 'AUTO',
+    epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
+    definitions: [],
+    budget: {
+      maxModelTurns: 10,
+      maxToolCalls: 20,
+      maxToolRounds: 20,
+      maxRepairAttempts: 1 as const,
+      maxRuntimeMs: 60_000,
+      maxOutputBytes: 1_048_576,
+      maxToolResultBytes: 262_144,
+    },
+  };
+}

@@ -511,6 +511,12 @@ export class AgentCoordinator implements vscode.Disposable {
     await cancelRemoteGenerations(this.backend, this.logger, threadIds);
   }
 
+  runtimeControl = (action: 'pause' | 'resume'): Promise<void> => {
+    this.runtimeStudio[action]();
+    return Promise.resolve();
+  };
+  runtimeSteer = (message: string): Promise<void> => this.runtimeStudio.steer(message);
+
   removeQueued = (requestId: string): void => void this.generations.remove(requestId);
 
   resolveApproval = (requestId: string, approved: boolean): void =>

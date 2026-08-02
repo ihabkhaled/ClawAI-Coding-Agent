@@ -26,6 +26,26 @@ describe('promptRequestId', () => {
 });
 
 describe('inboundMessageSchema', () => {
+  it('accepts bounded runtime controls', () => {
+    expect(inboundMessageSchema.parse({ type: 'runtimePause' })).toEqual({ type: 'runtimePause' });
+    expect(inboundMessageSchema.parse({ type: 'runtimeResume' })).toEqual({
+      type: 'runtimeResume',
+    });
+    expect(inboundMessageSchema.parse({ type: 'runtimeStop' })).toEqual({ type: 'runtimeStop' });
+    expect(
+      inboundMessageSchema.parse({ type: 'runtimeSteer', message: 'Prioritize tests.' }),
+    ).toEqual({
+      type: 'runtimeSteer',
+      message: 'Prioritize tests.',
+    });
+    expect(inboundMessageSchema.safeParse({ type: 'runtimeSteer', message: '' }).success).toBe(
+      false,
+    );
+    expect(
+      inboundMessageSchema.safeParse({ type: 'runtimeSteer', message: 'x'.repeat(20_001) }).success,
+    ).toBe(false);
+  });
+
   it('accepts the bounded display-language control', () => {
     expect(inboundMessageSchema.parse({ type: 'configureLanguage' })).toEqual({
       type: 'configureLanguage',

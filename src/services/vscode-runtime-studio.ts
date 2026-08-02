@@ -1,5 +1,3 @@
-import { createHash, randomUUID } from 'node:crypto';
-
 import * as vscode from 'vscode';
 
 import { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
@@ -22,6 +20,11 @@ import {
   developmentServiceToolDefinition,
 } from '../infrastructure/development-service-tool-executor';
 import {
+  ElevationToolExecutor,
+  VscodeElevationVerificationAdapter,
+  elevationToolDefinition,
+} from '../infrastructure/elevation-tool-executor';
+import {
   EvidenceToolExecutor,
   evidenceToolDefinition,
 } from '../infrastructure/evidence-tool-executor';
@@ -32,15 +35,16 @@ import {
 } from '../infrastructure/flagship-tool-executor';
 import { GitToolExecutor, gitToolDefinition } from '../infrastructure/git-tool-executor';
 import {
-  IntelligenceToolExecutor,
-  intelligenceToolDefinition,
-} from '../infrastructure/intelligence-tool-executor';
-import {
   IntegrationToolExecutor,
   RuntimeIntegrationGitAdapter,
   RuntimeIntegrationQualityAdapter,
   integrationToolDefinition,
 } from '../infrastructure/integration-tool-executor';
+import {
+  IntelligenceToolExecutor,
+  intelligenceToolDefinition,
+} from '../infrastructure/intelligence-tool-executor';
+import { PackagedNativeElevationAdapter } from '../infrastructure/native-elevation-adapter';
 import {
   PlanningToolExecutor,
   planningToolDefinition,
@@ -78,12 +82,13 @@ import {
   workspaceFilesystemToolDefinition,
 } from '../infrastructure/vscode-filesystem-tool-executor';
 import { VscodeIntelligenceIndex } from '../infrastructure/vscode-intelligence-index';
+import { VscodeObservabilitySink } from '../infrastructure/vscode-observability-sink';
 import {
   VscodeRunJournalKeyStore,
   VscodeRunJournalStorage,
 } from '../infrastructure/vscode-run-journal-adapter';
 import { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-binding-store';
-import { VscodeObservabilitySink } from '../infrastructure/vscode-observability-sink';
+import { VscodeSubAgentWorktreeAdapter } from '../infrastructure/vscode-sub-agent-worktree-adapter';
 
 import { BrowserControllerService } from './browser-controller-service';
 import { ContainerEngineService } from './container-engine-service';
@@ -94,10 +99,11 @@ import {
   SqlCliDatabaseAdapter,
 } from './database-workbench-service';
 import { DevelopmentServiceManager } from './development-service-manager';
+import { ElevationBrokerService } from './elevation-broker-service';
 import { EvidenceBundleService } from './evidence-bundle-service';
 import { ExecutionTargetRegistry } from './execution-target-registry';
-import { FileTransactionService } from './file-transaction-service';
 import { FileLeaseManager } from './file-lease-manager';
+import { FileTransactionService } from './file-transaction-service';
 import { FlagshipDeliveryService } from './flagship-delivery-service';
 import { GitAgentService } from './git-agent-service';
 import { IntegrationCoordinatorService } from './integration-coordinator-service';
@@ -106,37 +112,37 @@ import { ProcessSupervisorService } from './process-supervisor-service';
 import { ProjectPolicyService } from './project-policy-service';
 import { RunJournalService } from './run-journal-service';
 import { RuntimeEventStreamService } from './runtime-event-stream-service';
-import { RuntimeFlagshipStageAdapter } from './runtime-flagship-stage-adapter';
+import {
+  CoordinatedFlagshipSubAgentPort,
+  RuntimeFlagshipStageAdapter,
+} from './runtime-flagship-stage-adapter';
 import { RuntimePolicyV2Adapter } from './runtime-policy-v2-adapter';
-import { RuntimeRunService } from './runtime-run-service';
+import { executeRuntimeStudio } from './runtime-studio-execution';
+import {
+  approveRuntimeEffect,
+  buildRuntimeTargetRouter,
+  hashRuntimeValue,
+  runtimeBrowserScope,
+  runtimeFingerprint,
+  steerRuntime,
+} from './runtime-studio-helpers';
 import { RuntimeSubAgentExecutor } from './runtime-sub-agent-executor';
 import { RuntimeToolRouter } from './runtime-tool-router';
 import { ServerReadinessService } from './server-readiness-service';
 import { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
-import { TargetAwareToolRouter } from './target-aware-tool-router';
+import { SubAgentWorktreeService } from './sub-agent-worktree-service';
 import { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 
 import type { ExternalOutputGrantStore } from './agent-coordinator.types';
-import type { ConfigurationService, RuntimeConfiguration } from './configuration-service';
+import type { ConfigurationService } from './configuration-service';
+import type { RuntimeRunService } from './runtime-run-service';
+import type { RuntimeStudioInput } from './runtime-studio.types';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { BackendClient } from '../backend/backend-client';
-import type { OutputLogger } from '../infrastructure/output-logger';
 import type { ApprovalBroker } from '../core/approval-broker';
-import type { BrowserScope } from '../core/browser-operation';
 import type { ExtensionState } from '../core/extension-state';
-import type { PolicyRequest } from '../core/policy-v2';
-import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
-
-export interface RuntimeStudioInput {
-  readonly prompt: string;
-  readonly threadId: string;
-  readonly requestId: string;
-  readonly provider?: string;
-  readonly model?: string;
-  readonly signal: AbortSignal;
-  readonly onEvent: (event: RuntimeEvent) => void;
-}
+import type { OutputLogger } from '../infrastructure/output-logger';
 
 export class VscodeRuntimeStudio implements vscode.Disposable {
   private readonly files: VscodeFileTransactionAdapter;
@@ -149,6 +155,9 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   private readonly policy: RuntimePolicyV2Adapter;
   private readonly intelligenceIndex: VscodeIntelligenceIndex;
   private readonly observability: LocalObservabilityService;
+  private readonly flagship: FlagshipDeliveryService;
+  private readonly git: GitAgentService;
+  private readonly journals: RunJournalService;
   private active: RuntimeRunService | undefined;
   private activeRunId: string | undefined;
   private targetManifestHash: string | undefined;
@@ -188,11 +197,11 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         mode: () => this.configuration.read().permissionMode,
         workspaceTrusted: () => vscode.workspace.isTrusted,
         userPresent: () => vscode.window.state.focused,
-        approve: (request, signal) => this.approveEffect(approvals, request, signal),
+        approve: (request, signal) => approveRuntimeEffect(approvals, request, signal),
       },
       new ProjectPolicyService(this.workspaceScope),
     );
-    const git = new GitAgentService(this.files, (diff, hash, signal) =>
+    this.git = new GitAgentService(this.files, (diff, hash, signal) =>
       approvals.request(
         {
           kind: 'runtimeEffect',
@@ -249,7 +258,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     );
     const browser = new BrowserControllerService(
       browserDriver,
-      () => this.browserScope(this.configuration.read()),
+      () => runtimeBrowserScope(this.configuration.read()),
       {
         approveOrigin: (origin, signal) =>
           approvals.request(
@@ -270,7 +279,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       },
     );
     const readiness = new ServerReadinessService(
-      () => this.browserScope(this.configuration.read()),
+      () => runtimeBrowserScope(this.configuration.read()),
       {
         evidence: (sessionId, runId) => this.processes.readinessEvidence(sessionId, runId),
       },
@@ -280,7 +289,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       () => this.workspaceScope.snapshot().selectedFolderKey ?? 'workspace:missing',
     );
     const intelligence = new WorkspaceIntelligenceService(this.intelligenceIndex);
-    const journals = new RunJournalService(
+    this.journals = new RunJournalService(
       new VscodeRunJournalStorage(context.globalStorageUri),
       new VscodeRunJournalKeyStore(context.secrets),
     );
@@ -306,21 +315,58 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       stream: this.stream,
       transport: this.transport,
     });
+    const subAgentWorktreeAdapter = new VscodeSubAgentWorktreeAdapter(
+      this.files,
+      vscode.Uri.joinPath(context.globalStorageUri, 'agent-worktrees').fsPath,
+      () => this.workspaceScope.snapshot().selectedFolderKey ?? 'workspace:missing',
+    );
+    const subAgentWorktrees = new SubAgentWorktreeService(subAgentWorktreeAdapter);
     const subAgents = new SubAgentCoordinatorService(
       runtimeSubAgent,
       new FileLeaseManager(),
       () => this.epochs,
       { status: () => undefined, outcome: () => undefined },
+      subAgentWorktrees,
     );
     const quality = new QualityToolExecutor(this.files);
     const integration = new IntegrationCoordinatorService(
-      new RuntimeIntegrationGitAdapter(git),
+      new RuntimeIntegrationGitAdapter(this.git, subAgentWorktreeAdapter),
       new RuntimeIntegrationQualityAdapter(quality),
     );
-    const flagship = new FlagshipDeliveryService(
-      new RuntimeFlagshipStageAdapter(runtimeSubAgent, () => this.epochs),
+    this.flagship = new FlagshipDeliveryService(
+      new RuntimeFlagshipStageAdapter(
+        new CoordinatedFlagshipSubAgentPort(subAgents),
+        () => this.epochs,
+        integration,
+      ),
       new VscodeFlagshipCheckpointStore(context.workspaceState),
       { update: () => undefined },
+    );
+    const elevation = new ElevationBrokerService(
+      new PackagedNativeElevationAdapter(
+        vscode.Uri.joinPath(context.extensionUri, 'resources', 'elevation-helper.mjs').fsPath,
+      ),
+      {
+        confirm: (recipe, signal) =>
+          approvals.request(
+            {
+              kind: 'runtimeEffect',
+              title: vscode.l10n.t('Approve administrator operation'),
+              message: recipe.explanation,
+              effect: {
+                purpose: recipe.recipeId,
+                target: `${recipe.command.executable} ${recipe.command.arguments.join(' ')}`,
+                risk: 'R4',
+                sideEffects: [
+                  vscode.l10n.t('Your operating system will show native administrator consent.'),
+                ],
+                reversibility: 'irreversible',
+              },
+            },
+            signal,
+          ),
+      },
+      new VscodeElevationVerificationAdapter(),
     );
     const registrations = [
       {
@@ -339,7 +385,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
           this.files,
         ),
       },
-      { definition: gitToolDefinition, executor: new GitToolExecutor(git) },
+      { definition: gitToolDefinition, executor: new GitToolExecutor(this.git) },
       { definition: containerToolDefinition, executor: new ContainerToolExecutor(containers) },
       {
         definition: databaseToolDefinition,
@@ -352,7 +398,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         executor: new IntelligenceToolExecutor(intelligence),
       },
       { definition: planningToolDefinition, executor: new PlanningToolExecutor(this.transactions) },
-      { definition: runJournalToolDefinition, executor: new RunJournalToolExecutor(journals) },
+      { definition: runJournalToolDefinition, executor: new RunJournalToolExecutor(this.journals) },
       {
         definition: evidenceToolDefinition,
         executor: new EvidenceToolExecutor(evidence, this.files),
@@ -369,7 +415,15 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         definition: integrationToolDefinition,
         executor: new IntegrationToolExecutor(integration),
       },
-      { definition: flagshipToolDefinition, executor: new FlagshipToolExecutor(flagship) },
+      { definition: flagshipToolDefinition, executor: new FlagshipToolExecutor(this.flagship) },
+      {
+        definition: elevationToolDefinition,
+        executor: new ElevationToolExecutor(
+          elevation,
+          this.files,
+          () => this.activeRunId ?? 'runtime:inactive',
+        ),
+      },
     ];
     this.router = new RuntimeToolRouter(registrations, this.policy);
   }
@@ -379,94 +433,64 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       throw new Error('A Runtime V2 run is already active in this extension host');
     const manifest = this.state.snapshot.runtime.capabilityManifest;
     if (manifest === undefined) throw new Error('Runtime capability manifest is unavailable');
-    const definitions = this.router.definitions();
-    const traceId = input.requestId;
-    const spanId = `span:${randomUUID()}`;
-    const startedAt = new Date().toISOString();
-    this.observability.emit({
-      name: 'runtime.v2.run',
-      traceId,
-      spanId,
-      startedAt,
-      status: 'unset',
-      attributes: { threadId: input.threadId, toolCount: definitions.length },
-    });
-    const runtime = new RuntimeRunService({
-      clock: { now: Date.now },
-      currentEpochs: () => this.epochs,
-      // The backend stream owns user-visible event ordering. Local dispatch events still update
-      // RuntimeRunService atomically, but publishing them here would apply each lifecycle twice.
-      eventSink: { publishBatch: () => undefined },
-      executor: this.targetRouter(manifest),
+    await executeRuntimeStudio({
+      input,
+      manifest,
+      epochs: this.epochs,
+      router: this.router,
       policy: this.policy,
-      receiptId: () => `receipt:${randomUUID()}`,
       transport: this.transport,
-    });
-    this.active = runtime;
-    try {
-      const receipt = await runtime.start({
-        runId: `runtime:${randomUUID()}`,
-        turnId: `turn:${randomUUID()}`,
-        threadId: input.threadId,
-        clientRequestId: input.requestId,
-        idempotencyKey: `request:${input.requestId}`,
-        prompt: input.prompt,
-        manifestHash: this.hash(manifest),
-        toolCatalogHash: this.hash(definitions),
-        provider: input.provider ?? 'AUTO',
-        model: input.model ?? 'AUTO',
-        epochs: this.epochs,
-        definitions,
-        budget: {
-          maxModelTurns: 40,
-          maxToolCalls: 100,
-          maxToolRounds: 100,
-          maxRepairAttempts: 1,
-          maxRuntimeMs: 7_200_000,
-          maxOutputBytes: 16_777_216,
-          maxToolResultBytes: 1_048_576,
-        },
-      });
-      this.activeRunId = receipt.runId;
-      await this.stream.follow(
-        receipt.runId,
-        runtime,
-        {
-          onEvent: (event) => {
-            this.state.applyRuntimeEvent(event);
-            input.onEvent(event);
+      stream: this.stream,
+      observability: this.observability,
+      journals: this.journals,
+      flagship: this.flagship,
+      state: this.state,
+      configuration: () => this.configuration.read(),
+      targetRouter: (runtimeManifest) => {
+        const result = buildRuntimeTargetRouter({
+          manifest: runtimeManifest,
+          targets: this.targets,
+          router: this.router,
+          currentManifestHash: this.targetManifestHash,
+          currentTargetEpoch: this.epochs.target,
+        });
+        this.targetManifestHash = result.manifestHash;
+        this.epochs = { ...this.epochs, target: result.targetEpoch };
+        return result.router;
+      },
+      fingerprint: (signal) =>
+        runtimeFingerprint(
+          {
+            state: this.state,
+            configuration: this.configuration,
+            workspaceScope: this.workspaceScope,
+            git: this.git,
           },
-        },
-        input.signal,
-      );
-      this.observability.emit({
-        name: 'runtime.v2.run',
-        traceId,
-        spanId,
-        startedAt,
-        completedAt: new Date().toISOString(),
-        status: 'ok',
-        attributes: { threadId: input.threadId, toolCount: definitions.length },
-      });
-    } catch (error) {
-      this.observability.emit({
-        name: 'runtime.v2.run',
-        traceId,
-        spanId,
-        startedAt,
-        completedAt: new Date().toISOString(),
-        status: 'error',
-        attributes: { threadId: input.threadId, toolCount: definitions.length },
-      });
-      throw error;
-    } finally {
-      this.active = undefined;
-      this.activeRunId = undefined;
-    }
+          this.epochs,
+          signal,
+        ),
+      hash: hashRuntimeValue,
+      setActive: (runtime, runId) => {
+        this.active = runtime;
+        this.activeRunId = runId;
+      },
+    });
   }
 
   async cancel(): Promise<void> {
     await this.active?.cancel();
+  }
+
+  pause(): void {
+    this.flagship.pause();
+  }
+
+  resume(): void {
+    this.flagship.resume();
+  }
+
+  async steer(message: string): Promise<void> {
+    await steerRuntime(this.transport, this.active, this.activeRunId, this.epochs, message);
   }
 
   invalidateAccount(): void {
@@ -483,68 +507,5 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     void this.cancel();
     this.processes.dispose();
     this.intelligenceIndex.dispose();
-  }
-
-  private approveEffect(
-    approvals: ApprovalBroker,
-    request: PolicyRequest,
-    signal?: AbortSignal,
-  ): Promise<boolean> {
-    return approvals.request(
-      {
-        kind: 'runtimeEffect',
-        title: vscode.l10n.t('Approve agent effect'),
-        message: vscode.l10n.t('Review the exact scope before this operation runs.'),
-        effect: {
-          purpose: request.effect,
-          target: request.scope.targetId,
-          risk: request.risk,
-          sideEffects: [request.effect],
-          reversibility: request.reversible ? 'reversible' : 'irreversible',
-        },
-      },
-      signal,
-    );
-  }
-
-  private browserScope(configuration: RuntimeConfiguration): BrowserScope {
-    const origins = [configuration.backendUrl, configuration.frontendUrl].flatMap((value) =>
-      value === undefined ? [] : [new URL(value).origin],
-    );
-    return {
-      allowedOrigins: [...new Set(origins)],
-      allowExternalNavigationWithApproval: true,
-      allowDownloads: false,
-      maxDownloadBytes: 104_857_600,
-    };
-  }
-
-  private targetRouter(
-    manifest: NonNullable<ExtensionState['snapshot']['runtime']['capabilityManifest']>,
-  ): TargetAwareToolRouter {
-    const targetManifestHash = this.hash(manifest.targets);
-    if (this.targetManifestHash !== undefined && this.targetManifestHash !== targetManifestHash) {
-      this.epochs = { ...this.epochs, target: this.epochs.target + 1 };
-    }
-    this.targetManifestHash = targetManifestHash;
-    const delegates = new Map<string, RuntimeToolRouter>();
-    for (const target of manifest.targets) {
-      this.targets.register(
-        target,
-        {
-          networkReachability: target.online ? 'internet' : 'offline',
-          browserAvailability: target.capabilities.includes(browserToolDefinition.name)
-            ? 'visible-local'
-            : 'none',
-        },
-        this.epochs.target,
-      );
-      delegates.set(target.id, this.router);
-    }
-    return new TargetAwareToolRouter(this.targets, delegates);
-  }
-
-  private hash(value: unknown): string {
-    return `sha256:${createHash('sha256').update(JSON.stringify(value)).digest('hex')}`;
   }
 }

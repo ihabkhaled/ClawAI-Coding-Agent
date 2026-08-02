@@ -1,11 +1,11 @@
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
-import type { SubAgentCoordinatorService } from '../services/sub-agent-coordinator-service';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { SubAgentCoordinatorService } from '../services/sub-agent-coordinator-service';
 
 export const subAgentToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

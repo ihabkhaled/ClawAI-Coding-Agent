@@ -1,7 +1,7 @@
 import type { BackendClient } from '../backend/backend-client';
 import type { RuntimeCommandBinding } from '../backend/backend-client.types';
-import type { ToolResult } from '../core/runtime/runtime-tool-contracts';
 import type { SteeringMessage } from '../core/runtime/runtime-steering-queue';
+import type { ToolResult } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeRunStart,
   RuntimeRunStartReceipt,
@@ -42,7 +42,17 @@ export class BackendRuntimeTransport implements RuntimeRunTransportPort {
       epochs: input.epochs,
     };
     this.bindings.set(acknowledgement.runId, binding);
-    await this.store.save(binding);
+    try {
+      await this.store.save(binding);
+    } catch (error) {
+      this.bindings.delete(acknowledgement.runId);
+      try {
+        await this.backend().cancelRuntime(binding, `cancel:${acknowledgement.runId}:binding-save`);
+      } catch {
+        // Preserve the binding persistence failure after best-effort remote compensation.
+      }
+      throw error;
+    }
     return { runId: acknowledgement.runId };
   }
 
@@ -63,6 +73,11 @@ export class BackendRuntimeTransport implements RuntimeRunTransportPort {
   async cancel(runId: string): Promise<void> {
     const binding = await this.requireBinding(runId);
     await this.backend().cancelRuntime(binding, `cancel:${runId}`);
+    this.bindings.delete(runId);
+    await this.store.delete(runId);
+  }
+
+  async release(runId: string): Promise<void> {
     this.bindings.delete(runId);
     await this.store.delete(runId);
   }

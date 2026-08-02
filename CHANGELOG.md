@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.40.1
+
+This corrective release completes and hardens the Runtime Protocol V2 work
+delivered in 0.40.0 without moving or replacing the immutable 0.40.0 tag.
+
+- Enforces trusted host-side authorization for Git, integration, flagship, and
+  native elevation operations instead of accepting model-authored authority.
+- Hardens durable run admission, binding cleanup, idempotent tool dispatch,
+  verified commit provenance, bounded sub-agent execution, and global flagship
+  budgets and steering.
+- Advertises Runtime V2 capabilities only when their local prerequisites are
+  available and adds strict nested schemas for orchestration requests.
+- Adds a signed, time-bounded elevation request and receipt protocol with
+  workspace containment, executable identity checks, and read-only
+  postcondition verification.
+
 ## 0.40.0
 
 This consolidated pre-1.0 release advances the model-neutral Runtime Protocol

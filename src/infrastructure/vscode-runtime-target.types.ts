@@ -27,6 +27,14 @@ export interface RuntimeHostProbe {
   readonly vscodeVersion: string;
   readonly workspaceFolders: readonly RuntimeWorkspaceFolderProbe[];
   readonly workspaceTrusted: boolean;
+  readonly prerequisites: {
+    readonly browser: boolean;
+    readonly container: boolean;
+    readonly database: boolean;
+    readonly elevation: boolean;
+    readonly git: boolean;
+    readonly process: boolean;
+  };
 }
 
 export interface ExtensionHostDescriptor {

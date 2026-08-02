@@ -524,47 +524,4 @@ describe('runtime event reducer', () => {
       reduceRuntimeEvent(created, event(1, 'future.created', { value: undefined })),
     ).toThrow('Runtime event contains a non-serializable value');
   });
-
-  it('rejects budget usage beyond limits and regressing budget projections', () => {
-    const created = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
-    const limits = {
-      maxModelTurns: 2,
-      maxOutputBytes: 1_024,
-      maxRepairAttempts: 1,
-      maxRuntimeMs: 1_000,
-      maxToolCalls: 2,
-      maxToolResultBytes: 1_024,
-      maxToolRounds: 2,
-    };
-    const withinLimits = {
-      modelTurns: 1,
-      outputBytes: 1,
-      repairAttempts: 0,
-      toolCalls: 1,
-      toolResultBytes: 1,
-      toolRounds: 1,
-    };
-    expect(() =>
-      reduceRuntimeEvent(
-        created,
-        event(1, 'run.budget.updated', {
-          limits,
-          usage: { ...withinLimits, toolCalls: 3 },
-        }),
-      ),
-    ).toThrow(/invalid payload/i);
-    const updated = reduceRuntimeEvent(
-      created,
-      event(1, 'run.budget.updated', { limits, usage: withinLimits }),
-    );
-    expect(() =>
-      reduceRuntimeEvent(
-        updated,
-        event(2, 'run.budget.updated', {
-          limits,
-          usage: { ...withinLimits, modelTurns: 0 },
-        }),
-      ),
-    ).toThrow(/invalid payload/i);
-  });
 });

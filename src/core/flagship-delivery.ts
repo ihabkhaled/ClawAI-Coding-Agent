@@ -35,6 +35,7 @@ export const flagshipRequestSchema = z
       .max(10_000)
       .default([]),
     acceptanceChecks: z.array(z.string().min(1).max(2_000)).max(1_000).default([]),
+    mandatoryGateIds: z.array(z.string().min(3).max(200)).max(1_000).default([]),
     budget: z
       .object({
         maxRuntimeMs: z.number().int().min(1_000).max(172_800_000),
@@ -44,18 +45,18 @@ export const flagshipRequestSchema = z
         maxSubAgents: z.number().int().min(0).max(100),
       })
       .strict(),
-    effects: z
-      .object({
-        commitAuthorized: z.boolean(),
-        pushAuthorized: z.boolean(),
-        deployAuthorized: z.boolean(),
-        publishAuthorized: z.boolean(),
-      })
-      .strict(),
   })
   .strict();
 
 export type FlagshipRequest = z.infer<typeof flagshipRequestSchema>;
+
+export interface FlagshipCommitProvenance {
+  readonly taskId: string;
+  readonly worktreeId: string;
+  readonly commit: string;
+  readonly changedPaths: readonly string[];
+  readonly integrationSeams: readonly string[];
+}
 
 export interface FlagshipStageResult {
   readonly status: 'succeeded' | 'recoverable-failure' | 'blocked' | 'failed';
@@ -63,6 +64,13 @@ export interface FlagshipStageResult {
   readonly evidenceReferences: readonly string[];
   readonly unverifiedClaims: readonly string[];
   readonly resolvedClaims?: readonly string[];
+  readonly commits?: readonly FlagshipCommitProvenance[];
+  readonly clearCommits?: boolean;
+  readonly usage?: {
+    readonly modelTurns: number;
+    readonly toolCalls: number;
+    readonly subAgents: number;
+  };
   readonly failureClass?:
     | 'model'
     | 'tool'
@@ -87,6 +95,13 @@ export interface FlagshipSnapshot {
   readonly evidenceReferences: readonly string[];
   readonly unverifiedClaims: readonly string[];
   readonly steering: readonly string[];
+  readonly stageSummaries: Readonly<Partial<Record<FlagshipStage, string>>>;
+  readonly usage: {
+    readonly modelTurns: number;
+    readonly toolCalls: number;
+    readonly subAgents: number;
+  };
+  readonly commits: readonly FlagshipCommitProvenance[];
   readonly startedAt: string;
   readonly updatedAt: string;
   readonly stopReason?: string;

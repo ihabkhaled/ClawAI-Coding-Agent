@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
-const MAX_JSON_DEPTH = 8;
+// Strict orchestration schemas reach ten levels through
+// inputSchema -> graph -> tasks -> task -> epochs. Keep the transport bounded
+// while leaving enough headroom for those first-party definitions.
+const MAX_JSON_DEPTH = 12;
 const MAX_JSON_ENTRIES = 100;
 const MAX_JSON_KEY_LENGTH = 120;
 const MAX_JSON_STRING_LENGTH = 65_536;

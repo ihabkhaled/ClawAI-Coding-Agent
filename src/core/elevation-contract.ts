@@ -14,7 +14,11 @@ export const elevationRecipeSchema = z
       'permission-repair',
     ]),
     command: commandSpecSchema.refine(
-      (command) => command.elevation && command.shell === undefined,
+      (command) =>
+        command.elevation &&
+        command.shell === undefined &&
+        command.stdin === undefined &&
+        Object.keys(command.environment).length === 0,
       'Elevation requires one direct executable',
     ),
     explanation: z.string().min(1).max(4_000),
@@ -43,6 +47,7 @@ export const elevationEnvelopeSchema = z
     cwd: z.string().min(1).max(4_096),
     cwdHash: sha256Schema,
     environmentHash: sha256Schema,
+    timeoutMs: z.number().int().min(100).max(7_200_000),
     recipeId: elevationRecipeSchema.shape.recipeId,
     issuedAt: z.iso.datetime({ offset: true }),
     expiresAt: z.iso.datetime({ offset: true }),

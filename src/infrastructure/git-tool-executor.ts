@@ -1,3 +1,5 @@
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
+
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { GitAgentService } from '../services/git-agent-service';
 import type {
@@ -57,4 +59,3 @@ export class GitToolExecutor implements RuntimeToolExecutorPort {
     return { structured: { receipt } };
   }
 }
-import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';

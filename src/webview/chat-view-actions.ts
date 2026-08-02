@@ -40,6 +40,10 @@ export interface ChatViewActions {
   reviewChanges(previewId?: string): Promise<void>;
   removeQueued(requestId: string): Promise<void>;
   resolveApproval(requestId: string, approved: boolean): Promise<void>;
+  runtimePause(): Promise<void>;
+  runtimeResume(): Promise<void>;
+  runtimeSteer(message: string): Promise<void>;
+  runtimeStop(): Promise<void>;
   selectAgentMode(mode: AgentMode): Promise<void>;
   selectModel(modelKey: string): Promise<void>;
   selectPermissionMode(mode: PermissionMode): Promise<boolean>;
