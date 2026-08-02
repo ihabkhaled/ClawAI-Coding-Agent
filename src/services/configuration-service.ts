@@ -27,6 +27,13 @@ function normalizePermissionMode(value: unknown): PermissionMode {
   return 'ASK';
 }
 
+function normalizeSelectedPermissionMode(mode: PermissionMode): PermissionMode {
+  if (mode === 'BYPASS_PERMISSIONS') return 'AUTONOMOUS_SCOPED';
+  if (mode === 'EDIT_AUTOMATICALLY') return 'AUTO_EDIT';
+  if (mode === 'MANUAL') return 'ASK';
+  return mode;
+}
+
 export interface RuntimeConfiguration extends GlobalConfiguration {
   agentMode: AgentMode;
   backendCustomUrl?: string;
@@ -158,9 +165,10 @@ export class ConfigurationService {
   }
 
   async selectPermissionMode(mode: PermissionMode): Promise<boolean> {
+    const canonicalMode = normalizeSelectedPermissionMode(mode);
     await vscode.workspace
       .getConfiguration('clawAI')
-      .update('permissionMode', mode, vscode.ConfigurationTarget.Workspace);
+      .update('permissionMode', canonicalMode, vscode.ConfigurationTarget.Workspace);
     return true;
   }
 

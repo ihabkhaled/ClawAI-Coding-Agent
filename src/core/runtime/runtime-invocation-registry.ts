@@ -156,7 +156,10 @@ function validateKeywords(schema: RuntimeJsonObject, type: SafeSchemaType, path:
 }
 
 function validateObjectSchema(schema: RuntimeJsonObject, path: string): void {
-  if (schema.additionalProperties !== false) {
+  if (
+    schema.additionalProperties !== false &&
+    !(path !== '$' && schema.additionalProperties === true)
+  ) {
     throw new Error(`Tool input schema ${path} must deny additional properties`);
   }
   const properties = schemaObject(schema.properties ?? {}, `${path}.properties`);
@@ -271,6 +274,7 @@ function validateObjectValue(
   for (const [key, entry] of Object.entries(value)) {
     const childSchema = properties[key];
     if (childSchema === undefined) {
+      if (schema.additionalProperties === true) continue;
       throw new Error(`Tool arguments ${path}.${key} is not allowed`);
     }
     validateValue(entry, schemaObject(childSchema, `${path}.${key}`), `${path}.${key}`);

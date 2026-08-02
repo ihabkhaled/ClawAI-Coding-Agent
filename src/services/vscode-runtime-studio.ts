@@ -67,6 +67,8 @@ import {
   VscodeRunJournalKeyStore,
   VscodeRunJournalStorage,
 } from '../infrastructure/vscode-run-journal-adapter';
+import { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-binding-store';
+import { VscodeObservabilitySink } from '../infrastructure/vscode-observability-sink';
 
 import { BrowserControllerService } from './browser-controller-service';
 import { ContainerEngineService } from './container-engine-service';
@@ -81,6 +83,7 @@ import { EvidenceBundleService } from './evidence-bundle-service';
 import { ExecutionTargetRegistry } from './execution-target-registry';
 import { FileTransactionService } from './file-transaction-service';
 import { GitAgentService } from './git-agent-service';
+import { LocalObservabilityService } from './observability-service';
 import { ProcessSupervisorService } from './process-supervisor-service';
 import { ProjectPolicyService } from './project-policy-service';
 import { RunJournalService } from './run-journal-service';
@@ -96,6 +99,7 @@ import type { ExternalOutputGrantStore } from './agent-coordinator.types';
 import type { ConfigurationService, RuntimeConfiguration } from './configuration-service';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { BackendClient } from '../backend/backend-client';
+import type { OutputLogger } from '../infrastructure/output-logger';
 import type { ApprovalBroker } from '../core/approval-broker';
 import type { BrowserScope } from '../core/browser-operation';
 import type { ExtensionState } from '../core/extension-state';
@@ -123,6 +127,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   private readonly targets: ExecutionTargetRegistry;
   private readonly policy: RuntimePolicyV2Adapter;
   private readonly intelligenceIndex: VscodeIntelligenceIndex;
+  private readonly observability: LocalObservabilityService;
   private active: RuntimeRunService | undefined;
   private activeRunId: string | undefined;
   private targetManifestHash: string | undefined;
@@ -136,11 +141,16 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     externalOutputs: ExternalOutputGrantStore,
     approvals: ApprovalBroker,
     backend: () => BackendClient,
+    logger: OutputLogger,
   ) {
     this.files = new VscodeFileTransactionAdapter(externalOutputs);
     this.transactions = new FileTransactionService(this.files);
-    this.transport = new BackendRuntimeTransport(backend);
+    this.transport = new BackendRuntimeTransport(
+      backend,
+      new VscodeRuntimeBindingStore(context.workspaceState),
+    );
     this.stream = new RuntimeEventStreamService(this.transport);
+    this.observability = new LocalObservabilityService(new VscodeObservabilitySink(logger));
     this.targets = new ExecutionTargetRegistry({
       cancelTarget: async () => this.cancel(),
       cleanupOwnedProcesses: () => {
@@ -240,7 +250,9 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     );
     const readiness = new ServerReadinessService(
       () => this.browserScope(this.configuration.read()),
-      { isRunning: () => false, recentLogs: () => '' },
+      {
+        evidence: (sessionId, runId) => this.processes.readinessEvidence(sessionId, runId),
+      },
     );
     this.intelligenceIndex = new VscodeIntelligenceIndex(
       this.files,
@@ -316,6 +328,17 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     const manifest = this.state.snapshot.runtime.capabilityManifest;
     if (manifest === undefined) throw new Error('Runtime capability manifest is unavailable');
     const definitions = this.router.definitions();
+    const traceId = input.requestId;
+    const spanId = `span:${randomUUID()}`;
+    const startedAt = new Date().toISOString();
+    this.observability.emit({
+      name: 'runtime.v2.run',
+      traceId,
+      spanId,
+      startedAt,
+      status: 'unset',
+      attributes: { threadId: input.threadId, toolCount: definitions.length },
+    });
     const runtime = new RuntimeRunService({
       clock: { now: Date.now },
       currentEpochs: () => this.epochs,
@@ -364,6 +387,26 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         },
         input.signal,
       );
+      this.observability.emit({
+        name: 'runtime.v2.run',
+        traceId,
+        spanId,
+        startedAt,
+        completedAt: new Date().toISOString(),
+        status: 'ok',
+        attributes: { threadId: input.threadId, toolCount: definitions.length },
+      });
+    } catch (error) {
+      this.observability.emit({
+        name: 'runtime.v2.run',
+        traceId,
+        spanId,
+        startedAt,
+        completedAt: new Date().toISOString(),
+        status: 'error',
+        attributes: { threadId: input.threadId, toolCount: definitions.length },
+      });
+      throw error;
     } finally {
       this.active = undefined;
       this.activeRunId = undefined;

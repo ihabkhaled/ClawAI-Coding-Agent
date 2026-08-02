@@ -182,17 +182,23 @@ export class VscodeDevelopmentServiceReadiness implements ManagedServiceReadines
   ): Promise<boolean> {
     if (definition.readinessUrl === undefined) return true;
     try {
-      await this.readiness.wait(
+      const receipt =
+        instance.processReceipt === undefined
+          ? undefined
+          : processReceiptSchema.parse(instance.processReceipt);
+      const result = await this.readiness.wait(
         {
           url: definition.readinessUrl,
-          processId: instance.instanceId,
-          timeoutMs: 120_000,
+          ...(receipt === undefined ? {} : { processSessionId: receipt.sessionId }),
+          attempts: 20,
+          requestTimeoutMs: 3_000,
           intervalMs: 500,
           expectedStatuses: [200, 204, 301, 302, 307, 308],
         },
+        instance.ownerRunId,
         signal,
       );
-      return true;
+      return result.ready;
     } catch {
       return false;
     }

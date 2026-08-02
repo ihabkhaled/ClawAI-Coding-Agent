@@ -39,7 +39,7 @@ export const gitToolDefinition: ToolDefinition = {
   ],
   riskClasses: ['inspect', 'git-mutate', 'network', 'publish', 'destructive'],
   targetIds: ['target:workspace'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.git,
 };
 
 export class GitToolExecutor implements RuntimeToolExecutorPort {
@@ -57,3 +57,4 @@ export class GitToolExecutor implements RuntimeToolExecutorPort {
     return { structured: { receipt } };
   }
 }
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';

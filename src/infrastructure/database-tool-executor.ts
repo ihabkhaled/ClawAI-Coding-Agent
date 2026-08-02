@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
+
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { DatabaseProfileVault } from '../services/database-profile-vault';
@@ -25,7 +27,7 @@ export const databaseToolDefinition: ToolDefinition = {
   ],
   riskClasses: ['database-read', 'database-write', 'destructive'],
   targetIds: ['target:database'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.database,
 };
 
 const migrationPatterns = [

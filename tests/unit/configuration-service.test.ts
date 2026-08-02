@@ -67,14 +67,14 @@ describe('ConfigurationService model selection', () => {
     expect(vscodeConfiguration.updates).toEqual(['routingMode:AUTO', 'selectedModel:']);
   });
 
-  it('persists agent and permission modes after the workbench has approved them', async () => {
+  it('persists the canonical autonomous mode after a legacy full-access choice is approved', async () => {
     const service = new ConfigurationService();
 
     await service.selectAgentMode('PLAN');
     await expect(service.selectPermissionMode('BYPASS_PERMISSIONS')).resolves.toBe(true);
     expect(vscodeConfiguration.updates).toEqual([
       'agentMode:PLAN',
-      'permissionMode:BYPASS_PERMISSIONS',
+      'permissionMode:AUTONOMOUS_SCOPED',
     ]);
   });
 

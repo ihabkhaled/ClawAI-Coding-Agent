@@ -174,6 +174,19 @@ export class ProcessSupervisorService implements vscode.Disposable {
     };
   }
 
+  readinessEvidence(
+    sessionId: string,
+    runId: string,
+  ): { readonly running: boolean; readonly logs: string } {
+    const session = this.sessions.get(sessionId);
+    if (session?.receipt.runId !== runId)
+      throw new Error('Process readiness evidence is stale or not owned by this run');
+    return {
+      running: session.lifecycle === 'running' || session.lifecycle === 'paused',
+      logs: session.log,
+    };
+  }
+
   interrupt(receipt: ProcessIdentityReceipt): void {
     this.owned(receipt).process.kill('SIGINT');
   }

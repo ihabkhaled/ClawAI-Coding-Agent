@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
+
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
@@ -16,7 +18,7 @@ export const intelligenceToolDefinition: ToolDefinition = {
   operations: ['refresh', 'query', 'estimate-context', 'invalidate'],
   riskClasses: ['inspect'],
   targetIds: ['target:workspace'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.intelligence,
 };
 
 const identitySchema = z

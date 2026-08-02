@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { z } from 'zod';
 
 import { fileTransactionSchema } from '../core/file-transaction';
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 import { isSafeRelativeWorkspacePath } from '../core/workspace-path-policy';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
@@ -63,7 +64,7 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
   ],
   riskClasses: ['inspect', 'workspace-write', 'external-write', 'destructive'],
   targetIds: ['target:workspace'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.files,
 };
 
 export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {

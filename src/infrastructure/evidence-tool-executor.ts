@@ -3,6 +3,7 @@ import { z } from 'zod';
 
 import { renderEvidenceMarkdown, verifyEvidenceBundle } from '../core/evidence-bundle';
 import { contentHash } from '../core/file-transaction';
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -20,7 +21,7 @@ export const evidenceToolDefinition: ToolDefinition = {
   operations: ['build', 'verify', 'render-markdown', 'export-markdown', 'export-zip'],
   riskClasses: ['inspect', 'workspace-write'],
   targetIds: ['target:workspace'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.evidence,
 };
 
 const outputSchema = z

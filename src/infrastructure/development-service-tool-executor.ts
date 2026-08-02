@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
+
 import type { DevelopmentServiceDiscovery } from './development-service-discovery';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { DevelopmentServiceManager } from '../services/development-service-manager';
@@ -16,7 +18,7 @@ export const developmentServiceToolDefinition: ToolDefinition = {
   operations: ['discover', 'register', 'restore', 'start', 'start-all', 'restart', 'stop', 'list'],
   riskClasses: ['inspect', 'process', 'destructive'],
   targetIds: ['target:workspace'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.services,
 };
 
 const rootKeySchema = z.object({ rootKey: z.string().min(1).max(200) }).strict();

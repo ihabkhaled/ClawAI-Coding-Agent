@@ -1,4 +1,5 @@
 import { commandSpecSchema } from '../core/command-spec';
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
 import { runCommandSpec } from './bounded-command-runner';
 
@@ -17,7 +18,7 @@ export const structuredCommandToolDefinition: ToolDefinition = {
   operations: ['run'],
   riskClasses: ['process', 'network'],
   targetIds: ['target:workspace'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.command,
 };
 
 export class StructuredCommandToolExecutor implements RuntimeToolExecutorPort {

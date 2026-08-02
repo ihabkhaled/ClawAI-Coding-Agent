@@ -31,6 +31,40 @@ function event(
 }
 
 describe('runtime event reducer', () => {
+  it('projects a backend tool request that carries its canonical invocation envelope', () => {
+    const created = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
+    const invocation = {
+      schemaVersion: '2.0',
+      invocationId: 'invocation-id-0001',
+      runId: 'run-id-0001',
+      turnId: 'turn-id-0001',
+      toolName: 'workspace.files',
+      toolVersion: '2.0.0',
+      operation: 'read',
+      arguments: { rootKey: 'workspace-root', path: 'README.md' },
+      targetId: 'target:workspace',
+      epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
+      idempotencyKey: 'invocation-key-0001',
+      requestedAt: '2026-08-02T10:00:01.000Z',
+    };
+
+    const requested = reduceRuntimeEvent(
+      created,
+      event(1, 'tool.requested', {
+        invocationId: invocation.invocationId,
+        invocation,
+        operation: invocation.operation,
+        toolName: invocation.toolName,
+      }),
+    );
+
+    expect(requested.runs['run-id-0001']?.invocations['invocation-id-0001']).toEqual({
+      operation: 'read',
+      status: 'requested',
+      toolName: 'workspace.files',
+    });
+  });
+
   it('reduces every canonical projection lifecycle without retaining raw tool content', () => {
     const created = reduceRuntimeEvent(createRuntimeSnapshot(), event(0, 'run.created'));
     const turn = reduceRuntimeEvent(
