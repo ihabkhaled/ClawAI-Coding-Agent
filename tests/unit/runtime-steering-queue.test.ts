@@ -221,4 +221,40 @@ describe('runtime steering queue', () => {
     expect(terminal.historyBytes).toBeGreaterThan(0);
     expect(Object.keys(terminal.sequenceFingerprints).length).toBeLessThanOrEqual(32);
   });
+
+  it('compacts terminal entries by encoded byte size before accepting the next message', () => {
+    const content = 'x'.repeat(30_000);
+    let terminal = closeSteeringQueue(createSteeringQueue('run-id-0001', epochs), 'completed');
+    for (let sequence = 0; sequence < 4; sequence += 1) {
+      terminal = receiveSteering(terminal, message(sequence, content));
+    }
+    const oldest = terminal.entries[0];
+    if (oldest === undefined) throw new Error('Expected terminal steering history');
+    const oversized = {
+      ...terminal,
+      entries: [...terminal.entries, oldest],
+      historyBytes: terminal.historyBytes + oldest.byteLength,
+    };
+
+    const compacted = receiveSteering(oversized, message(4));
+
+    expect(compacted.entries.map((entry) => entry.message.sequence)).toEqual([1, 2, 3, 0, 4]);
+    expect(compacted.historyBytes).toBeLessThanOrEqual(131_072);
+    expect(compacted.nextSequence).toBe(5);
+  });
+
+  it('fails closed when oversized retained history has no terminal entry to evict', () => {
+    const content = 'x'.repeat(30_000);
+    let active = createSteeringQueue('run-id-0001', epochs);
+    for (let sequence = 0; sequence < 4; sequence += 1) {
+      active = receiveSteering(active, message(sequence, content));
+    }
+    const protectedHistory = {
+      ...active,
+      entries: [...active.entries, ...active.entries],
+      historyBytes: active.historyBytes * 2,
+    };
+
+    expect(() => receiveSteering(protectedHistory, message(4))).toThrow(/history capacity/i);
+  });
 });

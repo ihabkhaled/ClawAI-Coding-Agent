@@ -25,9 +25,16 @@ export const safeRuntimeFixtureDefinition: ToolDefinition = {
   version: '1.0',
 };
 
+/** Prevents fixture output from representing an implausibly large workspace. */
+const MAX_FIXTURE_DOCUMENT_COUNT = 1_000_000;
+
 function validFixture(fixture: SafeRuntimeFixture): void {
-  if (!Number.isInteger(fixture.documentCount) || fixture.documentCount < 0) {
-    throw new Error('Fixture document count must be a nonnegative integer');
+  if (
+    !Number.isSafeInteger(fixture.documentCount) ||
+    fixture.documentCount < 0 ||
+    fixture.documentCount > MAX_FIXTURE_DOCUMENT_COUNT
+  ) {
+    throw new Error('Fixture document count must be a bounded nonnegative safe integer');
   }
   if (fixture.workspaceLabel.trim().length === 0 || fixture.workspaceLabel.length > 200) {
     throw new Error('Fixture workspace label must be bounded and non-empty');

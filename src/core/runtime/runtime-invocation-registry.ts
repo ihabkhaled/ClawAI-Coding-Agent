@@ -476,3 +476,17 @@ export function closeRuntimeInvocationRegistry(
     throw new Error('Runtime invocation registry is already terminal');
   return { ...registry, status };
 }
+
+export function advanceRuntimeInvocationRegistryTurn(
+  registry: RuntimeInvocationRegistry,
+  turnId: string,
+): RuntimeInvocationRegistry {
+  if (typeof turnId !== 'string' || turnId.length === 0) {
+    throw new Error('Runtime invocation registry requires a turn');
+  }
+  if (registry.status !== 'active') {
+    throw new Error('Runtime invocation registry is terminal');
+  }
+  if (registry.turnId === turnId) return registry;
+  return { ...registry, turnId };
+}

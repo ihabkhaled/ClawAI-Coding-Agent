@@ -40,6 +40,10 @@ const invocation = {
 function harness(
   overrides: {
     currentEpochs?: () => typeof epochs;
+    execute?: () => Promise<{ modelText?: string; structured?: Record<string, string | number> }>;
+    onSubmit?: () => void;
+    policy?: () => Promise<{ code: string; decision: 'allow' | 'deny'; message: string }>;
+    policyDecision?: 'allow' | 'deny';
     startReceipt?: { runId: string };
   } = {},
 ) {
@@ -50,14 +54,19 @@ function harness(
   const service = new RuntimeRunService({
     clock: { now: () => now },
     currentEpochs: overrides.currentEpochs ?? (() => epochs),
-    eventSink: { publish: (event) => events.push(event) },
-    executor: new SafeRuntimeFixtureExecutor({ documentCount: 3, workspaceLabel: 'Fixture' }),
+    eventSink: { publishBatch: (batch) => events.push(...batch) },
+    executor:
+      overrides.execute === undefined
+        ? new SafeRuntimeFixtureExecutor({ documentCount: 3, workspaceLabel: 'Fixture' })
+        : { execute: overrides.execute },
     policy: {
-      evaluate: async () => ({
-        code: 'POLICY_ALLOWED',
-        decision: 'allow' as const,
-        message: 'Allowed.',
-      }),
+      evaluate:
+        overrides.policy ??
+        (async () => ({
+          code: overrides.policyDecision === 'deny' ? 'POLICY_DENIED' : 'POLICY_ALLOWED',
+          decision: overrides.policyDecision ?? ('allow' as const),
+          message: overrides.policyDecision === 'deny' ? 'Denied.' : 'Allowed.',
+        })),
     },
     receiptId: () => 'receipt_01JZZZZZZZZZZZZZZZZZZZZZ',
     transport: {
@@ -66,6 +75,7 @@ function harness(
       },
       start: async (input) => overrides.startReceipt ?? { runId: input.runId },
       submitResult: async (_runId, result) => {
+        overrides.onSubmit?.();
         submitted.push(result);
       },
     },
@@ -85,6 +95,7 @@ describe('RuntimeRunService', () => {
   it('requires an admitted run before dispatch or cancellation', async () => {
     const { service } = harness();
 
+    expect(service.snapshot.runs).toEqual({});
     await expect(service.dispatch(invocation, { action: 'final' })).rejects.toThrow(
       /no runtime run/i,
     );
@@ -104,7 +115,7 @@ describe('RuntimeRunService', () => {
     const service = new RuntimeRunService({
       clock: { now: () => 1_000 },
       currentEpochs: () => currentEpochs,
-      eventSink: { publish: () => undefined },
+      eventSink: { publishBatch: () => undefined },
       executor: new SafeRuntimeFixtureExecutor({ documentCount: 3, workspaceLabel: 'Fixture' }),
       policy: {
         evaluate: async () => ({
@@ -130,17 +141,59 @@ describe('RuntimeRunService', () => {
     expect(cancelled).toEqual([start.runId]);
   });
 
+  it('reduces run creation before the event sink observes sequence zero', async () => {
+    const observedSequences: number[] = [];
+    const holder: { service?: RuntimeRunService } = {};
+    const service = new RuntimeRunService({
+      clock: { now: () => 1_000 },
+      currentEpochs: () => epochs,
+      eventSink: {
+        publishBatch: () => {
+          observedSequences.push(holder.service?.snapshot.runs[start.runId]?.lastSequence ?? -1);
+        },
+      },
+      executor: new SafeRuntimeFixtureExecutor({ documentCount: 3, workspaceLabel: 'Fixture' }),
+      policy: {
+        evaluate: async () => ({ code: 'ALLOW', decision: 'allow', message: 'Allowed.' }),
+      },
+      receiptId: () => 'receipt_01JZZZZZZZZZZZZZZZZZZZZZ',
+      transport: {
+        cancel: async () => undefined,
+        start: async (input) => ({ runId: input.runId }),
+        submitResult: async () => undefined,
+      },
+    });
+    holder.service = service;
+
+    await service.start(start);
+
+    expect(observedSequences).toEqual([0]);
+  });
+
   it('starts, dispatches the safe fixture, submits one result, and replays it exactly', async () => {
     const { events, service, submitted } = harness();
     await service.start(start);
+    expect(service.snapshot.runs[start.runId]?.lastSequence).toBe(0);
 
     const first = await service.dispatch(invocation, { action: 'final' });
     const replay = await service.dispatch(invocation, { action: 'final' });
 
     expect(first).toMatchObject({ status: 'succeeded', structured: { documentCount: 3 } });
     expect(replay).toBe(first);
+    expect(service.snapshot.runs[start.runId]?.status).toBe('completed');
     expect(submitted).toEqual([first]);
-    expect(events).toHaveLength(1);
+    expect(events.map((event) => (event as { type: string }).type)).toEqual([
+      'run.created',
+      'tool.requested',
+      'tool.started',
+      'run.budget.updated',
+      'run.budget.updated',
+      'tool.completed',
+      'run.completed',
+    ]);
+    expect(events.map((event) => (event as { sequence: number }).sequence)).toEqual([
+      0, 1, 2, 3, 4, 5, 6,
+    ]);
   });
 
   it('closes steering when a final tool result terminates the runtime', async () => {
@@ -227,7 +280,7 @@ describe('RuntimeRunService', () => {
     ).rejects.toThrow(/another run/i);
     await expect(
       service.dispatch({ ...invocation, turnId: 'turn-id-other' }, { action: 'final' }),
-    ).rejects.toThrow(/another run/i);
+    ).rejects.toThrow(/another turn/i);
   });
 
   it('rejects an account epoch change after start before a tool can execute', async () => {
@@ -237,5 +290,78 @@ describe('RuntimeRunService', () => {
     currentEpochs = { ...epochs, account: 99 };
 
     await expect(service.dispatch(invocation, { action: 'final' })).rejects.toThrow(/epoch/i);
+  });
+
+  it('records explicit model and repair boundaries without tool-dispatch double debits', async () => {
+    const { events, service } = harness();
+    await service.start(start);
+
+    expect(service.beginModelTurn(false, 'turn_01K11111111111111111111111').usage).toMatchObject({
+      modelTurns: 1,
+      repairAttempts: 0,
+    });
+    expect(service.beginModelTurn(true, 'turn_01K22222222222222222222222').usage).toMatchObject({
+      modelTurns: 2,
+      repairAttempts: 1,
+    });
+    await service.dispatch(
+      { ...invocation, turnId: 'turn_01K22222222222222222222222' },
+      { action: 'final' },
+    );
+
+    const budgetEvents = events.filter(
+      (event): event is { type: string; payload: { usage: { modelTurns: number } } } =>
+        (event as { type: string }).type === 'run.budget.updated',
+    );
+    expect(budgetEvents.at(-1)?.payload.usage.modelTurns).toBe(2);
+    expect(
+      events.filter((event) => (event as { type: string }).type === 'model.turn.started'),
+    ).toHaveLength(2);
+  });
+
+  it('fails the explicit model boundary before an exhausted model or repair budget emits an event', async () => {
+    const { events, service } = harness();
+    await service.start({
+      ...start,
+      budget: { ...start.budget, maxModelTurns: 1, maxRepairAttempts: 0 },
+    });
+    service.beginModelTurn();
+    await expect(Promise.resolve().then(() => service.beginModelTurn())).rejects.toThrow(
+      /model turn/i,
+    );
+    await expect(Promise.resolve().then(() => service.beginModelTurn(true))).rejects.toThrow(
+      /model turn/i,
+    );
+    expect(
+      events.filter((event) => (event as { type: string }).type === 'model.turn.started'),
+    ).toHaveLength(1);
+  });
+
+  it.each([
+    { toolName: 'fixture.unknown' },
+    { toolVersion: '2.0' },
+    { operation: 'write' },
+    { targetId: 'target:unknown' },
+  ])('rejects an unknown invocation before it publishes lifecycle events', async (change) => {
+    const { events, service, submitted } = harness();
+    await service.start(start);
+
+    await expect(
+      service.dispatch({ ...invocation, ...change }, { action: 'final' }),
+    ).rejects.toThrow();
+    expect(events.map((event) => (event as { type: string }).type)).toEqual(['run.created']);
+    expect(submitted).toEqual([]);
+  });
+
+  it('records a denied tool result without executing the fixture', async () => {
+    const { events, service, submitted } = harness({ policyDecision: 'deny' });
+    await service.start(start);
+
+    const result = await service.dispatch(invocation, { action: 'final' });
+
+    expect(result.status).toBe('denied');
+    expect(submitted).toHaveLength(1);
+    expect(events.map((event) => (event as { type: string }).type)).toContain('tool.completed');
+    expect(events.map((event) => (event as { type: string }).type)).toContain('run.blocked');
   });
 });

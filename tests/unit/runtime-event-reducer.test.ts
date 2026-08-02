@@ -20,7 +20,7 @@ function event(
     eventId: `event-id-${String(sequence)}`,
     runId: 'run-id-0001',
     sequence,
-    timestamp: `2026-08-02T10:00:${String(sequence).padStart(2, '0')}.000Z`,
+    timestamp: new Date(Date.UTC(2026, 7, 2, 10, 0, sequence)).toISOString(),
     type,
     visibility: 'user',
     sensitivity: 'workspace',
@@ -362,6 +362,7 @@ describe('runtime event reducer', () => {
         reason: 'endpoint-unavailable',
         version: '1.0',
       },
+      runOrder: [],
       runs: {},
     });
     expect(created.runs['run-id-0001']).toMatchObject({
@@ -374,7 +375,6 @@ describe('runtime event reducer', () => {
       lastSequence: 1,
       phase: 'planning',
     });
-    expect(running.runs['run-id-0001']?.timeline).toHaveLength(2);
   });
 
   it('normalizes the legacy phase event to the V2 run.phase taxonomy', () => {

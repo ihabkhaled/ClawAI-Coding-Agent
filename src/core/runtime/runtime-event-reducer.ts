@@ -1,11 +1,21 @@
 import { z } from 'zod';
 
 import {
+  canonicalizeRuntimeValue,
+  compactRuntimeEventIdentities,
+  isRuntimeEventReplay,
+  runtimeEpochsMatch,
+  withoutRuntimeRunIdentities,
+  type RuntimeEventIdentity,
+} from './runtime-event-identity';
+import { compactProjectionBounds, compactTimeline } from './runtime-event-reducer-bounds';
+import {
   sameBudgetLimits,
   usageDoesNotRegress,
   usageWithinLimits,
 } from './runtime-event-reducer-budget';
 import { runtimeProtocolFallback, type RuntimeProtocolSelection } from './runtime-negotiation';
+import { admitRuntimeRunCollection, selectActiveRuntimeRun } from './runtime-run-collection';
 import { runBudgetSchema, type RunBudget } from './runtime-tool-contracts';
 
 import type { CapabilityManifest } from './capability-manifest';
@@ -14,22 +24,20 @@ import type { RuntimeBudgetUsage } from './runtime-run-budget';
 
 export type RuntimeRunStatus = 'running' | 'completed' | 'blocked' | 'failed' | 'cancelled';
 
-export interface RuntimeEventIdentity {
-  readonly fingerprint: string;
-  readonly runId: string;
-  readonly sequence: number;
-}
-
 export interface RuntimeRunSnapshot {
   readonly budget: RuntimeBudgetProjection | undefined;
   readonly epochs: RuntimeEvent['epochs'];
   readonly lastSequence: number;
+  readonly invocationOrder: readonly string[];
   readonly invocations: Readonly<Record<string, RuntimeInvocationProjection>>;
   readonly phase: string | undefined;
   readonly runId: string;
   readonly status: RuntimeRunStatus;
   readonly steering: Readonly<Record<string, RuntimeSteeringProjection>>;
+  readonly steeringNextSequence: number;
+  readonly steeringOrder: readonly string[];
   readonly timeline: readonly RuntimeEvent[];
+  readonly turnOrder: readonly string[];
   readonly turns: Readonly<Record<string, RuntimeTurnProjection>>;
 }
 
@@ -71,6 +79,7 @@ export interface RuntimeSnapshot {
   readonly capabilityManifest: CapabilityManifest | undefined;
   readonly eventIds: Readonly<Record<string, RuntimeEventIdentity>>;
   readonly protocolSelection: RuntimeProtocolSelection;
+  readonly runOrder: readonly string[];
   readonly runs: Readonly<Record<string, RuntimeRunSnapshot>>;
 }
 
@@ -145,43 +154,9 @@ export function createRuntimeSnapshot(
     capabilityManifest,
     eventIds: {},
     protocolSelection,
+    runOrder: [],
     runs: {},
   };
-}
-
-function canonicalize(value: unknown): string {
-  if (value === null || typeof value === 'boolean' || typeof value === 'string') {
-    return JSON.stringify(value);
-  }
-  if (typeof value === 'number') {
-    if (!Number.isFinite(value)) {
-      throw new Error('Runtime event contains a non-finite number');
-    }
-    return JSON.stringify(value);
-  }
-  if (Array.isArray(value)) {
-    return `[${value.map((entry) => canonicalize(entry)).join(',')}]`;
-  }
-  if (typeof value === 'object') {
-    const entries = Object.entries(value).sort(([left], [right]) => left.localeCompare(right));
-    return `{${entries
-      .map(([key, entry]) => `${JSON.stringify(key)}:${canonicalize(entry)}`)
-      .join(',')}}`;
-  }
-  throw new Error('Runtime event contains a non-serializable value');
-}
-
-function eventsMatch(identity: RuntimeEventIdentity, event: RuntimeEvent): boolean {
-  return identity.fingerprint === canonicalize(event);
-}
-
-function epochsMatch(left: RuntimeEvent['epochs'], right: RuntimeEvent['epochs']): boolean {
-  return (
-    left.account === right.account &&
-    left.workspace === right.workspace &&
-    left.target === right.target &&
-    left.policy === right.policy
-  );
 }
 
 function statusFor(event: RuntimeEvent, current: RuntimeRunStatus): RuntimeRunStatus {
@@ -227,15 +202,38 @@ function assertInvocationCorrelation(event: RuntimeEvent, invocationId: string):
 
 type RuntimeProjectionState = Pick<
   RuntimeRunSnapshot,
-  'budget' | 'invocations' | 'steering' | 'turns'
+  | 'budget'
+  | 'invocationOrder'
+  | 'invocations'
+  | 'steering'
+  | 'steeringNextSequence'
+  | 'steeringOrder'
+  | 'turnOrder'
+  | 'turns'
 >;
 
 function projectionState(run: RuntimeRunSnapshot | undefined): RuntimeProjectionState {
+  if (run !== undefined) {
+    return {
+      budget: run.budget,
+      invocationOrder: run.invocationOrder,
+      invocations: run.invocations,
+      steering: run.steering,
+      steeringNextSequence: run.steeringNextSequence,
+      steeringOrder: run.steeringOrder,
+      turnOrder: run.turnOrder,
+      turns: run.turns,
+    };
+  }
   return {
-    budget: run?.budget,
-    invocations: run?.invocations ?? {},
-    steering: run?.steering ?? {},
-    turns: run?.turns ?? {},
+    budget: undefined,
+    invocationOrder: [],
+    invocations: {},
+    steering: {},
+    steeringNextSequence: 0,
+    steeringOrder: [],
+    turnOrder: [],
+    turns: {},
   };
 }
 
@@ -248,6 +246,7 @@ function projectTurnStarted(
   if (base.turns[payload.turnId] !== undefined) invalidPayload(event);
   return {
     ...base,
+    turnOrder: [...base.turnOrder, payload.turnId],
     turns: { ...base.turns, [payload.turnId]: { status: 'streaming', textBytes: 0 } },
   };
 }
@@ -292,6 +291,7 @@ function projectRequested(
   if (base.invocations[payload.invocationId] !== undefined) invalidPayload(event);
   return {
     ...base,
+    invocationOrder: [...base.invocationOrder, payload.invocationId],
     invocations: {
       ...base.invocations,
       [payload.invocationId]: {
@@ -321,8 +321,7 @@ function projectCompleted(
   const payload = parseKnownPayload(event, completedPayloadSchema);
   assertInvocationCorrelation(event, payload.invocationId);
   const current = base.invocations[payload.invocationId];
-  if (current === undefined || !['requested', 'running'].includes(current.status))
-    invalidPayload(event);
+  if (current?.status !== 'running') invalidPayload(event);
   return {
     ...base,
     invocations: {
@@ -340,7 +339,7 @@ function projectSteering(
   const current = base.steering[payload.steeringId];
   if (
     event.type === 'run.steering.received' &&
-    (current !== undefined || payload.sequence !== Object.keys(base.steering).length)
+    (current !== undefined || payload.sequence !== base.steeringNextSequence)
   ) {
     invalidPayload(event);
   }
@@ -354,6 +353,12 @@ function projectSteering(
   return {
     ...base,
     steering: { ...base.steering, [payload.steeringId]: { sequence: payload.sequence, status } },
+    steeringNextSequence:
+      event.type === 'run.steering.received'
+        ? base.steeringNextSequence + 1
+        : base.steeringNextSequence,
+    steeringOrder:
+      current === undefined ? [...base.steeringOrder, payload.steeringId] : base.steeringOrder,
   };
 }
 
@@ -363,7 +368,7 @@ function projectRejectedSteering(
 ): RuntimeProjectionState {
   const payload = parseKnownPayload(event, rejectedSteeringPayloadSchema);
   const current = base.steering[payload.steeringId];
-  if (current === undefined && payload.sequence !== Object.keys(base.steering).length) {
+  if (current === undefined && payload.sequence !== base.steeringNextSequence) {
     invalidPayload(event);
   }
   if (
@@ -382,6 +387,10 @@ function projectRejectedSteering(
         status: 'rejected',
       },
     },
+    steeringNextSequence:
+      current === undefined ? base.steeringNextSequence + 1 : base.steeringNextSequence,
+    steeringOrder:
+      current === undefined ? [...base.steeringOrder, payload.steeringId] : base.steeringOrder,
   };
 }
 
@@ -448,28 +457,11 @@ function applyKnownProjection(
   run: RuntimeRunSnapshot | undefined,
 ): RuntimeProjectionState {
   const base = projectionState(run);
-  return projectionHandlers[event.type]?.(event, base) ?? base;
+  const projection = projectionHandlers[event.type]?.(event, base) ?? base;
+  return compactProjectionBounds(projection);
 }
 
-function selectActiveRun(
-  priorActiveRunId: string | undefined,
-  eventRunId: string,
-  runs: Readonly<Record<string, RuntimeRunSnapshot>>,
-): string | undefined {
-  if (runs[eventRunId]?.status === 'running') return eventRunId;
-  if (priorActiveRunId !== undefined && runs[priorActiveRunId]?.status === 'running')
-    return priorActiveRunId;
-  const candidates = Object.values(runs).filter((run) => run.status === 'running');
-  candidates.sort(
-    (left, right) =>
-      right.lastSequence - left.lastSequence || left.runId.localeCompare(right.runId),
-  );
-  return candidates[0]?.runId;
-}
-
-function isTerminal(status: RuntimeRunStatus): boolean {
-  return status !== 'running';
-}
+const isTerminal = (status: RuntimeRunStatus): boolean => status !== 'running';
 
 function assertCanAppend(existingRun: RuntimeRunSnapshot, event: RuntimeEvent): void {
   const expectedSequence = existingRun.lastSequence + 1;
@@ -478,7 +470,7 @@ function assertCanAppend(existingRun: RuntimeRunSnapshot, event: RuntimeEvent): 
       `Runtime event sequence must advance from ${String(existingRun.lastSequence)} to ${String(expectedSequence)} for run ${event.runId}`,
     );
   }
-  if (!epochsMatch(existingRun.epochs, event.epochs)) {
+  if (!runtimeEpochsMatch(existingRun.epochs, event.epochs)) {
     throw new Error(`Runtime event epochs changed for run ${event.runId}`);
   }
   if (isTerminal(existingRun.status)) {
@@ -487,63 +479,61 @@ function assertCanAppend(existingRun: RuntimeRunSnapshot, event: RuntimeEvent): 
 }
 
 function assertCanCreate(event: RuntimeEvent): void {
-  if (event.sequence !== 0 || event.type !== 'run.created') {
+  if (event.sequence !== 0 || event.type !== 'run.created')
     throw new Error(`Runtime run ${event.runId} must begin with run.created at sequence 0`);
-  }
-}
-
-function isAlreadyApplied(snapshot: RuntimeSnapshot, event: RuntimeEvent): boolean {
-  const existingIdentity = snapshot.eventIds[event.eventId];
-  if (existingIdentity === undefined) return false;
-  if (eventsMatch(existingIdentity, event)) return true;
-  throw new Error(`Runtime event ${event.eventId} conflicts with an earlier event`);
 }
 
 export function reduceRuntimeEvent(
   snapshot: RuntimeSnapshot,
   event: RuntimeEvent,
 ): RuntimeSnapshot {
-  if (event.type === 'run.phase.changed') {
-    return reduceRuntimeEvent(snapshot, normalizedEvent(event));
-  }
-  if (isAlreadyApplied(snapshot, event)) return snapshot;
+  const normalized = normalizedEvent(event);
+  if (isRuntimeEventReplay(snapshot.eventIds, normalized)) return snapshot;
 
-  const existingRun = snapshot.runs[event.runId];
+  const collection = admitRuntimeRunCollection(snapshot.runs, snapshot.runOrder, normalized.runId);
+  const existingRun = collection.runs[normalized.runId];
   if (existingRun === undefined) {
-    assertCanCreate(event);
+    assertCanCreate(normalized);
   } else {
-    assertCanAppend(existingRun, event);
+    assertCanAppend(existingRun, normalized);
   }
 
-  const knownPayloadSchema = knownPayloadSchemas[event.type];
-  if (knownPayloadSchema !== undefined) parseKnownPayload(event, knownPayloadSchema);
+  const knownPayloadSchema = knownPayloadSchemas[normalized.type];
+  if (knownPayloadSchema !== undefined) parseKnownPayload(normalized, knownPayloadSchema);
 
   const currentStatus = existingRun?.status ?? 'running';
-  const projection = applyKnownProjection(event, existingRun);
+  const projection = applyKnownProjection(normalized, existingRun);
+  const priorTimeline = existingRun?.timeline ?? [];
+  const timeline = compactTimeline(priorTimeline, normalized);
   const nextRun: RuntimeRunSnapshot = {
     ...projection,
-    epochs: existingRun?.epochs ?? event.epochs,
-    lastSequence: event.sequence,
-    phase: phaseFor(event, existingRun?.phase),
-    runId: event.runId,
-    status: statusFor(event, currentStatus),
-    timeline: [...(existingRun?.timeline ?? []), event],
+    epochs: existingRun?.epochs ?? normalized.epochs,
+    lastSequence: normalized.sequence,
+    phase: phaseFor(normalized, existingRun?.phase),
+    runId: normalized.runId,
+    status: statusFor(normalized, currentStatus),
+    timeline,
   };
-  const nextRuns = { ...snapshot.runs, [event.runId]: nextRun };
-  const nextActiveRunId = selectActiveRun(snapshot.activeRunId, event.runId, nextRuns);
+  const nextRuns = { ...collection.runs, [normalized.runId]: nextRun };
+  const nextActiveRunId = selectActiveRuntimeRun(snapshot.activeRunId, normalized.runId, nextRuns);
 
   return {
     activeRunId: nextActiveRunId,
     capabilityManifest: snapshot.capabilityManifest,
     eventIds: {
-      ...snapshot.eventIds,
-      [event.eventId]: {
-        fingerprint: canonicalize(event),
-        runId: event.runId,
-        sequence: event.sequence,
+      ...compactRuntimeEventIdentities(
+        withoutRuntimeRunIdentities(snapshot.eventIds, collection.evictedRunId),
+        priorTimeline,
+        timeline,
+      ),
+      [normalized.eventId]: {
+        fingerprint: canonicalizeRuntimeValue(normalized),
+        runId: normalized.runId,
+        sequence: normalized.sequence,
       },
     },
     protocolSelection: snapshot.protocolSelection,
+    runOrder: collection.order,
     runs: nextRuns,
   };
 }

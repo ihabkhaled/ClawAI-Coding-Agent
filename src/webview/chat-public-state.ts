@@ -1,14 +1,62 @@
 import type { ExtensionSnapshot } from '../core/extension-state';
 import type { RuntimeSnapshot } from '../core/runtime/runtime-event-reducer';
 
+export interface PublicRuntimeBudgetState {
+  readonly limits: {
+    readonly maxModelTurns: number;
+    readonly maxOutputBytes: number;
+    readonly maxRepairAttempts: number;
+    readonly maxRuntimeMs: number;
+    readonly maxToolCalls: number;
+    readonly maxToolResultBytes: number;
+    readonly maxToolRounds: number;
+  };
+  readonly usage: {
+    readonly modelTurns: number;
+    readonly outputBytes: number;
+    readonly repairAttempts: number;
+    readonly toolCalls: number;
+    readonly toolResultBytes: number;
+    readonly toolRounds: number;
+  };
+}
+
+export interface PublicRuntimeInvocationState {
+  readonly operation: string;
+  readonly receipt:
+    | {
+        readonly durationMs: number;
+        readonly outputBytes: number;
+        readonly receiptId: string;
+        readonly redactionApplied: boolean;
+        readonly truncated: boolean;
+      }
+    | undefined;
+  readonly status:
+    'requested' | 'running' | 'succeeded' | 'failed' | 'denied' | 'cancelled' | 'timed-out';
+  readonly toolName: string;
+}
+
+export interface PublicRuntimeSteeringState {
+  readonly reason: 'stale-epochs' | 'run-cancelled' | 'run-terminal' | undefined;
+  readonly sequence: number;
+  readonly status: 'received' | 'applied' | 'rejected';
+}
+
+export interface PublicRuntimeTurnState {
+  readonly status: 'streaming' | 'completed' | 'failed';
+  readonly summary: string | undefined;
+  readonly textBytes: number;
+}
+
 export interface PublicRuntimeRunState {
-  readonly budget: RuntimeSnapshot['runs'][string]['budget'];
-  readonly invocations: RuntimeSnapshot['runs'][string]['invocations'];
+  readonly budget: PublicRuntimeBudgetState | undefined;
+  readonly invocations: Readonly<Record<string, PublicRuntimeInvocationState>>;
   readonly lastSequence: number;
   readonly phase: string | undefined;
-  readonly status: RuntimeSnapshot['runs'][string]['status'];
-  readonly steering: RuntimeSnapshot['runs'][string]['steering'];
-  readonly turns: RuntimeSnapshot['runs'][string]['turns'];
+  readonly status: 'running' | 'completed' | 'blocked' | 'failed' | 'cancelled';
+  readonly steering: Readonly<Record<string, PublicRuntimeSteeringState>>;
+  readonly turns: Readonly<Record<string, PublicRuntimeTurnState>>;
 }
 
 export interface PublicRuntimeState {
@@ -19,14 +67,54 @@ export interface PublicRuntimeState {
 export function toPublicRuntimeState(runtime: RuntimeSnapshot): PublicRuntimeState {
   const runs: Record<string, PublicRuntimeRunState> = {};
   for (const [runId, run] of Object.entries(runtime.runs)) {
+    const invocations: Record<string, PublicRuntimeInvocationState> = {};
+    for (const [invocationId, invocation] of Object.entries(run.invocations)) {
+      invocations[invocationId] = {
+        operation: invocation.operation,
+        receipt:
+          invocation.receipt === undefined
+            ? undefined
+            : {
+                durationMs: invocation.receipt.durationMs,
+                outputBytes: invocation.receipt.outputBytes,
+                receiptId: invocation.receipt.receiptId,
+                redactionApplied: invocation.receipt.redactionApplied,
+                truncated: invocation.receipt.truncated,
+              },
+        status: invocation.status,
+        toolName: invocation.toolName,
+      };
+    }
+    const steering: Record<string, PublicRuntimeSteeringState> = {};
+    for (const [steeringId, entry] of Object.entries(run.steering)) {
+      steering[steeringId] = {
+        reason: entry.reason,
+        sequence: entry.sequence,
+        status: entry.status,
+      };
+    }
+    const turns: Record<string, PublicRuntimeTurnState> = {};
+    for (const [turnId, turn] of Object.entries(run.turns)) {
+      turns[turnId] = {
+        status: turn.status,
+        summary: turn.summary,
+        textBytes: turn.textBytes,
+      };
+    }
     runs[runId] = {
-      budget: run.budget,
-      invocations: run.invocations,
+      budget:
+        run.budget === undefined
+          ? undefined
+          : {
+              limits: { ...run.budget.limits },
+              usage: { ...run.budget.usage },
+            },
+      invocations,
       lastSequence: run.lastSequence,
       phase: run.phase,
       status: run.status,
-      steering: run.steering,
-      turns: run.turns,
+      steering,
+      turns,
     };
   }
   return { activeRunId: runtime.activeRunId, runs };

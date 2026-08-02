@@ -282,7 +282,7 @@ describe('runtime tool dispatcher', () => {
       });
       const pending = dispatcher.dispatch(invocation, { action: 'repair', repairAttempt: 1 });
 
-      await vi.advanceTimersByTimeAsync(1_000);
+      await vi.advanceTimersByTimeAsync(1_001);
 
       await expect(pending).resolves.toMatchObject({
         status: 'timed-out',
@@ -322,5 +322,25 @@ describe('runtime tool dispatcher', () => {
       error: { code: 'TOOL_EXECUTION_FAILED', retryable: false },
     });
     expect(JSON.stringify(result)).not.toContain('sensitive-token');
+  });
+
+  it('rolls back registry and budget admission when the lifecycle observer fails', async () => {
+    const { dispatcher, execute, policy } = harness();
+
+    await expect(
+      dispatcher.dispatch(invocation, continuation, undefined, {
+        onInvocationAdmitted: () => {
+          throw new Error('event sink unavailable');
+        },
+      }),
+    ).rejects.toThrow(/event sink unavailable/i);
+
+    expect(dispatcher.snapshot.budget.usage).toMatchObject({ toolCalls: 0, toolRounds: 0 });
+    expect(dispatcher.snapshot.registry.invocations).toEqual({});
+    await expect(dispatcher.dispatch(invocation, continuation)).resolves.toMatchObject({
+      status: 'succeeded',
+    });
+    expect(policy).toHaveBeenCalledTimes(1);
+    expect(execute).toHaveBeenCalledTimes(1);
   });
 });
