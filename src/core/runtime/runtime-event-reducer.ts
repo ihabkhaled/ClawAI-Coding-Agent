@@ -16,7 +16,7 @@ import {
 } from './runtime-event-reducer-budget';
 import { runtimeProtocolFallback, type RuntimeProtocolSelection } from './runtime-negotiation';
 import { admitRuntimeRunCollection, selectActiveRuntimeRun } from './runtime-run-collection';
-import { runBudgetSchema, type RunBudget } from './runtime-tool-contracts';
+import { runBudgetSchema, toolInvocationSchema, type RunBudget } from './runtime-tool-contracts';
 
 import type { CapabilityManifest } from './capability-manifest';
 import type { RuntimeEvent } from './runtime-protocol.schemas';
@@ -96,6 +96,7 @@ const summaryPayloadSchema = z
 const requestedPayloadSchema = z
   .object({
     invocationId: identifierSchema,
+    invocation: toolInvocationSchema.optional(),
     operation: z.string().trim().min(1).max(80),
     toolName: z.string().trim().min(2).max(80),
   })
@@ -288,6 +289,14 @@ function projectRequested(
 ): RuntimeProjectionState {
   const payload = parseKnownPayload(event, requestedPayloadSchema);
   assertInvocationCorrelation(event, payload.invocationId);
+  if (
+    payload.invocation !== undefined &&
+    (payload.invocation.invocationId !== payload.invocationId ||
+      payload.invocation.operation !== payload.operation ||
+      payload.invocation.toolName !== payload.toolName ||
+      payload.invocation.runId !== event.runId)
+  )
+    invalidPayload(event);
   if (base.invocations[payload.invocationId] !== undefined) invalidPayload(event);
   return {
     ...base,

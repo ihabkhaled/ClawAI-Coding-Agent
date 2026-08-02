@@ -17,6 +17,7 @@ export type RuntimeFallbackReason =
   | 'unsupported-version'
   | 'unsupported-transport'
   | 'missing-foundation-feature'
+  | 'tool-execution-unavailable'
   | 'endpoint-unavailable'
   | 'malformed-descriptor';
 
@@ -47,6 +48,9 @@ export function selectRuntimeProtocol(
   }
   if (!descriptor.features.capabilityManifest || !descriptor.features.orderedRunEvents) {
     return fallback('missing-foundation-feature');
+  }
+  if (!descriptor.features.toolExecution) {
+    return fallback('tool-execution-unavailable');
   }
   return { descriptor, mode: 'runtime-v2', version: '2.0' };
 }

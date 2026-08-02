@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
+
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { ProcessSupervisorService } from '../services/process-supervisor-service';
@@ -55,7 +57,7 @@ export const processSupervisorToolDefinition: ToolDefinition = {
   ],
   riskClasses: ['process', 'destructive'],
   targetIds: ['target:workspace'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.process,
 };
 
 export class ProcessSupervisorToolExecutor implements RuntimeToolExecutorPort {

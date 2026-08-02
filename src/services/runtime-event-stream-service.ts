@@ -1,14 +1,22 @@
 import { randomUUID } from 'node:crypto';
 
 import { parseRuntimeEvent, type RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
-import { parseToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import {
+  parseToolInvocation,
+  type Continuation,
+  type ToolInvocation,
+} from '../core/runtime/runtime-tool-contracts';
 import { SseDecoder } from '../core/sse-decoder';
 
-import type { RuntimeRunService } from './runtime-run-service';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
 export interface RuntimeStreamObserver {
   readonly onEvent: (event: RuntimeEvent) => void;
+}
+
+export interface RuntimeStreamRuntimePort {
+  beginModelTurn(repair: boolean, turnId: string): unknown;
+  dispatch(invocation: ToolInvocation, continuation: Continuation): Promise<unknown>;
 }
 
 export class RuntimeEventStreamService {
@@ -16,7 +24,7 @@ export class RuntimeEventStreamService {
 
   async follow(
     runId: string,
-    runtime: RuntimeRunService,
+    runtime: RuntimeStreamRuntimePort,
     observer: RuntimeStreamObserver,
     signal: AbortSignal,
   ): Promise<void> {
@@ -40,7 +48,7 @@ export class RuntimeEventStreamService {
 
   private async consume(
     response: Response,
-    runtime: RuntimeRunService,
+    runtime: RuntimeStreamRuntimePort,
     observer: RuntimeStreamObserver,
     signal: AbortSignal,
     initialCursor: number,

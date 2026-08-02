@@ -37,7 +37,7 @@ export const containerToolDefinition: ToolDefinition = {
   ],
   riskClasses: ['inspect', 'container-mutate', 'network', 'destructive'],
   targetIds: ['target:container'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.container,
 };
 
 export class ContainerToolExecutor implements RuntimeToolExecutorPort {
@@ -56,3 +56,4 @@ export class ContainerToolExecutor implements RuntimeToolExecutorPort {
     return { structured: { receipt } };
   }
 }
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';

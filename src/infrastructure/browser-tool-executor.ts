@@ -45,7 +45,7 @@ export const browserToolDefinition: ToolDefinition = {
   ],
   riskClasses: ['browser', 'network'],
   targetIds: ['target:browser'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.browser,
 };
 
 export class BrowserToolExecutor implements RuntimeToolExecutorPort {
@@ -60,7 +60,11 @@ export class BrowserToolExecutor implements RuntimeToolExecutorPort {
   ): Promise<RuntimeToolExecutionOutput> {
     if (invocation.toolName !== browserToolDefinition.name) throw new Error('Unknown browser tool');
     if (invocation.operation === 'wait-ready') {
-      return { structured: { receipt: await this.readiness.wait(invocation.arguments, signal) } };
+      return {
+        structured: {
+          receipt: await this.readiness.wait(invocation.arguments, invocation.runId, signal),
+        },
+      };
     }
     const result = await this.controller.execute(
       { ...invocation.arguments, operation: invocation.operation },
@@ -69,3 +73,4 @@ export class BrowserToolExecutor implements RuntimeToolExecutorPort {
     return { structured: { evidence: result.evidence, result: result.structured } };
   }
 }
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';

@@ -7,6 +7,7 @@ import {
   issuePayloads,
   renderImplementationPlanMarkdown,
 } from '../core/implementation-plan';
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { FileTransactionService } from '../services/file-transaction-service';
@@ -24,7 +25,7 @@ export const planningToolDefinition: ToolDefinition = {
   operations: ['validate', 'render-markdown', 'render-json', 'export', 'issue-payloads'],
   riskClasses: ['inspect', 'workspace-write'],
   targetIds: ['target:workspace'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.planning,
 };
 
 const exportSchema = z

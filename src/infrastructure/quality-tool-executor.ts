@@ -9,6 +9,7 @@ import {
   type QualityGate,
   type QualityProject,
 } from '../core/quality-graph';
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
 import { runCommandSpec } from './bounded-command-runner';
 
@@ -27,7 +28,7 @@ export const qualityToolDefinition: ToolDefinition = {
   operations: ['discover', 'plan', 'run'],
   riskClasses: ['process'],
   targetIds: ['target:workspace'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.quality,
 };
 
 const inputSchema = z

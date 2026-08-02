@@ -116,6 +116,7 @@ export class AgentCoordinator implements vscode.Disposable {
       externalOutputs,
       this.approvals,
       () => this.backend,
+      this.logger,
     );
     this.generations = new GenerationScheduler({
       after: async (signal) => {

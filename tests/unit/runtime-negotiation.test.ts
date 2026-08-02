@@ -15,14 +15,19 @@ const descriptor = {
 };
 
 describe('runtime protocol negotiation', () => {
-  it('selects the inert V2 foundation without requiring tool execution', () => {
-    expect(selectRuntimeProtocol(descriptor)).toMatchObject({ mode: 'runtime-v2', version: '2.0' });
+  it('keeps the executable runtime on V1 when the server advertises an inert V2 foundation', () => {
+    expect(selectRuntimeProtocol(descriptor)).toEqual({
+      mode: 'legacy-v1',
+      version: '1.0',
+      reason: 'tool-execution-unavailable',
+    });
   });
 
   it('selects V2 when a future server version is preferred but V2 overlaps', () => {
     expect(
       selectRuntimeProtocol({
         ...descriptor,
+        features: { ...descriptor.features, toolExecution: true },
         versions: ['3.0', '2.0', '1.0'],
         preferred: '3.0',
       }),

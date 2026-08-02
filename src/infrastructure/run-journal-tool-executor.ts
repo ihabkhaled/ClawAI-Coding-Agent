@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
+
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { RunJournalService } from '../services/run-journal-service';
 import type {
@@ -15,7 +17,7 @@ export const runJournalToolDefinition: ToolDefinition = {
   operations: ['save', 'load', 'search', 'safe-export', 'delete'],
   riskClasses: ['inspect', 'workspace-write'],
   targetIds: ['target:workspace'],
-  inputSchema: { type: 'object', additionalProperties: true },
+  inputSchema: runtimeToolInputSchemas.journal,
 };
 
 const runIdSchema = z.string().min(8).max(200);

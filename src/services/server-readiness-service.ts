@@ -15,8 +15,13 @@ const readinessRequestSchema = z
   .strict();
 
 export interface ReadinessProcessPort {
-  recentLogs(sessionId: string): string;
-  isRunning(sessionId: string): boolean;
+  evidence(
+    sessionId: string,
+    runId: string,
+  ): {
+    readonly running: boolean;
+    readonly logs: string;
+  };
 }
 
 export interface ServerReadinessReceipt {
@@ -36,7 +41,11 @@ export class ServerReadinessService {
     private readonly request: typeof fetch = fetch,
   ) {}
 
-  async wait(candidate: unknown, signal?: AbortSignal): Promise<ServerReadinessReceipt> {
+  async wait(
+    candidate: unknown,
+    runId: string,
+    signal?: AbortSignal,
+  ): Promise<ServerReadinessReceipt> {
     const input = readinessRequestSchema.parse(candidate);
     if (!isOriginAllowed(input.url, this.scope())) {
       throw new Error('Readiness URL is outside the approved browser origins');
@@ -62,7 +71,7 @@ export class ServerReadinessService {
         });
         lastStatus = response.status;
         if (input.expectedStatuses.includes(response.status)) {
-          return this.receipt(input, attempt, true, response.status);
+          return this.receipt(input, runId, attempt, true, response.status);
         }
         lastError = `Unexpected HTTP status ${String(response.status)}`;
       } catch (error) {
@@ -73,32 +82,31 @@ export class ServerReadinessService {
       }
       if (attempt < input.attempts) await this.delay(input.intervalMs, signal);
     }
-    return this.receipt(input, input.attempts, false, lastStatus, lastError);
+    return this.receipt(input, runId, input.attempts, false, lastStatus, lastError);
   }
 
   private receipt(
     input: z.infer<typeof readinessRequestSchema>,
+    runId: string,
     attempts: number,
     ready: boolean,
     status?: number,
     lastError?: string,
   ): ServerReadinessReceipt {
-    const processRunning =
+    const processEvidence =
       input.processSessionId === undefined
         ? undefined
-        : this.processes.isRunning(input.processSessionId);
-    const processLogs =
-      input.processSessionId === undefined
-        ? undefined
-        : redactText(this.processes.recentLogs(input.processSessionId)).slice(-32_768);
+        : this.processes.evidence(input.processSessionId, runId);
     return {
       ready,
       urlOrigin: browserOrigin(input.url),
       attempts,
       ...(status === undefined ? {} : { status }),
       ...(lastError === undefined ? {} : { lastError }),
-      ...(processRunning === undefined ? {} : { processRunning }),
-      ...(processLogs === undefined ? {} : { processLogs }),
+      ...(processEvidence === undefined ? {} : { processRunning: processEvidence.running }),
+      ...(processEvidence === undefined
+        ? {}
+        : { processLogs: redactText(processEvidence.logs).slice(-32_768) }),
     };
   }
 
