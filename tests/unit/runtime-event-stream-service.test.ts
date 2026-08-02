@@ -39,6 +39,7 @@ describe('RuntimeEventStreamService backend event integration', () => {
     const backend = {
       cancelRuntime: vi.fn(),
       startRuntime: vi.fn(),
+      steerRuntime: vi.fn(),
       submitRuntimeResult: vi.fn(),
       openRuntimeStream: vi.fn(
         async () =>

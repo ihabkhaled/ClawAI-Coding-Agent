@@ -14,6 +14,7 @@ import { processSupervisorToolDefinition } from '../../src/infrastructure/proces
 import { qualityToolDefinition } from '../../src/infrastructure/quality-tool-executor';
 import { runJournalToolDefinition } from '../../src/infrastructure/run-journal-tool-executor';
 import { structuredCommandToolDefinition } from '../../src/infrastructure/structured-command-tool-executor';
+import { subAgentToolDefinition } from '../../src/infrastructure/sub-agent-tool-executor';
 import { workspaceFilesystemToolDefinition } from '../../src/infrastructure/vscode-filesystem-tool-executor';
 import { createRuntimeInvocationRegistry } from '../../src/core/runtime/runtime-invocation-registry';
 
@@ -33,6 +34,7 @@ describe('production Runtime V2 tool catalog', () => {
       runJournalToolDefinition,
       evidenceToolDefinition,
       developmentServiceToolDefinition,
+      subAgentToolDefinition,
     ];
 
     expect(() =>

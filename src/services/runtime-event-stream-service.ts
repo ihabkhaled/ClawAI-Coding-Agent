@@ -11,7 +11,7 @@ import { SseDecoder } from '../core/sse-decoder';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
 export interface RuntimeStreamObserver {
-  readonly onEvent: (event: RuntimeEvent) => void;
+  readonly onEvent: (event: RuntimeEvent) => void | Promise<void>;
 }
 
 export interface RuntimeStreamRuntimePort {
@@ -67,7 +67,7 @@ export class RuntimeEventStreamService {
           const event = parseRuntimeEvent(candidate);
           if (event.sequence <= cursor) continue;
           cursor = event.sequence;
-          observer.onEvent(event);
+          await observer.onEvent(event);
           if (event.type === 'tool.requested') {
             const invocation = parseToolInvocation(event.payload.invocation);
             runtime.beginModelTurn(false, invocation.turnId);

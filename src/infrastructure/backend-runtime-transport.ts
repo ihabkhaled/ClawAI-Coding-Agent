@@ -1,6 +1,7 @@
 import type { BackendClient } from '../backend/backend-client';
 import type { RuntimeCommandBinding } from '../backend/backend-client.types';
 import type { ToolResult } from '../core/runtime/runtime-tool-contracts';
+import type { SteeringMessage } from '../core/runtime/runtime-steering-queue';
 import type {
   RuntimeRunStart,
   RuntimeRunStartReceipt,
@@ -55,6 +56,10 @@ export class BackendRuntimeTransport implements RuntimeRunTransportPort {
     );
   }
 
+  async steer(runId: string, steering: SteeringMessage, signal: AbortSignal): Promise<void> {
+    await this.backend().steerRuntime(await this.requireBinding(runId), steering, signal);
+  }
+
   async cancel(runId: string): Promise<void> {
     const binding = await this.requireBinding(runId);
     await this.backend().cancelRuntime(binding, `cancel:${runId}`);
@@ -72,7 +77,7 @@ export class BackendRuntimeTransport implements RuntimeRunTransportPort {
 
 export type BackendRuntimeTransportClient = Pick<
   BackendClient,
-  'cancelRuntime' | 'openRuntimeStream' | 'startRuntime' | 'submitRuntimeResult'
+  'cancelRuntime' | 'openRuntimeStream' | 'startRuntime' | 'steerRuntime' | 'submitRuntimeResult'
 >;
 
 export interface RuntimeBindingStorePort {

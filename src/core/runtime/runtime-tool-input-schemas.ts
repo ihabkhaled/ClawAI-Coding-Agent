@@ -13,6 +13,7 @@ function strict(properties: RuntimeJsonObject): RuntimeJsonObject {
 }
 
 export const runtimeToolInputSchemas = {
+  agents: strict({ graph: opaque }),
   browser: strict({
     sessionId: text,
     contextId: text,
