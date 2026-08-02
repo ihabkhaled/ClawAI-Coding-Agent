@@ -39,7 +39,12 @@ describe('runtime event reducer', () => {
       event(1, 'run.phase.changed', { phase: 'planning' }),
     );
 
-    expect(empty).toEqual({ activeRunId: undefined, eventIds: {}, runs: {} });
+    expect(empty).toEqual({
+      activeRunId: undefined,
+      capabilityManifest: undefined,
+      eventIds: {},
+      runs: {},
+    });
     expect(created.runs['run-id-0001']).toMatchObject({
       status: 'running',
       lastSequence: 0,

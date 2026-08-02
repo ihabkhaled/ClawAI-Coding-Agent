@@ -80,7 +80,10 @@ export class ExtensionState {
   }
 
   resetRuntime(): void {
-    this.snapshotValue = { ...this.snapshotValue, runtime: createRuntimeSnapshot() };
+    this.snapshotValue = {
+      ...this.snapshotValue,
+      runtime: createRuntimeSnapshot(this.snapshotValue.runtime.capabilityManifest),
+    };
     this.publish();
   }
 

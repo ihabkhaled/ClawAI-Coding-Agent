@@ -34,7 +34,7 @@ const targetLimitsSchema = z
   })
   .strict();
 
-const executionTargetSchema = z
+export const executionTargetSchema = z
   .object({
     id: z.string().regex(RUNTIME_ID_PATTERN),
     kind: z.enum(EXECUTION_TARGET_KINDS),
@@ -43,9 +43,9 @@ const executionTargetSchema = z
     osFamily: z.enum(OS_FAMILIES),
     distribution: z.string().max(100).nullable().optional(),
     architecture: z.enum(CPU_ARCHITECTURES),
-    shells: z.array(z.enum(SHELL_KINDS)).min(1).max(10),
+    shells: z.array(z.enum(SHELL_KINDS)).max(10),
     defaultShell: z.enum(SHELL_KINDS).optional(),
-    workspaceRoots: z.array(workspaceRootSchema).min(1).max(64),
+    workspaceRoots: z.array(workspaceRootSchema).max(64),
     online: z.boolean(),
     capabilities: z.array(z.string().min(1).max(100)).max(256),
     limits: targetLimitsSchema.optional(),
@@ -78,7 +78,7 @@ const manifestPolicySchema = z
   })
   .strict();
 
-const capabilityManifestSchema = z
+export const capabilityManifestSchema = z
   .object({
     protocolVersion: z.literal(RUNTIME_PROTOCOL_V2),
     manifestId: z.string().regex(RUNTIME_ID_PATTERN),
@@ -102,8 +102,60 @@ const capabilityManifestSchema = z
     addDuplicateIssue(targetIds, 'Duplicate target identifier', ['targets'], context);
     addDuplicateIssue(toolNames, 'Duplicate tool identifier', ['tools'], context);
 
+    for (const [targetIndex, target] of manifest.targets.entries()) {
+      addDuplicateIssue(
+        target.shells,
+        'Duplicate target shell',
+        ['targets', targetIndex, 'shells'],
+        context,
+      );
+      addDuplicateIssue(
+        target.capabilities,
+        'Duplicate target capability',
+        ['targets', targetIndex, 'capabilities'],
+        context,
+      );
+      addDuplicateIssue(
+        target.workspaceRoots.map((root) => root.rootKey),
+        'Duplicate workspace root key',
+        ['targets', targetIndex, 'workspaceRoots'],
+        context,
+      );
+      addDuplicateIssue(
+        target.workspaceRoots.map((root) => root.uri),
+        'Duplicate workspace root URI',
+        ['targets', targetIndex, 'workspaceRoots'],
+        context,
+      );
+      if (target.defaultShell !== undefined && !target.shells.includes(target.defaultShell)) {
+        context.addIssue({
+          code: 'custom',
+          message: 'Default shell must be included in target shells',
+          path: ['targets', targetIndex, 'defaultShell'],
+        });
+      }
+    }
+
     const knownTargets = new Set(targetIds);
     for (const [toolIndex, tool] of manifest.tools.entries()) {
+      addDuplicateIssue(
+        tool.operations,
+        'Duplicate tool operation',
+        ['tools', toolIndex, 'operations'],
+        context,
+      );
+      addDuplicateIssue(
+        tool.riskClasses,
+        'Duplicate tool risk class',
+        ['tools', toolIndex, 'riskClasses'],
+        context,
+      );
+      addDuplicateIssue(
+        tool.targetIds,
+        'Duplicate tool target',
+        ['tools', toolIndex, 'targetIds'],
+        context,
+      );
       for (const targetId of tool.targetIds) {
         if (!knownTargets.has(targetId)) {
           context.addIssue({
@@ -126,6 +178,7 @@ const capabilityManifestSchema = z
   });
 
 type CapabilityManifest = z.infer<typeof capabilityManifestSchema>;
+export type ExecutionTarget = z.infer<typeof executionTargetSchema>;
 type ManifestRefinementContext = z.core.$RefinementCtx<CapabilityManifest>;
 
 function addDuplicateIssue(
@@ -141,6 +194,10 @@ function addDuplicateIssue(
 
 export function parseCapabilityManifest(value: unknown): CapabilityManifest {
   return capabilityManifestSchema.parse(value);
+}
+
+export function buildCapabilityManifest(value: unknown): CapabilityManifest {
+  return parseCapabilityManifest(value);
 }
 
 export type { CapabilityManifest };

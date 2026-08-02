@@ -45,6 +45,7 @@ export default defineConfig({
         'src/services/session-control-service.ts',
         'src/services/workflow-service.ts',
         'src/infrastructure/vscode-workspace-edit-adapter.ts',
+        'src/infrastructure/vscode-runtime-target-adapter.ts',
       ],
       thresholds: {
         branches: 85,

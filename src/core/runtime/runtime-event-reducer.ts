@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import type { CapabilityManifest } from './capability-manifest';
 import type { RuntimeEvent } from './runtime-protocol.schemas';
 
 export type RuntimeRunStatus = 'running' | 'completed' | 'blocked' | 'failed' | 'cancelled';
@@ -21,6 +22,7 @@ export interface RuntimeRunSnapshot {
 
 export interface RuntimeSnapshot {
   readonly activeRunId: string | undefined;
+  readonly capabilityManifest: CapabilityManifest | undefined;
   readonly eventIds: Readonly<Record<string, RuntimeEventIdentity>>;
   readonly runs: Readonly<Record<string, RuntimeRunSnapshot>>;
 }
@@ -33,9 +35,10 @@ const terminalStatuses: Readonly<Record<string, RuntimeRunStatus>> = {
   'run.failed': 'failed',
 };
 
-export function createRuntimeSnapshot(): RuntimeSnapshot {
+export function createRuntimeSnapshot(capabilityManifest?: CapabilityManifest): RuntimeSnapshot {
   return {
     activeRunId: undefined,
+    capabilityManifest,
     eventIds: {},
     runs: {},
   };
@@ -148,6 +151,7 @@ export function reduceRuntimeEvent(
 
   return {
     activeRunId: nextActiveRunId,
+    capabilityManifest: snapshot.capabilityManifest,
     eventIds: {
       ...snapshot.eventIds,
       [event.eventId]: {

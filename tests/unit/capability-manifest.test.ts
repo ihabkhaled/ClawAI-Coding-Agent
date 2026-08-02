@@ -130,4 +130,41 @@ describe('capability manifest', () => {
       parseCapabilityManifest({ ...manifest, tools: [toolWithoutLimits] }).tools[0],
     ).not.toHaveProperty('limits');
   });
+
+  it('supports limited hosts with no workspace root or shell', () => {
+    expect(
+      parseCapabilityManifest({
+        ...manifest,
+        targets: [
+          {
+            ...target,
+            defaultShell: undefined,
+            shells: [],
+            workspaceRoots: [],
+          },
+        ],
+      }).targets[0],
+    ).toMatchObject({ shells: [], workspaceRoots: [] });
+  });
+
+  it('rejects duplicate semantic values and a default shell outside the shell list', () => {
+    expect(() =>
+      parseCapabilityManifest({
+        ...manifest,
+        targets: [{ ...target, capabilities: ['legacy.chat', 'legacy.chat'] }],
+      }),
+    ).toThrow(/duplicate target capability/i);
+    expect(() =>
+      parseCapabilityManifest({
+        ...manifest,
+        targets: [{ ...target, defaultShell: 'bash' }],
+      }),
+    ).toThrow(/default shell/i);
+    expect(() =>
+      parseCapabilityManifest({
+        ...manifest,
+        tools: [{ ...manifest.tools[0], operations: ['propose', 'propose'] }],
+      }),
+    ).toThrow(/duplicate tool operation/i);
+  });
 });

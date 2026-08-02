@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+import extensionPackage from '../package.json';
+
 import { contextModeForCommand } from './core/command-context';
 import { ExtensionState } from './core/extension-state';
 import { ExternalOutputGrantStore } from './core/external-output-grants';
@@ -7,6 +9,7 @@ import { createRuntimeSnapshot } from './core/runtime/runtime-event-reducer';
 import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
 import { OutputLogger } from './infrastructure/output-logger';
+import { buildRuntimeCapabilityManifest } from './infrastructure/vscode-runtime-target-adapter';
 import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-edit-adapter';
 import { AgentCoordinator } from './services/agent-coordinator';
 import { ConfigurationService } from './services/configuration-service';
@@ -110,6 +113,30 @@ export function activate(context: vscode.ExtensionContext): void {
   const connectionConfiguration = new ConfigurationService();
   const configuration = connectionConfiguration.read();
   const workspaceScope = new WorkspaceScopeService();
+  const extensionKind =
+    context.extension.extensionKind === vscode.ExtensionKind.UI ? 'ui' : 'workspace';
+  const runtimeManifest = buildRuntimeCapabilityManifest(
+    {
+      architecture: process.arch,
+      extensionKind,
+      extensionVersion: extensionPackage.version,
+      platform: process.platform,
+      remoteName: vscode.env.remoteName,
+      shell: vscode.env.shell,
+      uiKind: vscode.env.uiKind === vscode.UIKind.Web ? 'web' : 'desktop',
+      vscodeVersion: vscode.version,
+      workspaceFolders: (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
+        name: folder.name,
+        scheme: folder.uri.scheme,
+        uri: folder.uri.toString(),
+      })),
+      workspaceTrusted: vscode.workspace.isTrusted,
+    },
+    {
+      generatedAt: new Date().toISOString(),
+      manifestId: `manifest:${Date.now().toString(36)}`,
+    },
+  );
   const state = new ExtensionState({
     agentRun: undefined,
     agentRuns: {},
@@ -138,7 +165,7 @@ export function activate(context: vscode.ExtensionContext): void {
     models: [],
     permissionMode: configuration.permissionMode,
     routingMode: configuration.routingMode,
-    runtime: createRuntimeSnapshot(),
+    runtime: createRuntimeSnapshot(runtimeManifest),
     selectedModel: configuration.selectedModel,
     usage: undefined,
     user: undefined,
