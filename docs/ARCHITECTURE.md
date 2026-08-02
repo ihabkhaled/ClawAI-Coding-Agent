@@ -18,6 +18,21 @@ VS Code commands / webview / tree views / status bar
 `src/extension.ts` is the composition root. It registers all contributed
 commands and views and owns disposable lifetimes.
 
+## Runtime Protocol V2 foundation
+
+The 0.18 runtime is an inert compatibility layer. Pure contracts under
+`src/core/runtime` define a strict capability manifest, ordered event envelope,
+protocol selection, and the only V2 event reducer. Host facts are mapped by a
+pure infrastructure adapter from VS Code UI/extension host location, remote
+name, platform, architecture, Trust, and workspace URI schemes. Discovery does
+not execute commands.
+
+The authenticated agent-service descriptor is negotiated only after profile
+validation. V2 is selected when version 2.0, SSE, capability manifests, and
+ordered events overlap. Every expected additive-endpoint failure selects the
+legacy V1 adapter; account/session errors and cancellation remain hard
+boundaries. Tool execution stays disabled until 0.19.
+
 ## Layers
 
 - `src/core`: pure URL, session schema, state, model catalog, context,

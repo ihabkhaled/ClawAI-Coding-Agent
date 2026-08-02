@@ -1,3 +1,10 @@
+import {
+  createRuntimeSnapshot,
+  reduceRuntimeEvent,
+  type RuntimeSnapshot,
+} from './runtime/runtime-event-reducer';
+import { parseRuntimeEvent } from './runtime/runtime-protocol.schemas';
+
 import type { AgentMode } from './agent-mode.types';
 import type { AgentRunSnapshot } from './agent-run';
 import type { ApprovalRequest } from './approval-broker';
@@ -8,6 +15,7 @@ import type { WorkspaceReadiness } from './context-mode';
 import type { GenerationQueueSnapshot } from './generation-queue';
 import type { ModelCatalogEntry } from './model-catalog';
 import type { PermissionMode } from './permission-policy.types';
+import type { RuntimeProtocolSelection } from './runtime/runtime-negotiation';
 import type { WorkspaceScopeSnapshot } from './workspace-scope.types';
 import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contracts';
 
@@ -29,6 +37,7 @@ export interface ExtensionSnapshot {
   frontendUrl?: string | undefined;
   generationQueue: GenerationQueueSnapshot;
   routingMode: RoutingMode;
+  runtime: RuntimeSnapshot;
   selectedModel: string;
   models: ModelCatalogEntry[];
   modelWarnings: string[];
@@ -54,14 +63,37 @@ export class ExtensionState {
     return this.snapshotValue;
   }
 
-  update(patch: Partial<ExtensionSnapshot>): void {
+  update(patch: Partial<Omit<ExtensionSnapshot, 'runtime'>>): void {
     this.snapshotValue = {
       ...this.snapshotValue,
       ...patch,
     };
-    for (const listener of this.listeners) {
-      listener(this.snapshotValue);
+    this.publish();
+  }
+
+  applyRuntimeEvent(value: unknown): void {
+    const runtime = reduceRuntimeEvent(this.snapshotValue.runtime, parseRuntimeEvent(value));
+    if (runtime === this.snapshotValue.runtime) {
+      return;
     }
+    this.snapshotValue = { ...this.snapshotValue, runtime };
+    this.publish();
+  }
+
+  resetRuntime(): void {
+    this.snapshotValue = {
+      ...this.snapshotValue,
+      runtime: createRuntimeSnapshot(this.snapshotValue.runtime.capabilityManifest),
+    };
+    this.publish();
+  }
+
+  setRuntimeProtocolSelection(protocolSelection: RuntimeProtocolSelection): void {
+    this.snapshotValue = {
+      ...this.snapshotValue,
+      runtime: { ...this.snapshotValue.runtime, protocolSelection },
+    };
+    this.publish();
   }
 
   subscribe(listener: StateListener): () => void {
@@ -70,5 +102,11 @@ export class ExtensionState {
     return () => {
       this.listeners.delete(listener);
     };
+  }
+
+  private publish(): void {
+    for (const listener of this.listeners) {
+      listener(this.snapshotValue);
+    }
   }
 }

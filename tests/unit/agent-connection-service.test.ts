@@ -6,6 +6,8 @@ vi.mock('vscode', () => ({
 
 import { BackendRequestError } from '../../src/backend/backend-client';
 import { ExtensionState } from '../../src/core/extension-state';
+import { createRuntimeSnapshot } from '../../src/core/runtime/runtime-event-reducer';
+import { runtimeProtocolFallback } from '../../src/core/runtime/runtime-negotiation';
 import { AgentConnectionService } from '../../src/services/agent-connection-service';
 
 import type { TokenPair } from '../../src/core/session-vault';
@@ -51,6 +53,7 @@ function state() {
     models: [],
     permissionMode: 'MANUAL',
     routingMode: 'AUTO',
+    runtime: createRuntimeSnapshot(),
     selectedModel: '',
     usage: undefined,
     user: undefined,
@@ -90,6 +93,9 @@ function harness() {
     selectedBackend = candidateBackend;
   });
   const refreshData = vi.fn(async () => undefined);
+  const runtimeProtocol = {
+    negotiate: vi.fn(async () => runtimeProtocolFallback('endpoint-unavailable')),
+  };
   const accountBoundary = vi.fn();
   let sessionGeneration = 0;
   const sessionVault = {
@@ -127,6 +133,7 @@ function harness() {
     () => selectedBackend as never,
     createBackend as never,
     replaceBackend,
+    runtimeProtocol as never,
     refreshData,
     () => null,
     accountBoundary,
@@ -141,6 +148,7 @@ function harness() {
     extensionState,
     refreshData,
     replaceBackend,
+    runtimeProtocol,
     service,
     sessionVault,
     setConfiguration(next: Partial<RuntimeConfiguration>) {
@@ -449,6 +457,7 @@ describe('AgentConnectionService', () => {
     await subject.service.configurationChanged();
 
     expect(subject.candidateBackend.getProfile).toHaveBeenCalledOnce();
+    expect(subject.runtimeProtocol.negotiate).toHaveBeenCalledOnce();
     expect(subject.refreshData).toHaveBeenCalledOnce();
     expect(subject.extensionState.snapshot).toMatchObject({
       backendUrl: 'https://other.example',
@@ -456,6 +465,7 @@ describe('AgentConnectionService', () => {
       connected: true,
       user: { id: 'restored-user' },
     });
+    expect(subject.extensionState.snapshot.runtime.protocolSelection.mode).toBe('legacy-v1');
   });
 
   it('cannot finish restoring a configured origin after logout starts', async () => {
