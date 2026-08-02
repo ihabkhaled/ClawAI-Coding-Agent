@@ -11,12 +11,11 @@ in the ClawAI platform.
 
 ## Runtime foundation
 
-Version 0.18.0 introduces the inert Runtime Protocol V2 foundation. On
-activation, the extension describes only host capabilities it can prove from
-stable VS Code APIs. After authentication it negotiates V2 with the existing
-agent service; an unavailable or incompatible additive endpoint keeps the
-shipped V1 chat and reviewed edit workflow active. Runtime tool execution is
-intentionally not enabled until 0.19.0.
+Version 0.40.0 delivers the model-neutral Runtime Protocol V2 studio. Bounded
+workspace, command, process, Git, container, database, quality, browser,
+planning, service, journal, and evidence capabilities share one ordered,
+policy-controlled execution loop. An unavailable or incompatible additive
+endpoint keeps the supported V1 chat and reviewed edit workflow active.
 
 ## Highlights
 

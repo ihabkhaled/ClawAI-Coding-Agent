@@ -39,17 +39,28 @@ jobs:
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
 
-      - name: Require committed release artifact
+      - name: Require committed release assets
         env:
-          ARTIFACT: builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix
+          RELEASE_BASE: builds/clawai-coding-agent-${{ steps.version.outputs.version }}
         shell: bash
         run: |
-          if ! test -f "${ARTIFACT}"; then
-            echo "::error::Commit ${ARTIFACT} before pushing main."
-            exit 1
-          fi
-          git ls-files --error-unmatch "${ARTIFACT}" >/dev/null
-          cp "${ARTIFACT}" "${RUNNER_TEMP}/committed-release.vsix"
+          mkdir -p "${RUNNER_TEMP}/committed-release"
+          for asset in \
+            "${RELEASE_BASE}.vsix" \
+            "${RELEASE_BASE}.vsix.sha256" \
+            "${RELEASE_BASE}.cdx.json" \
+            "${RELEASE_BASE}.cdx.json.sha256" \
+            "${RELEASE_BASE}.spdx.json" \
+            "${RELEASE_BASE}.spdx.json.sha256" \
+            "${RELEASE_BASE}.provenance.json" \
+            "${RELEASE_BASE}.provenance.json.sha256"; do
+            if ! test -f "${asset}"; then
+              echo "::error::Commit ${asset} before pushing main."
+              exit 1
+            fi
+            git ls-files --error-unmatch "${asset}" >/dev/null
+            cp "${asset}" "${RUNNER_TEMP}/committed-release/"
+          done
 
       - name: Install
         run: npm ci --ignore-scripts
@@ -78,16 +89,30 @@ jobs:
       - name: Package VSIX
         run: npm run package
 
+      - name: Generate supply-chain evidence
+        run: npm run supply-chain
+
       - name: Verify release artifact
         env:
           ARTIFACT: builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix
+          RELEASE_BASE: builds/clawai-coding-agent-${{ steps.version.outputs.version }}
         shell: bash
         run: |
           test -f "${ARTIFACT}"
           mkdir -p "${RUNNER_TEMP}/committed-vsix" "${RUNNER_TEMP}/fresh-vsix"
-          unzip -qq "${RUNNER_TEMP}/committed-release.vsix" -d "${RUNNER_TEMP}/committed-vsix"
+          unzip -qq "${RUNNER_TEMP}/committed-release/$(basename "${ARTIFACT}")" -d "${RUNNER_TEMP}/committed-vsix"
           unzip -qq "${ARTIFACT}" -d "${RUNNER_TEMP}/fresh-vsix"
           diff -qr "${RUNNER_TEMP}/committed-vsix" "${RUNNER_TEMP}/fresh-vsix"
+          for asset in \
+            "${RELEASE_BASE}.vsix.sha256" \
+            "${RELEASE_BASE}.cdx.json" \
+            "${RELEASE_BASE}.cdx.json.sha256" \
+            "${RELEASE_BASE}.spdx.json" \
+            "${RELEASE_BASE}.spdx.json.sha256" \
+            "${RELEASE_BASE}.provenance.json" \
+            "${RELEASE_BASE}.provenance.json.sha256"; do
+            diff -q "${RUNNER_TEMP}/committed-release/$(basename "${asset}")" "${asset}"
+          done
 
       - name: Build full release notes
         env:
@@ -121,7 +146,7 @@ jobs:
         shell: bash
         run: |
           gh release create "${{ steps.version.outputs.tag }}" \
-            "builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix" \
+            builds/clawai-coding-agent-${{ steps.version.outputs.version }}.* \
             --target "${GITHUB_SHA}" \
             --title "ClawAI Coding Agent ${{ steps.version.outputs.version }}" \
             --notes-file "${RUNNER_TEMP}/release-notes.md"

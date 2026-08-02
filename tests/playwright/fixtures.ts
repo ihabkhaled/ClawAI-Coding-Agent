@@ -66,7 +66,7 @@ export function baseState() {
     lastError: undefined,
     models: [localModel],
     modelWarnings: [],
-    permissionMode: 'MANUAL',
+    permissionMode: 'ASK',
     routingMode: 'AUTO',
     selectedModel: '',
     usage: undefined,

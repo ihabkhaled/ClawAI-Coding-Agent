@@ -20,8 +20,10 @@ const webviewMarkup = readFileSync(join(root, 'src', 'webview', 'chat-markup.ts'
 const clawIcon = readFileSync(join(root, 'resources', 'claw.svg'), 'utf8');
 const darkClawIconPath = join(root, 'resources', 'claw-dark.svg');
 const lightClawIconPath = join(root, 'resources', 'claw-light.svg');
+const playwrightRegistryPath = join(root, 'browsers.json');
 const ciWorkflowPath = join(root, '.github', 'workflows', 'ci.yml');
 const releaseWorkflowPath = join(root, '.github', 'workflows', 'release.yml');
+const supplyChainSource = readFileSync(join(root, 'scripts', 'generate-supply-chain.mjs'), 'utf8');
 const commands = manifest.contributes.commands.map((command) => command.command);
 const uniqueCommands = new Set(commands);
 const productionDependencies = Object.keys(manifest.dependencies ?? {}).sort();
@@ -48,8 +50,15 @@ assert.deepEqual(rootVsix, [], 'VSIX artifacts must live under builds/, never th
 assert.equal(uniqueCommands.size, commands.length, 'command IDs must be unique');
 assert.deepEqual(
   productionDependencies,
-  ['zod'],
-  '0.18 runtime foundation must not add a native or executable dependency',
+  [
+    '@homebridge/node-pty-prebuilt-multiarch',
+    'chromium-bidi',
+    'jszip',
+    'node-pty',
+    'playwright-core',
+    'zod',
+  ],
+  'Runtime V2 production dependencies must remain explicit and security-reviewed',
 );
 for (const command of commands) {
   assert.match(
@@ -99,6 +108,11 @@ assert.equal(
 );
 assert.equal(existsSync(darkClawIconPath), true, 'Dark-theme scratch icon is missing');
 assert.equal(existsSync(lightClawIconPath), true, 'Light-theme scratch icon is missing');
+assert.equal(
+  existsSync(playwrightRegistryPath),
+  true,
+  'Packaged Playwright browser registry metadata is missing',
+);
 assert.match(
   extensionSource,
   /participant\.iconPath = createClawIconPath\(context\.extensionUri\);/u,
@@ -166,6 +180,18 @@ assert.match(
   releaseWorkflow,
   /diff -qr/u,
   'release workflow must compare the committed VSIX contents with a fresh package',
+);
+assert.match(
+  releaseWorkflow,
+  /npm run supply-chain/u,
+  'release workflow must regenerate supply-chain evidence',
+);
+assert.match(supplyChainSource, /CycloneDX/u, 'release must generate a CycloneDX SBOM');
+assert.match(supplyChainSource, /SPDX-2\.3/u, 'release must generate an SPDX SBOM');
+assert.match(
+  supplyChainSource,
+  /https:\/\/in-toto\.io\/Statement\/v1/u,
+  'release must generate in-toto provenance',
 );
 assert.equal(
   manifest.scripts.package,

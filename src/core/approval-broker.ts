@@ -2,13 +2,24 @@ import { randomUUID } from 'node:crypto';
 
 import type { PermissionOperation } from './permission-policy.types';
 
-export type ApprovalKind = PermissionOperation | 'command' | 'enableFullAccess' | 'undo';
+export type ApprovalKind =
+  PermissionOperation | 'command' | 'enableFullAccess' | 'runtimeEffect' | 'undo';
+
+export interface ApprovalEffectSummary {
+  readonly purpose: string;
+  readonly target: string;
+  readonly risk: 'R0' | 'R1' | 'R2' | 'R3' | 'R4';
+  readonly sideEffects: readonly string[];
+  readonly reversibility: 'reversible' | 'partially-reversible' | 'irreversible';
+  readonly sanitizedPreview?: string;
+}
 
 export interface ApprovalRequestInput {
   details?: string[];
   kind: ApprovalKind;
   message: string;
   title: string;
+  effect?: ApprovalEffectSummary;
 }
 
 export interface ApprovalRequest extends ApprovalRequestInput {
@@ -44,6 +55,17 @@ export class ApprovalBroker {
     const request: ApprovalRequest = {
       ...input,
       ...(input.details === undefined ? {} : { details: input.details.slice(0, 100) }),
+      ...(input.effect === undefined
+        ? {}
+        : {
+            effect: {
+              ...input.effect,
+              sideEffects: input.effect.sideEffects.slice(0, 20),
+              ...(input.effect.sanitizedPreview === undefined
+                ? {}
+                : { sanitizedPreview: input.effect.sanitizedPreview.slice(0, 4_096) }),
+            },
+          }),
       id: randomUUID(),
     };
     let resolveApproval: ((approved: boolean) => void) | undefined;

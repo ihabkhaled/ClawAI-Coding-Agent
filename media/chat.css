@@ -644,6 +644,15 @@ textarea:disabled {
   display: none;
 }
 
+.approval-preview {
+  margin-block-start: 6px;
+  padding: 7px;
+  overflow-wrap: anywhere;
+  white-space: pre-wrap;
+  border-inline-start: 2px solid var(--vscode-focusBorder);
+  color: var(--vscode-editor-foreground);
+}
+
 .approval-actions {
   display: flex;
   justify-content: flex-end;
@@ -1070,6 +1079,183 @@ textarea:disabled {
 
 .execution-spine {
   position: relative;
+}
+
+.runtime-timeline {
+  display: grid;
+  margin: 10px 12px 0 28px;
+  gap: 8px;
+}
+
+.runtime-timeline[hidden] {
+  display: none;
+}
+
+.runtime-run-card,
+.runtime-tool-card,
+.runtime-turn-card {
+  border: 1px solid color-mix(in srgb, var(--claw-border) 82%, transparent);
+  border-radius: 8px;
+  background: color-mix(in srgb, var(--claw-card) 94%, transparent);
+}
+
+.runtime-run-card {
+  position: relative;
+  overflow: clip;
+  border-inline-start: 3px solid var(--vscode-focusBorder);
+  box-shadow: 0 8px 24px color-mix(in srgb, #000 10%, transparent);
+}
+
+.runtime-run-card > summary,
+.runtime-tool-card > summary {
+  display: flex;
+  min-height: 42px;
+  align-items: center;
+  gap: 9px;
+  padding: 7px 10px;
+  list-style: none;
+}
+
+.runtime-run-card > summary::-webkit-details-marker,
+.runtime-tool-card > summary::-webkit-details-marker {
+  display: none;
+}
+
+.runtime-signal {
+  width: 10px;
+  height: 10px;
+  flex: 0 0 auto;
+  border: 2px solid var(--vscode-focusBorder);
+  border-radius: 50%;
+  background: color-mix(in srgb, var(--vscode-focusBorder) 25%, var(--claw-card));
+  box-shadow: 0 0 0 4px color-mix(in srgb, var(--vscode-focusBorder) 11%, transparent);
+}
+
+.runtime-run-card[data-status='completed'] .runtime-signal,
+.runtime-tool-card[data-status='succeeded'] .runtime-tool-glyph {
+  color: var(--vscode-testing-iconPassed);
+  border-color: var(--vscode-testing-iconPassed);
+}
+
+.runtime-run-card[data-status='failed'] .runtime-signal,
+.runtime-tool-card[data-status='failed'] .runtime-tool-glyph,
+.runtime-tool-card[data-status='timed-out'] .runtime-tool-glyph {
+  color: var(--vscode-testing-iconFailed);
+  border-color: var(--vscode-testing-iconFailed);
+}
+
+.runtime-run-identity,
+.runtime-tool-title,
+.runtime-budget-copy,
+.runtime-turn-card {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.runtime-run-identity {
+  flex: 1;
+}
+
+.runtime-run-id,
+.runtime-metadata,
+.runtime-tool-title small,
+.runtime-budget-copy small {
+  overflow: hidden;
+  color: var(--claw-muted);
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.runtime-status {
+  flex: 0 0 auto;
+  padding: 2px 7px;
+  border: 1px solid var(--claw-border);
+  border-radius: 999px;
+  color: var(--claw-muted);
+  font-size: 0.68rem;
+  font-weight: 700;
+}
+
+.runtime-run-body {
+  display: grid;
+  padding: 0 9px 9px 26px;
+  gap: 6px;
+}
+
+.runtime-budget {
+  display: grid;
+  grid-template-columns: minmax(100px, auto) minmax(80px, 1fr);
+  align-items: center;
+  gap: 10px;
+  padding: 7px 8px;
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--vscode-focusBorder) 8%, transparent);
+}
+
+.runtime-budget-copy strong {
+  color: var(--vscode-focusBorder);
+  font-family: var(--vscode-editor-font-family);
+  font-size: 0.82rem;
+}
+
+.runtime-budget-meter {
+  height: 6px;
+  overflow: hidden;
+  border-radius: 999px;
+  background: color-mix(in srgb, var(--claw-border) 70%, transparent);
+}
+
+.runtime-budget-meter > span {
+  display: block;
+  block-size: 100%;
+  border-radius: inherit;
+  background: linear-gradient(90deg, var(--vscode-focusBorder), var(--claw-accent));
+}
+
+.runtime-tool-card {
+  border-radius: 6px;
+  background: color-mix(in srgb, var(--vscode-textCodeBlock-background) 72%, transparent);
+}
+
+.runtime-tool-card > summary {
+  min-height: 34px;
+  padding-block: 5px;
+}
+
+.runtime-tool-title {
+  flex: 1;
+}
+
+.runtime-tool-glyph {
+  color: var(--vscode-focusBorder);
+  font-size: 0.62rem;
+}
+
+.runtime-tool-detail {
+  display: grid;
+  padding: 0 9px 8px 30px;
+  gap: 3px;
+}
+
+.runtime-tool-detail code {
+  overflow: hidden;
+  font-size: 0.68rem;
+  text-overflow: ellipsis;
+}
+
+.runtime-turn-card {
+  padding: 7px 9px;
+}
+
+@media (prefers-reduced-motion: reduce) {
+  .runtime-signal,
+  .runtime-budget-meter > span {
+    animation: none;
+    transition: none;
+  }
 }
 
 .execution-spine::before {
@@ -2623,7 +2809,7 @@ textarea:disabled {
 
 .language-button {
   display: inline-flex;
-  min-width: 46px;
+  min-width: 112px;
   align-items: center;
   justify-content: center;
   gap: 5px;
@@ -2631,7 +2817,7 @@ textarea:disabled {
   color: color-mix(in srgb, var(--claw-telemetry) 76%, var(--vscode-foreground));
   background: color-mix(in srgb, var(--claw-telemetry) 9%, transparent);
   font-weight: 750;
-  letter-spacing: 0.05em;
+  letter-spacing: normal;
 }
 
 .language-button:hover {
@@ -2727,7 +2913,7 @@ textarea:disabled {
     padding-inline: 7px;
   }
 
-  .language-button span:last-child {
+  .language-button span:nth-child(2) {
     display: none;
   }
 }

@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.19.0",
+  "version": "0.40.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -248,11 +248,13 @@
         "clawAI.permissionMode": {
           "type": "string",
           "enum": [
-            "MANUAL",
-            "EDIT_AUTOMATICALLY",
-            "BYPASS_PERMISSIONS"
+            "PLAN",
+            "ASK",
+            "AUTO_EDIT",
+            "AUTONOMOUS_SCOPED",
+            "ENTERPRISE_LOCKED"
           ],
-          "default": "MANUAL",
+          "default": "ASK",
           "scope": "resource",
           "description": "%config.permissionMode%"
         },
@@ -435,12 +437,18 @@
     "format": "prettier --write .",
     "format:check": "prettier --check .",
     "package:audit": "node scripts/package-audit.mjs",
+    "supply-chain": "node scripts/generate-supply-chain.mjs",
     "l10n:build": "node scripts/generate-locales.mjs",
     "package": "npm run build && node scripts/package-extension.mjs",
     "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run package:audit",
     "prepublishOnly": "npm run check"
   },
   "dependencies": {
+    "@homebridge/node-pty-prebuilt-multiarch": "^0.14.1",
+    "chromium-bidi": "0.4.33",
+    "jszip": "^3.10.1",
+    "node-pty": "^1.1.0",
+    "playwright-core": "^1.62.0",
     "zod": "^4.4.3"
   },
   "devDependencies": {

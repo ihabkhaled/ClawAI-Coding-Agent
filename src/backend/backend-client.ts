@@ -8,7 +8,10 @@ import {
   BackendRequestError,
   BackendSessionChangedError,
   BackendSessionExpiredError,
+  backendTransportFailureMessage,
+  bindBackendSession,
 } from './backend-errors';
+import { BackendRuntimeClient } from './backend-runtime-client';
 import {
   connectorModelSchema,
   entitlementsSchema,
@@ -18,7 +21,6 @@ import {
   paginatedSchema,
   parallelResponseSchema,
   refreshResultSchema,
-  runtimeProtocolWireDescriptorSchema,
   routerModelSchema,
   threadSchema,
   usageSchema,
@@ -45,10 +47,17 @@ import {
   waitForCaller,
 } from './response-lease';
 
+import type {
+  BackendClientOptions,
+  CompareRequest,
+  MessageRequest,
+  RuntimeCommandBinding,
+  RuntimeMutationAck,
+  RuntimeStartAck,
+  RuntimeStartRequest,
+} from './backend-client.types';
 import type { ChatAttachment } from '../core/chat-attachment';
-import type { ResearchMode } from '../core/research-mode';
-import type { RuntimeProtocolWireDescriptor } from '../core/runtime/runtime-negotiation';
-
+import type { ToolResult } from '../core/runtime/runtime-tool-contracts';
 export {
   BackendRequestError,
   BackendSessionChangedError,
@@ -58,52 +67,13 @@ export {
 const MAX_ERROR_BODY_BYTES = 64_000;
 const MAX_SUCCESS_BODY_BYTES = 8_000_000;
 
-export interface BackendClientOptions {
-  backendUrl: string;
-  timeoutMs: number;
-  sessionVault: SessionVault;
-  fetcher?: typeof fetch;
-  clientName?: string;
-}
-
-export interface MessageRequest {
-  threadId: string;
-  content: string;
-  clientIntent?: string;
-  routingMode: 'AUTO' | 'MANUAL_MODEL';
-  provider?: string;
-  model?: string;
-  modelDisplayName?: string;
-  researchMode?: ResearchMode;
-  fileIds?: string[];
-}
-
-export interface CompareRequest {
-  threadId?: string;
-  content: string;
-  models: {
-    provider: string;
-    model: string;
-  }[];
-  judgeEnabled?: boolean;
-  judgeModel?: string | null;
-  fileIds?: string[];
-  researchMode?: ResearchMode;
-}
-
-function transportFailureMessage(error: unknown, timedOut: boolean): string {
-  if (!timedOut) {
-    return 'ClawAI backend is unavailable. Check the app address or start the services, then retry.';
-  }
-  return error instanceof Error ? redactText(error.message) : 'ClawAI request timed out.';
-}
-
 export class BackendClient {
   private readonly backendUrl: string;
   private readonly clientName: string;
   private readonly fetcher: typeof fetch;
   private readonly sessionVault: SessionVault;
   private readonly timeoutMs: number;
+  private readonly runtime: BackendRuntimeClient;
   private boundSessionId: string | null = null;
   private refreshController: AbortController | null = null;
   private refreshPromise: Promise<void> | null = null;
@@ -114,6 +84,10 @@ export class BackendClient {
     this.fetcher = options.fetcher ?? fetch;
     this.sessionVault = options.sessionVault;
     this.timeoutMs = options.timeoutMs;
+    this.runtime = new BackendRuntimeClient(
+      (path, schema, requestOptions) => this.request(path, schema, requestOptions),
+      (path, signal) => this.openAuthenticatedStream(path, signal),
+    );
   }
 
   async initializeVscodeAuthorization(
@@ -157,7 +131,7 @@ export class BackendClient {
     if (current === null) {
       return;
     }
-    this.bindSession(current.sessionId);
+    this.boundSessionId = bindBackendSession(this.boundSessionId, current.sessionId);
     const tokens = await this.sessionVault.clearIfSession(this.backendUrl, current.sessionId);
     if (tokens === null) {
       throw new BackendSessionChangedError();
@@ -199,10 +173,45 @@ export class BackendClient {
     return this.request('/auth/me/usage', usageSchema);
   }
 
-  async getRuntimeProtocol(signal?: AbortSignal): Promise<RuntimeProtocolWireDescriptor> {
-    return this.request('/agent/runtime/protocol', runtimeProtocolWireDescriptorSchema, {
-      ...(signal === undefined ? {} : { signal }),
-    });
+  getRuntimeProtocol(signal?: AbortSignal) {
+    return this.runtime.getProtocol(signal);
+  }
+
+  async startRuntime(input: RuntimeStartRequest, signal?: AbortSignal): Promise<RuntimeStartAck> {
+    return this.runtime.start(input, signal);
+  }
+
+  async submitRuntimeResult(
+    binding: RuntimeCommandBinding,
+    idempotencyKey: string,
+    result: ToolResult,
+    signal?: AbortSignal,
+  ): Promise<RuntimeMutationAck> {
+    return this.runtime.submitResult(binding, idempotencyKey, result, signal);
+  }
+
+  async steerRuntime(
+    binding: RuntimeCommandBinding,
+    steering: unknown,
+    signal?: AbortSignal,
+  ): Promise<RuntimeMutationAck> {
+    return this.runtime.steer(binding, steering, signal);
+  }
+
+  async cancelRuntime(
+    binding: RuntimeCommandBinding,
+    idempotencyKey: string,
+    signal?: AbortSignal,
+  ): Promise<RuntimeMutationAck> {
+    return this.runtime.cancel(binding, idempotencyKey, signal);
+  }
+
+  async openRuntimeStream(
+    binding: RuntimeCommandBinding,
+    after: number,
+    signal?: AbortSignal,
+  ): Promise<Response> {
+    return this.runtime.openStream(binding, after, signal);
   }
 
   async getRouterModels(): Promise<RouterModel[]> {
@@ -309,6 +318,10 @@ export class BackendClient {
 
   async openStream(threadId: string, signal?: AbortSignal): Promise<Response> {
     const path = `/chat-messages/stream/${encodeURIComponent(threadId)}?replay=false`;
+    return this.openAuthenticatedStream(path, signal);
+  }
+
+  private async openAuthenticatedStream(path: string, signal?: AbortSignal): Promise<Response> {
     let response = await this.send(path, {
       accept: 'text/event-stream',
       auth: true,
@@ -449,7 +462,7 @@ export class BackendClient {
       if (session === null) {
         throw new BackendRequestError('Connect to ClawAI to continue.', 401, false);
       }
-      this.bindSession(session.sessionId);
+      this.boundSessionId = bindBackendSession(this.boundSessionId, session.sessionId);
       headers.Authorization = `Bearer ${session.tokens.accessToken}`;
     }
 
@@ -480,7 +493,7 @@ export class BackendClient {
     } catch (error: unknown) {
       clearTimeout(timeout);
       options.signal?.throwIfAborted();
-      const message = transportFailureMessage(error, timeoutController.signal.aborted);
+      const message = backendTransportFailureMessage(error, timeoutController.signal.aborted);
       throw new BackendRequestError(message, 0, true);
     }
   }
@@ -496,16 +509,6 @@ export class BackendClient {
     const text = await this.readResponseBody(lease, MAX_SUCCESS_BODY_BYTES);
     const body: unknown = JSON.parse(text);
     return schema.parse(body);
-  }
-
-  private bindSession(sessionId: string): void {
-    if (this.boundSessionId === null) {
-      this.boundSessionId = sessionId;
-      return;
-    }
-    if (this.boundSessionId !== sessionId) {
-      throw new BackendSessionChangedError();
-    }
   }
 
   private async readResponseBody(lease: ResponseLease, limitBytes: number): Promise<string> {

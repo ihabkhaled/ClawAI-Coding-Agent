@@ -5,6 +5,7 @@ import {
   createRuntimeInvocationRegistry,
   type RuntimeInvocationRegistry,
 } from '../core/runtime/runtime-invocation-registry';
+import { runtimeJsonObjectSchema } from '../core/runtime/runtime-json-value';
 import {
   consumeRuntimeBudget,
   createRuntimeBudgetState,
@@ -13,7 +14,6 @@ import {
 import {
   type Continuation,
   type RunBudget,
-  type RuntimeJsonObject,
   type ToolDefinition,
   type ToolInvocation,
   type ToolResult,
@@ -31,7 +31,8 @@ export interface RuntimeToolPolicyPort {
 }
 
 export interface RuntimeToolExecutionOutput {
-  readonly structured?: RuntimeJsonObject;
+  /** Adapter output is validated into bounded canonical JSON before it enters runtime state. */
+  readonly structured?: Readonly<Record<string, unknown>>;
   readonly modelText?: string;
 }
 
@@ -323,7 +324,9 @@ export class RuntimeToolDispatcher {
       continuation,
       maxOutputBytes: this.state.budget.budget.maxToolResultBytes,
       status: outcome.status,
-      ...(outcome.structured === undefined ? {} : { structured: outcome.structured }),
+      ...(outcome.structured === undefined
+        ? {}
+        : { structured: runtimeJsonObjectSchema.parse(outcome.structured) }),
       ...(outcome.modelText === undefined ? {} : { modelText: outcome.modelText }),
       ...(outcome.error === undefined ? {} : { error: outcome.error }),
     });

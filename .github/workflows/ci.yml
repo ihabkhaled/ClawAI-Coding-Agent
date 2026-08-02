@@ -58,6 +58,9 @@ jobs:
       - name: Package VSIX
         run: npm run package
 
+      - name: Generate supply-chain evidence
+        run: npm run supply-chain
+
       - uses: actions/upload-artifact@v4
         with:
           name: clawai-coding-agent-vsix

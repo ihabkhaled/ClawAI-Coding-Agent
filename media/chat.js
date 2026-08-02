@@ -72,6 +72,7 @@ const elements = {
   runDeck: byId('runDeck'),
   runDeckCount: byId('runDeckCount'),
   runMode: byId('runMode'),
+  runtimeTimeline: byId('runtimeTimeline'),
   selectedModelCount: byId('selectedModelCount'),
   selectedModelStrip: byId('selectedModelStrip'),
   sendButton: byId('sendButton'),
@@ -98,7 +99,7 @@ let currentState = {
   connected: false,
   modelWarnings: [],
   models: [],
-  permissionMode: 'MANUAL',
+  permissionMode: 'ASK',
   routingMode: 'AUTO',
   selectedModel: '',
 };
@@ -1067,12 +1068,33 @@ function renderApproval(request) {
       ? labels.alwaysAllow
       : labels.approve;
   elements.approvalReview.hidden = request.kind !== 'finalDiff';
-  elements.approvalKind.textContent = request.kind.replaceAll(/([A-Z])/gu, ' $1').trim();
+  elements.approvalKind.textContent = [
+    request.kind.replaceAll(/([A-Z])/gu, ' $1').trim(),
+    request.effect?.risk,
+  ]
+    .filter(Boolean)
+    .join(' · ');
   elements.approvalTitle.textContent = request.title;
   elements.approvalMessage.textContent = request.message;
   elements.approvalDetails.replaceChildren();
   for (const detail of request.details ?? []) {
     elements.approvalDetails.append(textElement('li', '', detail));
+  }
+  if (request.effect) {
+    const effectDetails = [
+      request.effect.purpose,
+      request.effect.target,
+      request.effect.reversibility,
+      ...(request.effect.sideEffects ?? []),
+    ];
+    for (const detail of effectDetails) {
+      elements.approvalDetails.append(textElement('li', '', detail));
+    }
+    if (request.effect.sanitizedPreview) {
+      elements.approvalDetails.append(
+        textElement('li', 'approval-preview', request.effect.sanitizedPreview),
+      );
+    }
   }
   if (wasHidden) {
     elements.approvalApprove.focus();
@@ -1264,6 +1286,7 @@ function renderState(state) {
   renderWarnings(state.modelWarnings ?? []);
   renderWorkspace(state.workspaceReadiness, state.workspaceScope);
   renderRunDeck(state.generationQueue, state.agentRuns);
+  renderRuntimeTimeline(state.runtime);
   renderApproval(state.approvalRequest);
   renderContextHint();
   const wasAuthorizing = !previousState.connected && previousState.backendStatus === 'loading';
@@ -1283,6 +1306,128 @@ function renderState(state) {
   if (state.lastError) {
     elements.announcer.textContent = state.lastError;
   }
+}
+
+function runtimeStatusLabel(status) {
+  if (status === 'completed' || status === 'succeeded') return labels.completed;
+  if (status === 'running' || status === 'requested') return labels.running;
+  if (status === 'cancelled') return labels.cancelled;
+  if (status === 'timed-out') return labels.timedOut;
+  if (status === 'denied' || status === 'blocked') return labels.agentRejected;
+  return labels.failed;
+}
+
+function renderRuntimeTimeline(runtime) {
+  const runs = Object.entries(runtime?.runs ?? {}).sort(
+    ([, left], [, right]) => (left.lastSequence ?? 0) - (right.lastSequence ?? 0),
+  );
+  elements.runtimeTimeline.replaceChildren();
+  elements.runtimeTimeline.hidden = runs.length === 0;
+  for (const [runId, run] of runs) {
+    const card = document.createElement('details');
+    card.className = 'runtime-run-card';
+    card.dataset.status = run.status;
+    card.open = runId === runtime.activeRunId;
+    const summary = document.createElement('summary');
+    const identity = textElement('span', 'runtime-run-identity', '');
+    identity.append(
+      textElement('strong', '', run.phase || labels.activity),
+      textElement('small', 'runtime-run-id', runId),
+    );
+    summary.append(
+      textElement('span', 'runtime-signal', ''),
+      identity,
+      textElement('span', 'runtime-status', runtimeStatusLabel(run.status)),
+    );
+    const body = document.createElement('div');
+    body.className = 'runtime-run-body';
+    if (run.budget) body.append(runtimeBudget(run.budget));
+    for (const [invocationId, invocation] of Object.entries(run.invocations ?? {})) {
+      body.append(runtimeInvocation(invocationId, invocation));
+    }
+    for (const [turnId, turn] of Object.entries(run.turns ?? {})) {
+      const turnCard = document.createElement('article');
+      turnCard.className = 'runtime-turn-card';
+      turnCard.dataset.status = turn.status;
+      turnCard.append(
+        textElement('strong', '', turn.summary || labels.reasoning),
+        textElement('small', 'runtime-metadata', `${turnId} · ${formatBytes(turn.textBytes ?? 0)}`),
+      );
+      body.append(turnCard);
+    }
+    card.append(summary, body);
+    elements.runtimeTimeline.append(card);
+  }
+}
+
+function runtimeBudget(budget) {
+  const limits = budget.limits ?? {};
+  const usage = budget.usage ?? {};
+  const used = usage.toolCalls ?? 0;
+  const maximum = Math.max(1, limits.maxToolCalls ?? 1);
+  const percent = Math.min(100, Math.round((used / maximum) * 100));
+  const region = document.createElement('section');
+  region.className = 'runtime-budget';
+  region.setAttribute('aria-label', labels.tokens);
+  const copy = textElement('span', 'runtime-budget-copy', '');
+  copy.append(
+    textElement('strong', '', `${String(used)} / ${String(maximum)}`),
+    textElement(
+      'small',
+      '',
+      labels.runtimeTurns
+        .replace('{0}', String(usage.modelTurns ?? 0))
+        .replace('{1}', String(usage.repairAttempts ?? 0)),
+    ),
+  );
+  const meter = document.createElement('span');
+  meter.className = 'runtime-budget-meter';
+  meter.setAttribute('role', 'progressbar');
+  meter.setAttribute('aria-valuemin', '0');
+  meter.setAttribute('aria-valuemax', String(maximum));
+  meter.setAttribute('aria-valuenow', String(used));
+  const fill = document.createElement('span');
+  fill.style.inlineSize = `${String(percent)}%`;
+  meter.append(fill);
+  region.append(copy, meter);
+  return region;
+}
+
+function runtimeInvocation(invocationId, invocation) {
+  const card = document.createElement('details');
+  card.className = 'runtime-tool-card';
+  card.dataset.status = invocation.status;
+  const summary = document.createElement('summary');
+  const title = textElement('span', 'runtime-tool-title', '');
+  title.append(
+    textElement('strong', '', invocation.toolName),
+    textElement('small', '', invocation.operation),
+  );
+  summary.append(
+    textElement('span', 'runtime-tool-glyph', '◆'),
+    title,
+    textElement('span', 'runtime-status', runtimeStatusLabel(invocation.status)),
+  );
+  const receipt = invocation.receipt;
+  const body = document.createElement('div');
+  body.className = 'runtime-tool-detail';
+  body.append(textElement('code', '', invocationId));
+  if (receipt) {
+    body.append(
+      textElement(
+        'span',
+        'runtime-metadata',
+        `${String(receipt.durationMs)} ms · ${formatBytes(receipt.outputBytes)}`,
+      ),
+      textElement(
+        'span',
+        'runtime-metadata',
+        `${receipt.receiptId}${receipt.truncated ? ` · ${labels.truncated}` : ''}${receipt.redactionApplied ? ` · ${labels.redacted}` : ''}`,
+      ),
+    );
+  }
+  card.append(summary, body);
+  return card;
 }
 
 function selectedModels() {

@@ -3,8 +3,6 @@ import { randomUUID } from 'node:crypto';
 import * as vscode from 'vscode';
 
 import { type BackendClient } from '../backend/backend-client';
-import { agentOperationErrorMessage } from '../backend/backend-error-message';
-import { isBackendSessionBoundaryError } from '../backend/backend-errors';
 import { AccountEpoch } from '../core/account-epoch';
 import { ApprovalBroker } from '../core/approval-broker';
 import { totalAttachmentBytes } from '../core/chat-attachment';
@@ -12,7 +10,6 @@ import { contextModeForCommand } from '../core/command-context';
 import { type ContextMode } from '../core/context-mode';
 import { GenerationThreadRegistry } from '../core/generation-thread-registry';
 import { type ResearchMode } from '../core/research-mode';
-import { cancelRunBoundary, transitionRunBoundary } from '../core/run-boundary';
 import { type OutputLogger } from '../infrastructure/output-logger';
 import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-workspace-edit-adapter';
 import { type DiffPreviewProvider } from '../views/diff-preview-provider';
@@ -20,22 +17,17 @@ import { type ChatViewProvider } from '../webview/chat-view-provider';
 
 import { AgentConnectionService } from './agent-connection-service';
 import { collectAgentContext } from './agent-context-service';
-import {
-  pickCompareInput,
-  pickModelKey,
-  promptQuestion,
-  promptWorkflowRequest,
-} from './agent-coordinator-prompts';
+import { AgentCoordinatorBoundaries } from './agent-coordinator-boundaries';
+import { pickCompareInput, pickModelKey } from './agent-coordinator-prompts';
 import {
   applyModelSelection,
-  cancelRemoteGeneration,
   cancelRemoteGenerations,
   cancelTargetGeneration,
   createBackendClient,
   prepareGeneration,
   removeSettledAgentRun,
-  resetAccountScopedState,
 } from './agent-coordinator-runtime';
+import { AgentCoordinatorWorkflowActions } from './agent-coordinator-workflow-actions';
 import {
   type ChatPromptInput,
   type CompareInput,
@@ -61,9 +53,11 @@ import { RuntimeProtocolService } from './runtime-protocol-service';
 import { confirmSafeEdits } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
 import { SessionControlService } from './session-control-service';
+import { VscodeRuntimeStudio } from './vscode-runtime-studio';
 import { type WorkflowKind } from './workflow-service';
 
 import type { WorkspaceContextService } from './workspace-context-service';
+import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { ChatAttachment } from '../core/chat-attachment';
 import type { ExtensionState } from '../core/extension-state';
 import type { SessionVault } from '../core/session-vault';
@@ -91,6 +85,9 @@ export class AgentCoordinator implements vscode.Disposable {
   private readonly generations: GenerationScheduler;
   private readonly conversations: ConversationSessionService;
   private readonly activeThreads = new GenerationThreadRegistry();
+  private readonly runtimeStudio: VscodeRuntimeStudio;
+  private readonly boundaries: AgentCoordinatorBoundaries;
+  private readonly workflowActions: AgentCoordinatorWorkflowActions;
   private view: ChatViewProvider | null = null;
 
   constructor(
@@ -102,6 +99,8 @@ export class AgentCoordinator implements vscode.Disposable {
     private readonly context: WorkspaceContextService,
     approvalMemory: WorkspaceApprovalMemory,
     externalOutputs: ExternalOutputGrantStore,
+    extensionContext: vscode.ExtensionContext,
+    workspaceScope: WorkspaceScopeService,
   ) {
     this.backend = createBackendClient(this.configuration.read(), this.sessionVault);
     this.attachmentRequests = new AttachmentRequestService(
@@ -109,6 +108,15 @@ export class AgentCoordinator implements vscode.Disposable {
       () => this.view,
     );
     this.approvals = new ApprovalBroker(this.state);
+    this.runtimeStudio = new VscodeRuntimeStudio(
+      extensionContext,
+      this.state,
+      this.configuration,
+      workspaceScope,
+      externalOutputs,
+      this.approvals,
+      () => this.backend,
+    );
     this.generations = new GenerationScheduler({
       after: async (signal) => {
         if (!this.state.snapshot.connected) {
@@ -128,7 +136,7 @@ export class AgentCoordinator implements vscode.Disposable {
       dropped: (requestId) => {
         this.view?.dropRequest(requestId);
       },
-      failed: (error, requestId) => this.generationFailed(error, requestId),
+      failed: (error, requestId) => this.boundaries.generationFailed(error, requestId),
       queueChanged: (generationQueue) => {
         this.state.update({
           busy: generationQueue.active.length > 0,
@@ -147,6 +155,20 @@ export class AgentCoordinator implements vscode.Disposable {
       this.state,
       () => this.backend,
       () => this.view,
+    );
+    this.boundaries = new AgentCoordinatorBoundaries(
+      () => this.backend,
+      () => this.view,
+      this.state,
+      this.logger,
+      this.activeThreads,
+      this.runEpoch,
+      this.accountEpoch,
+      this.runtimeStudio,
+      this.generations,
+      this.approvals,
+      this.attachmentRequests,
+      this.conversations,
     );
     this.chat = new ChatService(this.backend, (contextReceipt) => {
       this.state.update({ contextReceipt });
@@ -176,7 +198,7 @@ export class AgentCoordinator implements vscode.Disposable {
           this.dataRefreshEpoch,
         ),
       () => this.view,
-      () => this.handleAccountBoundary(),
+      () => this.boundaries.account(),
     );
     this.sessionControls = new SessionControlService(
       this.state,
@@ -233,7 +255,7 @@ export class AgentCoordinator implements vscode.Disposable {
         this.activeThreads.record(requestId, threadId);
       },
       (requestId) => this.cancel(requestId),
-      () => this.handleAccountBoundary(),
+      () => this.boundaries.account(),
     );
     this.safeEdits = new SafeEditService(this.editAdapter, (previews, summary, session, signal) =>
       confirmSafeEdits(
@@ -264,6 +286,14 @@ export class AgentCoordinator implements vscode.Disposable {
       executions: agentExecutions,
       state: this.state,
     });
+    this.workflowActions = new AgentCoordinatorWorkflowActions(
+      () => this.captureAdmission(),
+      () => this.openChat(),
+      (input) => this.send(input),
+      this.promptExecutions,
+      this.agentWorkflows,
+      this.generations,
+    );
   }
 
   attachView(view: ChatViewProvider): void {
@@ -321,10 +351,11 @@ export class AgentCoordinator implements vscode.Disposable {
     this.approvals.dispose();
     this.generations.dispose();
     this.browserAuthorization.dispose();
+    this.runtimeStudio.dispose();
   }
 
   async logout(): Promise<void> {
-    await this.handleAccountBoundary();
+    await this.boundaries.account();
     await this.connection.logout();
   }
 
@@ -365,7 +396,45 @@ export class AgentCoordinator implements vscode.Disposable {
       requestId,
       'agent',
       input.content,
-      (signal) => this.agentWorkflows.execute(queuedInput, signal, requestId),
+      async (signal) => {
+        const requiresLegacyPayload =
+          (queuedInput.attachments?.length ?? 0) > 0 ||
+          (queuedInput.researchMode !== undefined && queuedInput.researchMode !== 'NONE');
+        if (
+          this.state.snapshot.runtime.protocolSelection.mode !== 'runtime-v2' ||
+          requiresLegacyPayload
+        ) {
+          return this.agentWorkflows.execute(queuedInput, signal, requestId);
+        }
+        const threadId = await this.conversations.threadForRequest(requestId);
+        if (threadId === undefined)
+          throw new Error('Runtime V2 requires a persisted conversation thread');
+        await this.runtimeStudio.execute({
+          prompt: queuedInput.content,
+          threadId,
+          requestId,
+          ...(queuedInput.selection.provider === undefined
+            ? {}
+            : { provider: queuedInput.selection.provider }),
+          ...(queuedInput.selection.model === undefined
+            ? {}
+            : { model: queuedInput.selection.model }),
+          signal,
+          onEvent: (event) => {
+            if (event.type === 'model.delta') {
+              void this.view?.postEvent(
+                { type: 'CONTENT_DELTA', delta: event.payload.text },
+                requestId,
+              );
+            } else if (event.type === 'phase.changed') {
+              void this.view?.postEvent(
+                { type: 'RUNTIME_PHASE', label: event.payload.phase },
+                requestId,
+              );
+            }
+          },
+        });
+      },
       {
         concurrencyKey: generationConcurrencyKey(sessionId, queuedInput.admission.threadId),
         modelLabel: queuedInput.modelLabel,
@@ -374,9 +443,7 @@ export class AgentCoordinator implements vscode.Disposable {
     );
   }
 
-  async compare(input: CompareInput): Promise<void> {
-    await this.promptExecutions.compare(input);
-  }
+  compare = (input: CompareInput): Promise<void> => this.promptExecutions.compare(input);
 
   async compareModels(judgeEnabled = false): Promise<void> {
     const input = await pickCompareInput(this.state.snapshot.models, judgeEnabled);
@@ -398,51 +465,14 @@ export class AgentCoordinator implements vscode.Disposable {
     });
   }
 
-  async ask(contextMode: ContextMode): Promise<void> {
-    const content = await promptQuestion();
-    if (content === null) {
-      return;
-    }
-    const admission = this.captureAdmission();
-    const sessionId = await this.openChat();
-    await this.send({
-      admission,
-      content,
-      contextMode,
-      ...(sessionId === undefined ? {} : { sessionId }),
-    });
-  }
+  ask = (contextMode: ContextMode): Promise<void> => this.workflowActions.ask(contextMode);
 
   async runReadOnlyWorkflow(kind: WorkflowKind, contextMode: ContextMode): Promise<void> {
-    const request = await promptWorkflowRequest(kind);
-    if (request === null) {
-      return;
-    }
-    await this.promptExecutions.runReadOnly(kind, contextMode, request);
+    await this.workflowActions.runReadOnly(kind, contextMode);
   }
 
   async runEditWorkflow(kind: WorkflowKind, contextMode: ContextMode): Promise<void> {
-    const request = await promptWorkflowRequest(kind);
-    if (request === null) {
-      return;
-    }
-    const requestId = randomUUID();
-    const queuedInput = await this.agentWorkflows.snapshot({
-      content: request,
-      contextMode,
-      kind,
-    });
-    const sessionId = await this.agentWorkflows.prepare(queuedInput, requestId);
-    await this.generations.enqueue(
-      requestId,
-      'agent',
-      request,
-      (signal) => this.agentWorkflows.execute(queuedInput, signal, requestId),
-      {
-        concurrencyKey: generationConcurrencyKey(sessionId, queuedInput.admission.threadId),
-        modelLabel: queuedInput.modelLabel,
-      },
-    );
+    await this.workflowActions.runEdit(kind, contextMode);
   }
 
   async selectModel(modelKey?: string): Promise<void> {
@@ -451,13 +481,9 @@ export class AgentCoordinator implements vscode.Disposable {
     );
   }
 
-  async refreshModels(): Promise<void> {
-    await this.connection.refresh();
-  }
+  refreshModels = (): Promise<void> => this.connection.refresh();
 
-  async initializeWorkspace(): Promise<void> {
-    await this.initializer.promptAndInitialize();
-  }
+  initializeWorkspace = (): Promise<void> => this.initializer.promptAndInitialize();
 
   async undoLastEdit(): Promise<void> {
     if (await this.safeEdits.undoLast()) {
@@ -478,6 +504,7 @@ export class AgentCoordinator implements vscode.Disposable {
       return;
     }
     this.approvals.cancelCurrent();
+    await this.runtimeStudio.cancel();
     this.generations.cancelAll();
     const threadIds = this.activeThreads.takeAll();
     await cancelRemoteGenerations(this.backend, this.logger, threadIds);
@@ -495,42 +522,7 @@ export class AgentCoordinator implements vscode.Disposable {
     return this.admissions.capture(threadId);
   }
 
-  private async generationFailed(error: unknown, requestId: string): Promise<void> {
-    const activeThreadId = this.activeThreads.take(requestId);
-    await cancelRemoteGeneration(this.backend, this.logger, activeThreadId);
-    if (isBackendSessionBoundaryError(error)) {
-      await this.handleAccountBoundary();
-    }
-    const message = agentOperationErrorMessage(error);
-    this.logger.error('ClawAI generation failed.', error);
-    this.state.update({
-      backendStatus: isBackendSessionBoundaryError(error)
-        ? 'disconnected'
-        : this.state.snapshot.connected
-          ? 'connected'
-          : 'error',
-      lastError: message,
-    });
-    await this.view?.postError(message, requestId);
-  }
-
-  private async handleAccountBoundary(): Promise<void> {
-    const backend = this.backend;
-    const activeThreadIds = this.activeThreads.takeAll();
-    this.runEpoch.invalidate();
-    this.accountEpoch.invalidate();
-    cancelRunBoundary(this.generations, this.approvals);
-    this.attachmentRequests.resetAccountState();
-    this.conversations.resetAccountState();
-    resetAccountScopedState(this.state);
-    await cancelRemoteGenerations(backend, this.logger, activeThreadIds);
-  }
-
   private handleWorkspaceBoundary(transition: () => void): Promise<void> {
-    this.runEpoch.invalidate();
-    const activeThreadIds = this.activeThreads.takeAll();
-    return transitionRunBoundary(this.generations, this.approvals, transition, () =>
-      cancelRemoteGenerations(this.backend, this.logger, activeThreadIds),
-    );
+    return this.boundaries.workspace(transition);
   }
 }

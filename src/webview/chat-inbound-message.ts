@@ -92,7 +92,7 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
   }),
   z.object({
     type: z.literal('selectPermissionMode'),
-    mode: z.enum(['BYPASS_PERMISSIONS', 'EDIT_AUTOMATICALLY', 'MANUAL']),
+    mode: z.enum(['PLAN', 'ASK', 'AUTO_EDIT', 'AUTONOMOUS_SCOPED', 'ENTERPRISE_LOCKED']),
   }),
   z.object({
     type: z.literal('selectWorkspaceFolder'),
