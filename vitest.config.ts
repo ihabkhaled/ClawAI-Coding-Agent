@@ -17,6 +17,8 @@ export default defineConfig({
         'src/core/extension-state.ts',
         'src/core/generation-thread-registry.ts',
         'src/core/model-catalog.ts',
+        'src/core/runtime/capability-manifest.ts',
+        'src/core/runtime/runtime-protocol.schemas.ts',
         'src/core/permission-policy.ts',
         'src/core/redaction.ts',
         'src/core/run-boundary.ts',
