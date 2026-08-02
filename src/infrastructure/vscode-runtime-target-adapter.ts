@@ -16,6 +16,7 @@ import { processSupervisorToolDefinition } from './process-supervisor-tool-execu
 import { qualityToolDefinition } from './quality-tool-executor';
 import { runJournalToolDefinition } from './run-journal-tool-executor';
 import { structuredCommandToolDefinition } from './structured-command-tool-executor';
+import { subAgentToolDefinition } from './sub-agent-tool-executor';
 import { workspaceFilesystemToolDefinition } from './vscode-filesystem-tool-executor';
 
 import type {
@@ -147,6 +148,7 @@ export function buildRuntimeCapabilityManifest(
       runJournalToolDefinition,
       evidenceToolDefinition,
       developmentServiceToolDefinition,
+      subAgentToolDefinition,
     ];
     target.capabilities.push(...localDefinitions.map(({ name }) => name));
     tools.push(

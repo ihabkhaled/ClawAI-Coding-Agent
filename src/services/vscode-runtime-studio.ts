@@ -52,6 +52,10 @@ import {
   structuredCommandToolDefinition,
 } from '../infrastructure/structured-command-tool-executor';
 import {
+  SubAgentToolExecutor,
+  subAgentToolDefinition,
+} from '../infrastructure/sub-agent-tool-executor';
+import {
   SocketPortInspector,
   VscodeDevelopmentServiceAdapter,
   VscodeDevelopmentServiceReadiness,
@@ -82,6 +86,7 @@ import { DevelopmentServiceManager } from './development-service-manager';
 import { EvidenceBundleService } from './evidence-bundle-service';
 import { ExecutionTargetRegistry } from './execution-target-registry';
 import { FileTransactionService } from './file-transaction-service';
+import { FileLeaseManager } from './file-lease-manager';
 import { GitAgentService } from './git-agent-service';
 import { LocalObservabilityService } from './observability-service';
 import { ProcessSupervisorService } from './process-supervisor-service';
@@ -90,8 +95,10 @@ import { RunJournalService } from './run-journal-service';
 import { RuntimeEventStreamService } from './runtime-event-stream-service';
 import { RuntimePolicyV2Adapter } from './runtime-policy-v2-adapter';
 import { RuntimeRunService } from './runtime-run-service';
+import { RuntimeSubAgentExecutor } from './runtime-sub-agent-executor';
 import { RuntimeToolRouter } from './runtime-tool-router';
 import { ServerReadinessService } from './server-readiness-service';
+import { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
 import { TargetAwareToolRouter } from './target-aware-tool-router';
 import { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 
@@ -276,6 +283,20 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       new SocketPortInspector(),
       new VscodeServiceCheckpointStore(context.workspaceState),
     );
+    const subAgents = new SubAgentCoordinatorService(
+      new RuntimeSubAgentExecutor({
+        backend,
+        currentEpochs: () => this.epochs,
+        definitions: () => this.router.definitions(),
+        executor: { execute: (invocation, signal) => this.router.execute(invocation, signal) },
+        policy: this.policy,
+        stream: this.stream,
+        transport: this.transport,
+      }),
+      new FileLeaseManager(),
+      () => this.epochs,
+      { status: () => undefined, outcome: () => undefined },
+    );
     const registrations = [
       {
         definition: workspaceFilesystemToolDefinition,
@@ -318,6 +339,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
           developmentServices,
         ),
       },
+      { definition: subAgentToolDefinition, executor: new SubAgentToolExecutor(subAgents) },
     ];
     this.router = new RuntimeToolRouter(registrations, this.policy);
   }

@@ -33,6 +33,7 @@ describe('BackendRuntimeTransport durable bindings', () => {
         replayed: false,
       })),
       openRuntimeStream,
+      steerRuntime: vi.fn(async () => mutationAck),
       submitRuntimeResult: vi.fn(async () => mutationAck),
     };
     const first = new BackendRuntimeTransport(() => backend, store);
@@ -76,6 +77,17 @@ describe('BackendRuntimeTransport durable bindings', () => {
 
     const afterReload = new BackendRuntimeTransport(() => backend, store);
     await afterReload.openStream('runtime:backend-0001', 7, new AbortController().signal);
+    const steering = {
+      schemaVersion: '2.0' as const,
+      steeringId: 'steering-id-0001',
+      runId: 'runtime:backend-0001',
+      sequence: 0,
+      idempotencyKey: 'steering-key-0001',
+      message: 'Prioritize the failing integration test.',
+      epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
+      receivedAt: '2026-08-02T10:00:02.000Z',
+    };
+    await afterReload.steer('runtime:backend-0001', steering, new AbortController().signal);
 
     expect(openRuntimeStream).toHaveBeenCalledWith(
       expect.objectContaining({
@@ -84,6 +96,11 @@ describe('BackendRuntimeTransport durable bindings', () => {
         epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
       }),
       7,
+      expect.any(AbortSignal),
+    );
+    expect(backend.steerRuntime).toHaveBeenCalledWith(
+      expect.objectContaining({ runId: 'runtime:backend-0001' }),
+      steering,
       expect.any(AbortSignal),
     );
   });
