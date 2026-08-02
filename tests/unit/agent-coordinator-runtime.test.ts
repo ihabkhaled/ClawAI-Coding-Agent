@@ -5,6 +5,7 @@ vi.mock('vscode', () => ({
 }));
 
 import { ExtensionState } from '../../src/core/extension-state';
+import { createRuntimeSnapshot } from '../../src/core/runtime/runtime-event-reducer';
 import {
   cancelTargetGeneration,
   resetAccountScopedState,
@@ -70,6 +71,7 @@ describe('agent coordinator account boundary', () => {
       models: [{ key: 'OPENAI:private-model' }] as never,
       permissionMode: 'BYPASS_PERMISSIONS',
       routingMode: 'MANUAL_MODEL',
+      runtime: createRuntimeSnapshot(),
       selectedModel: 'OPENAI:private-model',
       usage: { day: { used: 99 } } as never,
       user: { id: 'account-a' } as never,

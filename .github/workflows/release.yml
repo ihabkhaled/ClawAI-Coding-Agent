@@ -112,7 +112,7 @@ jobs:
 
           ## Installation
 
-          Download \`clawai-coding-agent-${VERSION}.vsix\`, run **Extensions: Install from VSIX…** in VS Code, select the file, and reload the window.
+          Download \`clawai-coding-agent-${VERSION}.vsix\`, run **Extensions: Install from VSIX...** in VS Code, select the file, and reload the window.
           EOF
 
       - name: Create GitHub Release

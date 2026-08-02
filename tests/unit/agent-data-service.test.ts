@@ -2,6 +2,7 @@ import { describe, expect, it, vi } from 'vitest';
 
 import { AccountEpoch } from '../../src/core/account-epoch';
 import { ExtensionState } from '../../src/core/extension-state';
+import { createRuntimeSnapshot } from '../../src/core/runtime/runtime-event-reducer';
 import { refreshAgentData, refreshConversationData } from '../../src/services/agent-data-service';
 
 function deferred<T>() {
@@ -32,6 +33,7 @@ describe('refreshAgentData', () => {
       models: [],
       permissionMode: 'MANUAL',
       routingMode: 'MANUAL_MODEL',
+      runtime: createRuntimeSnapshot(),
       selectedModel: 'OLLAMA:removed',
       usage: undefined,
       user: { id: 'user-1' } as never,
@@ -93,6 +95,7 @@ describe('refreshAgentData', () => {
       models: [],
       permissionMode: 'MANUAL',
       routingMode: 'AUTO',
+      runtime: createRuntimeSnapshot(),
       selectedModel: '',
       usage: undefined,
       user: { id: 'old-user' } as never,
@@ -150,6 +153,7 @@ describe('refreshAgentData', () => {
       models: [],
       permissionMode: 'MANUAL',
       routingMode: 'AUTO',
+      runtime: createRuntimeSnapshot(),
       selectedModel: '',
       usage: undefined,
       user: { id: 'old-user' } as never,
@@ -213,6 +217,7 @@ describe('refreshAgentData', () => {
       models: [],
       permissionMode: 'MANUAL',
       routingMode: 'AUTO',
+      runtime: createRuntimeSnapshot(),
       selectedModel: '',
       usage: undefined,
       user: { id: 'user-1' } as never,

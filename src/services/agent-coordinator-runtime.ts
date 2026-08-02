@@ -31,6 +31,7 @@ export function prepareGeneration(state: ExtensionState): Promise<void> {
 }
 
 export function resetAccountScopedState(state: ExtensionState): void {
+  state.resetRuntime();
   state.update({
     agentRun: undefined,
     agentRuns: {},

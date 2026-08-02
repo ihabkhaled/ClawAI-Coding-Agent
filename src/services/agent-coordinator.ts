@@ -57,6 +57,7 @@ import { GenerationScheduler, generationConcurrencyKey } from './generation-sche
 import { ModelService } from './model-service';
 import { PromptExecutionService } from './prompt-execution-service';
 import { RequestAdmissionService } from './request-admission-service';
+import { RuntimeProtocolService } from './runtime-protocol-service';
 import { confirmSafeEdits } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
 import { SessionControlService } from './session-control-service';
@@ -164,6 +165,7 @@ export class AgentCoordinator implements vscode.Disposable {
       (configuration) => {
         this.backend = createBackendClient(configuration, this.sessionVault);
       },
+      new RuntimeProtocolService(() => this.backend),
       () =>
         refreshAgentData(
           this.backend,

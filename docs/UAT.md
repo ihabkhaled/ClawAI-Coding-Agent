@@ -2,6 +2,18 @@
 
 ## Connection and session
 
+- [ ] With the 0.18 agent-service endpoint available, authenticate and confirm
+      the connection remains healthy after V2 negotiation.
+- [ ] Return 404, malformed JSON, V1-only versions, and a transport mismatch
+      from `/agent/runtime/protocol`; confirm legacy chat and reviewed edits
+      remain available without a connection error.
+- [ ] Expire the access token during negotiation; confirm one refresh/retry.
+- [ ] Cancel or switch account/backend during negotiation; confirm the stale
+      result never enters extension state.
+- [ ] Activate simulated local, WSL, SSH, Dev Container, Codespaces, web,
+      virtual, untrusted, empty, and multi-root probes; confirm the manifest
+      never overclaims write or shell capability.
+
 - [ ] On a fresh profile, confirm only the connection gateway is visible; chat
       history, models, workspace status, suggestions, and composer are hidden.
 - [ ] Keep the `https://claw.local` default once, then repeat with an edited

@@ -18,6 +18,7 @@ import {
   paginatedSchema,
   parallelResponseSchema,
   refreshResultSchema,
+  runtimeProtocolWireDescriptorSchema,
   routerModelSchema,
   threadSchema,
   usageSchema,
@@ -46,6 +47,7 @@ import {
 
 import type { ChatAttachment } from '../core/chat-attachment';
 import type { ResearchMode } from '../core/research-mode';
+import type { RuntimeProtocolWireDescriptor } from '../core/runtime/runtime-negotiation';
 
 export {
   BackendRequestError,
@@ -195,6 +197,12 @@ export class BackendClient {
 
   async getUsage(): Promise<Usage> {
     return this.request('/auth/me/usage', usageSchema);
+  }
+
+  async getRuntimeProtocol(signal?: AbortSignal): Promise<RuntimeProtocolWireDescriptor> {
+    return this.request('/agent/runtime/protocol', runtimeProtocolWireDescriptorSchema, {
+      ...(signal === undefined ? {} : { signal }),
+    });
   }
 
   async getRouterModels(): Promise<RouterModel[]> {

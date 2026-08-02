@@ -24,6 +24,7 @@ const ciWorkflowPath = join(root, '.github', 'workflows', 'ci.yml');
 const releaseWorkflowPath = join(root, '.github', 'workflows', 'release.yml');
 const commands = manifest.contributes.commands.map((command) => command.command);
 const uniqueCommands = new Set(commands);
+const productionDependencies = Object.keys(manifest.dependencies ?? {}).sort();
 const rootVsix = readdirSync(root).filter((entry) => entry.endsWith('.vsix'));
 
 assert.match(
@@ -45,6 +46,11 @@ assert.match(
 assert.match(gitAttributes, /^\*\.vsix binary$/mu, 'tracked VSIX archives must be marked binary');
 assert.deepEqual(rootVsix, [], 'VSIX artifacts must live under builds/, never the repository root');
 assert.equal(uniqueCommands.size, commands.length, 'command IDs must be unique');
+assert.deepEqual(
+  productionDependencies,
+  ['zod'],
+  '0.18 runtime foundation must not add a native or executable dependency',
+);
 for (const command of commands) {
   assert.match(
     extensionSource,

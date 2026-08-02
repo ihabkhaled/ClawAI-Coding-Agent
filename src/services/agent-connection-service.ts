@@ -8,6 +8,7 @@ import type { BrowserAuthorizationService } from './browser-authorization-servic
 import type { ChatService } from './chat-service';
 import type { ConfigurationService, RuntimeConfiguration } from './configuration-service';
 import type { ModelService } from './model-service';
+import type { RuntimeProtocolService } from './runtime-protocol-service';
 import type { BackendClient } from '../backend/backend-client';
 import type { ExtensionState } from '../core/extension-state';
 import type { SessionVault } from '../core/session-vault';
@@ -32,6 +33,7 @@ export class AgentConnectionService {
     private readonly backend: () => BackendClient,
     private readonly createBackend: (configuration: RuntimeConfiguration) => BackendClient,
     private readonly replaceBackend: (configuration: RuntimeConfiguration) => void,
+    private readonly runtimeProtocol: RuntimeProtocolService,
     private readonly refreshData: () => Promise<void>,
     private readonly view: () => ChatViewProvider | null,
     private readonly accountBoundary: () => Promise<void> | void,
@@ -68,6 +70,11 @@ export class AgentConnectionService {
       if (!this.isCurrent(configurationEpoch, lifecycleEpoch, backendUrl)) {
         return;
       }
+      const protocolSelection = await this.runtimeProtocol.negotiate();
+      if (!this.isCurrent(configurationEpoch, lifecycleEpoch, backendUrl)) {
+        return;
+      }
+      this.state.setRuntimeProtocolSelection(protocolSelection);
       this.state.update({
         backendStatus: 'connected',
         connected: true,
@@ -128,6 +135,11 @@ export class AgentConnectionService {
       return;
     }
     if (this.state.snapshot.connected) {
+      const protocolSelection = await this.runtimeProtocol.negotiate();
+      if (configurationEpoch !== this.configurationEpoch) {
+        return;
+      }
+      this.state.setRuntimeProtocolSelection(protocolSelection);
       await this.refreshData();
     }
   }
@@ -198,6 +210,9 @@ export class AgentConnectionService {
           }
           throw error;
         }
+        const protocolSelection = await this.runtimeProtocol.negotiate();
+        this.requireCurrent(lifecycleEpoch);
+        this.state.setRuntimeProtocolSelection(protocolSelection);
         this.state.update({
           backendStatus: 'connected',
           connected: true,
@@ -322,6 +337,11 @@ export class AgentConnectionService {
       if (!this.isCurrent(configurationEpoch, lifecycleEpoch, backendUrl)) {
         return;
       }
+      const protocolSelection = await this.runtimeProtocol.negotiate();
+      if (!this.isCurrent(configurationEpoch, lifecycleEpoch, backendUrl)) {
+        return;
+      }
+      this.state.setRuntimeProtocolSelection(protocolSelection);
       this.state.update({
         backendStatus: 'connected',
         connected: true,

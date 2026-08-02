@@ -79,6 +79,14 @@ extension-local assets. Dynamic content is rendered with DOM text nodes and
 
 ### Backend compromise or drift
 
+Runtime negotiation is authenticated, bodyless, response-bounded, and schema
+validated. Capability discovery is descriptive and cannot authorize an
+effect. Workspace Trust, canonical roots, account/workspace/target/policy
+epochs, and replay identity are enforced locally. Unknown event fields are
+rejected; syntactically valid future event names are retained as inert data.
+The extension never sends the local manifest, paths, environment variables, or
+secrets during negotiation, and never requests or stores hidden reasoning.
+
 Every response is parsed through a narrow runtime schema. Error bodies are
 bounded and redacted. Requests have timeouts and cancellation. Proposed
 commands are treated as untrusted until strict local validation and the active

@@ -9,6 +9,15 @@ The extension remains a thin client. Authentication, entitlements, quotas,
 thread history, provider credentials, routing, inference, and audit records stay
 in the ClawAI platform.
 
+## Runtime foundation
+
+Version 0.18.0 introduces the inert Runtime Protocol V2 foundation. On
+activation, the extension describes only host capabilities it can prove from
+stable VS Code APIs. After authentication it negotiates V2 with the existing
+agent service; an unavailable or incompatible additive endpoint keeps the
+shipped V1 chat and reviewed edit workflow active. Runtime tool execution is
+intentionally not enabled until 0.19.0.
+
 ## Highlights
 
 - Stream responses from local or hosted ClawAI deployments.

@@ -3,7 +3,8 @@
 ## Lanes
 
 - Unit tests cover pure URL, redaction, session, context, SSE, model, edit, and
-  workflow behavior.
+  workflow behavior, plus runtime schemas, host mapping, negotiation, ordered
+  reduction, replay, epoch, terminal-state, and forward-compatibility rules.
 - Integration tests exercise the real `BackendClient` against mocked Fetch
   responses, including refresh, every endpoint, invalid contracts, redaction,
   logout cleanup, and network errors.
@@ -21,6 +22,10 @@
   screenshot baselines. The disconnected lane verifies that only the focused
   backend connection gateway is available, including its default URL,
   authorization progress, inline errors, and connected-state transition.
+
+Runtime security-critical pure modules require at least 95% statements,
+branches, functions, and lines. Release verification also inspects the VSIX to
+prove 0.18 introduces no executable or native binary.
 
 `npm test` enforces at least 85% lines, statements, functions, and 80% branches
 over the pure backend/security/application modules. VS Code adapters are

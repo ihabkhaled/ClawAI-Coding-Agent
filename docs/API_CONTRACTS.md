@@ -13,6 +13,7 @@ for the fields consumed by the extension.
 | GET      | `/auth/me`                               | Current user profile                                |
 | GET      | `/auth/me/entitlements`                  | Plan, model/provider grants, quota                  |
 | GET      | `/auth/me/usage`                         | Day/week/month and feature usage                    |
+| GET      | `/agent/runtime/protocol`                | Authenticated V1/V2 runtime negotiation descriptor  |
 | GET      | `/routing/models`                        | Execution-capable routing models                    |
 | GET      | `/connectors/available-models`           | Connected provider models                           |
 | POST     | `/files/upload`                          | Upload one validated request attachment             |
@@ -38,3 +39,9 @@ failure, and completion events cannot enter a new request on a reused thread.
 
 Contract changes require synchronized backend and extension tests. Do not use
 undocumented service-private endpoints.
+
+The runtime descriptor contains bounded version and transport lists, inert
+foundation feature flags, and event/run limits. It never receives a request
+body, capability manifest, workspace URI, environment value, or secret. The
+0.18 server prefers `2.0`, supports `1.0`, uses SSE, and reports
+`toolExecution: false`.

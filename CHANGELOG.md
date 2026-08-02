@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.18.0
+
+- Establishes a strict, model-neutral Runtime Protocol V2 foundation while
+  preserving the complete legacy V1 chat and reviewed edit-plan path.
+- Adds a truthful capability manifest for local, WSL, SSH, Dev Container,
+  Codespaces, web-limited, virtual, multi-root, and untrusted VS Code hosts
+  without running discovery commands or uploading workspace details.
+- Adds one immutable ordered-event reducer with global event identity,
+  per-run sequence and epoch enforcement, idempotent replay, terminal-state
+  protection, strict known payloads, and inert future-event compatibility.
+- Negotiates the authenticated agent-service protocol descriptor after profile
+  validation, automatically refreshes an expired access token, and safely
+  retains V1 when the additive endpoint is absent, incompatible, or malformed.
+- Keeps Runtime V2 tool execution disabled until the separately gated 0.19.0
+  release and introduces no executable, native binary, PTY, or shell executor.
+
 ## 0.17.0
 
 - Separates Backend and Frontend connection profiles so API traffic and browser

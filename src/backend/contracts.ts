@@ -2,6 +2,50 @@ import { z } from 'zod';
 
 import { tokenPairSchema } from '../core/session-vault';
 
+import type { RuntimeProtocolWireDescriptor } from '../core/runtime/runtime-negotiation';
+
+const runtimeVersionSchema = z
+  .string()
+  .regex(/^\d+\.\d+$/u)
+  .max(20);
+
+export const runtimeProtocolWireDescriptorSchema: z.ZodType<RuntimeProtocolWireDescriptor> = z
+  .object({
+    versions: z.array(runtimeVersionSchema).min(1).max(8),
+    preferred: runtimeVersionSchema,
+    transports: z.array(z.string().min(1).max(30)).min(1).max(8),
+    features: z
+      .object({
+        capabilityManifest: z.boolean(),
+        orderedRunEvents: z.boolean(),
+        toolExecution: z.boolean(),
+      })
+      .strict(),
+    limits: z
+      .object({
+        maxEventBytes: z.number().int().min(1_024).max(16_777_216),
+        maxActiveRuns: z.number().int().min(1).max(256),
+      })
+      .strict(),
+  })
+  .strict()
+  .superRefine((descriptor, context) => {
+    if (!descriptor.versions.includes(descriptor.preferred)) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Preferred runtime protocol version is not supported',
+        path: ['preferred'],
+      });
+    }
+    if (new Set(descriptor.versions).size !== descriptor.versions.length) {
+      context.addIssue({
+        code: 'custom',
+        message: 'Runtime protocol versions must be unique',
+        path: ['versions'],
+      });
+    }
+  });
+
 export const authUserSchema = z
   .object({
     id: z.string(),
