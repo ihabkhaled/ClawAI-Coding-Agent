@@ -65,6 +65,16 @@ describe('SafeRuntimeFixtureExecutor', () => {
     expect(
       () => new SafeRuntimeFixtureExecutor({ documentCount: -1, workspaceLabel: 'Fixture' }),
     ).toThrow(/count/i);
+    expect(
+      () =>
+        new SafeRuntimeFixtureExecutor({
+          documentCount: Number.MAX_SAFE_INTEGER + 1,
+          workspaceLabel: 'Fixture',
+        }),
+    ).toThrow(/count/i);
+    expect(
+      () => new SafeRuntimeFixtureExecutor({ documentCount: 1_000_001, workspaceLabel: 'Fixture' }),
+    ).toThrow(/count/i);
     expect(() => new SafeRuntimeFixtureExecutor({ documentCount: 1, workspaceLabel: ' ' })).toThrow(
       /label/i,
     );
