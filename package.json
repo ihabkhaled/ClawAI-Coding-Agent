@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.18.0",
+  "version": "0.19.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
