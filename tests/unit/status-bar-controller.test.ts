@@ -6,6 +6,7 @@ vi.mock('vscode', () => ({
   },
 }));
 
+import { createRuntimeSnapshot } from '../../src/core/runtime/runtime-event-reducer';
 import { statusBarText } from '../../src/views/status-bar-controller';
 
 import type { ExtensionSnapshot } from '../../src/core/extension-state';
@@ -29,6 +30,7 @@ function snapshot(patch: Partial<ExtensionSnapshot> = {}): ExtensionSnapshot {
     modelWarnings: [],
     permissionMode: 'MANUAL',
     routingMode: 'AUTO',
+    runtime: createRuntimeSnapshot(),
     selectedModel: '',
     usage: undefined,
     user: undefined,

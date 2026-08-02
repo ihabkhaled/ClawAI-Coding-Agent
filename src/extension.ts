@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { contextModeForCommand } from './core/command-context';
 import { ExtensionState } from './core/extension-state';
 import { ExternalOutputGrantStore } from './core/external-output-grants';
+import { createRuntimeSnapshot } from './core/runtime/runtime-event-reducer';
 import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
 import { OutputLogger } from './infrastructure/output-logger';
@@ -137,6 +138,7 @@ export function activate(context: vscode.ExtensionContext): void {
     models: [],
     permissionMode: configuration.permissionMode,
     routingMode: configuration.routingMode,
+    runtime: createRuntimeSnapshot(),
     selectedModel: configuration.selectedModel,
     usage: undefined,
     user: undefined,

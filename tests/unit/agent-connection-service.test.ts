@@ -6,6 +6,7 @@ vi.mock('vscode', () => ({
 
 import { BackendRequestError } from '../../src/backend/backend-client';
 import { ExtensionState } from '../../src/core/extension-state';
+import { createRuntimeSnapshot } from '../../src/core/runtime/runtime-event-reducer';
 import { AgentConnectionService } from '../../src/services/agent-connection-service';
 
 import type { TokenPair } from '../../src/core/session-vault';
@@ -51,6 +52,7 @@ function state() {
     models: [],
     permissionMode: 'MANUAL',
     routingMode: 'AUTO',
+    runtime: createRuntimeSnapshot(),
     selectedModel: '',
     usage: undefined,
     user: undefined,

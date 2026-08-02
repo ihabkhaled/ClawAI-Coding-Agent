@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { createRuntimeSnapshot } from '../../src/core/runtime/runtime-event-reducer';
 import { toPublicChatState } from '../../src/webview/chat-public-state';
 
 import type { ExtensionSnapshot } from '../../src/core/extension-state';
@@ -69,6 +70,7 @@ const snapshot: ExtensionSnapshot = {
   modelWarnings: ['Ollama is unavailable'],
   permissionMode: 'MANUAL',
   routingMode: 'AUTO',
+  runtime: createRuntimeSnapshot(),
   selectedModel: '',
   usage: undefined,
   user: undefined,
