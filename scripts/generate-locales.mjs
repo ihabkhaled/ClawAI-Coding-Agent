@@ -1590,8 +1590,84 @@ const runtimeV2Translations = {
   },
 };
 
+const administratorTranslations = {
+  ar: {
+    'Approve administrator operation': 'الموافقة على عملية المسؤول',
+    'ClawAI administrator consent': 'موافقة مسؤول ClawAI',
+    'Your operating system will show native administrator consent.':
+      'سيعرض نظام التشغيل نافذة الموافقة الأصلية للمسؤول.',
+  },
+  de: {
+    'Approve administrator operation': 'Administratorvorgang genehmigen',
+    'ClawAI administrator consent': 'ClawAI-Administratorzustimmung',
+    'Your operating system will show native administrator consent.':
+      'Ihr Betriebssystem zeigt die native Administratorzustimmung an.',
+  },
+  es: {
+    'Approve administrator operation': 'Aprobar operación de administrador',
+    'ClawAI administrator consent': 'Consentimiento de administrador de ClawAI',
+    'Your operating system will show native administrator consent.':
+      'El sistema operativo mostrará la solicitud nativa de consentimiento del administrador.',
+  },
+  fa: {
+    'Approve administrator operation': 'تأیید عملیات مدیر',
+    'ClawAI administrator consent': 'رضایت مدیر ClawAI',
+    'Your operating system will show native administrator consent.':
+      'سیستم‌عامل شما درخواست بومی رضایت مدیر را نمایش می‌دهد.',
+  },
+  fr: {
+    'Approve administrator operation': 'Approuver l’opération administrateur',
+    'ClawAI administrator consent': 'Consentement administrateur ClawAI',
+    'Your operating system will show native administrator consent.':
+      'Votre système d’exploitation affichera la demande native de consentement administrateur.',
+  },
+  hi: {
+    'Approve administrator operation': 'व्यवस्थापक कार्रवाई स्वीकृत करें',
+    'ClawAI administrator consent': 'ClawAI व्यवस्थापक सहमति',
+    'Your operating system will show native administrator consent.':
+      'आपका ऑपरेटिंग सिस्टम मूल व्यवस्थापक सहमति संवाद दिखाएगा।',
+  },
+  it: {
+    'Approve administrator operation': 'Approva operazione amministratore',
+    'ClawAI administrator consent': 'Consenso amministratore ClawAI',
+    'Your operating system will show native administrator consent.':
+      'Il sistema operativo mostrerà la richiesta nativa di consenso dell’amministratore.',
+  },
+  ja: {
+    'Approve administrator operation': '管理者操作を承認',
+    'ClawAI administrator consent': 'ClawAI 管理者の同意',
+    'Your operating system will show native administrator consent.':
+      'オペレーティングシステムが標準の管理者同意画面を表示します。',
+  },
+  pt: {
+    'Approve administrator operation': 'Aprovar operação de administrador',
+    'ClawAI administrator consent': 'Consentimento de administrador do ClawAI',
+    'Your operating system will show native administrator consent.':
+      'O sistema operacional mostrará a solicitação nativa de consentimento do administrador.',
+  },
+  ru: {
+    'Approve administrator operation': 'Одобрить операцию администратора',
+    'ClawAI administrator consent': 'Согласие администратора ClawAI',
+    'Your operating system will show native administrator consent.':
+      'Операционная система покажет стандартный запрос согласия администратора.',
+  },
+  th: {
+    'Approve administrator operation': 'อนุมัติการดำเนินการของผู้ดูแลระบบ',
+    'ClawAI administrator consent': 'ความยินยอมของผู้ดูแลระบบ ClawAI',
+    'Your operating system will show native administrator consent.':
+      'ระบบปฏิบัติการจะแสดงคำขอความยินยอมของผู้ดูแลระบบแบบเนทีฟ',
+  },
+  zh: {
+    'Approve administrator operation': '批准管理员操作',
+    'ClawAI administrator consent': 'ClawAI 管理员授权',
+    'Your operating system will show native administrator consent.':
+      '操作系统将显示原生管理员授权提示。',
+  },
+};
+
 function translate(locale, message) {
   return (
+    administratorTranslations[locale][message] ??
     runtimeV2Translations[locale][message] ??
     environmentTranslations[locale][message] ??
     cockpitTranslations[locale][message] ??

@@ -36,6 +36,7 @@
   "Approval": "Approval",
   "Approval required": "Approval required",
   "Approve": "Approve",
+  "Approve administrator operation": "管理者操作を承認",
   "Approve agent effect": "Approve agent effect",
   "Approve browser navigation": "Approve browser navigation",
   "Approve database change": "Approve database change",
@@ -74,6 +75,7 @@
   "Choose your ClawAI app address, then authorize securely in your browser.": "Choose your ClawAI app address, then authorize securely in your browser.",
   "CLAWAI": "CLAWAI",
   "ClawAI {0}": "ClawAI {0}",
+  "ClawAI administrator consent": "ClawAI 管理者の同意",
   "ClawAI attachment upload did not resolve a file ID.": "ClawAI attachment upload did not resolve a file ID.",
   "ClawAI attachment upload did not return a file ID.": "ClawAI attachment upload did not return a file ID.",
   "ClawAI authorization timed out. Please try again.": "ClawAI の認証がタイムアウトしました。もう一度お試しください。",
@@ -298,5 +300,6 @@
   "Write to external output folder": "Write to external output folder",
   "YOU": "YOU",
   "You can attach up to 10 files.": "ファイルは最大 10 個まで添付できます。",
-  "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue."
+  "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue.",
+  "Your operating system will show native administrator consent.": "オペレーティングシステムが標準の管理者同意画面を表示します。"
 }
