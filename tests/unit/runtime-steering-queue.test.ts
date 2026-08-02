@@ -19,7 +19,7 @@ function message(sequence: number, content = `Steering ${String(sequence)}`) {
     idempotencyKey: `steering-idem-${String(sequence).padStart(4, '0')}`,
     message: content,
     epochs,
-    receivedAt: `2026-08-02T09:00:0${String(sequence)}.000Z`,
+    receivedAt: `2026-08-02T09:00:${String(sequence % 60).padStart(2, '0')}.000Z`,
   };
 }
 
@@ -204,5 +204,21 @@ describe('runtime steering queue', () => {
     const closed = closeSteeringQueue(applied, 'completed');
 
     expect(closed.entries[0]?.status).toBe('applied');
+  });
+
+  it('bounds pending steering and compacts terminal history deterministically', () => {
+    let pending = createSteeringQueue('run-id-0001', epochs);
+    for (let sequence = 0; sequence < 8; sequence += 1) {
+      pending = receiveSteering(pending, message(sequence));
+    }
+    expect(() => receiveSteering(pending, message(8))).toThrow(/pending queue is full/i);
+
+    let terminal = closeSteeringQueue(createSteeringQueue('run-id-0001', epochs), 'completed');
+    for (let sequence = 0; sequence < 40; sequence += 1) {
+      terminal = receiveSteering(terminal, message(sequence));
+    }
+    expect(terminal.entries.length).toBeLessThanOrEqual(32);
+    expect(terminal.historyBytes).toBeGreaterThan(0);
+    expect(Object.keys(terminal.sequenceFingerprints).length).toBeLessThanOrEqual(32);
   });
 });

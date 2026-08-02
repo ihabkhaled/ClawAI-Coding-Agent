@@ -45,16 +45,21 @@ const continuation = { action: 'final' as const };
 
 function harness(
   overrides: {
+    budget?: typeof budget;
+    policy?: () => Promise<{ decision: 'allow' | 'deny'; code: string; message: string }>;
     policyDecision?: 'allow' | 'deny';
     currentEpochs?: () => typeof epochs;
     execute?: () => Promise<{ structured: { files: number }; modelText: string }>;
   } = {},
 ) {
-  const policy = vi.fn(async () => ({
-    decision: overrides.policyDecision ?? ('allow' as const),
-    code: 'TOOL_POLICY_DENIED',
-    message: 'The current policy denied this tool.',
-  }));
+  const policy = vi.fn(
+    overrides.policy ??
+      (async () => ({
+        decision: overrides.policyDecision ?? ('allow' as const),
+        code: 'TOOL_POLICY_DENIED',
+        message: 'The current policy denied this tool.',
+      })),
+  );
   const execute = vi.fn(
     overrides.execute ??
       (async () => ({ structured: { files: 3 }, modelText: 'Three files inspected.' })),
@@ -62,9 +67,10 @@ function harness(
   let now = 1_000;
   const dispatcher = new RuntimeToolDispatcher({
     runId: invocation.runId,
+    turnId: invocation.turnId,
     epochs,
     definitions: [definition],
-    budget,
+    budget: overrides.budget ?? budget,
     startedAtMs: now,
     currentEpochs: overrides.currentEpochs ?? (() => epochs),
     policy: { evaluate: policy },
@@ -98,6 +104,15 @@ describe('runtime tool dispatcher', () => {
     expect(execute).toHaveBeenCalledTimes(1);
   });
 
+  it('closes the invocation registry when the final result is terminal', async () => {
+    const { dispatcher } = harness();
+
+    await dispatcher.dispatch(invocation, continuation);
+
+    expect(dispatcher.snapshot.lifecycle).toBe('completed');
+    expect(dispatcher.snapshot.registry.status).toBe('completed');
+  });
+
   it('rejects a concurrent exact replay before a first result exists', async () => {
     let finish: ((value: { structured: { files: number }; modelText: string }) => void) | undefined;
     const pendingOutput = new Promise<{ structured: { files: number }; modelText: string }>(
@@ -118,6 +133,24 @@ describe('runtime tool dispatcher', () => {
     const result = await dispatcher.dispatch(invocation, continuation);
 
     expect(result).toMatchObject({ status: 'denied', error: { code: 'TOOL_POLICY_DENIED' } });
+    expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('converts a policy failure into a safe replayable terminal result', async () => {
+    const { dispatcher, execute } = harness({
+      policy: async () => {
+        throw new Error('Bearer policy-secret');
+      },
+    });
+
+    const first = await dispatcher.dispatch(invocation, continuation);
+    const replay = await dispatcher.dispatch(invocation, continuation);
+
+    expect(first).toMatchObject({ status: 'failed', error: { code: 'TOOL_EXECUTION_FAILED' } });
+    expect(replay).toBe(first);
+    expect(dispatcher.snapshot.lifecycle).toBe('failed');
+    expect(dispatcher.snapshot.registry.status).toBe('failed');
+    expect(JSON.stringify(first)).not.toContain('policy-secret');
     expect(execute).not.toHaveBeenCalled();
   });
 
@@ -155,8 +188,29 @@ describe('runtime tool dispatcher', () => {
     controller.abort(new Error('cancelled'));
     finish?.({ structured: { files: 3 }, modelText: 'late output' });
 
-    await expect(pending).rejects.toThrow(/cancelled/i);
-    expect(dispatcher.snapshot.results).toEqual({});
+    await expect(pending).resolves.toMatchObject({ status: 'cancelled' });
+    expect(dispatcher.snapshot.lifecycle).toBe('cancelled');
+  });
+
+  it('debits a repair turn and cancels execution at the runtime deadline', async () => {
+    vi.useFakeTimers();
+    try {
+      const { dispatcher } = harness({
+        budget: { ...budget, maxRuntimeMs: 1_000 },
+        execute: () => new Promise(() => undefined),
+      });
+      const pending = dispatcher.dispatch(invocation, { action: 'repair', repairAttempt: 1 });
+
+      await vi.advanceTimersByTimeAsync(1_000);
+
+      await expect(pending).resolves.toMatchObject({ status: 'cancelled' });
+      expect(dispatcher.snapshot.budget.usage).toMatchObject({
+        modelTurns: 1,
+        repairAttempts: 1,
+      });
+    } finally {
+      vi.useRealTimers();
+    }
   });
 
   it('denies an already-aborted signal before admission or effects', async () => {

@@ -22,6 +22,7 @@ export interface RuntimeInvocationRegistry {
   readonly idempotencyKeys: Readonly<Record<string, string>>;
   readonly invocations: Readonly<Record<string, RuntimeInvocationIdentity>>;
   readonly runId: string;
+  readonly turnId?: string;
   readonly status: RuntimeInvocationRegistryStatus;
 }
 
@@ -35,6 +36,15 @@ interface RegistryInput {
   readonly definitions: readonly unknown[];
   readonly epochs: RuntimeEpochs;
   readonly runId: string;
+  readonly turnId?: string;
+}
+
+function freezeDeep<T>(value: T): T {
+  if (value !== null && typeof value === 'object') {
+    for (const entry of Object.values(value)) freezeDeep(entry);
+    Object.freeze(value);
+  }
+  return value;
 }
 
 const schemaTypes = ['array', 'boolean', 'integer', 'null', 'number', 'object', 'string'] as const;
@@ -220,18 +230,19 @@ function buildCatalog(definitions: readonly unknown[]): Readonly<Record<string, 
     if (catalog[key] !== undefined) {
       throw new Error(`Duplicate tool catalog identity ${definition.name}@${definition.version}`);
     }
-    catalog[key] = definition;
+    catalog[key] = freezeDeep(definition);
   }
   return catalog;
 }
 
 export function createRuntimeInvocationRegistry(input: RegistryInput): RuntimeInvocationRegistry {
   return {
-    catalog: buildCatalog(input.definitions),
+    catalog: freezeDeep(buildCatalog(input.definitions)),
     epochs: { ...input.epochs },
     idempotencyKeys: {},
     invocations: {},
     runId: input.runId,
+    ...(input.turnId === undefined ? {} : { turnId: input.turnId }),
     status: 'active',
   };
 }
@@ -411,7 +422,6 @@ export function admitRuntimeInvocation(
   registry: RuntimeInvocationRegistry,
   value: unknown,
 ): RuntimeInvocationAdmission {
-  if (registry.status !== 'active') throw new Error('Runtime invocation registry is terminal');
   const invocation = parseToolInvocation(value);
   const fingerprint = canonicalize(invocation);
   const existing = registry.invocations[invocation.invocationId];
@@ -423,20 +433,23 @@ export function admitRuntimeInvocation(
       `Runtime invocation ${invocation.invocationId} conflicts with an earlier request`,
     );
   }
+  if (registry.status !== 'active') throw new Error('Runtime invocation registry is terminal');
   if (registry.idempotencyKeys[invocation.idempotencyKey] !== undefined) {
     throw new Error(`Runtime invocation idempotency key ${invocation.idempotencyKey} conflicts`);
   }
   if (invocation.runId !== registry.runId)
     throw new Error('Runtime invocation belongs to another run');
+  if (registry.turnId !== undefined && invocation.turnId !== registry.turnId)
+    throw new Error('Runtime invocation belongs to another turn');
   if (!epochsMatch(invocation.epochs, registry.epochs))
     throw new Error('Runtime invocation epochs are stale');
   const definition = exactDefinition(registry, invocation);
   validateValue(invocation.arguments, definition.inputSchema, '$');
-  const identity: RuntimeInvocationIdentity = {
+  const identity = freezeDeep<RuntimeInvocationIdentity>({
     fingerprint,
     idempotencyKey: invocation.idempotencyKey,
     invocation,
-  };
+  });
   return {
     invocation,
     replayed: false,
@@ -446,7 +459,7 @@ export function admitRuntimeInvocation(
         ...registry.idempotencyKeys,
         [invocation.idempotencyKey]: invocation.invocationId,
       },
-      invocations: { ...registry.invocations, [invocation.invocationId]: identity },
+      invocations: freezeDeep({ ...registry.invocations, [invocation.invocationId]: identity }),
     },
   };
 }

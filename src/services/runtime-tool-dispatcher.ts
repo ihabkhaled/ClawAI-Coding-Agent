@@ -1,5 +1,6 @@
 import {
   admitRuntimeInvocation,
+  closeRuntimeInvocationRegistry,
   createRuntimeInvocationRegistry,
   type RuntimeInvocationRegistry,
 } from '../core/runtime/runtime-invocation-registry';
@@ -25,7 +26,7 @@ export interface RuntimeToolPolicyDecision {
 }
 
 export interface RuntimeToolPolicyPort {
-  evaluate(invocation: ToolInvocation): Promise<RuntimeToolPolicyDecision>;
+  evaluate(invocation: ToolInvocation, signal?: AbortSignal): Promise<RuntimeToolPolicyDecision>;
 }
 
 export interface RuntimeToolExecutionOutput {
@@ -39,6 +40,7 @@ export interface RuntimeToolExecutorPort {
 
 export interface RuntimeToolDispatcherInput {
   readonly runId: string;
+  readonly turnId: string;
   readonly epochs: ToolInvocation['epochs'];
   readonly definitions: readonly ToolDefinition[];
   readonly budget: RunBudget;
@@ -54,6 +56,7 @@ export interface RuntimeToolDispatcherSnapshot {
   readonly registry: RuntimeInvocationRegistry;
   readonly budget: RuntimeBudgetState;
   readonly results: Readonly<Record<string, ToolResult>>;
+  readonly lifecycle: 'active' | 'blocked' | 'cancelled' | 'completed' | 'failed';
 }
 
 function epochsMatch(left: ToolInvocation['epochs'], right: ToolInvocation['epochs']): boolean {
@@ -74,9 +77,11 @@ export class RuntimeToolDispatcher {
         runId: input.runId,
         epochs: input.epochs,
         definitions: input.definitions,
+        turnId: input.turnId,
       }),
       budget: createRuntimeBudgetState(input.budget, input.startedAtMs),
       results: {},
+      lifecycle: 'active',
     };
   }
 
@@ -99,49 +104,109 @@ export class RuntimeToolDispatcher {
       }
       return completed;
     }
+    if (this.state.lifecycle !== 'active') throw new Error('Runtime tool dispatcher is terminal');
 
     const startedAtMs = this.input.now();
+    const nextBudget = consumeRuntimeBudget(
+      this.state.budget,
+      {
+        modelTurns: 1,
+        toolCalls: 1,
+        toolRounds: 1,
+        repairAttempts: continuation.action === 'repair' ? 1 : 0,
+      },
+      startedAtMs,
+    );
     this.state = {
       ...this.state,
       registry: admission.registry,
-      budget: consumeRuntimeBudget(this.state.budget, { toolCalls: 1, toolRounds: 1 }, startedAtMs),
+      budget: nextBudget,
     };
-    const decision = await this.input.policy.evaluate(admission.invocation);
-    signal?.throwIfAborted();
-    this.assertCurrentEpochs();
-    if (decision.decision === 'deny') {
-      return this.complete(admission.invocation, startedAtMs, continuation, {
-        status: 'denied',
-        error: {
-          code: decision.code,
-          message: decision.message,
-          retryable: false,
-          redactionApplied: true,
-        },
-      });
-    }
-
+    const deadline = this.createDeadline(signal);
     try {
-      const output = await this.input.executor.execute(admission.invocation, signal);
-      signal?.throwIfAborted();
+      const decision = await this.awaitWithinDeadline(
+        this.input.policy.evaluate(admission.invocation, deadline.signal),
+        deadline.signal,
+      );
+      this.assertCurrentEpochs();
+      if (decision.decision === 'deny') {
+        return this.complete(admission.invocation, startedAtMs, continuation, {
+          status: 'denied',
+          error: {
+            code: decision.code,
+            message: decision.message,
+            retryable: false,
+            redactionApplied: false,
+          },
+        });
+      }
+      const output = await this.awaitWithinDeadline(
+        this.input.executor.execute(admission.invocation, deadline.signal),
+        deadline.signal,
+      );
+      deadline.signal.throwIfAborted();
       this.assertCurrentEpochs();
       return this.complete(admission.invocation, startedAtMs, continuation, {
         status: 'succeeded',
         ...output,
       });
     } catch {
-      signal?.throwIfAborted();
+      const cancelled = deadline.signal.aborted;
       this.assertCurrentEpochs();
       return this.complete(admission.invocation, startedAtMs, continuation, {
-        status: 'failed',
+        status: cancelled ? 'cancelled' : 'failed',
         error: {
-          code: 'TOOL_EXECUTION_FAILED',
-          message: 'The trusted tool executor failed.',
+          code: cancelled ? 'TOOL_CANCELLED' : 'TOOL_EXECUTION_FAILED',
+          message: cancelled ? 'The tool run was cancelled.' : 'The trusted tool executor failed.',
           retryable: false,
-          redactionApplied: true,
+          redactionApplied: false,
         },
       });
+    } finally {
+      deadline.dispose();
     }
+  }
+
+  private createDeadline(signal: AbortSignal | undefined): {
+    readonly dispose: () => void;
+    readonly signal: AbortSignal;
+  } {
+    const controller = new AbortController();
+    const remaining =
+      this.state.budget.budget.maxRuntimeMs - (this.input.now() - this.state.budget.startedAtMs);
+    const timer = setTimeout(
+      () => {
+        controller.abort(new Error('Runtime deadline exceeded'));
+      },
+      Math.max(0, remaining),
+    );
+    const abort = () => {
+      controller.abort(signal?.reason);
+    };
+    signal?.addEventListener('abort', abort, { once: true });
+    return {
+      signal: controller.signal,
+      dispose: () => {
+        clearTimeout(timer);
+        signal?.removeEventListener('abort', abort);
+      },
+    };
+  }
+
+  private async awaitWithinDeadline<T>(value: Promise<T>, signal: AbortSignal): Promise<T> {
+    if (signal.aborted) signal.throwIfAborted();
+    return Promise.race([
+      value,
+      new Promise<T>((_resolve, reject) => {
+        signal.addEventListener(
+          'abort',
+          () => {
+            reject(signal.reason instanceof Error ? signal.reason : new Error('Runtime cancelled'));
+          },
+          { once: true },
+        );
+      }),
+    ]);
   }
 
   private assertCurrentEpochs(): void {
@@ -180,11 +245,28 @@ export class RuntimeToolDispatcher {
       },
       completedAtMs,
     );
+    const lifecycle = this.lifecycleFor(result, continuation);
     this.state = {
       ...this.state,
       budget,
-      results: { ...this.state.results, [invocation.invocationId]: result },
+      lifecycle,
+      registry:
+        lifecycle === 'active'
+          ? this.state.registry
+          : closeRuntimeInvocationRegistry(this.state.registry, lifecycle),
+      results: Object.freeze({ ...this.state.results, [invocation.invocationId]: result }),
     };
     return result;
+  }
+
+  private lifecycleFor(
+    result: ToolResult,
+    continuation: Continuation,
+  ): RuntimeToolDispatcherSnapshot['lifecycle'] {
+    if (result.status === 'succeeded')
+      return continuation.action === 'continue' ? 'active' : 'completed';
+    if (result.status === 'denied') return 'blocked';
+    if (result.status === 'cancelled') return 'cancelled';
+    return 'failed';
   }
 }
