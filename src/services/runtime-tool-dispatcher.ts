@@ -283,14 +283,7 @@ export class RuntimeToolDispatcher {
       ...(outcome.modelText === undefined ? {} : { modelText: outcome.modelText }),
       ...(outcome.error === undefined ? {} : { error: outcome.error }),
     });
-    const budget = consumeRuntimeBudget(
-      this.state.budget,
-      {
-        outputBytes: result.receipt.outputBytes,
-        toolResultBytes: result.receipt.outputBytes,
-      },
-      completedAtMs,
-    );
+    const budget = this.consumeResultBudget(result, completedAtMs);
     const lifecycle =
       this.state.lifecycle === 'active'
         ? this.lifecycleFor(result, continuation)
@@ -307,6 +300,24 @@ export class RuntimeToolDispatcher {
     };
     if (lifecycle !== 'active') this.abortConcurrentDeadlines(invocation.invocationId);
     return result;
+  }
+
+  private consumeResultBudget(result: ToolResult, completedAtMs: number): RuntimeBudgetState {
+    const receiptBytes = result.receipt.outputBytes;
+    const { budget, usage } = this.state.budget;
+    const receiptCapacityExhausted =
+      usage.outputBytes + receiptBytes > budget.maxOutputBytes ||
+      usage.toolResultBytes + receiptBytes > budget.maxToolResultBytes;
+    const mandatoryConcurrentCancellation =
+      this.state.lifecycle !== 'active' && result.status === 'cancelled';
+    if (mandatoryConcurrentCancellation && receiptCapacityExhausted) {
+      return consumeRuntimeBudget(this.state.budget, {}, completedAtMs);
+    }
+    return consumeRuntimeBudget(
+      this.state.budget,
+      { outputBytes: receiptBytes, toolResultBytes: receiptBytes },
+      completedAtMs,
+    );
   }
 
   private abortConcurrentDeadlines(completedInvocationId: string): void {

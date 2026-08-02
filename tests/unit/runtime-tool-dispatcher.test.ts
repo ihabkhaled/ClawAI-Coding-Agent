@@ -169,6 +169,46 @@ describe('runtime tool dispatcher', () => {
     expect(Object.keys(dispatcher.snapshot.results)).toHaveLength(2);
   });
 
+  it('stores a concurrent cancellation receipt after the first result exhausts remaining capacity', async () => {
+    let completeFirst:
+      ((value: { structured: { files: number }; modelText: string }) => void) | undefined;
+    const firstOutput = new Promise<{ structured: { files: number }; modelText: string }>(
+      (resolve) => {
+        completeFirst = resolve;
+      },
+    );
+    let execution = 0;
+    const { dispatcher } = harness({
+      budget: {
+        ...budget,
+        maxOutputBytes: 1_024,
+        maxToolCalls: 2,
+        maxToolResultBytes: 1_024,
+        maxToolRounds: 2,
+      },
+      execute: () => {
+        execution += 1;
+        return execution === 1 ? firstOutput : new Promise(() => undefined);
+      },
+    });
+    const secondInvocation = {
+      ...invocation,
+      invocationId: 'inv_01K22222222222222222222222',
+      idempotencyKey: 'idem_01K22222222222222222222222',
+    };
+
+    const first = dispatcher.dispatch(invocation, continuation);
+    const second = dispatcher.dispatch(secondInvocation, continuation);
+    await vi.waitFor(() => {
+      expect(execution).toBe(2);
+    });
+    completeFirst?.({ structured: { files: 1 }, modelText: 'x'.repeat(900) });
+
+    await expect(first).resolves.toMatchObject({ receipt: { truncated: false } });
+    await expect(second).resolves.toMatchObject({ status: 'cancelled' });
+    expect(Object.keys(dispatcher.snapshot.results)).toHaveLength(2);
+  });
+
   it('denies through policy without calling the executor', async () => {
     const { dispatcher, execute } = harness({ policyDecision: 'deny' });
     const result = await dispatcher.dispatch(invocation, continuation);
