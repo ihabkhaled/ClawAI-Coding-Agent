@@ -57,7 +57,7 @@ export class IntegrationCoordinatorService {
 
   async integrate(candidate: unknown, signal?: AbortSignal): Promise<IntegrationReceipt> {
     const request = integrationRequestSchema.parse(candidate);
-    const initialFingerprint = await this.git.workingFingerprint(request.targetWorktreeId);
+    let expectedFingerprint = await this.git.workingFingerprint(request.targetWorktreeId);
     const integrated: string[] = [];
     const semanticConflicts = this.semanticConflicts(request.commits);
     if (semanticConflicts.length > 0) {
@@ -73,7 +73,7 @@ export class IntegrationCoordinatorService {
     for (const item of request.commits) {
       signal?.throwIfAborted();
       const before = await this.git.workingFingerprint(request.targetWorktreeId);
-      if (before !== initialFingerprint && integrated.length === 0) {
+      if (before !== expectedFingerprint) {
         throw new Error('Target worktree changed after integration review');
       }
       const result = await this.git.cherryPick(request.targetWorktreeId, item.commit, signal);
@@ -89,6 +89,7 @@ export class IntegrationCoordinatorService {
         };
       }
       integrated.push(item.commit);
+      expectedFingerprint = await this.git.workingFingerprint(request.targetWorktreeId);
     }
     const gates = await this.quality.run(
       request.targetWorktreeId,
