@@ -25,6 +25,11 @@ import {
   EvidenceToolExecutor,
   evidenceToolDefinition,
 } from '../infrastructure/evidence-tool-executor';
+import {
+  FlagshipToolExecutor,
+  VscodeFlagshipCheckpointStore,
+  flagshipToolDefinition,
+} from '../infrastructure/flagship-tool-executor';
 import { GitToolExecutor, gitToolDefinition } from '../infrastructure/git-tool-executor';
 import {
   IntelligenceToolExecutor,
@@ -93,6 +98,7 @@ import { EvidenceBundleService } from './evidence-bundle-service';
 import { ExecutionTargetRegistry } from './execution-target-registry';
 import { FileTransactionService } from './file-transaction-service';
 import { FileLeaseManager } from './file-lease-manager';
+import { FlagshipDeliveryService } from './flagship-delivery-service';
 import { GitAgentService } from './git-agent-service';
 import { IntegrationCoordinatorService } from './integration-coordinator-service';
 import { LocalObservabilityService } from './observability-service';
@@ -100,6 +106,7 @@ import { ProcessSupervisorService } from './process-supervisor-service';
 import { ProjectPolicyService } from './project-policy-service';
 import { RunJournalService } from './run-journal-service';
 import { RuntimeEventStreamService } from './runtime-event-stream-service';
+import { RuntimeFlagshipStageAdapter } from './runtime-flagship-stage-adapter';
 import { RuntimePolicyV2Adapter } from './runtime-policy-v2-adapter';
 import { RuntimeRunService } from './runtime-run-service';
 import { RuntimeSubAgentExecutor } from './runtime-sub-agent-executor';
@@ -290,16 +297,17 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       new SocketPortInspector(),
       new VscodeServiceCheckpointStore(context.workspaceState),
     );
+    const runtimeSubAgent = new RuntimeSubAgentExecutor({
+      backend,
+      currentEpochs: () => this.epochs,
+      definitions: () => this.router.definitions(),
+      executor: { execute: (invocation, signal) => this.router.execute(invocation, signal) },
+      policy: this.policy,
+      stream: this.stream,
+      transport: this.transport,
+    });
     const subAgents = new SubAgentCoordinatorService(
-      new RuntimeSubAgentExecutor({
-        backend,
-        currentEpochs: () => this.epochs,
-        definitions: () => this.router.definitions(),
-        executor: { execute: (invocation, signal) => this.router.execute(invocation, signal) },
-        policy: this.policy,
-        stream: this.stream,
-        transport: this.transport,
-      }),
+      runtimeSubAgent,
       new FileLeaseManager(),
       () => this.epochs,
       { status: () => undefined, outcome: () => undefined },
@@ -308,6 +316,11 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     const integration = new IntegrationCoordinatorService(
       new RuntimeIntegrationGitAdapter(git),
       new RuntimeIntegrationQualityAdapter(quality),
+    );
+    const flagship = new FlagshipDeliveryService(
+      new RuntimeFlagshipStageAdapter(runtimeSubAgent, () => this.epochs),
+      new VscodeFlagshipCheckpointStore(context.workspaceState),
+      { update: () => undefined },
     );
     const registrations = [
       {
@@ -356,6 +369,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         definition: integrationToolDefinition,
         executor: new IntegrationToolExecutor(integration),
       },
+      { definition: flagshipToolDefinition, executor: new FlagshipToolExecutor(flagship) },
     ];
     this.router = new RuntimeToolRouter(registrations, this.policy);
   }

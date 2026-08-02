@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
+
 export const flagshipStageSchema = z.enum([
   'discover',
   'plan',
@@ -28,6 +30,11 @@ export const flagshipRequestSchema = z
       'prompt-pack-audit',
     ]),
     repositories: z.array(z.string().min(1).max(4_096)).min(1).max(100),
+    writeSet: z
+      .array(z.string().min(1).max(4_096).refine(isSafeRelativeWorkspacePath))
+      .max(10_000)
+      .default([]),
+    acceptanceChecks: z.array(z.string().min(1).max(2_000)).max(1_000).default([]),
     budget: z
       .object({
         maxRuntimeMs: z.number().int().min(1_000).max(172_800_000),
@@ -55,6 +62,7 @@ export interface FlagshipStageResult {
   readonly summary: string;
   readonly evidenceReferences: readonly string[];
   readonly unverifiedClaims: readonly string[];
+  readonly resolvedClaims?: readonly string[];
   readonly failureClass?:
     | 'model'
     | 'tool'

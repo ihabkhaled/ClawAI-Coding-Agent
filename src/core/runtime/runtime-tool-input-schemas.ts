@@ -79,6 +79,7 @@ export const runtimeToolInputSchemas = {
     backupAcknowledged: flag,
   }),
   evidence: strict({ input: opaque, bundle: opaque, output: opaque }),
+  flagship: strict({ request: opaque }),
   files: strict({
     rootKey: text,
     path: text,
