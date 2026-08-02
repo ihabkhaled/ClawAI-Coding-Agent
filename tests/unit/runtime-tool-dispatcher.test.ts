@@ -128,6 +128,47 @@ describe('runtime tool dispatcher', () => {
     await expect(first).resolves.toMatchObject({ status: 'succeeded' });
   });
 
+  it('cancels another admitted invocation when the first terminalizes and stores both receipts', async () => {
+    let completeFirst:
+      ((value: { structured: { files: number }; modelText: string }) => void) | undefined;
+    let failSecond: ((reason?: unknown) => void) | undefined;
+    const firstOutput = new Promise<{ structured: { files: number }; modelText: string }>(
+      (resolve) => {
+        completeFirst = resolve;
+      },
+    );
+    const secondOutput = new Promise<{ structured: { files: number }; modelText: string }>(
+      (_resolve, reject) => {
+        failSecond = reject;
+      },
+    );
+    let execution = 0;
+    const { dispatcher } = harness({
+      budget: { ...budget, maxToolCalls: 2, maxToolRounds: 2 },
+      execute: () => {
+        execution += 1;
+        return execution === 1 ? firstOutput : secondOutput;
+      },
+    });
+    const secondInvocation = {
+      ...invocation,
+      invocationId: 'inv_01K11111111111111111111111',
+      idempotencyKey: 'idem_01K11111111111111111111111',
+    };
+
+    const first = dispatcher.dispatch(invocation, continuation);
+    const second = dispatcher.dispatch(secondInvocation, continuation);
+    await vi.waitFor(() => {
+      expect(execution).toBe(2);
+    });
+    completeFirst?.({ structured: { files: 1 }, modelText: 'First result.' });
+    await expect(first).resolves.toMatchObject({ status: 'succeeded' });
+    failSecond?.(new Error('Second execution failed.'));
+
+    await expect(second).resolves.toMatchObject({ status: 'cancelled' });
+    expect(Object.keys(dispatcher.snapshot.results)).toHaveLength(2);
+  });
+
   it('denies through policy without calling the executor', async () => {
     const { dispatcher, execute } = harness({ policyDecision: 'deny' });
     const result = await dispatcher.dispatch(invocation, continuation);
@@ -192,7 +233,7 @@ describe('runtime tool dispatcher', () => {
     expect(dispatcher.snapshot.lifecycle).toBe('cancelled');
   });
 
-  it('debits a repair turn and cancels execution at the runtime deadline', async () => {
+  it('debits a repair turn and emits a timed-out result at the runtime deadline', async () => {
     vi.useFakeTimers();
     try {
       const { dispatcher } = harness({
@@ -203,7 +244,10 @@ describe('runtime tool dispatcher', () => {
 
       await vi.advanceTimersByTimeAsync(1_000);
 
-      await expect(pending).resolves.toMatchObject({ status: 'cancelled' });
+      await expect(pending).resolves.toMatchObject({
+        status: 'timed-out',
+        error: { code: 'TOOL_TIMED_OUT' },
+      });
       expect(dispatcher.snapshot.budget.usage).toMatchObject({
         modelTurns: 1,
         repairAttempts: 1,

@@ -59,6 +59,13 @@ export interface RuntimeToolDispatcherSnapshot {
   readonly lifecycle: 'active' | 'blocked' | 'cancelled' | 'completed' | 'failed';
 }
 
+interface RuntimeDeadline {
+  readonly abort: (reason?: unknown) => void;
+  readonly dispose: () => void;
+  readonly signal: AbortSignal;
+  readonly timedOut: () => boolean;
+}
+
 function epochsMatch(left: ToolInvocation['epochs'], right: ToolInvocation['epochs']): boolean {
   return (
     left.account === right.account &&
@@ -69,6 +76,7 @@ function epochsMatch(left: ToolInvocation['epochs'], right: ToolInvocation['epoc
 }
 
 export class RuntimeToolDispatcher {
+  private readonly activeDeadlines = new Map<string, RuntimeDeadline>();
   private state: RuntimeToolDispatcherSnapshot;
 
   constructor(private readonly input: RuntimeToolDispatcherInput) {
@@ -123,6 +131,7 @@ export class RuntimeToolDispatcher {
       budget: nextBudget,
     };
     const deadline = this.createDeadline(signal);
+    this.activeDeadlines.set(admission.invocation.invocationId, deadline);
     try {
       const decision = await this.awaitWithinDeadline(
         this.input.policy.evaluate(admission.invocation, deadline.signal),
@@ -151,44 +160,81 @@ export class RuntimeToolDispatcher {
         ...output,
       });
     } catch {
-      const cancelled = deadline.signal.aborted;
       this.assertCurrentEpochs();
-      return this.complete(admission.invocation, startedAtMs, continuation, {
-        status: cancelled ? 'cancelled' : 'failed',
-        error: {
-          code: cancelled ? 'TOOL_CANCELLED' : 'TOOL_EXECUTION_FAILED',
-          message: cancelled ? 'The tool run was cancelled.' : 'The trusted tool executor failed.',
-          retryable: false,
-          redactionApplied: false,
-        },
-      });
+      return this.complete(
+        admission.invocation,
+        startedAtMs,
+        continuation,
+        this.failureOutcome(deadline),
+      );
     } finally {
+      this.activeDeadlines.delete(admission.invocation.invocationId);
       deadline.dispose();
     }
   }
 
-  private createDeadline(signal: AbortSignal | undefined): {
-    readonly dispose: () => void;
-    readonly signal: AbortSignal;
-  } {
+  private createDeadline(signal: AbortSignal | undefined): RuntimeDeadline {
     const controller = new AbortController();
+    let timedOut = false;
     const remaining =
       this.state.budget.budget.maxRuntimeMs - (this.input.now() - this.state.budget.startedAtMs);
     const timer = setTimeout(
       () => {
+        timedOut = true;
         controller.abort(new Error('Runtime deadline exceeded'));
       },
       Math.max(0, remaining),
     );
-    const abort = () => {
+    const abortFromCaller = () => {
       controller.abort(signal?.reason);
     };
-    signal?.addEventListener('abort', abort, { once: true });
+    signal?.addEventListener('abort', abortFromCaller, { once: true });
     return {
+      abort: (reason?: unknown) => {
+        controller.abort(reason);
+      },
       signal: controller.signal,
+      timedOut: () => timedOut,
       dispose: () => {
         clearTimeout(timer);
-        signal?.removeEventListener('abort', abort);
+        signal?.removeEventListener('abort', abortFromCaller);
+      },
+    };
+  }
+
+  private failureOutcome(deadline: RuntimeDeadline): {
+    readonly error: NonNullable<ToolResult['error']>;
+    readonly status: ToolResult['status'];
+  } {
+    if (deadline.timedOut()) {
+      return {
+        status: 'timed-out',
+        error: {
+          code: 'TOOL_TIMED_OUT',
+          message: 'The tool run exceeded its runtime deadline.',
+          retryable: false,
+          redactionApplied: false,
+        },
+      };
+    }
+    if (deadline.signal.aborted) {
+      return {
+        status: 'cancelled',
+        error: {
+          code: 'TOOL_CANCELLED',
+          message: 'The tool run was cancelled.',
+          retryable: false,
+          redactionApplied: false,
+        },
+      };
+    }
+    return {
+      status: 'failed',
+      error: {
+        code: 'TOOL_EXECUTION_FAILED',
+        message: 'The trusted tool executor failed.',
+        retryable: false,
+        redactionApplied: false,
       },
     };
   }
@@ -245,18 +291,30 @@ export class RuntimeToolDispatcher {
       },
       completedAtMs,
     );
-    const lifecycle = this.lifecycleFor(result, continuation);
+    const lifecycle =
+      this.state.lifecycle === 'active'
+        ? this.lifecycleFor(result, continuation)
+        : this.state.lifecycle;
     this.state = {
       ...this.state,
       budget,
       lifecycle,
       registry:
-        lifecycle === 'active'
+        lifecycle === 'active' || this.state.registry.status !== 'active'
           ? this.state.registry
           : closeRuntimeInvocationRegistry(this.state.registry, lifecycle),
       results: Object.freeze({ ...this.state.results, [invocation.invocationId]: result }),
     };
+    if (lifecycle !== 'active') this.abortConcurrentDeadlines(invocation.invocationId);
     return result;
+  }
+
+  private abortConcurrentDeadlines(completedInvocationId: string): void {
+    for (const [invocationId, deadline] of this.activeDeadlines) {
+      if (invocationId !== completedInvocationId) {
+        deadline.abort(new Error('Runtime dispatcher reached a terminal state'));
+      }
+    }
   }
 
   private lifecycleFor(

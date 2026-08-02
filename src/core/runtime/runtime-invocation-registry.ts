@@ -22,7 +22,7 @@ export interface RuntimeInvocationRegistry {
   readonly idempotencyKeys: Readonly<Record<string, string>>;
   readonly invocations: Readonly<Record<string, RuntimeInvocationIdentity>>;
   readonly runId: string;
-  readonly turnId?: string;
+  readonly turnId: string;
   readonly status: RuntimeInvocationRegistryStatus;
 }
 
@@ -36,7 +36,7 @@ interface RegistryInput {
   readonly definitions: readonly unknown[];
   readonly epochs: RuntimeEpochs;
   readonly runId: string;
-  readonly turnId?: string;
+  readonly turnId: string;
 }
 
 function freezeDeep<T>(value: T): T {
@@ -236,13 +236,16 @@ function buildCatalog(definitions: readonly unknown[]): Readonly<Record<string, 
 }
 
 export function createRuntimeInvocationRegistry(input: RegistryInput): RuntimeInvocationRegistry {
+  if (typeof input.turnId !== 'string' || input.turnId.length === 0) {
+    throw new Error('Runtime invocation registry requires a turn');
+  }
   return {
     catalog: freezeDeep(buildCatalog(input.definitions)),
     epochs: { ...input.epochs },
     idempotencyKeys: {},
     invocations: {},
     runId: input.runId,
-    ...(input.turnId === undefined ? {} : { turnId: input.turnId }),
+    turnId: input.turnId,
     status: 'active',
   };
 }
@@ -439,7 +442,7 @@ export function admitRuntimeInvocation(
   }
   if (invocation.runId !== registry.runId)
     throw new Error('Runtime invocation belongs to another run');
-  if (registry.turnId !== undefined && invocation.turnId !== registry.turnId)
+  if (invocation.turnId !== registry.turnId)
     throw new Error('Runtime invocation belongs to another turn');
   if (!epochsMatch(invocation.epochs, registry.epochs))
     throw new Error('Runtime invocation epochs are stale');
