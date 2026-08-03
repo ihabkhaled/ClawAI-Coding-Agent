@@ -134,6 +134,7 @@ describe('AgentRunService', () => {
         contextMode: 'smart',
         selection: {
           model: 'qwen2.5-coder',
+          modelDisplayName: 'Qwen 2.5 Coder',
           provider: 'OLLAMA',
           routingMode: 'MANUAL_MODEL',
         },
@@ -148,6 +149,7 @@ describe('AgentRunService', () => {
       routingMode: 'MANUAL_MODEL',
       provider: 'OLLAMA',
       model: 'qwen2.5-coder',
+      modelDisplayName: 'Qwen 2.5 Coder',
     });
     expect(vi.mocked(chat.send).mock.calls[0]?.[0].content).toContain(prompt);
     expect(phases.map((phase) => phase.phase)).toEqual([

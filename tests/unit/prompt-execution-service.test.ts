@@ -165,6 +165,7 @@ describe('PromptExecutionService', () => {
           truncated: false,
         },
         model: 'model-a',
+        modelDisplayName: 'model-a',
         provider: 'PROVIDER_A',
         routingMode: 'MANUAL_MODEL',
         threadId: 'thread-existing',

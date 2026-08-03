@@ -282,6 +282,7 @@ export class AgentCoordinator implements vscode.Disposable {
       },
       attachments: this.attachmentRequests,
       captureAdmission: (threadId) => this.captureAdmission(threadId),
+      chat: this.chat,
       configuration: this.configuration,
       conversations: this.conversations,
       executions: agentExecutions,
@@ -407,9 +408,7 @@ export class AgentCoordinator implements vscode.Disposable {
         ) {
           return this.agentWorkflows.execute(queuedInput, signal, requestId);
         }
-        const threadId = await this.conversations.threadForRequest(requestId);
-        if (threadId === undefined)
-          throw new Error('Runtime V2 requires a persisted conversation thread');
+        const threadId = await this.agentWorkflows.runtimeThread(queuedInput, requestId);
         await this.runtimeStudio.execute({
           prompt: queuedInput.content,
           threadId,

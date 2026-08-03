@@ -60,6 +60,10 @@ test('submits coding prompts to the agent execution path by default', async ({ p
       modelKey: 'AUTO',
       requestId: expect.any(String),
     });
+  await expect(page.locator('.message-user .message-model-chip')).toHaveText('Automatic routing');
+  await expect(page.locator('.message-assistant .message-model-chip')).toHaveText(
+    'Automatic routing',
+  );
 });
 
 test('handles Autonomous Scoped and file approvals inside the workbench', async ({ page }) => {
@@ -355,6 +359,7 @@ test('switches backend conversation history inside the current chat tab', async 
           role: 'USER',
           content: 'Create the loop file',
           inputTokens: 8,
+          modelDisplayName: 'Qwen 2.5 Coder 7B',
           outputTokens: 0,
         },
         {
@@ -362,7 +367,9 @@ test('switches backend conversation history inside the current chat tab', async 
           role: 'ASSISTANT',
           content: 'Created app/for-loop.js',
           inputTokens: 8,
+          model: 'qwen2.5-coder:7b',
           outputTokens: 12,
+          provider: 'OLLAMA',
         },
       ],
     });
@@ -371,6 +378,10 @@ test('switches backend conversation history inside the current chat tab', async 
   await expect(page.locator('#conversationTitle')).toHaveText('Create loop file');
   await expect(page.locator('.message-user')).toContainText('Create the loop file');
   await expect(page.locator('.message-assistant')).toContainText('Created app/for-loop.js');
+  await expect(page.locator('.message-user .message-model-chip')).toHaveText('Qwen 2.5 Coder 7B');
+  await expect(page.locator('.message-assistant .message-model-chip')).toHaveText(
+    'OLLAMA · qwen2.5-coder:7b',
+  );
 });
 
 test('renders a structured file-change receipt after an agent run', async ({ page }) => {
@@ -455,6 +466,9 @@ test('supports narrow responsive use, suggestions, streaming, success, and error
   await expect(page.locator('.message-assistant .message-meta')).toContainText(
     /OLLAMA · qwen2\.5-coder:7b · \d+ tokens · estimated/u,
   );
+  await expect(page.locator('.message-assistant .message-model-chip').first()).toHaveText(
+    'OLLAMA · qwen2.5-coder:7b',
+  );
 
   await page.locator('#prompt').fill('Fail safely');
   await page.locator('#composer').evaluate((form: HTMLFormElement) => {
@@ -470,6 +484,7 @@ test('supports narrow responsive use, suggestions, streaming, success, and error
     });
   }, failedRequestId);
   await expect(page.locator('.message-error')).toContainText('Backend unavailable');
+  await expect(page.locator('.message-error .message-model-chip')).toHaveText('Automatic routing');
   await expectWindowsScreenshot(page, 'workbench-narrow.png');
 });
 

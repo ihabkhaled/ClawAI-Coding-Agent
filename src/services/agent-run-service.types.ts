@@ -66,7 +66,7 @@ export interface AgentRunInput {
   content: string;
   contextMode: ContextMode;
   kind?: WorkflowKind;
-  selection: ResolvedModelSelection;
+  selection: ResolvedModelSelection & { modelDisplayName?: string };
   session?: AgentRunSessionPort;
   signal: AbortSignal;
   fileIds?: string[];

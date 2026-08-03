@@ -72,6 +72,10 @@ export class ChatParticipantService {
     const selection = currentModelSelection(configuration, models);
     const requestedModelKey =
       configuration.routingMode === 'MANUAL_MODEL' ? configuration.selectedModel : 'AUTO';
+    const modelLabel = modelSelectionLabel(
+      models,
+      selection.routingMode === 'AUTO' ? 'AUTO' : requestedModelKey,
+    );
     const cancellation = token.onCancellationRequested(() => {
       void this.cancelRequest(requestId);
     });
@@ -81,13 +85,19 @@ export class ChatParticipantService {
         'chat',
         content,
         (signal) =>
-          this.execute(requestId, content, response, admission, configuration, selection, signal),
+          this.execute(
+            requestId,
+            content,
+            response,
+            admission,
+            configuration,
+            selection,
+            modelLabel,
+            signal,
+          ),
         {
           concurrencyKey: `participant:${requestId}`,
-          modelLabel: modelSelectionLabel(
-            models,
-            selection.routingMode === 'AUTO' ? 'AUTO' : requestedModelKey,
-          ),
+          modelLabel,
         },
       );
     } catch (error: unknown) {
@@ -106,6 +116,7 @@ export class ChatParticipantService {
     admission: RequestAdmission,
     configuration: ReturnType<ConfigurationService['read']>,
     selection: ReturnType<typeof currentModelSelection>,
+    modelDisplayName: string,
     queueSignal: AbortSignal,
   ): Promise<void> {
     const linked = linkedSignal(queueSignal, admission.boundarySignal);
@@ -130,6 +141,7 @@ export class ChatParticipantService {
           context: collected.files,
           contextReceipt: collected.receipt,
           ...selection,
+          modelDisplayName,
         },
         () => undefined,
         linked.signal,

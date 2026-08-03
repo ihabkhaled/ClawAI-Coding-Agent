@@ -2384,8 +2384,27 @@ textarea:disabled {
 
 .message-meta {
   display: flex;
+  min-width: 0;
   align-items: center;
   gap: 5px;
+}
+
+.message-model-chip {
+  max-inline-size: clamp(96px, 30vw, 240px);
+  padding: 2px 6px;
+  overflow: hidden;
+  border: 1px solid color-mix(in srgb, var(--claw-accent) 45%, var(--claw-border));
+  border-radius: 999px;
+  color: color-mix(in srgb, var(--claw-accent) 76%, var(--vscode-foreground));
+  background: color-mix(in srgb, var(--claw-accent) 10%, var(--claw-card));
+  font-weight: 750;
+  text-overflow: ellipsis;
+  white-space: nowrap;
+}
+
+.message-meta-separator {
+  flex: 0 0 auto;
+  color: var(--claw-muted);
 }
 
 .workbench {
@@ -2779,6 +2798,7 @@ textarea:disabled {
   .run-deck,
   .run-lane,
   .token-chip,
+  .message-model-chip,
   .compare-card,
   .model-group,
   .selected-model-chip,

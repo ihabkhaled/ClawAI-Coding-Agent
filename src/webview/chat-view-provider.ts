@@ -8,6 +8,7 @@ import {
   deriveConversationSubject,
 } from '../core/chat-session';
 
+import { publicHistoryMessage } from './chat-history-message';
 import {
   inboundMessageSchema,
   promptRequestId,
@@ -127,19 +128,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   async postHistory(sessionId: string, messages: ChatMessage[]): Promise<void> {
     await this.postToSession(sessionId, {
       type: 'historyLoaded',
-      messages: messages.map((message) => ({
-        content: message.content,
-        createdAt:
-          message.createdAt instanceof Date ? message.createdAt.toISOString() : message.createdAt,
-        id: message.id,
-        inputTokens: message.inputTokens,
-        latencyMs: message.latencyMs,
-        model: message.model,
-        outputTokens: message.outputTokens,
-        provider: message.provider,
-        role: message.role,
-        status: message.status,
-      })),
+      messages: messages.map(publicHistoryMessage),
     });
   }
 

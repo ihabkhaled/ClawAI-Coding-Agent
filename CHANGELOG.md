@@ -2,6 +2,17 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.41.0
+
+This release restores first-message execution for Runtime Protocol V2 and makes
+the model used for every chat exchange visible and durable.
+
+- Creates and binds the backend conversation thread before a new Runtime V2 run
+  starts, preventing the missing persisted-thread error.
+- Shows the submitted model on both user and assistant message cards, replaces
+  the assistant label with resolved provider/model provenance, and preserves
+  labels on failures and reopened conversation history.
+
 ## 0.40.1
 
 This corrective release completes and hardens the Runtime Protocol V2 work
