@@ -85,6 +85,7 @@ describe('PromptExecutionService read-only workflows', () => {
           totalBytes: 23,
           truncated: false,
         },
+        modelDisplayName: 'Automatic routing',
         routingMode: 'AUTO',
         threadId: 'thread-1',
       }),

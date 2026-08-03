@@ -3,6 +3,7 @@ import { currentModelSelection, modelSelectionLabel } from './agent-coordinator-
 import type { AgentWorkflowInput, RequestAdmission } from './agent-coordinator.types';
 import type { AgentExecutionPresenter } from './agent-execution-presenter';
 import type { AttachmentLease, AttachmentRequestService } from './attachment-request-service';
+import type { ChatService } from './chat-service';
 import type { ConfigurationService, RuntimeConfiguration } from './configuration-service';
 import type { ConversationSessionService } from './conversation-session-service';
 import type { SessionControlPort } from './session-control.types';
@@ -13,6 +14,7 @@ interface AgentWorkflowDependencies {
   assertAdmission(admission: RequestAdmission): void;
   attachments: AttachmentRequestService;
   captureAdmission(threadId?: string): RequestAdmission;
+  chat: ChatService;
   configuration: ConfigurationService;
   conversations: ConversationSessionService;
   executions: AgentExecutionPresenter;
@@ -85,6 +87,21 @@ export class AgentWorkflowService {
     }
   }
 
+  async runtimeThread(input: QueuedAgentWorkflowInput, requestId: string): Promise<string> {
+    const existingThreadId = await this.dependencies.conversations.threadForRequest(requestId);
+    if (existingThreadId !== undefined) {
+      return existingThreadId;
+    }
+    const threadId = await this.dependencies.chat.createThread({
+      content: input.content,
+      routingMode: input.selection.routingMode,
+      ...(input.selection.provider === undefined ? {} : { provider: input.selection.provider }),
+      ...(input.selection.model === undefined ? {} : { model: input.selection.model }),
+    });
+    this.dependencies.conversations.recordThread(requestId, threadId);
+    return threadId;
+  }
+
   async execute(
     input: QueuedAgentWorkflowInput,
     signal: AbortSignal,
@@ -103,7 +120,7 @@ export class AgentWorkflowService {
           contextMode: input.contextMode,
           kind: input.kind,
           ...(input.researchMode === undefined ? {} : { researchMode: input.researchMode }),
-          selection: input.selection,
+          selection: { ...input.selection, modelDisplayName: input.modelLabel },
           session: input.session,
           externalOutputRoots: input.admission.externalOutputRoots,
           ...(input.attachments === undefined || input.attachments.length === 0

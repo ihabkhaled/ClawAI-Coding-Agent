@@ -65,6 +65,10 @@ export class PromptExecutionService {
     const requestedModelKey =
       input.modelKey ??
       (configuration.routingMode === 'MANUAL_MODEL' ? configuration.selectedModel : 'AUTO');
+    const modelLabel = modelSelectionLabel(
+      modelCatalog,
+      selection.routingMode === 'AUTO' ? 'AUTO' : requestedModelKey,
+    );
     await this.dependencies.generations.enqueue(
       requestId,
       'chat',
@@ -96,6 +100,7 @@ export class PromptExecutionService {
               ...selection,
               ...(input.researchMode === undefined ? {} : { researchMode: input.researchMode }),
               ...(attachmentLease.fileIds.length === 0 ? {} : { fileIds: attachmentLease.fileIds }),
+              modelDisplayName: modelLabel,
               ...(threadId === undefined ? {} : { threadId }),
             },
             (event) => {
@@ -123,10 +128,7 @@ export class PromptExecutionService {
       },
       {
         concurrencyKey: generationConcurrencyKey(sessionId, admission.threadId),
-        modelLabel: modelSelectionLabel(
-          modelCatalog,
-          selection.routingMode === 'AUTO' ? 'AUTO' : requestedModelKey,
-        ),
+        modelLabel,
         retainedBytes: totalAttachmentBytes(input.attachments),
       },
     );
@@ -237,6 +239,10 @@ export class PromptExecutionService {
     const sessionId = await this.prepareConversation(admission, undefined, requestId, request);
     const requestedModelKey =
       configuration.routingMode === 'MANUAL_MODEL' ? configuration.selectedModel : 'AUTO';
+    const modelLabel = modelSelectionLabel(
+      modelCatalog,
+      selection.routingMode === 'AUTO' ? 'AUTO' : requestedModelKey,
+    );
     await this.dependencies.generations.enqueue(
       requestId,
       'chat',
@@ -267,6 +273,7 @@ export class PromptExecutionService {
             context: collected.files,
             contextReceipt: collected.receipt,
             ...selection,
+            modelDisplayName: modelLabel,
             ...(threadId === undefined ? {} : { threadId }),
           },
           (event) => {
@@ -287,10 +294,7 @@ export class PromptExecutionService {
       },
       {
         concurrencyKey: generationConcurrencyKey(sessionId, admission.threadId),
-        modelLabel: modelSelectionLabel(
-          modelCatalog,
-          selection.routingMode === 'AUTO' ? 'AUTO' : requestedModelKey,
-        ),
+        modelLabel,
       },
     );
   }

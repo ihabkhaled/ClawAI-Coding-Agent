@@ -236,6 +236,12 @@ describe('ChatParticipantService', () => {
     await vi.waitFor(() => {
       expect(chat.send).toHaveBeenCalledOnce();
     });
+    expect(chat.send).toHaveBeenCalledWith(
+      expect.objectContaining({ modelDisplayName: 'Automatic routing' }),
+      expect.any(Function),
+      expect.any(AbortSignal),
+      expect.any(Function),
+    );
     expect(generations.enqueue).toHaveBeenCalledWith(
       expect.any(String),
       'chat',

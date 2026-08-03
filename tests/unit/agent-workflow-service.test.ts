@@ -5,6 +5,7 @@ vi.mock('vscode', () => ({
 }));
 
 import { AgentWorkflowService } from '../../src/services/agent-workflow-service';
+import { ChatService } from '../../src/services/chat-service';
 import { ConversationSessionService } from '../../src/services/conversation-session-service';
 import { testRuntimeConfiguration } from '../helpers/runtime-configuration';
 
@@ -22,6 +23,40 @@ function deferred() {
 }
 
 describe('AgentWorkflowService', () => {
+  it('persists a new conversation thread before Runtime V2 starts', async () => {
+    const createRequests: unknown[] = [];
+    const backend = {
+      createThread: async (input: unknown) => {
+        createRequests.push(input);
+        return { id: 'thread-runtime' };
+      },
+      listMessages: async () => [],
+    };
+    const conversations = new ConversationSessionService(
+      { snapshot: { history: [] } } as never,
+      () => backend as never,
+      () =>
+        ({
+          bindRequest: vi.fn(),
+          titleSessionFromPrompt: vi.fn(async () => undefined),
+          updateSession: vi.fn(async () => undefined),
+        }) as never,
+    );
+    const service = new AgentWorkflowService({
+      chat: new ChatService(backend as never),
+      conversations,
+    } as never);
+    const input = {
+      content: 'First runtime question',
+      selection: { routingMode: 'AUTO' },
+    } as never;
+    await conversations.prepare('session-1', 'request-1', 'First runtime question');
+
+    await expect(service.runtimeThread(input, 'request-1')).resolves.toBe('thread-runtime');
+    await expect(conversations.threadForRequest('request-1')).resolves.toBe('thread-runtime');
+    expect(createRequests).toEqual([{ title: 'First runtime question', routingMode: 'AUTO' }]);
+  });
+
   it('captures immutable workflow inputs and accepts uploaded attachments after execution starts', async () => {
     const accept = vi.fn();
     const acquire = vi.fn(async () => ({

@@ -108,6 +108,7 @@ export class ConversationSessionService {
     if (sessionId === undefined) {
       return;
     }
+    this.requestThreadTargets.set(requestId, threadId);
     const pending = this.pendingThreads.get(sessionId);
     if (pending?.ownerRequestId === requestId) {
       pending.resolve(threadId);

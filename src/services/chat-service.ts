@@ -79,7 +79,9 @@ export class ChatStreamError extends Error {
   }
 }
 
-function threadRequest(input: ChatSendInput) {
+function threadRequest(
+  input: Pick<ChatSendInput, 'content' | 'model' | 'provider' | 'routingMode'>,
+) {
   return {
     title: input.content.trim().slice(0, 80),
     routingMode: input.routingMode,
@@ -308,6 +310,12 @@ export class ChatService {
 
   setBackend(backend: ChatBackendPort): void {
     this.backend = backend;
+  }
+
+  async createThread(
+    input: Pick<ChatSendInput, 'content' | 'model' | 'provider' | 'routingMode'>,
+  ): Promise<string> {
+    return (await this.backend.createThread(threadRequest(input))).id;
   }
 
   async send(

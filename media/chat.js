@@ -243,15 +243,16 @@ function updateRequestMeta(requestId) {
   const streamState = streamStates.get(requestId);
   const body = responseBodies.get(requestId);
   const meta = body?.closest('.message-card')?.querySelector('.message-meta');
-  if (!receipt || !meta) {
+  if (!meta) {
     return;
   }
-  meta.replaceChildren();
   const provenance = [streamState?.provider, streamState?.model].filter(Boolean).join(' · ');
-  if (provenance.length > 0) {
-    meta.append(textElement('span', 'message-provenance', `${provenance} · `));
-  }
-  meta.append(tokenChip(receipt, 'message-token-chip'));
+  renderMessageMeta(
+    meta,
+    provenance.length > 0 ? provenance : (streamState?.submittedModelLabel ?? ''),
+    '',
+    receipt,
+  );
 }
 
 function setRequestTokens(requestId, receipt) {
@@ -432,7 +433,39 @@ function createFileIcon() {
   return icon;
 }
 
-function appendMessage(role, content, meta = '', requestId = '', attachments = []) {
+function appendMetaItem(meta, item) {
+  if (meta.childElementCount > 0) {
+    meta.append(textElement('span', 'message-meta-separator', ' · '));
+  }
+  meta.append(item);
+}
+
+function renderMessageMeta(meta, modelLabel = '', detail = '', receipt, status = '') {
+  meta.replaceChildren();
+  if (modelLabel.length > 0) {
+    const chip = textElement('span', 'message-model-chip', modelLabel);
+    chip.title = modelLabel;
+    appendMetaItem(meta, chip);
+  }
+  if (detail.length > 0) {
+    appendMetaItem(meta, textElement('span', 'message-meta-detail', detail));
+  }
+  if (receipt) {
+    appendMetaItem(meta, tokenChip(receipt, 'message-token-chip'));
+  }
+  if (status.length > 0) {
+    appendMetaItem(meta, textElement('span', 'message-status', status));
+  }
+}
+
+function appendMessage(
+  role,
+  content,
+  meta = '',
+  requestId = '',
+  attachments = [],
+  modelLabel = '',
+) {
   const article = document.createElement('article');
   article.className = `message timeline-item message-${role}`;
   if (requestId.length > 0) {
@@ -446,8 +479,10 @@ function appendMessage(role, content, meta = '', requestId = '', attachments = [
   header.append(
     textElement('span', 'message-role', role === 'user' ? labels.you : labels.assistant),
   );
-  if (meta.length > 0 || (role === 'assistant' && requestId.length > 0)) {
-    header.append(textElement('span', 'message-meta', meta));
+  if (modelLabel.length > 0 || meta.length > 0 || (role === 'assistant' && requestId.length > 0)) {
+    const messageMeta = textElement('span', 'message-meta', '');
+    renderMessageMeta(messageMeta, modelLabel, meta);
+    header.append(messageMeta);
   }
   const body = textElement('div', 'message-body', content);
   if (role === 'assistant') {
@@ -494,13 +529,14 @@ function displayHistoryContent(message) {
 
 function historyMessageMeta(message) {
   const tokenTotal = (message.inputTokens ?? 0) + (message.outputTokens ?? 0);
-  return [
-    message.provider,
-    message.model,
-    tokenTotal > 0 ? `${tokenTotal} ${labels.tokens} · ${labels.reported}` : '',
-  ]
-    .filter(Boolean)
-    .join(' · ');
+  return tokenTotal > 0 ? `${tokenTotal} ${labels.tokens} · ${labels.reported}` : '';
+}
+
+function historyMessageModelLabel(message) {
+  if (typeof message.modelDisplayName === 'string' && message.modelDisplayName.length > 0) {
+    return message.modelDisplayName;
+  }
+  return [message.provider, message.model].filter(Boolean).join(' · ');
 }
 
 function renderHistoryMessages(messages) {
@@ -522,6 +558,8 @@ function renderHistoryMessages(messages) {
       displayHistoryContent(message),
       historyMessageMeta(message),
       '',
+      [],
+      historyMessageModelLabel(message),
     );
     body.dataset.streamPlaceholder = 'false';
   }
@@ -618,6 +656,20 @@ function activeModelValue() {
     return pendingModel;
   }
   return currentState.routingMode === 'AUTO' ? 'AUTO' : currentState.selectedModel;
+}
+
+function modelLabel(modelKey) {
+  if (modelKey === 'AUTO') {
+    return labels.automaticRouting;
+  }
+  return currentState.models.find((model) => model.key === modelKey)?.displayName ?? modelKey;
+}
+
+function requestModelLabel(mode, modelKey, modelKeys) {
+  if (mode === 'compare' || mode === 'judge') {
+    return modelKeys.map((key) => modelLabel(key)).join(' + ');
+  }
+  return modelLabel(modelKey);
 }
 
 function renderModels(models) {
@@ -1763,6 +1815,7 @@ function submitPrompt(retryInput) {
   const researchMode = retryInput?.researchMode ?? elements.researchMode.value;
   const modelKeys = retryInput?.modelKeys ?? selectedModels();
   const modelKey = retryInput?.modelKey ?? activeModelValue();
+  const submittedModelLabel = requestModelLabel(mode, modelKey, modelKeys);
   const judgeEnabled = retryInput?.judgeEnabled ?? mode === 'judge';
   const attachments = snapshotAttachments(retryInput?.attachments ?? composerAttachments);
   const activeRequests = currentState.generationQueue?.active ?? [];
@@ -1791,12 +1844,15 @@ function submitPrompt(retryInput) {
     `${promptTokens} ${labels.tokens} · ${labels.estimated}`,
     requestId,
     attachments,
+    submittedModelLabel,
   );
   const responseBody = appendMessage(
     'assistant',
     queued ? labels.queued : mode === 'agent' ? labels.agentReading : labels.connecting,
     '',
     requestId,
+    [],
+    submittedModelLabel,
   );
   responseBodies.set(requestId, responseBody);
   streamStates.set(requestId, {
@@ -1805,6 +1861,7 @@ function submitPrompt(retryInput) {
     lastProgressKey: '',
     model: '',
     provider: '',
+    submittedModelLabel,
     reasoningTokens: 0,
   });
   setRequestTokens(requestId, {
@@ -2308,7 +2365,15 @@ window.addEventListener('message', (event) => {
       timeline?.classList.add('message-error');
       const meta = timeline?.querySelector('.message-meta');
       if (meta) {
-        meta.textContent = labels.error;
+        const streamState = streamStates.get(message.requestId);
+        const provenance = [streamState?.provider, streamState?.model].filter(Boolean).join(' · ');
+        renderMessageMeta(
+          meta,
+          provenance.length > 0 ? provenance : (streamState?.submittedModelLabel ?? ''),
+          '',
+          requestTokens.get(message.requestId),
+          labels.error,
+        );
       }
       responseBodies.delete(message.requestId);
       streamStates.delete(message.requestId);

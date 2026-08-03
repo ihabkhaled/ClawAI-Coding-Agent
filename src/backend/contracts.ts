@@ -187,6 +187,11 @@ export const messageSchema = z
     inputTokens: z.number().int().nullable().optional(),
     outputTokens: z.number().int().nullable().optional(),
     latencyMs: z.number().int().nullable().optional(),
+    metadata: z
+      .object({ modelDisplayName: z.string().max(255).optional() })
+      .loose()
+      .nullable()
+      .optional(),
     status: z.string().optional(),
     createdAt: z.union([z.string(), z.date()]).optional(),
   })
