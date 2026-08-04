@@ -26,6 +26,17 @@ function externalOutputRootBlock(
   ].join('\n');
 }
 
+// A repair round is sent on the malformed response's own thread, so that turn is already in the
+// provider transcript. Echoing it back verbatim duplicated it and let each round compound the
+// context until the provider returned no content at all. Keep only enough of the head to show the
+// model what it produced, and mark the elision explicitly.
+const MAX_ECHOED_RESPONSE_CHARACTERS = 4_000;
+
+function boundedPreviousResponse(previousResponse: string): string {
+  if (previousResponse.length <= MAX_ECHOED_RESPONSE_CHARACTERS) return previousResponse;
+  return `${previousResponse.slice(0, MAX_ECHOED_RESPONSE_CHARACTERS)}\n[previous response truncated]`;
+}
+
 const workflowInstructions: Record<WorkflowKind, string> = {
   audit: 'Audit the supplied workspace context and propose only justified changes.',
   docs: 'Generate or update documentation that accurately reflects the supplied code.',
@@ -112,7 +123,7 @@ export function buildEditPlanRepairPrompt(
     "Use only safe relative workspace paths. Create and update require full file content. Delete must omit content. Commands must be executable bounded development tools with no chaining or redirection. Command paths are relative to cwd; if the command already includes a path like 'app/file.js', omit cwd or use '.'.",
     externalOutputRootBlock(externalOutputRoots),
     '<previous-response>',
-    previousResponse,
+    boundedPreviousResponse(previousResponse),
     '</previous-response>',
   ].join('\n');
 }

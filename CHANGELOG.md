@@ -2,6 +2,31 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.41.1
+
+This corrective release restores tool dispatch for trusted local workspaces and
+stops a repair round from compounding conversation context.
+
+- Separates a target's execution readiness from its network reachability. The
+  workspace target previously reported `online: false` unconditionally, so
+  `ExecutionTargetRegistry.select` rejected every invocation with
+  "Execution target is offline" before its epoch and capability checks ran. A
+  trusted local workspace is now dispatchable while the host has no internet.
+- Stops claiming internet reachability as a side effect of execution readiness.
+  A registered target now reports `workspace-only` until a probe proves more,
+  rather than fabricating `internet` from an unrelated flag.
+- Bounds the previous response echoed into an edit-plan repair prompt. Because a
+  repair is sent on the malformed response's own thread, echoing it back
+  verbatim duplicated the turn and let each round compound the context until the
+  provider returned no message content. The echo is now capped and the elision
+  is marked explicitly.
+
+Paired backend change in `claw-chat-service`: a Runtime V2 run that ends in an
+agent-self capability denial is corrected once and then failed with
+`MODEL_CAPABILITY_DRIFT`, instead of storing the refusal as a completed
+successful answer. Genuine safety refusals and truthful factual negatives are
+unaffected.
+
 ## 0.41.0
 
 This release restores first-message execution for Runtime Protocol V2 and makes

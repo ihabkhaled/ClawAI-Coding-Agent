@@ -60,6 +60,23 @@ describe('code workflow protocol', () => {
     expect(prompt).toContain('"operation":"delete"');
   });
 
+  it('bounds the echoed previous response so a repair round cannot grow the context', () => {
+    const refusal = `I cannot navigate to or read files outside the workspace. ${'x'.repeat(80_000)}`;
+
+    const prompt = buildEditPlanRepairPrompt('Create app/for-loop.js.', refusal);
+
+    expect(prompt.length).toBeLessThan(refusal.length);
+    expect(prompt).toContain('[previous response truncated]');
+    expect(prompt).toContain('Original user request: Create app/for-loop.js.');
+  });
+
+  it('keeps a short previous response intact and unmarked', () => {
+    const prompt = buildEditPlanRepairPrompt('Create app/for-loop.js.', '{"files":[]}');
+
+    expect(prompt).toContain('{"files":[]}');
+    expect(prompt).not.toContain('[previous response truncated]');
+  });
+
   it('extracts and validates a fenced edit plan without accepting surrounding prose as code', () => {
     expect(
       parseWorkflowEditPlan(`Here is the proposed change.

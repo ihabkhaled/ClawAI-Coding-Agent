@@ -171,6 +171,10 @@ export function describeRuntimeTarget(probe: RuntimeHostProbe): ExecutionTarget 
     probe.workspaceTrusted &&
     probe.workspaceFolders.length > 0 &&
     probe.workspaceFolders.every((folder) => folder.scheme === 'file');
+  // `online` is the target's execution readiness, never its internet reachability. A trusted
+  // local workspace stays dispatchable while the host is offline; network reachability is a
+  // separate registered fact. A rootless window has nothing to execute against.
+  const executionReady = probe.workspaceFolders.length > 0;
 
   return {
     id: 'target:workspace',
@@ -186,7 +190,7 @@ export function describeRuntimeTarget(probe: RuntimeHostProbe): ExecutionTarget 
       uri: folder.uri,
       access: writable ? 'read-write' : 'read',
     })),
-    online: false,
+    online: executionReady,
     capabilities: writable ? ['legacy.chat', 'legacy.edit-plan'] : ['legacy.chat'],
   };
 }

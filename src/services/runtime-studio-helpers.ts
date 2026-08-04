@@ -122,7 +122,10 @@ export function buildRuntimeTargetRouter(dependencies: TargetRouterDependencies)
     dependencies.targets.register(
       target,
       {
-        networkReachability: target.online ? 'internet' : 'offline',
+        // Execution readiness (`target.online`) proves nothing about internet reachability.
+        // Without a probe the only truthful claim is that the workspace itself is reachable;
+        // asserting 'internet' here would fabricate research capability the host has not proven.
+        networkReachability: 'workspace-only',
         browserAvailability: target.capabilities.includes(browserToolDefinition.name)
           ? 'visible-local'
           : 'none',
