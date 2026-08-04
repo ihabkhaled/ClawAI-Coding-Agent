@@ -95,6 +95,15 @@ describe('VS Code runtime target adapter', () => {
     });
   });
 
+  it('reports a trusted local workspace as execution-ready without any internet evidence', () => {
+    expect(describeRuntimeTarget(localProbe).online).toBe(true);
+    expect(describeRuntimeTarget({ ...localProbe, workspaceTrusted: false }).online).toBe(true);
+  });
+
+  it('reports a rootless workspace as not execution-ready', () => {
+    expect(describeRuntimeTarget({ ...localProbe, workspaceFolders: [] }).online).toBe(false);
+  });
+
   it('limits untrusted and virtual workspaces to read-only capabilities', () => {
     const untrusted = describeRuntimeTarget({ ...localProbe, workspaceTrusted: false });
     const virtual = describeRuntimeTarget({
