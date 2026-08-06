@@ -2,6 +2,18 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.41.4
+
+Patch: diagnostics for an answer that streams but never renders.
+
+- A run was observed emitting its answer and completing while the panel stayed
+  on "Reading workspace". Replaying that exact run journal through the real
+  stream service and reducer delivers every delta and reports the run terminal,
+  so the loss is in the hop from the coordinator to the panel. The coordinator
+  now records each delta it posts with its request id and whether a view was
+  attached, and the panel reports a delta that arrives for a request it has no
+  bubble for instead of dropping the text in silence.
+
 ## 0.41.3
 
 Patch: makes `workspace.files` usable at all. Three defects, each of which on
