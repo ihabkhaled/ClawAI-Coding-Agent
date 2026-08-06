@@ -2,6 +2,46 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.41.3
+
+Patch: makes `workspace.files` usable at all. Three defects, each of which on
+its own made "gain context on this workspace" impossible. A run captured
+against a live backend showed the model calling `list` with
+`{rootKey: "workspace", path: ""}`, the tool failing in 1 ms without touching
+the disk, the model retrying, and the run stranding with no answer.
+
+- Lets the workspace root be addressed. Every spelling of it — `""`, `"."`,
+  `"./"`, `"/"` — was rejected by the relative-path policy, so no value meant
+  "the root". An agent had to name a subdirectory to list, but could not list
+  the root to discover one, which made the first tool call of any exploratory
+  task impossible. Enumeration now accepts the root; reads and mutations keep
+  the stricter rule, and every containment and secret-denial check is unchanged.
+- Makes the advertised `rootKey` the one the filesystem actually approves. The
+  capability manifest advertised `workspace-1` while the filesystem adapter
+  resolved only the SHA-256 folder key, so even a model that used the
+  advertised value got "The requested filesystem root is not approved" — every
+  invocation was unsatisfiable. Both sides now derive the convention from one
+  place so they cannot drift apart again. A near miss such as `workspace` or
+  `workspace-0` is still rejected rather than resolved to the first folder.
+- Tells the model the argument convention. The tool description is the only
+  guidance that reaches it: the catalog carries a bare input shape, and the
+  manifest that knows the roots goes to the backend as a hash. It now states
+  the `workspace-N` scheme and how to enumerate a folder root.
+
+## 0.41.2
+
+Patch: a compatible correctness fix to event validation, with no new workflow.
+
+- Shows why a run ended instead of replacing the reason with a protocol error.
+  Terminal events (`run.failed`, `run.blocked`, `run.cancelled`,
+  `run.completed`) were validated against a strict empty payload, so once the
+  backend began attaching a reason — added precisely so a client could explain a
+  failure — every failed run was rejected here as an invalid payload. A run that
+  the model correctly refused surfaced as `Runtime event run.failed has an
+invalid payload` rather than the actual cause, which is worse than the silence
+  it replaced. Terminal payloads now accept an optional `{ code, message }`
+  reason; `run.created` keeps the empty payload.
+
 ## 0.41.1
 
 This corrective release restores tool dispatch for trusted local workspaces and

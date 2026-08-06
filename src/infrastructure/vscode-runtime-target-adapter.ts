@@ -8,6 +8,7 @@ import {
   type CapabilityManifest,
   type ExecutionTarget,
 } from '../core/runtime/capability-manifest';
+import { advertisedWorkspaceRootKey } from '../core/workspace-scope';
 
 import { browserToolDefinition } from './browser-tool-executor';
 import { containerToolDefinition } from './container-tool-executor';
@@ -186,7 +187,7 @@ export function describeRuntimeTarget(probe: RuntimeHostProbe): ExecutionTarget 
     shells: shell === undefined ? [] : [shell],
     defaultShell: shell,
     workspaceRoots: probe.workspaceFolders.map((folder, index) => ({
-      rootKey: `workspace-${String(index + 1)}`,
+      rootKey: advertisedWorkspaceRootKey(index),
       uri: folder.uri,
       access: writable ? 'read-write' : 'read',
     })),

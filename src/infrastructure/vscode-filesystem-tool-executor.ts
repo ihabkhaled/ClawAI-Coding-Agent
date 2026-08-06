@@ -3,7 +3,11 @@ import { z } from 'zod';
 
 import { fileTransactionSchema } from '../core/file-transaction';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
-import { isSafeRelativeWorkspacePath } from '../core/workspace-path-policy';
+import {
+  isSafeRelativeWorkspacePath,
+  isSafeWorkspaceDirectoryPath,
+  normalizeWorkspaceDirectoryPath,
+} from '../core/workspace-path-policy';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -14,6 +18,15 @@ import type {
 } from '../services/runtime-tool-dispatcher';
 
 const relativePath = z.string().max(4_096).refine(isSafeRelativeWorkspacePath);
+// Enumeration is the one place the workspace root is a legitimate target, and
+// the only way an agent can discover anything before it knows a subdirectory
+// name. Root spellings are folded to the empty relative path here so the rest
+// of the pipeline sees one canonical value.
+const directoryPath = z
+  .string()
+  .max(4_096)
+  .refine(isSafeWorkspaceDirectoryPath)
+  .transform(normalizeWorkspaceDirectoryPath);
 const rootKey = z.string().min(1).max(100);
 const readSchema = z
   .object({
@@ -28,7 +41,7 @@ const pathSchema = z.object({ rootKey, path: relativePath }).strict();
 const listSchema = z
   .object({
     rootKey,
-    path: relativePath,
+    path: directoryPath,
     cursor: z.number().int().nonnegative().default(0),
     limit: z.number().int().min(1).max(1_000).default(200),
   })
@@ -45,7 +58,20 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',
   name: 'workspace.files',
   version: '2.0.0',
-  description: 'Bounded workspace discovery, reads, and transactional file mutation.',
+  // The description is the ONLY guidance the model gets about these arguments:
+  // the catalog it receives carries name, operations, targetIds and a bare
+  // input shape, while the capability manifest that knows the real roots is
+  // sent to the backend as a hash. Without the convention spelled out here a
+  // model has to guess `rootKey`, and the natural guesses — "workspace",
+  // "root", an absolute path — all resolve to nothing, so every single
+  // invocation failed before touching the disk.
+  description:
+    'Bounded workspace discovery, reads, and transactional file mutation. ' +
+    'Set rootKey to "workspace-1" for the first workspace folder, "workspace-2" for the second, ' +
+    'and so on in the order they are opened; most workspaces have only "workspace-1". ' +
+    'path is always relative to that folder and never absolute. ' +
+    'To enumerate the folder itself, use the list operation with path "" — that is how to ' +
+    'discover the top-level layout before any subdirectory name is known.',
   operations: [
     'stat',
     'list',

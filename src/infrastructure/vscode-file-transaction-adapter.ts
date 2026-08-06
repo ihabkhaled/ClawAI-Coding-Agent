@@ -5,7 +5,8 @@ import {
   isRealPathInsideWorkspace,
   resolveCanonicalWorkspacePath,
 } from '../core/workspace-file-containment';
-import { workspaceFolderKey } from '../core/workspace-scope';
+import { WORKSPACE_ROOT_PATH } from '../core/workspace-path-policy';
+import { advertisedWorkspaceRootIndex, workspaceFolderKey } from '../core/workspace-scope';
 
 import type { ExternalOutputGrant } from '../core/external-output-grants';
 import type { FileTransaction } from '../core/file-transaction';
@@ -225,6 +226,12 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
   private root(rootKey: string, operation: FileTransactionOperation['kind'] | 'read'): vscode.Uri {
     const runtime = this.runtimeRoots.get(rootKey);
     if (runtime !== undefined) return runtime;
+    const advertisedIndex = advertisedWorkspaceRootIndex(rootKey);
+    const advertised =
+      advertisedIndex === undefined
+        ? undefined
+        : (vscode.workspace.workspaceFolders ?? [])[advertisedIndex];
+    if (advertised !== undefined) return advertised.uri;
     const workspace = (vscode.workspace.workspaceFolders ?? []).find(
       (folder) => workspaceFolderKey(folder.uri.toString()) === rootKey,
     );
@@ -242,7 +249,15 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
     create: boolean,
   ): Promise<vscode.Uri> {
     if (root.scheme !== 'file') throw new Error('This filesystem operation requires a file root');
-    const target = vscode.Uri.joinPath(root, ...relativePath.replaceAll('\\', '/').split('/'));
+    // The empty relative path IS the root. Joining an empty segment relies on
+    // Uri.joinPath's normalization, so the root is resolved explicitly instead.
+    // Containment still runs below, which is what actually enforces the
+    // boundary — a root that is itself a symlink out of the workspace is
+    // rejected exactly as any other target would be.
+    const target =
+      relativePath === WORKSPACE_ROOT_PATH
+        ? root
+        : vscode.Uri.joinPath(root, ...relativePath.replaceAll('\\', '/').split('/'));
     const canonicalRoot = await resolveCanonicalWorkspacePath(root.fsPath);
     if (!(await isRealPathInsideWorkspace(canonicalRoot, target.fsPath, create)))
       throw new Error('Filesystem target escapes through a symbolic link or junction');
