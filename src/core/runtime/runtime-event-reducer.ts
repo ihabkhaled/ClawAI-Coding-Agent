@@ -88,6 +88,24 @@ export interface RuntimeSnapshot {
 
 const phasePayloadSchema = z.object({ phase: z.string().trim().min(1).max(120) }).strict();
 const emptyPayloadSchema = z.object({}).strict();
+
+/**
+ * A terminal run event may carry why the run ended.
+ *
+ * These were validated against the empty payload, so the moment the server
+ * started attaching a reason — the whole point of which was to let a client
+ * show WHY a run died — every failed run was rejected here as an invalid
+ * payload. The user then saw a protocol error in place of the actual cause,
+ * which is strictly worse than the silence it replaced. The reason stays
+ * optional so a terminal event without one is still valid.
+ */
+const terminalReasonSchema = z
+  .object({
+    code: z.string().trim().min(1).max(120),
+    message: z.string().trim().min(1).max(4_096),
+  })
+  .strict();
+const terminalPayloadSchema = z.object({ reason: terminalReasonSchema.optional() }).strict();
 const identifierSchema = z.string().regex(/^[A-Za-z][A-Za-z0-9_.:-]{7,127}$/u);
 const turnPayloadSchema = z.object({ turnId: identifierSchema }).strict();
 const deltaPayloadSchema = z
@@ -449,12 +467,12 @@ const knownPayloadSchemas: Readonly<Record<string, z.ZodType>> = {
   'model.delta': deltaPayloadSchema,
   'model.summary': summaryPayloadSchema,
   'model.turn.started': turnPayloadSchema,
-  'run.blocked': emptyPayloadSchema,
+  'run.blocked': terminalPayloadSchema,
   'run.budget.updated': budgetPayloadSchema,
-  'run.cancelled': emptyPayloadSchema,
-  'run.completed': emptyPayloadSchema,
+  'run.cancelled': terminalPayloadSchema,
+  'run.completed': terminalPayloadSchema,
   'run.created': emptyPayloadSchema,
-  'run.failed': emptyPayloadSchema,
+  'run.failed': terminalPayloadSchema,
   'run.phase': phasePayloadSchema,
   'run.steering.applied': steeringPayloadSchema,
   'run.steering.received': steeringPayloadSchema,
