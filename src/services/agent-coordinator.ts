@@ -20,6 +20,7 @@ import { collectAgentContext } from './agent-context-service';
 import { AgentCoordinatorBoundaries } from './agent-coordinator-boundaries';
 import { pickCompareInput, pickModelKey } from './agent-coordinator-prompts';
 import {
+  agentConcurrencyKey,
   applyModelSelection,
   cancelRemoteGenerations,
   cancelTargetGeneration,
@@ -45,7 +46,7 @@ import { ChatService } from './chat-service';
 import { ClawaiInitializer } from './clawai-initializer';
 import { ConfigurationService } from './configuration-service';
 import { ConversationSessionService } from './conversation-session-service';
-import { GenerationScheduler, generationConcurrencyKey } from './generation-scheduler';
+import { GenerationScheduler } from './generation-scheduler';
 import { ModelService } from './model-service';
 import { PromptExecutionService } from './prompt-execution-service';
 import { RequestAdmissionService } from './request-admission-service';
@@ -425,13 +426,16 @@ export class AgentCoordinator implements vscode.Disposable {
           onEvent: (event) => {
             projector.project(event);
           },
+          onApproval: (phase, effect) => {
+            projector.approval(phase, effect);
+          },
         });
         // Only the non-throwing path settles here: a thrown failure is already
         // reported, and cancelled, by the generation failure boundary.
         await projector.settle();
       },
       {
-        concurrencyKey: generationConcurrencyKey(sessionId, queuedInput.admission.threadId),
+        concurrencyKey: agentConcurrencyKey(this.state, sessionId, queuedInput.admission.threadId),
         modelLabel: queuedInput.modelLabel,
         retainedBytes: totalAttachmentBytes(input.attachments),
       },
