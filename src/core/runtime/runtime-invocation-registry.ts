@@ -6,6 +6,23 @@ import {
   type ToolInvocation,
 } from './runtime-tool-contracts';
 
+/**
+ * Something arrived for a run that has already ended.
+ *
+ * The backend keeps streaming until it learns the run is over, so a frame for
+ * the turn after a denied or blocked step is ordinary traffic, not a fault. It
+ * used to be a bare Error, and its sentence went straight to the panel as the
+ * assistant's answer: an Enterprise-locked run, which correctly refuses the
+ * first tool it is asked for, replied "Runtime invocation registry is terminal"
+ * and nothing else. Naming it lets the stream stop reading instead.
+ */
+export class RuntimeRunEndedError extends Error {
+  constructor() {
+    super('Runtime invocation registry is terminal');
+    this.name = 'RuntimeRunEndedError';
+  }
+}
+
 type RuntimeEpochs = ToolInvocation['epochs'];
 export type RuntimeInvocationRegistryStatus =
   'active' | 'blocked' | 'cancelled' | 'completed' | 'failed';
@@ -440,7 +457,7 @@ export function admitRuntimeInvocation(
       `Runtime invocation ${invocation.invocationId} conflicts with an earlier request`,
     );
   }
-  if (registry.status !== 'active') throw new Error('Runtime invocation registry is terminal');
+  if (registry.status !== 'active') throw new RuntimeRunEndedError();
   if (registry.idempotencyKeys[invocation.idempotencyKey] !== undefined) {
     throw new Error(`Runtime invocation idempotency key ${invocation.idempotencyKey} conflicts`);
   }
@@ -489,7 +506,7 @@ export function advanceRuntimeInvocationRegistryTurn(
     throw new Error('Runtime invocation registry requires a turn');
   }
   if (registry.status !== 'active') {
-    throw new Error('Runtime invocation registry is terminal');
+    throw new RuntimeRunEndedError();
   }
   if (registry.turnId === turnId) return registry;
   return { ...registry, turnId };

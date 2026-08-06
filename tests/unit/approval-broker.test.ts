@@ -98,4 +98,42 @@ describe('ApprovalBroker', () => {
     broker.cancelAll();
     await expect(second).resolves.toBe(false);
   });
+  it('withdraws one lane of questions and leaves another lane standing', async () => {
+    // A runtime run that ends cannot hear the answer to what it was asking, and
+    // an unanswerable modal swallows every click meant for the composer — the
+    // user cannot type again until the window is reloaded. Withdrawing by kind
+    // clears the dead run's prompts without denying a question another lane is
+    // still legitimately waiting on.
+    const broker = new ApprovalBroker({ update: () => undefined });
+
+    const runtimeEffect = broker.request({
+      kind: 'runtimeEffect',
+      message: 'Write one file',
+      title: 'Approve agent effect',
+    });
+    const queuedEffect = broker.request({
+      kind: 'runtimeEffect',
+      message: 'Write another file',
+      title: 'Approve agent effect',
+    });
+    const otherLane = broker.request({
+      kind: 'finalDiff',
+      message: 'Apply one file',
+      title: 'Apply changes',
+    });
+
+    expect(broker.cancelKind('runtimeEffect')).toBe(true);
+
+    await expect(runtimeEffect).resolves.toBe(false);
+    await expect(queuedEffect).resolves.toBe(false);
+    expect(broker.current).toMatchObject({ kind: 'finalDiff' });
+    expect(broker.resolve(broker.current?.id ?? '', true)).toBe(true);
+    await expect(otherLane).resolves.toBe(true);
+  });
+
+  it('reports nothing to withdraw when that lane has no questions open', () => {
+    const broker = new ApprovalBroker({ update: () => undefined });
+
+    expect(broker.cancelKind('runtimeEffect')).toBe(false);
+  });
 });

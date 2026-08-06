@@ -167,6 +167,17 @@ const terminalStatuses: Readonly<Record<string, RuntimeRunStatus>> = {
   'run.failed': 'failed',
 };
 
+/**
+ * Whether this event type means the run reached an end state of its own.
+ *
+ * Callers use it to tell a run that finished from one that stopped being
+ * followed — the difference between letting a completed run be, and having to
+ * tell the backend to stop a run nobody is listening to any more.
+ */
+export function isRuntimeRunEnded(type: string): boolean {
+  return Object.hasOwn(terminalStatuses, type);
+}
+
 export function createRuntimeSnapshot(
   capabilityManifest?: CapabilityManifest,
   protocolSelection: RuntimeProtocolSelection = runtimeProtocolFallback('endpoint-unavailable'),

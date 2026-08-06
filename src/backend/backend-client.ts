@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { backendErrorReason } from '../core/backend-error-body';
 import { joinApiUrl, normalizeBackendUrl } from '../core/configuration';
 import { redactText } from '../core/redaction';
 import { type SessionVault, type TokenPair } from '../core/session-vault';
@@ -353,23 +354,21 @@ export class BackendClient {
       method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
       body?: unknown;
       signal?: AbortSignal;
+      timeoutMs?: number;
     } = {},
   ): Promise<T> {
-    let response = await this.send(path, {
-      auth: true,
-      method: options.method ?? 'GET',
+    const attempt = {
+      auth: true as const,
+      method: options.method ?? ('GET' as const),
       ...(options.body === undefined ? {} : { body: options.body }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
-    });
+      ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
+    };
+    let response = await this.send(path, attempt);
     if (response.response.status === 401) {
       await discardResponseBody(response);
       await this.refreshSession(options.signal);
-      response = await this.send(path, {
-        auth: true,
-        method: options.method ?? 'GET',
-        ...(options.body === undefined ? {} : { body: options.body }),
-        ...(options.signal === undefined ? {} : { signal: options.signal }),
-      });
+      response = await this.send(path, attempt);
     }
     return this.parse(response, schema);
   }
@@ -447,6 +446,7 @@ export class BackendClient {
       method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
       body?: unknown;
       signal?: AbortSignal;
+      timeoutMs?: number;
     },
   ): Promise<ResponseLease> {
     const headers: Record<string, string> = {
@@ -469,7 +469,7 @@ export class BackendClient {
     const timeoutController = new AbortController();
     const timeout = setTimeout(() => {
       timeoutController.abort(new Error('ClawAI request timed out.'));
-    }, this.timeoutMs);
+    }, options.timeoutMs ?? this.timeoutMs);
     const signal =
       options.signal === undefined
         ? timeoutController.signal
@@ -529,8 +529,11 @@ export class BackendClient {
     const body = await this.readResponseBody(lease, MAX_ERROR_BODY_BYTES);
     const safeBody = redactText(body).trim();
     const statusMessage = `ClawAI request failed (${String(lease.response.status)}).`;
+    // A platform error carries its own reason and code; showing the raw JSON
+    // envelope around them made every backend failure unreadable in the panel.
+    const reason = backendErrorReason(safeBody);
     throw new BackendRequestError(
-      safeBody.length === 0 ? statusMessage : `${statusMessage} ${safeBody}`,
+      reason ?? (safeBody.length === 0 ? statusMessage : `${statusMessage} ${safeBody}`),
       lease.response.status,
       lease.response.status === 408 ||
         lease.response.status === 429 ||

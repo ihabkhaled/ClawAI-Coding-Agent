@@ -2,6 +2,109 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.52.0
+
+Patch to 0.51.0: a locally decided ending reaches the panel and stops there.
+
+- 0.51.0 sent those endings to the run-state reducer as well, and every run died
+  with "Runtime event sequence must advance from 40 to 41". The reducer's ledger
+  belongs to the backend and admits events strictly in sequence; these carry the
+  run service's own counter, which is a different series. They now go to the
+  panel and nowhere else, through a forwarder that is given a panel callback and
+  no ledger — so the mistake cannot be made again. Caught by the confirmation
+  round in a real VS Code window, not by review.
+
+## 0.51.0
+
+Minor: a refused run says so, and a slow turn is not a failed one.
+
+- A run stopped by policy — a tool the user denied, a mode that forbids it —
+  ends on this side, and the backend never learns of it, so it never streams a
+  terminal back. Those locally decided endings were published into a sink that
+  discarded them, and the panel reported "The ClawAI run ended without reporting
+  a result" for a run that had stopped exactly as intended. Terminals raised
+  here now reach the panel, and `run.blocked` is treated as the outcome it is:
+  whatever the agent produced is kept, followed by a line saying an operation
+  was not permitted.
+- Runtime commands are no longer held to the ordinary one-minute request budget.
+  Posting a tool result hands the run back to the platform, which calls the model
+  and only then answers, so the request stays open for as long as the turn takes
+  — and the platform's own provider timeout is five minutes. Any turn slower than
+  a minute was aborted from this side while the backend was working perfectly
+  well, and the panel reported "ClawAI request timed out." Seen twice in the
+  final sweep, at 70 s and 110 s. Ordinary requests keep the one-minute budget.
+
+## 0.50.0
+
+Minor: an internal sentence is no longer the answer.
+
+- A run that ends between a stream frame arriving and its turn opening — which
+  is what Enterprise-locked mode does, correctly refusing the first tool it is
+  asked for — replied "Runtime invocation registry is terminal" and nothing
+  else. That condition is now a named error the stream recognises, and the
+  reader stops instead of raising it at the user.
+
+## 0.49.0
+
+Minor: a run that ends stops being in the way.
+
+- One failing tool step used to end the whole run on this side while the
+  backend, correctly, handed the error back to the model and kept going. The
+  two halves then disagreed: the next tool request found nothing active and
+  threw, and "No runtime run is active" was shown to the user as the
+  assistant's answer, eleven seconds into a run whose only fault was one tool
+  returning an error. A failed step is now what the backend already treats it
+  as — the model's next input.
+- Cancelling when nothing is active is success rather than an error. Because
+  the coordinator awaited that call before telling the backend to stop, the
+  throw skipped the cancel entirely, and the run left running on the server was
+  exactly the one the user had asked to stop. Each stage of a cancel is now
+  best effort and the remote stop always runs.
+- A run nobody is following any more is told to stop, so the backend no longer
+  executes a run whose answer can reach no one while holding the single runtime
+  slot against the next prompt.
+- Approval prompts belonging to a finished run are withdrawn. An unanswerable
+  prompt is modal: it swallowed every click meant for the composer, so the next
+  message could not be typed at all until the window was reloaded.
+- Stream frames that arrive after the run has ended are ignored instead of
+  being dispatched into nothing.
+
+## 0.48.0
+
+Minor: the agent can finally write a file.
+
+- Every mutation goes through a nested transaction, and the tool catalog
+  reported that argument as an empty object while the description never
+  mentioned it — so a model had to guess the shape, and across eight different
+  models none ever did. The description now spells the transaction out:
+  transactionId, summary, and one operation carrying kind, rootKey, path,
+  content and beforeHash. This is the same channel that had to be taught the
+  rootKey convention in 0.41.3; it is the only guidance that reaches the model.
+- A stream frame the schema rejects no longer surfaces as a raw list of
+  validation issues. A platform error frame reports its own reason and code,
+  and anything else says plainly that the event could not be read.
+
+## 0.47.0
+
+Minor: a backend failure now reads as a sentence.
+
+- A run that ended because the provider returned no content showed the whole
+  HTTP envelope in the panel — statusCode, timestamp and all — with the actual
+  reason buried inside the JSON. The reason and its code are now shown on their
+  own, and anything that is not a platform error body is left exactly as it was.
+
+## 0.46.0
+
+Minor: Ollama cloud models are usable again.
+
+- Choosing any Ollama cloud model failed with "Unauthorized". The local Ollama
+  daemon also lists the cloud models it can proxy, and the catalog claimed all
+  of them as local, so the local entry shadowed the connector entry that holds
+  the credentials and the request was dispatched to the local runtime. A
+  cloud-tagged model now comes from its connector, which is also the truthful
+  source for tool support — the local entry hardcoded it to false, which made
+  every cloud model look incapable of using tools.
+
 ## 0.45.0
 
 Minor: a second prompt now waits its turn instead of failing.

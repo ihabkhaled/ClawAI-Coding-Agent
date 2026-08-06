@@ -93,6 +93,33 @@ describe('runtime stream delivers the answer a real run produced', () => {
     expect(seen.at(-1)?.type).toBe('run.completed');
   });
 
+  it('reports an unreadable frame in words, not as a schema dump', async () => {
+    // A frame the schema rejects used to surface the raw Zod issue list, so the
+    // panel showed `[{"code":"invalid_value","values":["2.0"],…}]` as the
+    // assistant's response.
+    const seen: RuntimeEvent[] = [];
+    await expect(
+      follow([{ type: 'model.delta', schemaVersion: '9.9' } as unknown as RuntimeEvent], seen),
+    ).rejects.toThrow('cannot read');
+  });
+
+  it('reports a platform error frame with its own reason', async () => {
+    const seen: RuntimeEvent[] = [];
+    await expect(
+      follow(
+        [
+          {
+            message: 'Cloud provider OLLAMA returned no message content',
+            code: 'CLOUD_PROVIDER_EMPTY_RESPONSE',
+          } as unknown as RuntimeEvent,
+        ],
+        seen,
+      ),
+    ).rejects.toThrow(
+      'Cloud provider OLLAMA returned no message content (CLOUD_PROVIDER_EMPTY_RESPONSE)',
+    );
+  });
+
   it('delivers a terminal failure to the observer instead of ending silently', async () => {
     // A failed run reaches the client as an ordinary terminal event: `follow`
     // returns normally rather than throwing. Nothing downstream may treat that

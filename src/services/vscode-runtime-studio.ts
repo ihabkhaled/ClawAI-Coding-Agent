@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { RUNTIME_EFFECT_APPROVAL_KIND } from '../core/approval-broker';
 import { describeExternalOutputRoots } from '../core/runtime/external-output-catalog';
 import { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 import {
@@ -151,7 +152,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     private readonly configuration: ConfigurationService,
     private readonly workspaceScope: WorkspaceScopeService,
     private readonly externalOutputs: ExternalOutputGrantStore,
-    approvals: ApprovalBroker,
+    private readonly approvals: ApprovalBroker,
     backend: () => BackendClient,
     logger: OutputLogger,
   ) {
@@ -458,6 +459,9 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       setActive: (runtime, runId) => {
         this.active = runtime;
         this.activeRunId = runId;
+      },
+      releaseApprovals: () => {
+        this.approvals.cancelKind(RUNTIME_EFFECT_APPROVAL_KIND);
       },
     });
   }

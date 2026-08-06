@@ -100,14 +100,64 @@ function harness(
 }
 
 describe('RuntimeRunService', () => {
-  it('requires an admitted run before dispatch or cancellation', async () => {
+  it('requires an admitted run before dispatch', async () => {
     const { service } = harness();
 
     expect(service.snapshot.runs).toEqual({});
     await expect(service.dispatch(invocation, { action: 'final' })).rejects.toThrow(
       /no runtime run/i,
     );
-    await expect(service.cancel()).rejects.toThrow(/no runtime run/i);
+  });
+
+  it('treats cancelling nothing as success, so the remote stop still runs', async () => {
+    // The coordinator awaits this before telling the backend to stop. While it
+    // threw here, that throw skipped the cancel POST — and the run left running
+    // on the server was exactly the one the user had asked to stop.
+    const { cancelled, service } = harness();
+
+    await expect(service.cancel()).resolves.toBeUndefined();
+    expect(cancelled).toEqual([]);
+    expect(service.hasActiveRun()).toBe(false);
+  });
+
+  it('reports whether a run is active, so a late stream frame is not dispatched', async () => {
+    const { service } = harness();
+
+    expect(service.hasActiveRun()).toBe(false);
+    await service.start(start);
+    expect(service.hasActiveRun()).toBe(true);
+    await service.cancel();
+    expect(service.hasActiveRun()).toBe(false);
+  });
+
+  it('cancels once when asked twice', async () => {
+    const { cancelled, service } = harness();
+    await service.start(start);
+
+    await service.cancel();
+    await service.cancel();
+
+    expect(cancelled).toEqual([start.runId]);
+  });
+
+  it('keeps the run alive when a tool fails and the loop says continue', async () => {
+    // The backend hands a failed step back to the model, which adapts and asks
+    // for the next tool. Ending the local run here made the two halves of the
+    // protocol disagree: the backend streamed on, the next tool.requested found
+    // nothing active, and "No runtime run is active" was shown to the user as
+    // the assistant's answer.
+    const { service } = harness({
+      execute: () => Promise.reject(new Error('fixture is unavailable')),
+    });
+    await service.start(start);
+
+    const result = await service.dispatch(invocation, {
+      action: 'continue',
+      nextTurnId: 'turn_01JZZZZZZZZZZZZZZZZZZZZZY',
+    });
+
+    expect(result.status).toBe('failed');
+    expect(service.hasActiveRun()).toBe(true);
   });
 
   it('adopts the authoritative server-generated run identifier', async () => {

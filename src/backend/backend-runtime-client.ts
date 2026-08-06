@@ -15,8 +15,28 @@ import type { z } from 'zod';
 type Request = <T>(
   path: string,
   schema: z.ZodType<T>,
-  options?: { method?: 'GET' | 'POST' | 'PATCH' | 'DELETE'; body?: unknown; signal?: AbortSignal },
+  options?: {
+    method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+    body?: unknown;
+    signal?: AbortSignal;
+    timeoutMs?: number;
+  },
 ) => Promise<T>;
+
+/**
+ * How long a runtime command may take before the client gives up on it.
+ *
+ * These are not ordinary requests. Posting a tool result hands the run back to
+ * the platform, which calls the model and only then answers — so the request is
+ * open for as long as the turn takes. The generic request budget is one minute,
+ * and the platform's own provider timeout is five, so any turn slower than a
+ * minute was aborted from this side while the backend was still working
+ * perfectly well: the panel said "ClawAI request timed out." and the run was
+ * lost. Observed twice in the final sweep, at 70 s and 110 s. This sits above
+ * the provider timeout so the platform's answer — success or its own timeout —
+ * is what decides the run.
+ */
+const RUNTIME_COMMAND_TIMEOUT_MS = 330_000;
 
 export class BackendRuntimeClient {
   constructor(
@@ -37,6 +57,7 @@ export class BackendRuntimeClient {
     return this.request('/chat-messages/runtime/runs', runtimeStartAckSchema, {
       body: input,
       method: 'POST',
+      timeoutMs: RUNTIME_COMMAND_TIMEOUT_MS,
       ...(signal === undefined ? {} : { signal }),
     });
   }
@@ -113,7 +134,12 @@ export class BackendRuntimeClient {
     return this.request(
       `/chat-messages/runtime/runs/${encodeURIComponent(binding.runId)}/${command}?${query.toString()}`,
       runtimeMutationAckSchema,
-      { body, method: 'POST', ...(signal === undefined ? {} : { signal }) },
+      {
+        body,
+        method: 'POST',
+        timeoutMs: RUNTIME_COMMAND_TIMEOUT_MS,
+        ...(signal === undefined ? {} : { signal }),
+      },
     );
   }
 }

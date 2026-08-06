@@ -7,14 +7,20 @@ import { type RuntimeApprovalPhase } from './runtime-studio.types';
 import type { OutputLogger } from '../infrastructure/output-logger';
 import type { ChatViewProvider } from '../webview/chat-view-provider';
 
-type TerminalKind = 'completed' | 'failed' | 'cancelled';
+type TerminalKind = 'blocked' | 'completed' | 'failed' | 'cancelled';
 
 interface TerminalReason {
   readonly code: string;
   readonly message: string;
 }
 
+// `run.blocked` is here because a refusal is an outcome, not an absence. A tool
+// the user denied, or a mode that forbids it, ends the run every bit as
+// definitely as a completion — and while this map did not say so, the panel
+// reported "The ClawAI run ended without reporting a result" for a run that had
+// been stopped exactly as intended.
 const TERMINAL_KINDS: Readonly<Record<string, TerminalKind>> = {
+  'run.blocked': 'blocked',
   'run.completed': 'completed',
   'run.failed': 'failed',
   'run.cancelled': 'cancelled',
@@ -192,6 +198,14 @@ export class RuntimeUiProjector {
       return this.answer.length === 0
         ? vscode.l10n.t('The ClawAI run was cancelled.')
         : `${this.answer}\n\n${vscode.l10n.t('The ClawAI run was cancelled.')}`;
+    }
+    // A refusal is a result the user asked for, so it is reported as one and
+    // whatever the agent had already produced is kept.
+    if (this.terminal === 'blocked') {
+      const blocked = vscode.l10n.t(
+        'The ClawAI run stopped because an operation was not permitted.',
+      );
+      return this.answer.length === 0 ? blocked : `${this.answer}\n\n${blocked}`;
     }
     return this.answer.length === 0
       ? vscode.l10n.t('The ClawAI run finished without producing an answer.')
