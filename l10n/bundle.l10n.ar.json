@@ -1,5 +1,6 @@
 {
   "{0} ({1}/{2})": "{0} ({1}/{2})",
+  "{0} bytes in {1} ms": "{0} bytes in {1} ms",
   "{0} files · {1}": "{0} ملفات · {1}",
   "{0} files · {1} bytes": "{0} files · {1} bytes",
   "{0} of {1} commands completed before the failure.": "{0} of {1} commands completed before the failure.",
@@ -211,6 +212,7 @@
   "Repairing model response": "إصلاح استجابة النموذج",
   "reported": "reported",
   "Request accepted": "Request accepted",
+  "Requested": "Requested",
   "Restricted": "Restricted",
   "Retry": "Retry",
   "Review": "Review",
@@ -292,6 +294,7 @@
   "Waiting for an available run slot": "Waiting for an available run slot",
   "Waiting for the active run to finish.": "Waiting for the active run to finish.",
   "Waiting for this conversation": "Waiting for this conversation",
+  "Waiting for your approval": "Waiting for your approval",
   "Web research": "Web research",
   "What should the models answer?": "What should the models answer?",
   "What should we build?": "What should we build?",
@@ -304,7 +307,9 @@
   "WORKSPACE-READY AGENT": "WORKSPACE-READY AGENT",
   "Write to external output folder": "Write to external output folder",
   "YOU": "YOU",
+  "You approved this step": "You approved this step",
   "You can attach up to 10 files.": "يمكنك إرفاق ما يصل إلى 10 ملفات.",
+  "You rejected this step": "You rejected this step",
   "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue.",
   "Your operating system will show native administrator consent.": "سيعرض نظام التشغيل نافذة الموافقة الأصلية للمسؤول."
 }

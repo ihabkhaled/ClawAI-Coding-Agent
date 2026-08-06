@@ -14,7 +14,7 @@ import type { RuntimeToolRouter } from './runtime-tool-router';
 import type { TargetAwareToolRouter } from './target-aware-tool-router';
 import type { ExtensionState } from '../core/extension-state';
 import type { CapabilityManifest } from '../core/runtime/capability-manifest';
-import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
 interface RuntimeStudioExecutionDependencies {
@@ -22,6 +22,7 @@ interface RuntimeStudioExecutionDependencies {
   readonly manifest: CapabilityManifest;
   readonly epochs: ToolInvocation['epochs'];
   readonly router: RuntimeToolRouter;
+  readonly definitions?: readonly ToolDefinition[];
   readonly policy: RuntimePolicyV2Adapter;
   readonly transport: BackendRuntimeTransport;
   readonly stream: RuntimeEventStreamService;
@@ -57,7 +58,9 @@ const runtimeBudget = {
 
 export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionDependencies) {
   const { input, manifest, epochs, router } = dependencies;
-  const definitions = router.definitions();
+  // The caller supplies the catalog so it can describe roots that only exist
+  // for this run, such as an approved external output folder.
+  const definitions = dependencies.definitions ?? router.definitions();
   const traceId = input.requestId;
   const spanId = `span:${randomUUID()}`;
   const startedAt = new Date().toISOString();

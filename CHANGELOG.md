@@ -2,6 +2,29 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.44.0
+
+Minor: the agent can be told about folders outside the workspace.
+
+- Asked to write a file outside the workspace the agent replied that it could
+  not, which was wrong whenever an output folder had been approved and
+  unhelpful when none had. The approved folders were always addressable by the
+  file tools; the tool catalog simply never mentioned them. It now names every
+  approved output folder and its root key, and when there are none it says the
+  folder has to be approved with the Output folders action first.
+
+## 0.43.0
+
+Minor: you can see what the agent is doing, and when it is waiting for you.
+
+- The response card showed one static line for a whole run. Every tool the
+  agent requests, starts and finishes now appears in the run activity with its
+  name, operation, outcome, size and duration, so a working run no longer looks
+  identical to a hung one.
+- A run blocked on the approval dialog reported nothing at all. The card now
+  says it is waiting for your approval, names the exact effect, and records
+  whether you approved or rejected it.
+
 ## 0.42.0
 
 Minor: the agent now always tells you how a run ended.
