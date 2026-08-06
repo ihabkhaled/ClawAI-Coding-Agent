@@ -253,4 +253,47 @@ describe('runtime UI projection', () => {
       REQUEST_ID,
     );
   });
+  it('reports a refused run as a result, not as a silence', async () => {
+    // A tool the user denied, or a mode that forbids it, ends the run exactly as
+    // intended. The panel used to answer that with "The ClawAI run ended without
+    // reporting a result", because run.blocked was not counted as terminal — and
+    // the run service publishes that one locally, where the backend never sees
+    // it and so never streams it back.
+    const posted: { content?: string; error?: string } = {};
+    const projector = new RuntimeUiProjector(
+      () =>
+        ({
+          postEvent: async () => undefined,
+          postResult: async (result: { content: string }) => {
+            posted.content = result.content;
+          },
+          postError: async (message: string) => {
+            posted.error = message;
+          },
+        }) as never,
+      { info: () => undefined } as never,
+      'request-blocked',
+    );
+
+    projector.project(terminalEvent('run.blocked'));
+    await projector.settle();
+
+    expect(posted.error).toBeUndefined();
+    expect(posted.content).toContain('not permitted');
+  });
 });
+
+function terminalEvent(type: string): never {
+  return {
+    schemaVersion: '2.0',
+    eventId: `event-${type}`,
+    runId: 'run-blocked-0001',
+    sequence: 1,
+    timestamp: '2026-08-06T19:00:00.000Z',
+    type,
+    visibility: 'user',
+    sensitivity: 'workspace',
+    epochs: { account: 1, workspace: 1, target: 1, policy: 1 },
+    payload: {},
+  } as never;
+}

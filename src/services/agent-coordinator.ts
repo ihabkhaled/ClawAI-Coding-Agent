@@ -22,7 +22,7 @@ import { pickCompareInput, pickModelKey } from './agent-coordinator-prompts';
 import {
   agentConcurrencyKey,
   applyModelSelection,
-  cancelRemoteGenerations,
+  cancelEverything,
   cancelTargetGeneration,
   createBackendClient,
   prepareGeneration,
@@ -503,10 +503,13 @@ export class AgentCoordinator implements vscode.Disposable {
       return;
     }
     this.approvals.cancelCurrent();
-    await this.runtimeStudio.cancel();
-    this.generations.cancelAll();
-    const threadIds = this.activeThreads.takeAll();
-    await cancelRemoteGenerations(this.backend, this.logger, threadIds);
+    await cancelEverything({
+      backend: this.backend,
+      generations: this.generations,
+      logger: this.logger,
+      runtimeStudio: this.runtimeStudio,
+      threadIds: () => this.activeThreads.takeAll(),
+    });
   }
 
   runtimeControl = (action: 'pause' | 'resume'): Promise<void> => {

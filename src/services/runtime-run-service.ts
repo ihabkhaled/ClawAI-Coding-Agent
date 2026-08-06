@@ -84,13 +84,32 @@ interface ActiveRuntimeRun {
 
 type RuntimeTerminalLifecycle = 'blocked' | 'cancelled' | 'completed' | 'failed';
 
+/**
+ * Whether this tool result ends the run locally.
+ *
+ * `cancelled` and `denied` are human decisions to stop, so they end the run
+ * whatever the continuation says. Everything else defers to the continuation:
+ * `continue` means the protocol loop is still running and this result is simply
+ * the model's next input.
+ *
+ * A `failed` result used to end the run even under `continue`, and the two
+ * halves of the protocol then disagreed. The backend does the right thing with
+ * a failed step — it hands the error back to the model, which adapts and asks
+ * for the next tool — so it kept streaming while the extension had already
+ * cleared its active run. The next legitimate `tool.requested` hit
+ * `beginModelTurn` with nothing active and threw, and the user was shown the
+ * raw string "No runtime run is active" as the assistant's answer, eleven
+ * seconds into a run whose only sin was one tool returning an error. The run
+ * was also left alive on the backend, holding the single-run slot against the
+ * next prompt. Observed in the permission sweep, Ask-for-approval cell.
+ */
 function terminalSteeringLifecycle(
   result: ToolResult,
   continuation: Continuation,
 ): RuntimeTerminalLifecycle | undefined {
   if (result.status === 'cancelled') return 'cancelled';
   if (result.status === 'denied') return 'blocked';
-  if (result.status === 'succeeded' && continuation.action === 'continue') return undefined;
+  if (continuation.action === 'continue') return undefined;
   return result.status === 'succeeded' ? 'completed' : 'failed';
 }
 
@@ -327,15 +346,30 @@ export class RuntimeRunService {
     return result;
   }
 
+  hasActiveRun(): boolean {
+    return this.active !== undefined;
+  }
+
+  /**
+   * Stop the run. Cancelling when nothing is active is success, not an error.
+   *
+   * "Cancel" is a promise that nothing of the user's keeps running. It used to
+   * throw when the local run had already ended — and because the coordinator
+   * awaits this before telling the backend to stop, that throw skipped the
+   * cancel POST entirely. The run the user was trying to stop was precisely the
+   * one still alive on the server, holding the slot against their next prompt.
+   * Cancelling twice, or after the run finished, now simply does nothing.
+   */
   async cancel(): Promise<void> {
-    const active = this.requireActive();
+    const active = this.active;
+    if (active === undefined) return;
     if (!active.controller.signal.aborted)
       active.controller.abort(new Error('Runtime run cancelled'));
     active.steering = closeSteeringQueue(active.steering, 'cancelled');
     this.publish(active, eventFor(active, 'run.cancelled', {}, this.dependencies.clock.now()));
-    await this.dependencies.transport.cancel(active.start.runId);
     this.completed = active;
     this.active = undefined;
+    await this.dependencies.transport.cancel(active.start.runId);
   }
 
   receiveSteering(value: unknown): SteeringQueueSnapshot {

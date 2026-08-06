@@ -120,6 +120,46 @@ export async function cancelRemoteGenerations(
   await Promise.all(threadIds.map((threadId) => cancelRemoteGeneration(backend, logger, threadId)));
 }
 
+/**
+ * Stop everything this extension has running, locally and on the backend.
+ *
+ * Each stage is best effort and the remote stop is unconditional. They used to
+ * run as one unbroken sequence, so the first stage that threw — the runtime
+ * studio, whenever its run had already ended locally — took the backend cancel
+ * down with it, and the run the user asked to stop went on running on the
+ * server, holding the slot against their next prompt.
+ */
+export async function cancelEverything(input: {
+  readonly backend: BackendClient;
+  readonly generations: { cancelAll: () => void };
+  readonly logger: OutputLogger;
+  readonly runtimeStudio: { cancel: () => Promise<void> };
+  readonly threadIds: () => string[];
+}): Promise<void> {
+  await stopBestEffort('runtime studio', () => input.runtimeStudio.cancel(), input.logger);
+  await stopBestEffort(
+    'local generations',
+    () => {
+      input.generations.cancelAll();
+      return Promise.resolve();
+    },
+    input.logger,
+  );
+  await cancelRemoteGenerations(input.backend, input.logger, input.threadIds());
+}
+
+async function stopBestEffort(
+  stage: string,
+  stop: () => Promise<void>,
+  logger: OutputLogger,
+): Promise<void> {
+  try {
+    await stop();
+  } catch (error: unknown) {
+    logger.warn(`ClawAI could not stop the ${stage} cleanly.`, error);
+  }
+}
+
 export function cancelTargetGeneration(
   cancel: () => boolean,
   takeThread: () => string | null,

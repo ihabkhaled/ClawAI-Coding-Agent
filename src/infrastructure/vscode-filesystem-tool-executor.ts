@@ -71,7 +71,19 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'and so on in the order they are opened; most workspaces have only "workspace-1". ' +
     'path is always relative to that folder and never absolute. ' +
     'To enumerate the folder itself, use the list operation with path "" — that is how to ' +
-    'discover the top-level layout before any subdirectory name is known.',
+    'discover the top-level layout before any subdirectory name is known. ' +
+    // Writing was undiscoverable: every mutation goes through a nested
+    // transaction whose shape the catalog reports as an empty object, so a
+    // model had to guess it and no model ever did. Spelling it out here is the
+    // only channel that reaches the model, exactly as with rootKey.
+    'To WRITE a file, put a transaction in arguments: ' +
+    '{"transaction":{"transactionId":"<unique id>","summary":"<what and why>",' +
+    '"operations":[{"kind":"create","rootKey":"workspace-1","path":"<relative path>",' +
+    '"content":"<full file text>","beforeHash":null}]}}. ' +
+    'Use kind "create" for a new file and "update" to replace an existing one, where beforeHash ' +
+    'is the "sha256:<hex>" the read operation reported for the current bytes — null only when ' +
+    'creating. Send exactly one operation per call and make its kind match the operation you ' +
+    'requested.',
   operations: [
     'stat',
     'list',

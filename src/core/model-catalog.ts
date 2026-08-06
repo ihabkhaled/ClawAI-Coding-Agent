@@ -1,5 +1,8 @@
 import type { RoutingMode } from './configuration';
 
+/** The tag Ollama gives a model it serves from its cloud rather than this host. */
+const CLOUD_OLLAMA_TAG = 'cloud';
+
 export interface RouterModelInput {
   id: string;
   provider: string;
@@ -93,6 +96,13 @@ function appendLocalOllamaModels(
     if (!model.isInstalled) {
       continue;
     }
+    // The local daemon also lists the cloud models it can proxy, and marking
+    // those `local-ollama` sent them to the local runtime, which holds no cloud
+    // credentials and answered "Unauthorized" — every Ollama cloud model was
+    // unusable. They are served by Ollama's cloud through the OLLAMA connector,
+    // and they are the tool-capable ones, so they must not be reported as
+    // incapable either.
+    const isCloud = model.tag === CLOUD_OLLAMA_TAG;
     const fullModelName =
       model.tag.length > 0 && model.tag !== 'latest' ? `${model.name}:${model.tag}` : model.name;
     const key = `OLLAMA:${fullModelName}`;
@@ -100,13 +110,13 @@ function appendLocalOllamaModels(
     entries.push({
       id: model.id,
       key,
-      provider: 'local-ollama',
+      provider: isCloud ? 'OLLAMA' : 'local-ollama',
       model: fullModelName,
-      displayName: `${fullModelName} (${model.family ?? 'local'})`,
-      isLocal: true,
+      displayName: `${fullModelName} (${isCloud ? 'cloud' : (model.family ?? 'local')})`,
+      isLocal: !isCloud,
       source: 'ollama',
       supportsStreaming: true,
-      supportsTools: false,
+      supportsTools: isCloud,
       supportsVision: false,
       supportsStructuredOutput: false,
       contextTokens: null,

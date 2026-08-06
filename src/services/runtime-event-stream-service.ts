@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { RuntimeRunEndedError } from '../core/runtime/runtime-invocation-registry';
 import { parseRuntimeEvent, type RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import {
   parseToolInvocation,
@@ -17,6 +18,15 @@ export interface RuntimeStreamObserver {
 export interface RuntimeStreamRuntimePort {
   beginModelTurn(repair: boolean, turnId: string): unknown;
   dispatch(invocation: ToolInvocation, continuation: Continuation): Promise<unknown>;
+  /**
+   * Whether the local run this stream belongs to is still open.
+   *
+   * A run can end on this side first — the user cancels, or denies a tool — and
+   * the backend keeps streaming until it learns of it. Those late frames used
+   * to be handed to `beginModelTurn`, which threw "No runtime run is active"
+   * and put that internal sentence in front of the user as the answer.
+   */
+  hasActiveRun(): boolean;
 }
 
 function isTerminalEvent(event: RuntimeEvent): boolean {
@@ -29,6 +39,43 @@ function errorFrom(value: unknown): Error {
 
 function throwDispatchFailure(state: { readonly failure?: unknown }): void {
   if (state.failure !== undefined) throw errorFrom(state.failure);
+}
+
+/**
+ * Parses one stream frame, or fails with something a person can read.
+ *
+ * A frame the schema rejects used to surface the raw Zod issue list — the panel
+ * showed `[{"code":"invalid_value","values":["2.0"],"path":["schemaVersion"]…}]`
+ * as the assistant's response. When the frame is a platform error envelope its
+ * own reason is the honest thing to report; otherwise say plainly that the
+ * event could not be read.
+ */
+function readRuntimeEvent(candidate: unknown): RuntimeEvent {
+  try {
+    return parseRuntimeEvent(candidate);
+  } catch (error: unknown) {
+    const reason = errorEnvelopeReason(candidate);
+    if (reason !== undefined) throw new Error(reason);
+    throw new Error(
+      `The ClawAI stream sent an event this version cannot read: ${frameKind(candidate)}`,
+      { cause: error },
+    );
+  }
+}
+
+function errorEnvelopeReason(candidate: unknown): string | undefined {
+  if (candidate === null || typeof candidate !== 'object') return undefined;
+  const record = candidate as Record<string, unknown>;
+  const message = typeof record.message === 'string' ? record.message.trim() : '';
+  if (message.length === 0) return undefined;
+  const code = typeof record.code === 'string' ? record.code.trim() : '';
+  return code.length === 0 ? message : `${message} (${code})`;
+}
+
+function frameKind(candidate: unknown): string {
+  if (candidate === null || typeof candidate !== 'object') return typeof candidate;
+  const type = (candidate as Record<string, unknown>).type;
+  return typeof type === 'string' && type.length > 0 ? type : 'unknown';
 }
 
 export class RuntimeEventStreamService {
@@ -78,14 +125,27 @@ export class RuntimeEventStreamService {
         if (chunk.done) return { cursor, terminal: false };
         for (const candidate of events.push(decoder.decode(chunk.value, { stream: true }))) {
           if (candidate.type === 'HEARTBEAT') continue;
-          const event = parseRuntimeEvent(candidate);
+          const event = readRuntimeEvent(candidate);
           if (event.sequence <= cursor) continue;
           cursor = event.sequence;
           throwDispatchFailure(dispatchState);
           await observer.onEvent(event);
           if (event.type === 'tool.requested') {
+            // The run ended on this side while the backend was still streaming.
+            // Nothing is left to dispatch into, and the frames that follow
+            // describe a run the user has already stopped caring about.
+            if (!runtime.hasActiveRun()) return { cursor, terminal: true };
             const invocation = parseToolInvocation(event.payload.invocation);
-            runtime.beginModelTurn(false, invocation.turnId);
+            try {
+              runtime.beginModelTurn(false, invocation.turnId);
+            } catch (error: unknown) {
+              // The run ended between the frame arriving and this turn opening
+              // — the step just dispatched was denied or blocked. Nothing is
+              // left to dispatch into; the sentence this used to raise reached
+              // the user as the assistant's whole answer.
+              if (error instanceof RuntimeRunEndedError) return { cursor, terminal: true };
+              throw error;
+            }
             const dispatch = runtime
               .dispatch(invocation, {
                 action: 'continue',

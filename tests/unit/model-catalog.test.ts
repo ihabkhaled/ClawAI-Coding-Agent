@@ -122,3 +122,76 @@ describe('model catalog', () => {
     });
   });
 });
+
+describe('Ollama cloud models', () => {
+  // The local daemon lists the cloud models it can proxy. Claiming those as
+  // local made the local entry shadow the connector entry that holds the
+  // credentials, so selecting one dispatched it to the local runtime and came
+  // back "Unauthorized" — every Ollama cloud model was unusable from the picker.
+  const cloudModel = {
+    id: 'ollama-cloud',
+    name: 'kimi-k2.7-code',
+    tag: 'cloud',
+    family: 'kimi',
+    isInstalled: true,
+  };
+  const connectorModel = {
+    id: 'connector-cloud',
+    connectorId: 'connector-ollama',
+    provider: 'OLLAMA',
+    modelKey: 'kimi-k2.7-code:cloud',
+    displayName: 'Kimi K2.7 Code',
+    lifecycle: 'ACTIVE' as const,
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsVision: false,
+    supportsAudio: false,
+    supportsStructuredOutput: true,
+    maxContextTokens: 262_144,
+  };
+
+  it('routes a cloud-tagged model through the connector, not the local runtime', () => {
+    const catalog = buildModelCatalog([], [connectorModel], [cloudModel], []);
+    const entry = catalog.find((candidate) => candidate.key === 'OLLAMA:kimi-k2.7-code:cloud');
+
+    expect(entry?.provider).toBe('OLLAMA');
+    expect(entry?.isLocal).toBe(false);
+    expect(entry?.source).toBe('ollama');
+    // The connector entry is also the truthful one about tool support; the
+    // local entry hardcodes false, which made every cloud model look incapable.
+    expect(entry?.supportsTools).toBe(true);
+  });
+
+  it('resolves the manual selection to the cloud provider', () => {
+    const catalog = buildModelCatalog([], [connectorModel], [cloudModel], []);
+
+    expect(
+      resolveModelSelection('MANUAL_MODEL', 'OLLAMA:kimi-k2.7-code:cloud', catalog),
+    ).toMatchObject({ provider: 'OLLAMA', model: 'kimi-k2.7-code:cloud' });
+  });
+
+  it('still treats a genuinely local model as local', () => {
+    const catalog = buildModelCatalog(
+      [],
+      [],
+      [{ id: 'ollama-local', name: 'qwen3', tag: '14b', family: 'qwen', isInstalled: true }],
+      [],
+    );
+    const entry = catalog.find((candidate) => candidate.key === 'OLLAMA:qwen3:14b');
+
+    expect(entry?.provider).toBe('local-ollama');
+    expect(entry?.isLocal).toBe(true);
+  });
+
+  it('still points a cloud model at the connector when its id is not synced', () => {
+    // The connector's synced model list does not necessarily carry every cloud
+    // id the daemon can proxy. Dropping those removed the tool-capable models
+    // from the picker entirely, so the entry is re-pointed rather than removed.
+    const catalog = buildModelCatalog([], [], [cloudModel], []);
+    const entry = catalog.find((candidate) => candidate.key === 'OLLAMA:kimi-k2.7-code:cloud');
+
+    expect(entry?.provider).toBe('OLLAMA');
+    expect(entry?.isLocal).toBe(false);
+    expect(entry?.supportsTools).toBe(true);
+  });
+});

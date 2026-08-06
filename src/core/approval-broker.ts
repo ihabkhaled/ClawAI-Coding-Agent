@@ -5,6 +5,9 @@ import type { PermissionOperation } from './permission-policy.types';
 export type ApprovalKind =
   PermissionOperation | 'command' | 'enableFullAccess' | 'runtimeEffect' | 'undo';
 
+/** The kind every Runtime Protocol tool approval is filed under. */
+export const RUNTIME_EFFECT_APPROVAL_KIND: ApprovalKind = 'runtimeEffect';
+
 export interface ApprovalEffectSummary {
   readonly purpose: string;
   readonly target: string;
@@ -104,6 +107,33 @@ export class ApprovalBroker {
   cancelCurrent(): boolean {
     const id = this.active?.request.id;
     return id === undefined ? false : this.resolve(id, false);
+  }
+
+  /**
+   * Withdraw every question of one kind, on screen or queued behind it.
+   *
+   * A run that ends leaves its approvals unanswerable: the dispatch that would
+   * have read the answer is gone, so the panel sits there modal, swallowing
+   * every click meant for the composer, and the user cannot type again at all
+   * until the window is reloaded. Withdrawing by kind keeps that cleanup inside
+   * the lane that ended, so a question another lane is legitimately waiting on
+   * is left standing.
+   */
+  cancelKind(kind: ApprovalKind): boolean {
+    const active = this.active?.request.kind === kind ? this.active : undefined;
+    const queued = this.pending.filter((approval) => approval.request.kind === kind);
+    if (active === undefined && queued.length === 0) return false;
+    for (const approval of queued) {
+      this.pending.splice(this.pending.indexOf(approval), 1);
+      this.settle(approval, false);
+    }
+    if (active !== undefined) {
+      this.active = undefined;
+      this.settle(active, false);
+      this.activateNext();
+    }
+    this.publish();
+    return true;
   }
 
   cancelAll(): boolean {

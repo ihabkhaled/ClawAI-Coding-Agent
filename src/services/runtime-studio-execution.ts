@@ -1,5 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
+import { isRuntimeRunEnded } from '../core/runtime/runtime-event-reducer';
+
 import { RuntimeJournalTracker } from './runtime-journal-tracker';
 import { RuntimeRunService } from './runtime-run-service';
 
@@ -14,6 +16,7 @@ import type { RuntimeToolRouter } from './runtime-tool-router';
 import type { TargetAwareToolRouter } from './target-aware-tool-router';
 import type { ExtensionState } from '../core/extension-state';
 import type { CapabilityManifest } from '../core/runtime/capability-manifest';
+import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
@@ -35,6 +38,8 @@ interface RuntimeStudioExecutionDependencies {
   readonly fingerprint: (signal: AbortSignal) => Promise<RuntimeFingerprint>;
   readonly hash: (value: unknown) => string;
   readonly setActive: (runtime: RuntimeRunService | undefined, runId?: string) => void;
+  /** Withdraw the run's approval prompts once it can no longer answer them. */
+  readonly releaseApprovals: () => void;
 }
 
 interface RuntimeFingerprint {
@@ -56,6 +61,38 @@ const runtimeBudget = {
   maxToolResultBytes: 1_048_576,
 };
 
+/**
+ * Carries endings this side decided on to the panel, and nowhere else.
+ *
+ * The backend streams the whole step trail already, so forwarding everything
+ * would show each tool twice. What it cannot stream is an ending decided here —
+ * a denied tool, a cancel — because it does not know about it yet. Those went
+ * into a sink that discarded them, so the panel was never told the run had
+ * ended and reported "The ClawAI run ended without reporting a result" for what
+ * was really a tool the user had refused.
+ *
+ * The panel is the only destination on purpose. The reducer's ledger belongs to
+ * the backend and admits events strictly in sequence — `lastSequence + 1` —
+ * while these carry the run service's own counter, an unrelated series. The
+ * first version of this fix passed both to the same place and every run died
+ * with "Runtime event sequence must advance from 40 to 41". Taking only a panel
+ * callback here is what makes that mistake impossible to repeat.
+ */
+export function forwardLocalTerminals(
+  toPanel: (event: RuntimeEvent) => void,
+  onEnded: () => void,
+): { publishBatch: (events: readonly RuntimeEvent[]) => void } {
+  return {
+    publishBatch: (events) => {
+      for (const event of events) {
+        if (!isRuntimeRunEnded(event.type)) continue;
+        onEnded();
+        toPanel(event);
+      }
+    },
+  };
+}
+
 export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionDependencies) {
   const { input, manifest, epochs, router } = dependencies;
   // The caller supplies the catalog so it can describe roots that only exist
@@ -72,10 +109,20 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
     status: 'unset',
     attributes: { threadId: input.threadId, toolCount: definitions.length },
   });
+  // Whether the run reached an end state of its own, as opposed to the stream
+  // being torn down under it by an error, a cancel, or a dropped connection.
+  const outcome = { ended: false };
+  const deliver = (event: RuntimeEvent): void => {
+    if (isRuntimeRunEnded(event.type)) outcome.ended = true;
+    dependencies.state.applyRuntimeEvent(event);
+    input.onEvent(event);
+  };
   const runtime = new RuntimeRunService({
     clock: { now: Date.now },
     currentEpochs: () => epochs,
-    eventSink: { publishBatch: () => undefined },
+    eventSink: forwardLocalTerminals(input.onEvent, () => {
+      outcome.ended = true;
+    }),
     executor: dependencies.targetRouter(manifest),
     policy: dependencies.policy,
     receiptId: () => `receipt:${randomUUID()}`,
@@ -122,8 +169,7 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
           if (event.type === 'steering.received' && typeof event.payload.message === 'string') {
             dependencies.flagship.steerIfActive(event.payload.message);
           }
-          dependencies.state.applyRuntimeEvent(event);
-          input.onEvent(event);
+          deliver(event);
         },
       },
       input.signal,
@@ -133,6 +179,16 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
     emitCompletion(dependencies, traceId, spanId, startedAt, definitions.length, 'error');
     throw error;
   } finally {
+    // A run nobody is following any more has to be told to stop. Leaving it
+    // meant the backend went on executing a run whose answer could no longer
+    // reach anyone, and kept holding the one runtime slot — so the user's next
+    // prompt queued behind a run that had already failed in front of them.
+    // `cancel` is idempotent, so a run that ended on its own is left alone.
+    if (!outcome.ended) await runtime.cancel().catch(() => undefined);
+    // Whatever this run was still asking the user, it can no longer hear the
+    // answer. An abandoned prompt is modal: it swallows every click aimed at
+    // the composer, so the next message cannot be typed at all.
+    dependencies.releaseApprovals();
     dependencies.setActive(undefined);
   }
 }

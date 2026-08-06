@@ -79,3 +79,72 @@ describe('BackendClient runtime protocol', () => {
     await expect((await client(fetcher)).getRuntimeProtocol()).rejects.toThrow();
   });
 });
+
+/**
+ * Posting a tool result hands the run back to the platform, which calls the
+ * model and only then answers. The request is therefore open for as long as the
+ * turn takes, and the generic one-minute request budget aborted it from this
+ * side while the backend was working perfectly well — "ClawAI request timed
+ * out." in the panel, and the run lost. Seen twice in the final sweep, at 70 s
+ * and 110 s.
+ */
+describe('BackendClient runtime command timeouts', () => {
+  const binding = {
+    threadId: 'thread-id-0001',
+    runId: 'run-id-0001',
+    generation: 'generation-id-0001',
+    epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
+  };
+  const result = {
+    schemaVersion: '2.0' as const,
+    invocationId: 'invocation-id-0001',
+    runId: 'run-id-0001',
+    turnId: 'turn-id-0001',
+    status: 'succeeded' as const,
+    startedAt: '2026-08-06T19:00:00.000Z',
+    completedAt: '2026-08-06T19:00:01.000Z',
+    receipt: {
+      invocationId: 'invocation-id-0001',
+      receiptId: 'receipt-id-0001',
+      toolName: 'workspace.files',
+      toolVersion: '2.0.0',
+      operation: 'read',
+      targetId: 'target:workspace',
+      decision: { outcome: 'allow' as const, code: 'POLICY_ALLOWED', risk: 'R0' as const },
+      issuedAt: '2026-08-06T19:00:01.000Z',
+    },
+    continuation: { action: 'continue' as const, nextTurnId: 'turn-id-0002' },
+  };
+
+  function slowFetcher(bodyFor: (url: string) => unknown) {
+    return vi.fn<typeof fetch>(async (url, init) => {
+      await new Promise((resolve) => setTimeout(resolve, 1_400));
+      init?.signal?.throwIfAborted();
+      return new Response(JSON.stringify(bodyFor(String(url))), {
+        status: 200,
+        headers: { 'content-type': 'application/json' },
+      });
+    });
+  }
+
+  it('waits out a turn that takes longer than the generic request budget', async () => {
+    const fetcher = slowFetcher(() => ({
+      runId: binding.runId,
+      sequence: 1,
+      eventId: 'event-id-0001',
+      replayed: false,
+    }));
+    const backend = await client(fetcher);
+
+    await expect(
+      backend.submitRuntimeResult(binding, 'idempotency-key-0001', result as never),
+    ).resolves.toMatchObject({ runId: binding.runId, replayed: false });
+  });
+
+  it('still holds an ordinary request to the generic budget', async () => {
+    const fetcher = slowFetcher(() => ({}));
+    const backend = await client(fetcher);
+
+    await expect(backend.getRuntimeProtocol()).rejects.toThrow();
+  });
+});
