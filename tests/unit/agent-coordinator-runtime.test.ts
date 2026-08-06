@@ -7,6 +7,7 @@ vi.mock('vscode', () => ({
 import { ExtensionState } from '../../src/core/extension-state';
 import { createRuntimeSnapshot } from '../../src/core/runtime/runtime-event-reducer';
 import {
+  agentConcurrencyKey,
   cancelTargetGeneration,
   resetAccountScopedState,
 } from '../../src/services/agent-coordinator-runtime';
@@ -116,5 +117,36 @@ describe('agent coordinator account boundary', () => {
         selectedFolderKey: 'folder-a',
       },
     });
+  });
+});
+
+describe('agentConcurrencyKey', () => {
+  function stateWith(mode: 'runtime-v2' | 'legacy'): ExtensionState {
+    const state = new ExtensionState({
+      runtime: { protocolSelection: { mode } },
+    } as never);
+    return state;
+  }
+
+  it('queues every Runtime V2 run behind the same key', () => {
+    // The studio holds a single active run per extension host and refuses a
+    // second outright, so a second prompt used to fail instantly with "A
+    // Runtime V2 run is already active in this extension host" — an internal
+    // message shown to a user whose only mistake was sending another request.
+    const state = stateWith('runtime-v2');
+
+    expect(agentConcurrencyKey(state, 'session-a', 'thread-a')).toBe(
+      agentConcurrencyKey(state, 'session-b', 'thread-b'),
+    );
+  });
+
+  it('keeps the legacy lane per conversation', () => {
+    const state = stateWith('legacy');
+
+    expect(agentConcurrencyKey(state, 'session-a', 'thread-a')).toBe('thread:thread-a');
+    expect(agentConcurrencyKey(state, 'session-a')).toBe('session:session-a');
+    expect(agentConcurrencyKey(state, 'session-a', 'thread-a')).not.toBe(
+      agentConcurrencyKey(state, 'session-a', 'thread-b'),
+    );
   });
 });

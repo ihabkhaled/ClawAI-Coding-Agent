@@ -23,6 +23,16 @@ export function generationConcurrencyKey(sessionId: string, threadId?: string): 
   return threadId === undefined ? `session:${sessionId}` : `thread:${threadId}`;
 }
 
+/**
+ * Every Runtime V2 run shares one key, because the studio holds a single active
+ * run per extension host and rejects a second outright. Keying these per thread
+ * let the queue start a run the runtime then refused with "A Runtime V2 run is
+ * already active in this extension host" — an internal message shown to a user
+ * whose only mistake was sending a second prompt. Sharing the key queues it
+ * instead, which is what the run deck already promises.
+ */
+export const RUNTIME_GENERATION_CONCURRENCY_KEY = 'runtime:v2';
+
 export class GenerationScheduler {
   private readonly queue: GenerationQueue;
 

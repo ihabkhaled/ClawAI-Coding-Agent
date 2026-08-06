@@ -2,6 +2,11 @@ import * as vscode from 'vscode';
 
 import { BackendClient } from '../backend/backend-client';
 
+import {
+  generationConcurrencyKey,
+  RUNTIME_GENERATION_CONCURRENCY_KEY,
+} from './generation-scheduler';
+
 import type { RuntimeConfiguration } from './configuration-service';
 import type { ConfigurationService } from './configuration-service';
 import type { ExtensionState } from '../core/extension-state';
@@ -123,4 +128,24 @@ export function cancelTargetGeneration(
 ): Promise<void> {
   cancel();
   return cancelRemoteGeneration(backend, logger, takeThread());
+}
+
+/**
+ * Which queue an agent run belongs to.
+ *
+ * The Runtime V2 studio holds a single active run per extension host and
+ * refuses a second outright, so keying these per thread let the queue start a
+ * run the runtime then rejected with "A Runtime V2 run is already active in
+ * this extension host" — an internal message shown to a user whose only mistake
+ * was sending a second prompt. Runtime runs therefore share one key and queue;
+ * only the legacy lane can genuinely run beside another conversation.
+ */
+export function agentConcurrencyKey(
+  state: ExtensionState,
+  sessionId: string,
+  threadId?: string,
+): string {
+  return state.snapshot.runtime.protocolSelection.mode === 'runtime-v2'
+    ? RUNTIME_GENERATION_CONCURRENCY_KEY
+    : generationConcurrencyKey(sessionId, threadId);
 }

@@ -2,6 +2,17 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.45.0
+
+Minor: a second prompt now waits its turn instead of failing.
+
+- Sending another request while an agent run was working failed instantly with
+  "A Runtime V2 run is already active in this extension host" — an internal
+  message shown to a user whose only mistake was asking a second question. The
+  runtime holds one active run per window, so agent runs now share one queue
+  and the next request starts when the current one finishes, which is what the
+  run deck already showed.
+
 ## 0.44.0
 
 Minor: the agent can be told about folders outside the workspace.
