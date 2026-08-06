@@ -2,6 +2,25 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.42.0
+
+Minor: the agent now always tells you how a run ended.
+
+- A Runtime V2 agent run projected only its streamed text to the panel. When a
+  run failed, completed, or was cancelled the response card was told nothing at
+  all, so it kept its "Reading workspace" placeholder while the generation
+  quietly settled and released the request — a card that could never finish.
+  Every run now ends in exactly one visible terminal state: the answer, the
+  failure with its stable reason and code, or a cancellation that keeps whatever
+  had already streamed. A stream that ends without any terminal event says so
+  rather than leaving the card running.
+- The replay test that guards this path read its captured journal from an
+  absolute path inside one developer's temporary directory, so it proved nothing
+  in a fresh clone and could pass on a stale capture. The sanitized journal now
+  lives in `tests/fixtures/journals/`, is resolved relative to the test module,
+  and `npm run scan:paths` fails the gate on any machine-local path a test
+  actually opens.
+
 ## 0.41.4
 
 Patch: diagnostics for an answer that streams but never renders.

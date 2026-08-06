@@ -50,6 +50,7 @@ import { ModelService } from './model-service';
 import { PromptExecutionService } from './prompt-execution-service';
 import { RequestAdmissionService } from './request-admission-service';
 import { RuntimeProtocolService } from './runtime-protocol-service';
+import { RuntimeUiProjector } from './runtime-ui-projection';
 import { confirmSafeEdits } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
 import { SessionControlService } from './session-control-service';
@@ -409,6 +410,7 @@ export class AgentCoordinator implements vscode.Disposable {
           return this.agentWorkflows.execute(queuedInput, signal, requestId);
         }
         const threadId = await this.agentWorkflows.runtimeThread(queuedInput, requestId);
+        const projector = new RuntimeUiProjector(() => this.view, this.logger, requestId);
         await this.runtimeStudio.execute({
           prompt: queuedInput.content,
           threadId,
@@ -421,21 +423,12 @@ export class AgentCoordinator implements vscode.Disposable {
             : { model: queuedInput.selection.model }),
           signal,
           onEvent: (event) => {
-            if (event.type === 'model.delta') {
-              // A run streamed its answer while the panel stayed on its
-              // placeholder. Replaying that journal through the stream service
-              // and reducer delivers every delta, so the loss is in this hop.
-              const text = typeof event.payload.text === 'string' ? event.payload.text : '';
-              this.logger.info('runtime delta posted', { requestId, characters: text.length });
-              void this.view?.postEvent({ type: 'CONTENT_DELTA', delta: text }, requestId);
-            } else if (event.type === 'phase.changed') {
-              void this.view?.postEvent(
-                { type: 'RUNTIME_PHASE', label: event.payload.phase },
-                requestId,
-              );
-            }
+            projector.project(event);
           },
         });
+        // Only the non-throwing path settles here: a thrown failure is already
+        // reported, and cancelled, by the generation failure boundary.
+        await projector.settle();
       },
       {
         concurrencyKey: generationConcurrencyKey(sessionId, queuedInput.admission.threadId),

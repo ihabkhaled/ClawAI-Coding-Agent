@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.41.4",
+  "version": "0.42.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -440,7 +440,8 @@
     "supply-chain": "node scripts/generate-supply-chain.mjs",
     "l10n:build": "node scripts/generate-locales.mjs",
     "package": "npm run build && node scripts/package-extension.mjs",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm test && npm run build && npm run package:audit",
+    "check": "npm run format:check && npm run lint && npm run typecheck && npm run scan:paths && npm test && npm run build && npm run package:audit",
+    "scan:paths": "node scripts/scan-absolute-paths.mjs",
     "prepublishOnly": "npm run check"
   },
   "dependencies": {

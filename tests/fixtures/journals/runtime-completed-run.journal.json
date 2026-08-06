@@ -1,0 +1,136 @@
+[
+  {
+    "schemaVersion": "2.0",
+    "runId": "run_00000000000000000000000000000001",
+    "sequence": 0,
+    "type": "run.created",
+    "eventId": "evt_00000000000000000000000000000001",
+    "timestamp": "2026-01-01T00:00:00.000Z",
+    "visibility": "user",
+    "sensitivity": "sensitive-redacted",
+    "epochs": {
+      "account": 0,
+      "workspace": 0,
+      "target": 0,
+      "policy": 0
+    },
+    "payload": {}
+  },
+  {
+    "eventId": "evt_00000000000000000000000000000002",
+    "type": "run.claimed",
+    "sequence": 1,
+    "sensitivity": "sensitive-redacted",
+    "schemaVersion": "2.0",
+    "payload": {
+      "status": "claimed"
+    },
+    "epochs": {
+      "target": 0,
+      "policy": 0,
+      "workspace": 0,
+      "account": 0
+    },
+    "timestamp": "2026-01-01T00:00:01.000Z",
+    "runId": "run_00000000000000000000000000000001",
+    "visibility": "internal-state"
+  },
+  {
+    "eventId": "evt_00000000000000000000000000000003",
+    "type": "run.provider-dispatched",
+    "sequence": 2,
+    "sensitivity": "sensitive-redacted",
+    "schemaVersion": "2.0",
+    "payload": {
+      "status": "dispatched"
+    },
+    "epochs": {
+      "target": 0,
+      "policy": 0,
+      "workspace": 0,
+      "account": 0
+    },
+    "timestamp": "2026-01-01T00:00:02.000Z",
+    "runId": "run_00000000000000000000000000000001",
+    "visibility": "internal-state"
+  },
+  {
+    "eventId": "evt_00000000000000000000000000000004",
+    "type": "model.turn.started",
+    "sequence": 3,
+    "sensitivity": "sensitive-redacted",
+    "schemaVersion": "2.0",
+    "turnId": "turn_00000000000000000000000000000001",
+    "payload": {
+      "turnId": "turn_00000000000000000000000000000001"
+    },
+    "epochs": {
+      "target": 0,
+      "policy": 0,
+      "workspace": 0,
+      "account": 0
+    },
+    "timestamp": "2026-01-01T00:00:03.000Z",
+    "runId": "run_00000000000000000000000000000001",
+    "visibility": "user"
+  },
+  {
+    "eventId": "evt_00000000000000000000000000000005",
+    "type": "model.delta",
+    "sequence": 4,
+    "sensitivity": "sensitive-redacted",
+    "schemaVersion": "2.0",
+    "turnId": "turn_00000000000000000000000000000001",
+    "payload": {
+      "turnId": "turn_00000000000000000000000000000001",
+      "text": "The rules directory contains 7 files."
+    },
+    "epochs": {
+      "target": 0,
+      "policy": 0,
+      "workspace": 0,
+      "account": 0
+    },
+    "timestamp": "2026-01-01T00:00:04.000Z",
+    "runId": "run_00000000000000000000000000000001",
+    "visibility": "user"
+  },
+  {
+    "eventId": "evt_00000000000000000000000000000006",
+    "type": "model.summary",
+    "sequence": 5,
+    "sensitivity": "sensitive-redacted",
+    "schemaVersion": "2.0",
+    "turnId": "turn_00000000000000000000000000000001",
+    "payload": {
+      "turnId": "turn_00000000000000000000000000000001",
+      "summary": "The rules directory contains 7 files."
+    },
+    "epochs": {
+      "target": 0,
+      "policy": 0,
+      "workspace": 0,
+      "account": 0
+    },
+    "timestamp": "2026-01-01T00:00:05.000Z",
+    "runId": "run_00000000000000000000000000000001",
+    "visibility": "user"
+  },
+  {
+    "eventId": "evt_00000000000000000000000000000007",
+    "type": "run.completed",
+    "sequence": 6,
+    "sensitivity": "sensitive-redacted",
+    "schemaVersion": "2.0",
+    "payload": {},
+    "epochs": {
+      "target": 0,
+      "policy": 0,
+      "workspace": 0,
+      "account": 0
+    },
+    "timestamp": "2026-01-01T00:00:06.000Z",
+    "runId": "run_00000000000000000000000000000001",
+    "visibility": "user"
+  }
+]
