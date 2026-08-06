@@ -165,7 +165,78 @@ describe('runtime UI projection', () => {
 
     expect(view.postEvent).toHaveBeenCalledTimes(1);
     expect(view.postEvent).toHaveBeenCalledWith(
-      { type: 'RUNTIME_PHASE', label: 'Reading workspace' },
+      { type: 'RUNTIME_PHASE', label: 'Reading workspace', description: '' },
+      REQUEST_ID,
+    );
+  });
+
+  it('shows the tool trail so a working run does not look like a hung one', () => {
+    const { projector, view } = harness();
+    projector.project(
+      event('tool.requested', {
+        invocationId: 'invocation_1',
+        toolName: 'workspace.files',
+        operation: 'list',
+      }),
+    );
+    projector.project(event('tool.started', { invocationId: 'invocation_1' }));
+    projector.project(
+      event('tool.completed', {
+        invocationId: 'invocation_1',
+        status: 'succeeded',
+        receipt: { durationMs: 42, outputBytes: 1_024 },
+      }),
+    );
+
+    expect(view.postEvent.mock.calls.map(([envelope]) => envelope)).toEqual([
+      { type: 'RUNTIME_PHASE', label: 'workspace.files · list', description: 'Requested' },
+      { type: 'RUNTIME_PHASE', label: 'workspace.files · list', description: 'Running' },
+      {
+        type: 'RUNTIME_PHASE',
+        label: 'workspace.files · list',
+        description: 'succeeded · 1024 bytes in 42 ms',
+      },
+    ]);
+  });
+
+  it('ignores tool progress for an invocation it never saw requested', () => {
+    const { projector, view } = harness();
+    projector.project(event('tool.started', { invocationId: 'invocation_unknown' }));
+
+    expect(view.postEvent).not.toHaveBeenCalled();
+  });
+
+  it('says when the run is waiting on the person and what they decided', () => {
+    // A run blocked on the approval dialog used to show nothing at all, which
+    // is exactly what a hang looks like.
+    const { projector, view } = harness();
+    projector.approval('waiting', 'read target:workspace');
+    projector.approval('approved', 'read target:workspace');
+
+    expect(view.postEvent.mock.calls.map(([envelope]) => envelope)).toEqual([
+      {
+        type: 'RUNTIME_PHASE',
+        label: 'Waiting for your approval',
+        description: 'read target:workspace',
+      },
+      {
+        type: 'RUNTIME_PHASE',
+        label: 'You approved this step',
+        description: 'read target:workspace',
+      },
+    ]);
+  });
+
+  it('records a rejected step', () => {
+    const { projector, view } = harness();
+    projector.approval('rejected', 'write target:workspace');
+
+    expect(view.postEvent).toHaveBeenCalledWith(
+      {
+        type: 'RUNTIME_PHASE',
+        label: 'You rejected this step',
+        description: 'write target:workspace',
+      },
       REQUEST_ID,
     );
   });

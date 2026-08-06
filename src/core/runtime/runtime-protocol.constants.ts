@@ -75,3 +75,6 @@ export const NETWORK_POLICY_MODES = ['off', 'allowlisted', 'unrestricted-with-ap
 
 export const SECRET_LIKE_KEY_PATTERN =
   /(?:api[-_]?key|authorization|credential|password|private[-_]?key|refresh[-_]?token|secret|token)/iu;
+
+/** The one tool whose description has to carry the addressable filesystem roots. */
+export const WORKSPACE_FILES_TOOL_NAME = 'workspace.files';

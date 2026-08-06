@@ -10,6 +10,7 @@ import type { ConfigurationService, RuntimeConfiguration } from './configuration
 import type { ExecutionTargetRegistry } from './execution-target-registry';
 import type { GitAgentService } from './git-agent-service';
 import type { RuntimeRunService } from './runtime-run-service';
+import type { RuntimeStudioInput } from './runtime-studio.types';
 import type { RuntimeToolRouter } from './runtime-tool-router';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { ApprovalBroker } from '../core/approval-broker';
@@ -20,26 +21,40 @@ import type { CapabilityManifest } from '../core/runtime/capability-manifest';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
-export function approveRuntimeEffect(
+/**
+ * `notify` tells the run that asked for this effect that it is now waiting on a
+ * human, and what the answer was. Without it the panel shows nothing at all
+ * while the approval dialog is open, which reads as a hang.
+ */
+export async function approveRuntimeEffect(
   approvals: ApprovalBroker,
   request: PolicyRequest,
   signal?: AbortSignal,
+  notify?: RuntimeStudioInput['onApproval'],
 ): Promise<boolean> {
-  return approvals.request(
-    {
-      kind: 'runtimeEffect',
-      title: vscode.l10n.t('Approve agent effect'),
-      message: vscode.l10n.t('Review the exact scope before this operation runs.'),
-      effect: {
-        purpose: request.effect,
-        target: request.scope.targetId,
-        risk: request.risk,
-        sideEffects: [request.effect],
-        reversibility: request.reversible ? 'reversible' : 'irreversible',
+  notify?.('waiting', request.effect);
+  try {
+    const approved = await approvals.request(
+      {
+        kind: 'runtimeEffect',
+        title: vscode.l10n.t('Approve agent effect'),
+        message: vscode.l10n.t('Review the exact scope before this operation runs.'),
+        effect: {
+          purpose: request.effect,
+          target: request.scope.targetId,
+          risk: request.risk,
+          sideEffects: [request.effect],
+          reversibility: request.reversible ? 'reversible' : 'irreversible',
+        },
       },
-    },
-    signal,
-  );
+      signal,
+    );
+    notify?.(approved ? 'approved' : 'rejected', request.effect);
+    return approved;
+  } catch (error: unknown) {
+    notify?.('rejected', request.effect);
+    throw error;
+  }
 }
 
 export function runtimeBrowserScope(configuration: RuntimeConfiguration): BrowserScope {

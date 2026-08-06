@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 
 import { type RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 
+import { type RuntimeApprovalPhase } from './runtime-studio.types';
+
 import type { OutputLogger } from '../infrastructure/output-logger';
 import type { ChatViewProvider } from '../webview/chat-view-provider';
 
@@ -52,11 +54,28 @@ function describe(reason: TerminalReason | undefined): string {
  * that could never finish. Terminalizing exactly once, and loudly when the
  * stream ends without a terminal event, is what makes that impossible.
  */
+function readText(payload: Record<string, unknown>, key: string): string {
+  const value = payload[key];
+  return typeof value === 'string' ? value : '';
+}
+
+function receiptDetail(payload: Record<string, unknown>): string {
+  const receipt = payload.receipt;
+  if (receipt === null || typeof receipt !== 'object') {
+    return '';
+  }
+  const record = receipt as Record<string, unknown>;
+  const duration = typeof record.durationMs === 'number' ? record.durationMs : 0;
+  const bytes = typeof record.outputBytes === 'number' ? record.outputBytes : 0;
+  return vscode.l10n.t('{0} bytes in {1} ms', bytes, duration);
+}
+
 export class RuntimeUiProjector {
   private answer = '';
   private terminal: TerminalKind | undefined;
   private reason: TerminalReason | undefined;
   private settled = false;
+  private readonly invocations = new Map<string, string>();
 
   constructor(
     private readonly view: () => ChatViewProvider | null,
@@ -64,11 +83,25 @@ export class RuntimeUiProjector {
     private readonly requestId: string,
   ) {}
 
+  /** The run is blocked on a human, or has just been answered by one. */
+  approval(phase: RuntimeApprovalPhase, effect: string): void {
+    const label =
+      phase === 'waiting'
+        ? vscode.l10n.t('Waiting for your approval')
+        : phase === 'approved'
+          ? vscode.l10n.t('You approved this step')
+          : vscode.l10n.t('You rejected this step');
+    this.activity(label, effect);
+  }
+
   project(event: RuntimeEvent): void {
     const terminal = TERMINAL_KINDS[event.type];
     if (terminal !== undefined) {
       this.terminal = terminal;
       this.reason = readReason(event.payload);
+      return;
+    }
+    if (this.projectTool(event)) {
       return;
     }
     if (event.type === 'model.delta') {
@@ -85,11 +118,47 @@ export class RuntimeUiProjector {
       return;
     }
     if (event.type === 'phase.changed' && typeof event.payload.phase === 'string') {
-      void this.view()?.postEvent(
-        { type: 'RUNTIME_PHASE', label: event.payload.phase },
-        this.requestId,
-      );
+      this.activity(event.payload.phase, '');
     }
+  }
+
+  /**
+   * The tool trail is the only thing that tells a user the agent is working.
+   * Without it the card shows one static line for the whole run, which is
+   * indistinguishable from a hang.
+   */
+  private projectTool(event: RuntimeEvent): boolean {
+    const invocationId = readText(event.payload, 'invocationId');
+    if (invocationId.length === 0) {
+      return false;
+    }
+    if (event.type === 'tool.requested') {
+      const toolName = readText(event.payload, 'toolName');
+      const operation = readText(event.payload, 'operation');
+      const label = operation.length === 0 ? toolName : `${toolName} · ${operation}`;
+      this.invocations.set(invocationId, label);
+      this.activity(label, vscode.l10n.t('Requested'));
+      return true;
+    }
+    const label = this.invocations.get(invocationId);
+    if (label === undefined) {
+      return false;
+    }
+    if (event.type === 'tool.started') {
+      this.activity(label, vscode.l10n.t('Running'));
+      return true;
+    }
+    if (event.type === 'tool.completed') {
+      const status = readText(event.payload, 'status');
+      const detail = receiptDetail(event.payload);
+      this.activity(label, detail.length === 0 ? status : `${status} · ${detail}`);
+      return true;
+    }
+    return false;
+  }
+
+  private activity(label: string, description: string): void {
+    void this.view()?.postEvent({ type: 'RUNTIME_PHASE', label, description }, this.requestId);
   }
 
   /** Exactly one terminal envelope per request, whatever the run did. */
