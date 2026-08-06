@@ -422,10 +422,12 @@ export class AgentCoordinator implements vscode.Disposable {
           signal,
           onEvent: (event) => {
             if (event.type === 'model.delta') {
-              void this.view?.postEvent(
-                { type: 'CONTENT_DELTA', delta: event.payload.text },
-                requestId,
-              );
+              // A run streamed its answer while the panel stayed on its
+              // placeholder. Replaying that journal through the stream service
+              // and reducer delivers every delta, so the loss is in this hop.
+              const text = typeof event.payload.text === 'string' ? event.payload.text : '';
+              this.logger.info('runtime delta posted', { requestId, characters: text.length });
+              void this.view?.postEvent({ type: 'CONTENT_DELTA', delta: text }, requestId);
             } else if (event.type === 'phase.changed') {
               void this.view?.postEvent(
                 { type: 'RUNTIME_PHASE', label: event.payload.phase },
