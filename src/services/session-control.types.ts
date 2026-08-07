@@ -2,6 +2,7 @@ import type { AgentMode } from '../core/agent-mode.types';
 import type { ApprovalRequestInput } from '../core/approval-broker';
 import type { EffortMode } from '../core/effort-mode';
 import type { PermissionMode, PermissionOperation } from '../core/permission-policy.types';
+import type { SpeedMode } from '../core/speed-mode';
 
 export interface SessionConfiguration {
   agentMode: AgentMode;
@@ -12,6 +13,7 @@ export interface SessionConfigurationPort {
   read(): SessionConfiguration;
   selectAgentMode(mode: AgentMode): Promise<void>;
   selectEffortMode(mode: EffortMode): Promise<void>;
+  selectSpeedMode(mode: SpeedMode): Promise<void>;
   selectPermissionMode(mode: PermissionMode): Promise<boolean>;
 }
 
@@ -19,6 +21,7 @@ export interface SessionStatePort {
   update(patch: {
     agentMode?: AgentMode;
     effortMode?: EffortMode;
+    speedMode?: SpeedMode;
     permissionMode?: PermissionMode;
   }): void;
 }

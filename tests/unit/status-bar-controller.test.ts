@@ -15,6 +15,7 @@ function snapshot(patch: Partial<ExtensionSnapshot> = {}): ExtensionSnapshot {
   return {
     agentMode: 'AUTO',
     effortMode: 'ULTRA',
+    speedMode: '1X',
     agentRun: undefined,
     agentRuns: {},
     approvalRequest: undefined,

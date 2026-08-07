@@ -18,6 +18,7 @@ describe('refreshAgentData', () => {
     const state = new ExtensionState({
       agentMode: 'AUTO',
       effortMode: 'ULTRA',
+      speedMode: '1X',
       agentRun: undefined,
       agentRuns: {},
       approvalRequest: undefined,
@@ -81,6 +82,7 @@ describe('refreshAgentData', () => {
     const state = new ExtensionState({
       agentMode: 'AUTO',
       effortMode: 'ULTRA',
+      speedMode: '1X',
       agentRun: undefined,
       agentRuns: {},
       approvalRequest: undefined,
@@ -140,6 +142,7 @@ describe('refreshAgentData', () => {
     const state = new ExtensionState({
       agentMode: 'AUTO',
       effortMode: 'ULTRA',
+      speedMode: '1X',
       agentRun: undefined,
       agentRuns: {},
       approvalRequest: undefined,
@@ -205,6 +208,7 @@ describe('refreshAgentData', () => {
     const state = new ExtensionState({
       agentMode: 'AUTO',
       effortMode: 'ULTRA',
+      speedMode: '1X',
       agentRun: undefined,
       agentRuns: {},
       approvalRequest: undefined,

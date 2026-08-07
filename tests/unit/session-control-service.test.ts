@@ -37,6 +37,7 @@ describe('SessionControlService', () => {
     }),
     selectAgentMode: vi.fn(),
     selectEffortMode: vi.fn(),
+    selectSpeedMode: vi.fn(),
     selectPermissionMode: vi.fn(),
   };
   const patches: unknown[] = [];
@@ -51,6 +52,7 @@ describe('SessionControlService', () => {
     configuration.permissionMode = 'MANUAL';
     configuration.selectAgentMode.mockReset();
     configuration.selectEffortMode.mockReset();
+    configuration.selectSpeedMode.mockReset();
     configuration.selectPermissionMode.mockReset();
     patches.length = 0;
   });
@@ -71,6 +73,23 @@ describe('SessionControlService', () => {
     expect(patches).toEqual([{ effortMode: 'LOW' }]);
     // A state patch published before the write lands would show the user a mode
     // the next run would not actually use.
+    expect(order).toEqual(['persisted', 'published']);
+  });
+
+  it('persists a speed selection before it becomes session-visible', async () => {
+    const order: string[] = [];
+    configuration.selectSpeedMode.mockImplementation(async () => {
+      order.push('persisted');
+    });
+    const service = new SessionControlService(state, configuration, {
+      request: vi.fn(async () => true),
+    });
+
+    await service.selectSpeedMode('2X');
+
+    order.push('published');
+    expect(configuration.selectSpeedMode).toHaveBeenCalledWith('2X');
+    expect(patches).toEqual([{ speedMode: '2X' }]);
     expect(order).toEqual(['persisted', 'published']);
   });
 

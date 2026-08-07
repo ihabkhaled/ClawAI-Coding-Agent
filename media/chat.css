@@ -1551,6 +1551,14 @@ textarea:disabled {
   box-shadow: 0 5px 18px color-mix(in srgb, #000 13%, transparent);
 }
 
+/* The settings popover is absolutely positioned above its summary and would be
+   cut off by the card's own clip — 32px of it, which is exactly the row of
+   labels. Release the clip only while the popover is open, so every other state
+   keeps its rounded corners honest. */
+.composer-card:has(.more-settings[open]) {
+  overflow: visible;
+}
+
 .composer-card:focus-within {
   border-color: var(--vscode-focusBorder);
   box-shadow: 0 0 0 1px var(--vscode-focusBorder);
@@ -2657,8 +2665,12 @@ textarea:disabled {
   inset-inline-end: 0;
   inset-block-end: calc(100% + 7px);
   display: grid;
-  width: min(390px, calc(100vw - 24px));
-  grid-template-columns: repeat(3, minmax(0, 1fr));
+  /* auto-fit rather than a fixed three, so adding a control reflows instead of
+     squeezing every label until "Ask for Approval" reads "Ask for Appro". */
+  width: min(460px, calc(100vw - 24px));
+  max-height: min(60vh, 420px);
+  overflow-y: auto;
+  grid-template-columns: repeat(auto-fit, minmax(132px, 1fr));
   gap: 7px;
   padding: 9px;
   border: 1px solid var(--claw-border);

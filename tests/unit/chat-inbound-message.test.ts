@@ -94,6 +94,21 @@ describe('inboundMessageSchema', () => {
     }
   });
 
+  it('accepts every speed mode the composer offers and refuses an invented one', () => {
+    for (const mode of ['1X', '1.5X', '2X']) {
+      expect(inboundMessageSchema.parse({ type: 'selectSpeedMode', mode }), mode).toEqual({
+        type: 'selectSpeedMode',
+        mode,
+      });
+    }
+    for (const mode of ['3X', '1x', '', 2]) {
+      expect(
+        inboundMessageSchema.safeParse({ type: 'selectSpeedMode', mode }).success,
+        String(mode),
+      ).toBe(false);
+    }
+  });
+
   it('accepts a request-scoped cancellation and rejects a malformed target', () => {
     const requestId = '11c89732-7559-42d5-9ab1-c752ee98ea0d';
     expect(inboundMessageSchema.parse({ type: 'cancel', requestId })).toEqual({

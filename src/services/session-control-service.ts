@@ -14,6 +14,7 @@ import type {
 import type { AgentMode } from '../core/agent-mode.types';
 import type { EffortMode } from '../core/effort-mode';
 import type { PermissionMode, PermissionOperation } from '../core/permission-policy.types';
+import type { SpeedMode } from '../core/speed-mode';
 
 function approvalMessage(operation: PermissionOperation): string {
   if (operation === 'externalFinalDiff') {
@@ -153,6 +154,13 @@ export class SessionControlService {
     return this.enqueueMutation(async () => {
       await this.configuration.selectEffortMode(mode);
       this.state.update({ effortMode: mode });
+    });
+  }
+
+  selectSpeedMode(mode: SpeedMode): Promise<void> {
+    return this.enqueueMutation(async () => {
+      await this.configuration.selectSpeedMode(mode);
+      this.state.update({ speedMode: mode });
     });
   }
 

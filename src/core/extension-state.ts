@@ -17,6 +17,7 @@ import type { GenerationQueueSnapshot } from './generation-queue';
 import type { ModelCatalogEntry } from './model-catalog';
 import type { PermissionMode } from './permission-policy.types';
 import type { RuntimeProtocolSelection } from './runtime/runtime-negotiation';
+import type { SpeedMode } from './speed-mode';
 import type { WorkspaceScopeSnapshot } from './workspace-scope.types';
 import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contracts';
 
@@ -27,6 +28,7 @@ export interface ExtensionSnapshot {
   agentRuns: Record<string, AgentRunSnapshot>;
   agentMode: AgentMode;
   effortMode: EffortMode;
+  speedMode: SpeedMode;
   approvalRequest: ApprovalRequest | undefined;
   backendUrl: string;
   backendCustomUrl?: string | undefined;

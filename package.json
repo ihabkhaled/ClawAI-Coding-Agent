@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.54.0",
+  "version": "0.55.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -260,6 +260,17 @@
           "default": "ULTRA",
           "scope": "resource",
           "description": "%config.effortMode%"
+        },
+        "clawAI.speedMode": {
+          "type": "string",
+          "enum": [
+            "1X",
+            "1.5X",
+            "2X"
+          ],
+          "default": "1X",
+          "scope": "resource",
+          "description": "%config.speedMode%"
         },
         "clawAI.permissionMode": {
           "type": "string",

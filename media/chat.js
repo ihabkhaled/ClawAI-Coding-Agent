@@ -62,6 +62,7 @@ const elements = {
   newChatButton: byId('newChatButton'),
   openFolderButton: byId('openFolderButton'),
   effortMode: byId('effortMode'),
+  speedMode: byId('speedMode'),
   permissionMode: byId('permissionMode'),
   prompt: byId('prompt'),
   refreshModelsButton: byId('refreshModelsButton'),
@@ -97,6 +98,7 @@ let currentState = {
   agentMode: 'AUTO',
   backendStatus: 'disconnected',
   effortMode: 'ULTRA',
+  speedMode: '1X',
   busy: false,
   connected: false,
   modelWarnings: [],
@@ -109,6 +111,7 @@ let currentSession = null;
 let pendingAgentMode = null;
 let pendingModel = null;
 let pendingEffortMode = null;
+let pendingSpeedMode = null;
 let pendingPermissionMode = null;
 let connectionViewInitialized = false;
 let approvalReturnFocus = null;
@@ -1188,6 +1191,9 @@ function reconcilePending(state) {
   if (pendingEffortMode === state.effortMode) {
     pendingEffortMode = null;
   }
+  if (pendingSpeedMode === state.speedMode) {
+    pendingSpeedMode = null;
+  }
   if (pendingPermissionMode === state.permissionMode) {
     pendingPermissionMode = null;
   }
@@ -1336,10 +1342,12 @@ function renderState(state) {
   elements.modelSelect.disabled = false;
   elements.agentMode.disabled = false;
   elements.effortMode.disabled = false;
+  elements.speedMode.disabled = false;
   elements.permissionMode.disabled = false;
   elements.workspaceSelect.disabled = state.busy;
   elements.agentMode.value = pendingAgentMode ?? state.agentMode;
   elements.effortMode.value = pendingEffortMode ?? state.effortMode ?? 'ULTRA';
+  elements.speedMode.value = pendingSpeedMode ?? state.speedMode ?? '1X';
   elements.permissionMode.value = pendingPermissionMode ?? state.permissionMode;
   renderModels(state.models);
   renderHistory(state.history);
@@ -2130,6 +2138,11 @@ elements.agentMode.addEventListener('change', () => {
 elements.effortMode.addEventListener('change', () => {
   pendingEffortMode = elements.effortMode.value;
   vscode.postMessage({ type: 'selectEffortMode', mode: pendingEffortMode });
+});
+
+elements.speedMode.addEventListener('change', () => {
+  pendingSpeedMode = elements.speedMode.value;
+  vscode.postMessage({ type: 'selectSpeedMode', mode: pendingSpeedMode });
 });
 
 elements.permissionMode.addEventListener('change', () => {
