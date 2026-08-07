@@ -272,6 +272,16 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
                   <option value="PLAN">${translated('Plan mode')}</option>
                 </select>
               </label>
+              <label class="compact-control"><span>${translated('Effort')}</span>
+                <select id="effortMode">
+                  <option value="LOW">${translated('Low')}</option>
+                  <option value="MEDIUM">${translated('Medium')}</option>
+                  <option value="HIGH">${translated('High')}</option>
+                  <option value="MAX">${translated('Max')}</option>
+                  <option value="XHIGH">${translated('xHigh')}</option>
+                  <option value="ULTRA">${translated('Ultra')}</option>
+                </select>
+              </label>
               <label class="compact-control"><span>${translated('Approval')}</span>
                 <select id="permissionMode">
                   <option value="PLAN">${translated('Plan')}</option>

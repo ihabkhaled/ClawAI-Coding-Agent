@@ -148,6 +148,7 @@ layout.
 | `clawAI.backendEnvironment`  | machine   | `LOCAL` (`LOCAL`, `CLOUD`, `CUSTOM`)    |
 | `clawAI.frontendEnvironment` | machine   | `LOCAL` (`LOCAL`, `CLOUD`, `CUSTOM`)    |
 | `clawAI.requestTimeoutMs`    | machine   | `60000`                                 |
+| `clawAI.effortMode`          | resource  | `ULTRA` (`LOW`…`ULTRA`)                 |
 | `clawAI.routingMode`         | workspace | `AUTO`                                  |
 | `clawAI.agentMode`           | workspace | `AUTO`                                  |
 | `clawAI.permissionMode`      | workspace | `MANUAL`                                |

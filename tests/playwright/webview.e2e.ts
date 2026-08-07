@@ -438,6 +438,32 @@ test('keeps manual model and mode selections stable through state round trips', 
   await expect(page.locator('#permissionMode')).toHaveValue('AUTO_EDIT');
 });
 
+test('offers all six effort modes and keeps a selection through a state round trip', async ({
+  page,
+}) => {
+  await page.locator('#moreSettingsSummary').click();
+  await expect(page.locator('#effortMode option')).toHaveCount(6);
+  await expect(page.locator('#effortMode')).toHaveValue('ULTRA');
+
+  await page.locator('#effortMode').selectOption('LOW');
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({ type: 'selectEffortMode', mode: 'LOW' });
+
+  // The pending selection has to survive a state frame that still reports the
+  // old mode, or the control snaps back under the user mid-change.
+  await sendState(page, { effortMode: 'ULTRA' });
+  await expect(page.locator('#effortMode')).toHaveValue('LOW');
+
+  await sendState(page, { effortMode: 'LOW' });
+  await expect(page.locator('#effortMode')).toHaveValue('LOW');
+
+  await page.locator('#effortMode').selectOption('XHIGH');
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({ type: 'selectEffortMode', mode: 'XHIGH' });
+});
+
 test('supports narrow responsive use, suggestions, streaming, success, and errors', async ({
   page,
 }) => {

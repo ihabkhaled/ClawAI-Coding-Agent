@@ -13,6 +13,7 @@ import type { RuntimeConfiguration } from '../../src/services/configuration-serv
 
 const configuration: RuntimeConfiguration = {
   agentMode: 'AUTO',
+  effortMode: 'ULTRA',
   backendUrl: 'https://claw.local',
   exclude: [],
   historyLimit: 50,
@@ -35,6 +36,7 @@ const authorizedTokens = {
 function state() {
   return new ExtensionState({
     agentMode: 'AUTO',
+    effortMode: 'ULTRA',
     agentRun: undefined,
     agentRuns: {},
     approvalRequest: undefined,

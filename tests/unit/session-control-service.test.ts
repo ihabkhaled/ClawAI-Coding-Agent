@@ -36,6 +36,7 @@ describe('SessionControlService', () => {
       permissionMode: configuration.permissionMode,
     }),
     selectAgentMode: vi.fn(),
+    selectEffortMode: vi.fn(),
     selectPermissionMode: vi.fn(),
   };
   const patches: unknown[] = [];
@@ -49,8 +50,40 @@ describe('SessionControlService', () => {
     configuration.agentMode = 'AUTO';
     configuration.permissionMode = 'MANUAL';
     configuration.selectAgentMode.mockReset();
+    configuration.selectEffortMode.mockReset();
     configuration.selectPermissionMode.mockReset();
     patches.length = 0;
+  });
+
+  it('persists an effort selection before it becomes session-visible', async () => {
+    const order: string[] = [];
+    configuration.selectEffortMode.mockImplementation(async () => {
+      order.push('persisted');
+    });
+    const service = new SessionControlService(state, configuration, {
+      request: vi.fn(async () => true),
+    });
+
+    await service.selectEffortMode('LOW');
+
+    order.push('published');
+    expect(configuration.selectEffortMode).toHaveBeenCalledWith('LOW');
+    expect(patches).toEqual([{ effortMode: 'LOW' }]);
+    // A state patch published before the write lands would show the user a mode
+    // the next run would not actually use.
+    expect(order).toEqual(['persisted', 'published']);
+  });
+
+  it('serializes effort selections behind other mode mutations', async () => {
+    configuration.selectAgentMode.mockImplementation(async () => undefined);
+    configuration.selectEffortMode.mockImplementation(async () => undefined);
+    const service = new SessionControlService(state, configuration, {
+      request: vi.fn(async () => true),
+    });
+
+    await Promise.all([service.selectAgentMode('PLAN'), service.selectEffortMode('MAX')]);
+
+    expect(patches).toEqual([{ agentMode: 'PLAN' }, { effortMode: 'MAX' }]);
   });
 
   it('updates session-visible agent and permission modes after persistence', async () => {

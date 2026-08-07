@@ -79,6 +79,21 @@ describe('inboundMessageSchema', () => {
     ).toBe(false);
   });
 
+  it('accepts every effort mode the composer offers and refuses an invented one', () => {
+    for (const mode of ['LOW', 'MEDIUM', 'HIGH', 'MAX', 'XHIGH', 'ULTRA']) {
+      expect(inboundMessageSchema.parse({ type: 'selectEffortMode', mode }), mode).toEqual({
+        type: 'selectEffortMode',
+        mode,
+      });
+    }
+    for (const mode of ['EXTREME', 'low', '', 9]) {
+      expect(
+        inboundMessageSchema.safeParse({ type: 'selectEffortMode', mode }).success,
+        String(mode),
+      ).toBe(false);
+    }
+  });
+
   it('accepts a request-scoped cancellation and rejects a malformed target', () => {
     const requestId = '11c89732-7559-42d5-9ab1-c752ee98ea0d';
     expect(inboundMessageSchema.parse({ type: 'cancel', requestId })).toEqual({

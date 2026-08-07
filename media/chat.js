@@ -61,6 +61,7 @@ const elements = {
   moreSettings: byId('moreSettings'),
   newChatButton: byId('newChatButton'),
   openFolderButton: byId('openFolderButton'),
+  effortMode: byId('effortMode'),
   permissionMode: byId('permissionMode'),
   prompt: byId('prompt'),
   refreshModelsButton: byId('refreshModelsButton'),
@@ -95,6 +96,7 @@ const labels = byId('i18n').dataset;
 let currentState = {
   agentMode: 'AUTO',
   backendStatus: 'disconnected',
+  effortMode: 'ULTRA',
   busy: false,
   connected: false,
   modelWarnings: [],
@@ -106,6 +108,7 @@ let currentState = {
 let currentSession = null;
 let pendingAgentMode = null;
 let pendingModel = null;
+let pendingEffortMode = null;
 let pendingPermissionMode = null;
 let connectionViewInitialized = false;
 let approvalReturnFocus = null;
@@ -1182,6 +1185,9 @@ function reconcilePending(state) {
   if (pendingAgentMode === state.agentMode) {
     pendingAgentMode = null;
   }
+  if (pendingEffortMode === state.effortMode) {
+    pendingEffortMode = null;
+  }
   if (pendingPermissionMode === state.permissionMode) {
     pendingPermissionMode = null;
   }
@@ -1329,9 +1335,11 @@ function renderState(state) {
   elements.prompt.disabled = false;
   elements.modelSelect.disabled = false;
   elements.agentMode.disabled = false;
+  elements.effortMode.disabled = false;
   elements.permissionMode.disabled = false;
   elements.workspaceSelect.disabled = state.busy;
   elements.agentMode.value = pendingAgentMode ?? state.agentMode;
+  elements.effortMode.value = pendingEffortMode ?? state.effortMode ?? 'ULTRA';
   elements.permissionMode.value = pendingPermissionMode ?? state.permissionMode;
   renderModels(state.models);
   renderHistory(state.history);
@@ -2117,6 +2125,11 @@ elements.agentMode.addEventListener('change', () => {
   elements.agentBehavior.textContent =
     pendingAgentMode === 'PLAN' ? labels.agentBehaviorPlanning : labels.agentBehaviorCoding;
   vscode.postMessage({ type: 'selectAgentMode', mode: pendingAgentMode });
+});
+
+elements.effortMode.addEventListener('change', () => {
+  pendingEffortMode = elements.effortMode.value;
+  vscode.postMessage({ type: 'selectEffortMode', mode: pendingEffortMode });
 });
 
 elements.permissionMode.addEventListener('change', () => {

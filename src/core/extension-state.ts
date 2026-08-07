@@ -12,6 +12,7 @@ import type { RoutingMode } from './configuration';
 import type { ConnectionEnvironment } from './configuration';
 import type { ContextReceipt } from './context-collector';
 import type { WorkspaceReadiness } from './context-mode';
+import type { EffortMode } from './effort-mode';
 import type { GenerationQueueSnapshot } from './generation-queue';
 import type { ModelCatalogEntry } from './model-catalog';
 import type { PermissionMode } from './permission-policy.types';
@@ -25,6 +26,7 @@ export interface ExtensionSnapshot {
   agentRun: AgentRunSnapshot | undefined;
   agentRuns: Record<string, AgentRunSnapshot>;
   agentMode: AgentMode;
+  effortMode: EffortMode;
   approvalRequest: ApprovalRequest | undefined;
   backendUrl: string;
   backendCustomUrl?: string | undefined;

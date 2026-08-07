@@ -8,6 +8,7 @@ const initialSnapshot: ExtensionSnapshot = {
   agentRun: undefined,
   agentRuns: {},
   agentMode: 'AUTO',
+  effortMode: 'ULTRA',
   approvalRequest: undefined,
   backendUrl: 'https://claw.example',
   backendStatus: 'disconnected',

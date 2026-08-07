@@ -166,6 +166,7 @@ export function toPublicChatState(snapshot: ExtensionSnapshot) {
     lastError: snapshot.lastError,
     modelWarnings: snapshot.modelWarnings,
     models: snapshot.models,
+    effortMode: snapshot.effortMode,
     permissionMode: snapshot.permissionMode,
     routingMode: snapshot.routingMode,
     runtime: toPublicRuntimeState(snapshot.runtime),

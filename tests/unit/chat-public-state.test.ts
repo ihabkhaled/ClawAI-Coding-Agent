@@ -28,6 +28,7 @@ const snapshot: ExtensionSnapshot = {
     },
   },
   agentMode: 'PLAN',
+  effortMode: 'ULTRA',
   approvalRequest: undefined,
   backendStatus: 'connected',
   backendUrl: 'https://claw.local',
@@ -310,6 +311,7 @@ describe('toPublicChatState', () => {
         phase: 'reviewing',
       },
       agentMode: 'PLAN',
+      effortMode: 'ULTRA',
       backendStatus: 'connected',
       history: [
         {
