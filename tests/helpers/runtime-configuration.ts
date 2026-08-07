@@ -3,6 +3,7 @@ import type { RuntimeConfiguration } from '../../src/services/configuration-serv
 export function testRuntimeConfiguration(): RuntimeConfiguration {
   return {
     agentMode: 'AUTO',
+    effortMode: 'ULTRA',
     backendCustomUrl: '',
     backendEnvironment: 'LOCAL',
     backendUrl: 'https://claw.local',

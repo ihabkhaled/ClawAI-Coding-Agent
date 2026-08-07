@@ -2,6 +2,7 @@ import type { AgentMode } from '../core/agent-mode.types';
 import type { ChatAttachment } from '../core/chat-attachment';
 import type { ConnectionProfile } from '../core/configuration';
 import type { ContextMode } from '../core/context-mode';
+import type { EffortMode } from '../core/effort-mode';
 import type { PermissionMode } from '../core/permission-policy.types';
 import type { ResearchMode } from '../core/research-mode';
 import type { RequestAdmission } from '../services/agent-coordinator.types';
@@ -45,6 +46,7 @@ export interface ChatViewActions {
   runtimeSteer(message: string): Promise<void>;
   runtimeStop(): Promise<void>;
   selectAgentMode(mode: AgentMode): Promise<void>;
+  selectEffortMode(mode: EffortMode): Promise<void>;
   selectModel(modelKey: string): Promise<void>;
   selectPermissionMode(mode: PermissionMode): Promise<boolean>;
   selectWorkspaceFolder(folderKey: string): Promise<void>;

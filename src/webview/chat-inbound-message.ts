@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { chatAttachmentsSchema } from '../core/chat-attachment';
+import { effortModeSchema } from '../core/effort-mode';
 import { RESEARCH_MODES } from '../core/research-mode';
 
 import type { ContextMode } from '../core/context-mode';
@@ -93,6 +94,10 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('selectAgentMode'),
     mode: z.enum(['AUTO', 'PLAN']),
+  }),
+  z.object({
+    type: z.literal('selectEffortMode'),
+    mode: effortModeSchema,
   }),
   z.object({
     type: z.literal('selectPermissionMode'),

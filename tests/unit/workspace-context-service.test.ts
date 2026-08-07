@@ -87,6 +87,7 @@ vi.mock('vscode', () => ({
 
 const configuration: RuntimeConfiguration = {
   agentMode: 'AUTO',
+  effortMode: 'ULTRA',
   backendUrl: 'https://claw.local',
   exclude: [],
   historyLimit: 50,

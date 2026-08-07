@@ -327,6 +327,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.actions.selectModel(request.modelKey);
     } else if (request.type === 'selectAgentMode') {
       await this.actions.selectAgentMode(request.mode);
+    } else if (request.type === 'selectEffortMode') {
+      await this.actions.selectEffortMode(request.mode);
     } else if (request.type === 'selectPermissionMode') {
       await this.actions.selectPermissionMode(request.mode);
       await this.postState();

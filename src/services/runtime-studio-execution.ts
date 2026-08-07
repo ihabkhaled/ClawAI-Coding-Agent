@@ -1,5 +1,6 @@
 import { randomUUID } from 'node:crypto';
 
+import { effortBudget } from '../core/effort-mode';
 import { isRuntimeRunEnded } from '../core/runtime/runtime-event-reducer';
 
 import { RuntimeJournalTracker } from './runtime-journal-tracker';
@@ -51,16 +52,6 @@ interface RuntimeFingerprint {
   readonly gitHead: string;
 }
 
-const runtimeBudget = {
-  maxModelTurns: 40,
-  maxToolCalls: 100,
-  maxToolRounds: 100,
-  maxRepairAttempts: 1,
-  maxRuntimeMs: 7_200_000,
-  maxOutputBytes: 16_777_216,
-  maxToolResultBytes: 1_048_576,
-};
-
 /**
  * Carries endings this side decided on to the panel, and nowhere else.
  *
@@ -98,6 +89,11 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
   // The caller supplies the catalog so it can describe roots that only exist
   // for this run, such as an approved external output folder.
   const definitions = dependencies.definitions ?? router.definitions();
+  // Read once and reuse: the run and the journal entry that describes it must
+  // agree on what this run was allowed to spend, and the setting can change
+  // under a long run.
+  const effortMode = dependencies.configuration().effortMode;
+  const runtimeBudget = effortBudget(effortMode);
   const traceId = input.requestId;
   const spanId = `span:${randomUUID()}`;
   const startedAt = new Date().toISOString();
@@ -107,7 +103,10 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
     spanId,
     startedAt,
     status: 'unset',
-    attributes: { threadId: input.threadId, toolCount: definitions.length },
+    // effortMode rides along so a run's cost can be attributed to the setting
+    // that chose it. Comparing modes is impossible if the trace does not say
+    // which one was in force.
+    attributes: { threadId: input.threadId, toolCount: definitions.length, effortMode },
   });
   // Whether the run reached an end state of its own, as opposed to the stream
   // being torn down under it by an error, a cancel, or a dropped connection.
@@ -154,6 +153,7 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
       policySnapshotHash: dependencies.hash({
         epochs,
         mode: dependencies.configuration().permissionMode,
+        effortMode,
       }),
       capabilitySnapshotHash: dependencies.hash(manifest),
       fingerprints: await dependencies.fingerprint(input.signal),

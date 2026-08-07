@@ -17,6 +17,7 @@ describe('refreshAgentData', () => {
   it('falls back in view state without mutating a newer persisted model selection', async () => {
     const state = new ExtensionState({
       agentMode: 'AUTO',
+      effortMode: 'ULTRA',
       agentRun: undefined,
       agentRuns: {},
       approvalRequest: undefined,
@@ -79,6 +80,7 @@ describe('refreshAgentData', () => {
     }>();
     const state = new ExtensionState({
       agentMode: 'AUTO',
+      effortMode: 'ULTRA',
       agentRun: undefined,
       agentRuns: {},
       approvalRequest: undefined,
@@ -137,6 +139,7 @@ describe('refreshAgentData', () => {
     const history = deferred<{ id: string; title: string }[]>();
     const state = new ExtensionState({
       agentMode: 'AUTO',
+      effortMode: 'ULTRA',
       agentRun: undefined,
       agentRuns: {},
       approvalRequest: undefined,
@@ -201,6 +204,7 @@ describe('refreshAgentData', () => {
     };
     const state = new ExtensionState({
       agentMode: 'AUTO',
+      effortMode: 'ULTRA',
       agentRun: undefined,
       agentRuns: {},
       approvalRequest: undefined,

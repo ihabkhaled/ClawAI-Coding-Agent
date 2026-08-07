@@ -12,6 +12,7 @@ import type {
   SessionStatePort,
 } from './session-control.types';
 import type { AgentMode } from '../core/agent-mode.types';
+import type { EffortMode } from '../core/effort-mode';
 import type { PermissionMode, PermissionOperation } from '../core/permission-policy.types';
 
 function approvalMessage(operation: PermissionOperation): string {
@@ -145,6 +146,13 @@ export class SessionControlService {
     return this.enqueueMutation(async () => {
       await this.configuration.selectAgentMode(mode);
       this.state.update({ agentMode: mode });
+    });
+  }
+
+  selectEffortMode(mode: EffortMode): Promise<void> {
+    return this.enqueueMutation(async () => {
+      await this.configuration.selectEffortMode(mode);
+      this.state.update({ effortMode: mode });
     });
   }
 

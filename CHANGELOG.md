@@ -2,6 +2,40 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.54.0
+
+Minor: how hard a run may work is now a choice, and the choice does something.
+
+- Every run received one hardcoded budget — forty model turns, a hundred tool
+  calls, a two-hour clock — whether it was a one-line edit or a cross-service
+  feature. `clawAI.effortMode` picks from six: Low, Medium, High, Max, xHigh,
+  Ultra. Each resolves to a genuinely different `RunBudget`, and the runtime
+  starts the run with the one the setting chose.
+- **Nothing changes until you choose.** Ultra is the default and is
+  byte-identical to the budget that was hardcoded, so an upgraded install
+  behaves exactly as it did. Spending less is opt-in — which is the safe
+  direction, because a default that quietly lowered a limit would fail long
+  runs that had never had to respect one.
+- The names are checked, not asserted. The test suite fails if any two modes
+  resolve to the same budget, if a stronger mode buys less of any dimension
+  than a weaker one, if Ultra stops matching the historical constant, or if the
+  runtime stops sending the selected budget to the transport. Six labels
+  mapped to identical behaviour would be worse than no labels at all.
+- Two limits belong to the budget schema rather than the ladder, and are
+  documented rather than worked around. `maxRepairAttempts` is bounded `0..1`,
+  so it cannot form a six-step ladder: Low spends it — a malformed tool call
+  ends the turn instead of being retried — and every other mode keeps its
+  single repair. Wall clock, output bytes and tool-result bytes were already
+  pinned at the schema ceiling before this change, so the ladder reaches that
+  ceiling at Ultra instead of exceeding what the product already did.
+- Each run's observability trace and durable journal record the mode in force.
+  Two runs at different efforts now produce different policy snapshot hashes,
+  because a run that was allowed to spend more is not reproducing the same
+  conditions as one that was not.
+- The composer gained an **Effort** control beside Agent and Approval, and a
+  pending selection survives a state frame that still reports the old mode
+  rather than snapping back mid-change.
+
 ## 0.53.0
 
 Minor: the Cloud lane is a real destination, not a placeholder.
