@@ -217,6 +217,51 @@ describe('runtime tool dispatcher', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
+  it('tells the model why the executor failed instead of only that it failed', async () => {
+    // Seventeen models were screened against this runtime and all seventeen got
+    // the same bare "The trusted tool executor failed." for a `workspace.files
+    // list` request that was itself valid. The reason was discarded at the catch,
+    // so nothing anywhere said what went wrong.
+    const { dispatcher } = harness({
+      execute: async () => {
+        throw new Error('EACCES: permission denied, scandir /workspace');
+      },
+    });
+
+    const result = await dispatcher.dispatch(invocation, continuation);
+
+    expect(result.status).toBe('failed');
+    expect(result.error?.code).toBe('TOOL_EXECUTION_FAILED');
+    expect(result.error?.message).toContain('permission denied');
+    expect(result.error?.message).toContain('The trusted tool executor failed');
+  });
+
+  it('still says only that it failed when the executor gave no message', async () => {
+    const { dispatcher } = harness({
+      execute: async () => {
+        throw new Error('   ');
+      },
+    });
+
+    const result = await dispatcher.dispatch(invocation, continuation);
+
+    expect(result.error?.message).toBe('The trusted tool executor failed.');
+    expect(result.error?.redactionApplied).toBe(false);
+  });
+
+  it('keeps a secret out of the reason it now reports', async () => {
+    const { dispatcher } = harness({
+      execute: async () => {
+        throw new Error('refused with Authorization: Bearer executor-secret-value');
+      },
+    });
+
+    const result = await dispatcher.dispatch(invocation, continuation);
+
+    expect(JSON.stringify(result)).not.toContain('executor-secret-value');
+    expect(result.error?.redactionApplied).toBe(true);
+  });
+
   it('converts a policy failure into a safe replayable terminal result', async () => {
     const { dispatcher, execute } = harness({
       policy: async () => {
