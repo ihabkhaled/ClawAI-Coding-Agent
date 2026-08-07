@@ -33,8 +33,8 @@ test('shows a focused backend connection gateway before revealing the workbench'
   await expect(page.locator('#workspaceActions')).toBeHidden();
   await expect(page.locator('#backendEnvironmentLocal')).toBeChecked();
   await expect(page.locator('#frontendEnvironmentLocal')).toBeChecked();
-  await expect(page.locator('#backendEnvironmentCloud')).toBeDisabled();
-  await expect(page.locator('#frontendEnvironmentCloud')).toBeDisabled();
+  await expect(page.locator('#backendEnvironmentCloud')).toBeEnabled();
+  await expect(page.locator('#frontendEnvironmentCloud')).toBeEnabled();
   await expect(page.locator('#backendUrlInput')).toBeHidden();
   await expect(page.locator('#connectButton')).toBeFocused();
   await expectWindowsScreenshot(page, 'connect-gateway-dark.png');
@@ -54,7 +54,22 @@ test('shows a focused backend connection gateway before revealing the workbench'
     delete document.body.dataset.theme;
   });
 
+  await page.locator('#backendEnvironmentCloud').check();
+  await page.locator('#frontendEnvironmentCloud').check();
+  await expect(page.locator('#backendUrlInput')).toBeHidden();
+  await page.locator('#connectButton').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({
+      type: 'connect',
+      backendCustomUrl: '',
+      backendEnvironment: 'CLOUD',
+      frontendCustomUrl: '',
+      frontendEnvironment: 'CLOUD',
+    });
+
   await page.locator('#backendEnvironmentCustom').check();
+  await page.locator('#frontendEnvironmentLocal').check();
   await page.locator('#backendUrlInput').fill('https://localhost/');
   await page.locator('#connectButton').click();
   await expect
@@ -129,8 +144,27 @@ test('updates separate app connections from the authenticated settings dialog', 
   await page.locator('#connectionSettingsButton').click();
 
   await expect(page.locator('#connectionSettingsPanel')).toBeVisible();
-  await expect(page.locator('#settingsBackendCloud')).toBeDisabled();
-  await expect(page.locator('#settingsFrontendCloud')).toBeDisabled();
+  await expect(page.locator('#settingsBackendCloud')).toBeEnabled();
+  await expect(page.locator('#settingsFrontendCloud')).toBeEnabled();
+  await page.locator('#settingsBackendCloud').check();
+  await page.locator('#settingsFrontendCloud').check();
+  await expect(page.locator('#settingsBackendCustomWrap')).toBeHidden();
+  await expect(page.locator('#settingsFrontendCustomWrap')).toBeHidden();
+  await page.locator('#connectionSettingsForm button[type="submit"]').click();
+  await expect
+    .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
+    .toEqual({
+      type: 'configureConnections',
+      backendCustomUrl: '',
+      backendEnvironment: 'CLOUD',
+      frontendCustomUrl: '',
+      frontendEnvironment: 'CLOUD',
+    });
+
+  // Submitting the dialog is a pointerdown outside the composer's More
+  // settings disclosure, which closes it. Reopen before the second round trip.
+  await page.locator('#moreSettingsSummary').click();
+  await page.locator('#connectionSettingsButton').click();
   await page.locator('#settingsBackendCustom').check();
   await page.locator('#settingsBackendUrl').fill('https://api.example.com/');
   await page.locator('#settingsFrontendCustom').check();

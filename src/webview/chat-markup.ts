@@ -1,3 +1,10 @@
+import {
+  BACKEND_CLOUD_URL,
+  BACKEND_LOCAL_URL,
+  FRONTEND_CLOUD_URL,
+  FRONTEND_LOCAL_URL,
+} from '../core/configuration';
+
 export interface ChatMarkupInput {
   cspSource: string;
   language: string;
@@ -111,24 +118,24 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
             <legend>${translated('Backend')}</legend>
             <small>${translated('API, authentication, models, and agent runs')}</small>
             <div class="environment-options">
-              <label><input id="backendEnvironmentLocal" type="radio" name="backendEnvironment" value="LOCAL" checked><span><strong>${translated('Local')}</strong><small>https://claw.local</small></span></label>
-              <label class="environment-disabled"><input id="backendEnvironmentCloud" type="radio" name="backendEnvironment" value="CLOUD" disabled><span><strong>${translated('Cloud')}</strong><small>${translated('Coming soon')}</small></span></label>
+              <label><input id="backendEnvironmentLocal" type="radio" name="backendEnvironment" value="LOCAL" checked><span><strong>${translated('Local')}</strong><small>${BACKEND_LOCAL_URL}</small></span></label>
+              <label><input id="backendEnvironmentCloud" type="radio" name="backendEnvironment" value="CLOUD"><span><strong>${translated('Cloud')}</strong><small>${BACKEND_CLOUD_URL}</small></span></label>
               <label><input id="backendEnvironmentCustom" type="radio" name="backendEnvironment" value="CUSTOM"><span><strong>${translated('Custom')}</strong><small>${translated('Use another server')}</small></span></label>
             </div>
             <label class="custom-endpoint" for="backendUrlInput" hidden>${translated('Custom backend URL')}
-              <input id="backendUrlInput" name="backendCustomUrl" type="url" placeholder="https://claw.local" maxlength="2000" autocomplete="url" spellcheck="false">
+              <input id="backendUrlInput" name="backendCustomUrl" type="url" placeholder="${BACKEND_LOCAL_URL}" maxlength="2000" autocomplete="url" spellcheck="false">
             </label>
           </fieldset>
           <fieldset class="endpoint-fieldset">
             <legend>${translated('Frontend')}</legend>
             <small>${translated('Browser authorization and app links')}</small>
             <div class="environment-options">
-              <label><input id="frontendEnvironmentLocal" type="radio" name="frontendEnvironment" value="LOCAL" checked><span><strong>${translated('Local')}</strong><small>https://claw.local</small></span></label>
-              <label class="environment-disabled"><input id="frontendEnvironmentCloud" type="radio" name="frontendEnvironment" value="CLOUD" disabled><span><strong>${translated('Cloud')}</strong><small>${translated('Coming soon')}</small></span></label>
+              <label><input id="frontendEnvironmentLocal" type="radio" name="frontendEnvironment" value="LOCAL" checked><span><strong>${translated('Local')}</strong><small>${FRONTEND_LOCAL_URL}</small></span></label>
+              <label><input id="frontendEnvironmentCloud" type="radio" name="frontendEnvironment" value="CLOUD"><span><strong>${translated('Cloud')}</strong><small>${FRONTEND_CLOUD_URL}</small></span></label>
               <label><input id="frontendEnvironmentCustom" type="radio" name="frontendEnvironment" value="CUSTOM"><span><strong>${translated('Custom')}</strong><small>${translated('Use another web app')}</small></span></label>
             </div>
             <label class="custom-endpoint" for="frontendUrlInput" hidden>${translated('Custom frontend URL')}
-              <input id="frontendUrlInput" name="frontendCustomUrl" type="url" placeholder="https://claw.local" maxlength="2000" autocomplete="url" spellcheck="false">
+              <input id="frontendUrlInput" name="frontendCustomUrl" type="url" placeholder="${FRONTEND_LOCAL_URL}" maxlength="2000" autocomplete="url" spellcheck="false">
             </label>
           </fieldset>
           <button id="connectButton" class="connect-button" type="submit">
@@ -312,15 +319,15 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       <header><strong id="connectionSettingsTitle">${translated('App connections')}</strong></header>
       <p>${translated('Choose where the extension sends API requests and opens browser pages.')}</p>
       <fieldset class="endpoint-fieldset"><legend>${translated('Backend')}</legend><div class="environment-options">
-        <label><input id="settingsBackendLocal" type="radio" name="settingsBackendEnvironment" value="LOCAL"><span><strong>${translated('Local')}</strong><small>https://claw.local</small></span></label>
-        <label class="environment-disabled"><input id="settingsBackendCloud" type="radio" name="settingsBackendEnvironment" value="CLOUD" disabled><span><strong>${translated('Cloud')}</strong><small>${translated('Coming soon')}</small></span></label>
+        <label><input id="settingsBackendLocal" type="radio" name="settingsBackendEnvironment" value="LOCAL"><span><strong>${translated('Local')}</strong><small>${BACKEND_LOCAL_URL}</small></span></label>
+        <label><input id="settingsBackendCloud" type="radio" name="settingsBackendEnvironment" value="CLOUD"><span><strong>${translated('Cloud')}</strong><small>${BACKEND_CLOUD_URL}</small></span></label>
         <label><input id="settingsBackendCustom" type="radio" name="settingsBackendEnvironment" value="CUSTOM"><span><strong>${translated('Custom')}</strong></span></label>
-      </div><label id="settingsBackendCustomWrap" class="custom-endpoint" for="settingsBackendUrl" hidden>${translated('Custom backend URL')}<input id="settingsBackendUrl" type="url" placeholder="https://claw.local" maxlength="2000"></label></fieldset>
+      </div><label id="settingsBackendCustomWrap" class="custom-endpoint" for="settingsBackendUrl" hidden>${translated('Custom backend URL')}<input id="settingsBackendUrl" type="url" placeholder="${BACKEND_LOCAL_URL}" maxlength="2000"></label></fieldset>
       <fieldset class="endpoint-fieldset"><legend>${translated('Frontend')}</legend><div class="environment-options">
-        <label><input id="settingsFrontendLocal" type="radio" name="settingsFrontendEnvironment" value="LOCAL"><span><strong>${translated('Local')}</strong><small>https://claw.local</small></span></label>
-        <label class="environment-disabled"><input id="settingsFrontendCloud" type="radio" name="settingsFrontendEnvironment" value="CLOUD" disabled><span><strong>${translated('Cloud')}</strong><small>${translated('Coming soon')}</small></span></label>
+        <label><input id="settingsFrontendLocal" type="radio" name="settingsFrontendEnvironment" value="LOCAL"><span><strong>${translated('Local')}</strong><small>${FRONTEND_LOCAL_URL}</small></span></label>
+        <label><input id="settingsFrontendCloud" type="radio" name="settingsFrontendEnvironment" value="CLOUD"><span><strong>${translated('Cloud')}</strong><small>${FRONTEND_CLOUD_URL}</small></span></label>
         <label><input id="settingsFrontendCustom" type="radio" name="settingsFrontendEnvironment" value="CUSTOM"><span><strong>${translated('Custom')}</strong></span></label>
-      </div><label id="settingsFrontendCustomWrap" class="custom-endpoint" for="settingsFrontendUrl" hidden>${translated('Custom frontend URL')}<input id="settingsFrontendUrl" type="url" placeholder="https://claw.local" maxlength="2000"></label></fieldset>
+      </div><label id="settingsFrontendCustomWrap" class="custom-endpoint" for="settingsFrontendUrl" hidden>${translated('Custom frontend URL')}<input id="settingsFrontendUrl" type="url" placeholder="${FRONTEND_LOCAL_URL}" maxlength="2000"></label></fieldset>
       <div class="approval-actions"><button id="connectionSettingsCancel" class="quiet-button" type="button">${translated('Cancel')}</button><button class="send-button" type="submit">${translated('Save connections')}</button></div>
     </form>
   </section>

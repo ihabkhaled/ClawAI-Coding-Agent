@@ -52,7 +52,7 @@ describe('inboundMessageSchema', () => {
     });
   });
 
-  it('accepts only selectable local and custom connection profiles', () => {
+  it('accepts every selectable connection lane and rejects an unknown one', () => {
     const custom = {
       type: 'configureConnections',
       backendEnvironment: 'CUSTOM',
@@ -61,10 +61,20 @@ describe('inboundMessageSchema', () => {
       frontendCustomUrl: 'https://app.example.com',
     };
     expect(inboundMessageSchema.safeParse(custom).success).toBe(true);
+    for (const environment of ['LOCAL', 'CLOUD', 'CUSTOM']) {
+      expect(
+        inboundMessageSchema.safeParse({
+          ...custom,
+          backendEnvironment: environment,
+          frontendEnvironment: environment,
+        }).success,
+        `${environment} must be a selectable lane`,
+      ).toBe(true);
+    }
     expect(
       inboundMessageSchema.safeParse({
         ...custom,
-        backendEnvironment: 'CLOUD',
+        backendEnvironment: 'STAGING',
       }).success,
     ).toBe(false);
   });

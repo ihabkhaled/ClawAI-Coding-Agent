@@ -2,6 +2,33 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.53.0
+
+Minor: the Cloud lane is a real destination, not a placeholder.
+
+- Backend and Frontend each offered a Cloud choice that was rendered dimmed and
+  `disabled`, and the resolver behind it threw "ClawAI backend cloud is not
+  available yet." The hosted deployment now exists: `https://claw-ai.co` serves
+  the API and the web app from one origin behind a publicly trusted Let's
+  Encrypt certificate. Cloud selects it, on the connection gate and in the App
+  connections dialog, for the backend and the frontend independently. The
+  webview message schema accepted only `LOCAL` and `CUSTOM`, so a Cloud
+  selection would have been rejected at the extension boundary even with the
+  radio enabled; it now accepts the lane the UI can produce, and `STAGING` or
+  any other invented value is still refused.
+- The gate used to hard-code `https://claw.local` in six places next to a
+  resolver that decided the real origin somewhere else. Both now read the same
+  exported constants, so a label cannot advertise an origin the extension will
+  not connect to.
+- Sessions were already keyed by a digest of the normalized backend origin, so
+  Local and Cloud hold separate credentials. Switching lanes disconnects the
+  current one and restores the other if it was authorized; it does not delete
+  the session left behind. Documented rather than changed — the behavior only
+  became reachable now that a second lane exists.
+- `clawAI.backendEnvironment` and `clawAI.frontendEnvironment` accept `CLOUD`.
+  A settings file that already carried the value parsed but resolved to a
+  throw; it now resolves.
+
 ## 0.52.0
 
 Patch to 0.51.0: a locally decided ending reaches the panel and stops there.
