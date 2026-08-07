@@ -6,3 +6,4 @@ test-results/
 .vscode-test/
 *.log
 .DS_Store
+builds/
