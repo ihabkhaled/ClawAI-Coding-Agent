@@ -13,7 +13,7 @@ const contextModeSchema: z.ZodType<ContextMode> = z.enum([
   'workspace',
 ]);
 const researchModeSchema = z.enum(RESEARCH_MODES).default('NONE');
-const selectableEnvironmentSchema = z.enum(['LOCAL', 'CUSTOM']);
+const selectableEnvironmentSchema = z.enum(['LOCAL', 'CLOUD', 'CUSTOM']);
 const connectionProfileSchema = z.object({
   backendEnvironment: selectableEnvironmentSchema,
   backendCustomUrl: z.string().trim().max(2_000),

@@ -59,7 +59,9 @@ Node.js is only required when developing or packaging the extension.
 ## Quick start
 
 1. Install the VSIX or Marketplace release.
-2. The focused connection screen starts with `https://claw.local`. Keep it or
+2. The focused connection screen offers **Local** (`https://claw.local`),
+   **Cloud** (`https://claw-ai.co`), and **Custom** for the backend and the
+   frontend separately. Keep Local, pick Cloud for the hosted deployment, or
    enter another ClawAI app origin such as `https://localhost`; `/api/v1` is
    added automatically.
 3. Choose **Connect to ClawAI**, then approve VS Code in the ClawAI web app.
@@ -78,6 +80,15 @@ Use `Ctrl+Shift+A` (`Cmd+Shift+A` on macOS) to open chat and
 You can also open VS Code Chat and address the stable `@clawai` participant.
 
 ## Local and hosted backends
+
+Backend and Frontend are chosen independently. **Local** resolves both to
+`https://claw.local`. **Cloud** resolves both to `https://claw-ai.co`, the
+hosted deployment that serves the API and the web app from one origin under a
+publicly trusted certificate. **Custom** takes any other ClawAI origin.
+
+Sessions are stored per backend origin, so Local and Cloud each keep their own
+credentials. Switching lanes disconnects the current one and restores the other
+if it was already authorized; it never deletes the session you left.
 
 The extension adds `/api/v1` to the configured backend origin. A pasted
 trailing `/api/v1` is removed automatically. Do not include
@@ -131,18 +142,20 @@ layout.
 
 ## Configuration
 
-| Setting                   | Scope     | Default                                 |
-| ------------------------- | --------- | --------------------------------------- |
-| `clawAI.backendUrl`       | machine   | `https://claw.local`                    |
-| `clawAI.requestTimeoutMs` | machine   | `60000`                                 |
-| `clawAI.routingMode`      | workspace | `AUTO`                                  |
-| `clawAI.agentMode`        | workspace | `AUTO`                                  |
-| `clawAI.permissionMode`   | workspace | `MANUAL`                                |
-| `clawAI.selectedModel`    | workspace | empty                                   |
-| `clawAI.maxContextBytes`  | workspace | `200000`                                |
-| `clawAI.maxContextFiles`  | workspace | `40`                                    |
-| `clawAI.exclude`          | workspace | generated, build, secret, and VCS globs |
-| `clawAI.historyLimit`     | window    | `50`                                    |
+| Setting                      | Scope     | Default                                 |
+| ---------------------------- | --------- | --------------------------------------- |
+| `clawAI.backendUrl`          | machine   | `https://claw.local`                    |
+| `clawAI.backendEnvironment`  | machine   | `LOCAL` (`LOCAL`, `CLOUD`, `CUSTOM`)    |
+| `clawAI.frontendEnvironment` | machine   | `LOCAL` (`LOCAL`, `CLOUD`, `CUSTOM`)    |
+| `clawAI.requestTimeoutMs`    | machine   | `60000`                                 |
+| `clawAI.routingMode`         | workspace | `AUTO`                                  |
+| `clawAI.agentMode`           | workspace | `AUTO`                                  |
+| `clawAI.permissionMode`      | workspace | `MANUAL`                                |
+| `clawAI.selectedModel`       | workspace | empty                                   |
+| `clawAI.maxContextBytes`     | workspace | `200000`                                |
+| `clawAI.maxContextFiles`     | workspace | `40`                                    |
+| `clawAI.exclude`             | workspace | generated, build, secret, and VCS globs |
+| `clawAI.historyLimit`        | window    | `50`                                    |
 
 Secrets are deliberately not settings.
 

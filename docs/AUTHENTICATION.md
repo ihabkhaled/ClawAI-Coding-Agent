@@ -4,13 +4,20 @@ The extension delegates login and consent to the configured ClawAI web app. It
 never asks for or receives the account password.
 
 Before authentication, the webview renders only its connection gateway. The
-user independently selects Local or Custom Backend and Frontend origins, then
-starts authorization from the in-extension Connect button. Local resolves both
-origins to `https://claw.local`; the visible Cloud choices remain disabled until
-the hosted endpoints are finalized. History, models,
-workspace context, and the composer are not rendered as available controls
-until the session is authenticated. Connection progress and failures remain
-inside the webview instead of opening VS Code input or warning dialogs.
+user independently selects Local, Cloud, or Custom Backend and Frontend
+origins, then starts authorization from the in-extension Connect button. Local
+resolves both origins to `https://claw.local`; Cloud resolves both to the
+hosted deployment at `https://claw-ai.co`, which serves the API and the web app
+under one publicly trusted certificate. The two lanes are independent: a Cloud
+backend with a Local frontend is a valid, if unusual, selection, and the
+extension does not couple them. History, models, workspace context, and the
+composer are not rendered as available controls until the session is
+authenticated. Connection progress and failures remain inside the webview
+instead of opening VS Code input or warning dialogs.
+
+Tokens are keyed by a digest of the normalized backend origin, so the Local and
+Cloud lanes hold separate sessions. Switching between them does not carry a
+session across, and it does not destroy the one left behind.
 
 API calls, token exchange, models, chat, and agent runs use the Backend origin.
 The browser authorization page uses the Frontend origin, so split deployments

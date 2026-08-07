@@ -4,7 +4,8 @@ const loopbackHosts = new Set(['localhost', '127.0.0.1', '[::1]', '::1', 'claw.l
 
 export const BACKEND_LOCAL_URL = 'https://claw.local';
 export const FRONTEND_LOCAL_URL = 'https://claw.local';
-export const FRONTEND_CLOUD_URL = 'https://claw-frontend-five.vercel.app';
+export const BACKEND_CLOUD_URL = 'https://claw-ai.co';
+export const FRONTEND_CLOUD_URL = 'https://claw-ai.co';
 
 export const connectionEnvironmentSchema = z.enum(['LOCAL', 'CLOUD', 'CUSTOM']);
 export type ConnectionEnvironment = z.infer<typeof connectionEnvironmentSchema>;
@@ -86,7 +87,7 @@ export function resolveConnectionEndpoint(
   customUrl: string,
 ): string {
   if (environment === 'CLOUD') {
-    throw new Error(`ClawAI ${kind} cloud is not available yet.`);
+    return kind === 'backend' ? BACKEND_CLOUD_URL : FRONTEND_CLOUD_URL;
   }
   if (environment === 'LOCAL') {
     return kind === 'backend' ? BACKEND_LOCAL_URL : FRONTEND_LOCAL_URL;

@@ -314,7 +314,7 @@ textarea:disabled {
   background: color-mix(in srgb, var(--claw-accent) 10%, transparent);
 }
 
-.environment-options label.environment-disabled {
+.environment-options label:has(input:disabled) {
   cursor: not-allowed;
   opacity: 0.48;
 }
@@ -326,11 +326,13 @@ textarea:disabled {
   gap: 2px;
 }
 
+/* The origin is the point of the label, so wrap it rather than clip it to
+   "https://claw.lo…". `anywhere` breaks a long host without a hyphen to
+   break on, which ellipsis could only hide. */
 .environment-options small {
-  overflow: hidden;
   color: var(--claw-muted);
   font-size: 0.62rem;
-  text-overflow: ellipsis;
+  overflow-wrap: anywhere;
 }
 
 .custom-endpoint {

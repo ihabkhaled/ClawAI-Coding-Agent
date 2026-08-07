@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import {
+  BACKEND_CLOUD_URL,
   BACKEND_LOCAL_URL,
   FRONTEND_CLOUD_URL,
   FRONTEND_LOCAL_URL,
@@ -13,19 +14,33 @@ import {
 } from '../../src/core/configuration';
 
 describe('connection environments', () => {
-  it('resolves local and custom endpoints while keeping cloud unavailable', () => {
+  it('resolves the local, cloud, and custom endpoints', () => {
     expect(resolveConnectionEndpoint('backend', 'LOCAL', '')).toBe(BACKEND_LOCAL_URL);
     expect(resolveConnectionEndpoint('frontend', 'LOCAL', '')).toBe(FRONTEND_LOCAL_URL);
+    expect(resolveConnectionEndpoint('backend', 'CLOUD', '')).toBe(BACKEND_CLOUD_URL);
+    expect(resolveConnectionEndpoint('frontend', 'CLOUD', '')).toBe(FRONTEND_CLOUD_URL);
     expect(resolveConnectionEndpoint('backend', 'CUSTOM', 'https://api.example.com/')).toBe(
       'https://api.example.com',
     );
     expect(resolveConnectionEndpoint('frontend', 'CUSTOM', 'https://app.example.com/')).toBe(
       'https://app.example.com',
     );
-    expect(() => resolveConnectionEndpoint('backend', 'CLOUD', '')).toThrow(/not available/iu);
-    expect(() => resolveConnectionEndpoint('frontend', 'CLOUD', FRONTEND_CLOUD_URL)).toThrow(
-      /not available/iu,
+  });
+
+  it('ignores a stale custom URL when the cloud lane is selected', () => {
+    expect(resolveConnectionEndpoint('backend', 'CLOUD', 'https://left-over.example.com')).toBe(
+      BACKEND_CLOUD_URL,
     );
+    expect(resolveConnectionEndpoint('frontend', 'CLOUD', 'https://left-over.example.com')).toBe(
+      FRONTEND_CLOUD_URL,
+    );
+  });
+
+  it('publishes cloud endpoints that survive the extension URL guards', () => {
+    expect(normalizeBackendUrl(BACKEND_CLOUD_URL)).toBe(BACKEND_CLOUD_URL);
+    expect(normalizeFrontendUrl(FRONTEND_CLOUD_URL)).toBe(FRONTEND_CLOUD_URL);
+    expect(new URL(BACKEND_CLOUD_URL).protocol).toBe('https:');
+    expect(new URL(FRONTEND_CLOUD_URL).protocol).toBe('https:');
   });
 
   it('normalizes safe frontend origins and rejects unsafe hosted URLs', () => {

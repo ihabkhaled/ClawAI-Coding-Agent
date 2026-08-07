@@ -4,18 +4,24 @@ import { createServer } from 'node:http';
 import { join } from 'node:path';
 import process, { cwd, stdout } from 'node:process';
 
-import { transform } from 'esbuild';
+import { build } from 'esbuild';
 
 const root = cwd();
 const nonce = 'playwright-fixture-nonce';
-const markupSource = readFileSync(join(root, 'src', 'webview', 'chat-markup.ts'), 'utf8');
-const transformed = await transform(markupSource, {
+// Bundled, not transpiled: the markup imports the same endpoint constants the
+// resolver uses, and a bare `transform` leaves that import unresolvable in a
+// data: module.
+const bundled = await build({
+  bundle: true,
+  entryPoints: [join(root, 'src', 'webview', 'chat-markup.ts')],
+  external: ['vscode'],
   format: 'esm',
-  loader: 'ts',
+  platform: 'node',
   target: 'es2022',
+  write: false,
 });
 const markupModule = await import(
-  `data:text/javascript;base64,${Buffer.from(transformed.code).toString('base64')}`
+  `data:text/javascript;base64,${Buffer.from(bundled.outputFiles[0].text).toString('base64')}`
 );
 const bridge = `<script nonce="${nonce}">
 window.__clawMock = {

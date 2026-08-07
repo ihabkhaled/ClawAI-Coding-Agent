@@ -1237,7 +1237,7 @@ function syncConnectionControls(state, authorizing) {
   toggleCustomEndpoint('backendEnvironment', elements.backendUrlInput);
   toggleCustomEndpoint('frontendEnvironment', elements.frontendUrlInput);
   for (const control of elements.connectionForm.querySelectorAll('input')) {
-    control.disabled = authorizing || control.value === 'CLOUD';
+    control.disabled = authorizing;
   }
 }
 

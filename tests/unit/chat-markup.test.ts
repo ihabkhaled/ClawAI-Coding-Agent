@@ -1,5 +1,10 @@
 import { describe, expect, it } from 'vitest';
 
+import {
+  BACKEND_CLOUD_URL,
+  BACKEND_LOCAL_URL,
+  FRONTEND_CLOUD_URL,
+} from '../../src/core/configuration';
 import { renderChatMarkup } from '../../src/webview/chat-markup';
 
 describe('renderChatMarkup', () => {
@@ -51,13 +56,33 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('name="frontendEnvironment"');
     expect(html).toContain('id="backendEnvironmentCloud"');
     expect(html).toContain('id="frontendEnvironmentCloud"');
-    expect(html).toMatch(/id="backendEnvironmentCloud"[^>]*disabled/iu);
-    expect(html).toMatch(/id="frontendEnvironmentCloud"[^>]*disabled/iu);
-    expect(html).toContain('Coming soon');
     expect(html).toContain('id="connectionSettingsButton"');
     expect(html).toContain('id="connectButton"');
     expect(html).toContain('id="authenticatedUi"');
     expect(html).toContain('id="approvalReview"');
+  });
+
+  it('offers every cloud radio as a selectable lane labelled with its real origin', () => {
+    for (const id of [
+      'backendEnvironmentCloud',
+      'frontendEnvironmentCloud',
+      'settingsBackendCloud',
+      'settingsFrontendCloud',
+    ]) {
+      const radio = new RegExp(`<input id="${id}"[^>]*>`, 'iu').exec(html)?.[0];
+      expect(radio, `${id} is missing from the markup`).toBeDefined();
+      expect(radio).toContain('value="CLOUD"');
+      expect(radio).not.toContain('disabled');
+    }
+    expect(html).not.toContain('environment-disabled');
+    expect(html).not.toContain('Coming soon');
+  });
+
+  it('prints resolver origins so the gate cannot drift from what it connects to', () => {
+    expect(html).toContain(`<small>${BACKEND_CLOUD_URL}</small>`);
+    expect(html).toContain(`<small>${FRONTEND_CLOUD_URL}</small>`);
+    expect(html).toContain(`<small>${BACKEND_LOCAL_URL}</small>`);
+    expect(html).toContain(`placeholder="${BACKEND_LOCAL_URL}"`);
   });
 
   it('keeps accessible landmarks and a strict nonce-based CSP without inline handlers', () => {
