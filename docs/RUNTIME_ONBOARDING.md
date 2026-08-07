@@ -59,6 +59,24 @@ Each run's trace and journal record the mode in force, so cost can be
 attributed to the setting that chose it, and two runs at different efforts
 produce different policy snapshot hashes.
 
+## Speed modes
+
+`clawAI.speedMode` bounds how many workspace **metadata lookups** — the
+containment check and the stat — are in flight while context is assembled.
+
+| Mode   | Lookups in flight |
+| ------ | ----------------- |
+| `1X`   | 1 (default)       |
+| `1.5X` | 4                 |
+| `2X`   | 8                 |
+
+Reading a file's bytes is deliberately excluded. It stays serial and conditional
+on the running byte total, so a run never pulls a near-limit candidate into
+memory just to discard it. Approvals, writes, commands, and the set of files
+that end up in context are identical at every speed — asserted by a test that
+compares the produced context across all three modes under a truncating byte
+limit.
+
 ## Privacy and evidence
 
 Runtime journals are encrypted with a random key held in VS Code Secret Storage. Evidence exports are sanitized, exclude hidden reasoning and credentials, and include an integrity hash chain. Remote telemetry is off by default and requires explicit policy plus user authorization.

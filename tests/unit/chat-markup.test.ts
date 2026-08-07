@@ -42,6 +42,7 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('id="moreSettingsSummary"');
     expect(html).toContain('id="agentMode"');
     expect(html).toContain('id="effortMode"');
+    expect(html).toContain('id="speedMode"');
     expect(html).toContain('id="permissionMode"');
     expect(html).toContain('id="contextMode"');
     expect(html).toContain('id="researchMode"');

@@ -11,10 +11,12 @@ import {
   type GlobalConfiguration,
 } from '../core/configuration';
 import { normalizeEffortMode } from '../core/effort-mode';
+import { normalizeSpeedMode } from '../core/speed-mode';
 
 import type { AgentMode } from '../core/agent-mode.types';
 import type { EffortMode } from '../core/effort-mode';
 import type { PermissionMode } from '../core/permission-policy.types';
+import type { SpeedMode } from '../core/speed-mode';
 
 function normalizePermissionMode(value: unknown): PermissionMode {
   if (
@@ -42,6 +44,7 @@ export interface RuntimeConfiguration extends GlobalConfiguration {
   backendEnvironment?: ConnectionEnvironment;
   backendUrl: string;
   effortMode: EffortMode;
+  speedMode: SpeedMode;
   frontendCustomUrl?: string;
   frontendEnvironment?: ConnectionEnvironment;
   frontendUrl?: string;
@@ -145,6 +148,7 @@ export class ConfigurationService {
     return {
       agentMode: configuration.get<AgentMode>('agentMode') ?? 'AUTO',
       effortMode: normalizeEffortMode(configuration.get<unknown>('effortMode')),
+      speedMode: normalizeSpeedMode(configuration.get<unknown>('speedMode')),
       backendCustomUrl,
       backendEnvironment,
       backendUrl: resolveConnectionEndpoint('backend', backendEnvironment, backendCustomUrl),
@@ -172,6 +176,12 @@ export class ConfigurationService {
     await vscode.workspace
       .getConfiguration('clawAI')
       .update('effortMode', mode, vscode.ConfigurationTarget.Workspace);
+  }
+
+  async selectSpeedMode(mode: SpeedMode): Promise<void> {
+    await vscode.workspace
+      .getConfiguration('clawAI')
+      .update('speedMode', mode, vscode.ConfigurationTarget.Workspace);
   }
 
   async selectPermissionMode(mode: PermissionMode): Promise<boolean> {

@@ -33,6 +33,7 @@
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
   "config.routingMode": "Use automatic backend routing or a manually selected model.",
   "config.agentMode": "Choose automatic execution or read-only planning.",
+  "config.speedMode": "How many workspace metadata lookups run at once while building context. Byte reads stay serial; approvals, writes, commands and the included file set are never affected.",
   "config.effortMode": "How much a run may spend: model turns, tool calls, wall clock and output size. Ultra is the default and matches the fixed budget used before effort modes existed.",
   "config.permissionMode": "Control approvals for workspace context and edit generation. Final diff review is always required.",
   "config.selectedModel": "Manual model selection encoded as provider:model.",

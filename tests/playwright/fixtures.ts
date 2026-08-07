@@ -56,6 +56,7 @@ export function baseState() {
     frontendEnvironment: 'LOCAL',
     frontendUrl: 'https://claw.local',
     effortMode: 'ULTRA',
+    speedMode: '1X',
     contextReceipt: undefined,
     entitlements: undefined,
     generationQueue: {

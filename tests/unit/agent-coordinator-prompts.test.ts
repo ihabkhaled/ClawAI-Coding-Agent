@@ -16,6 +16,7 @@ import type { RuntimeConfiguration } from '../../src/services/configuration-serv
 const configuration: RuntimeConfiguration = {
   agentMode: 'AUTO',
   effortMode: 'ULTRA',
+  speedMode: '1X',
   backendUrl: 'https://claw.local',
   exclude: [],
   historyLimit: 50,

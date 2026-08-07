@@ -2,6 +2,42 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.55.0
+
+Minor: speed modes exist, and the settings popover stops hiding half of itself.
+
+- **The popover was clipping its own labels.** `.secondary-controls` is
+  positioned above its summary inside `.composer-card`, which clips overflow —
+  so once a fifth control pushed the panel to three rows, the entire top row of
+  labels sat 32px above the card edge and was cut off. The controls were still
+  there and still worked; they just had no visible names, and the panel looked
+  shifted into the composer. The clip is now released only while the popover is
+  open. Measured before and after in a browser, not eyeballed.
+- The popover also squeezed its columns until "Ask for Approval" read "Ask for
+  Appro". Columns are `auto-fit` now and the panel is wider, so adding a control
+  reflows instead of truncating, with a height cap so nothing can push it off
+  screen again.
+- **`clawAI.speedMode` adds 1X, 1.5X and 2X.** Building workspace context did a
+  containment check, then a stat, then a read — strictly one file at a time, for
+  up to forty files. The containment checks and stats now run four (1.5X) or
+  eight (2X) at a time.
+- **What speed deliberately does not do.** Reading a file's bytes stays serial
+  and conditional on the running byte total. Parallelising that is faster and
+  pulls every near-limit candidate into memory only to discard it — the existing
+  suite caught exactly that regression during development, and the memory bound
+  it guards is worth more than the latency. Approvals, writes, commands and the
+  set of files that end up in context are untouched at every speed.
+- The order-dependent part stays ordered. Which files fit depends on how many
+  bytes the ones before them consumed, so the lookups overlap while the decision
+  that consumes them stays strictly sequential. A test asserts the produced
+  context is byte-identical at 1X, 1.5X and 2X, including under a byte limit
+  that truncates — a comparison that would be vacuous if nothing were excluded,
+  so the test checks that too.
+- A speculatively prefetched neighbour cannot raise an error the one-at-a-time
+  path would never have produced: a prefetch failure is held and surfaced only
+  if the sequential loop actually reaches that file.
+- 1X is the default and is the previous behaviour exactly.
+
 ## 0.54.0
 
 Minor: how hard a run may work is now a choice, and the choice does something.

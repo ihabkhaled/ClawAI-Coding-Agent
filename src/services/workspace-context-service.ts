@@ -13,6 +13,7 @@ import {
   type WorkspaceReadiness,
 } from '../core/context-mode';
 import { EMPTY_CONTEXT } from '../core/empty-context';
+import { forEachPrefetched, readConcurrency } from '../core/speed-mode';
 import {
   isRealPathInsideWorkspace,
   resolveCanonicalWorkspacePath,
@@ -164,6 +165,7 @@ export class WorkspaceContextService {
       configuration.maxContextBytes,
       configuration.maxContextFiles,
       canonicalWorkspacePath,
+      readConcurrency(configuration.speedMode),
     );
     return this.finish(read.candidates, configuration, ignore, [
       ...preReadExcluded,
@@ -219,43 +221,70 @@ export class WorkspaceContextService {
     maxBytes: number,
     maxFiles: number,
     canonicalWorkspacePath: string | undefined,
+    concurrency: number,
   ): Promise<WorkspaceReadResult> {
     const candidates: ContextCandidate[] = [];
     const excluded: ContextExclusion[] = [];
     let readBytes = 0;
     let readFiles = 0;
-    for (const [index, file] of files.entries()) {
-      const remainingBytes = maxBytes - readBytes;
-      if (remainingBytes <= 0 || readFiles >= maxFiles) {
-        excluded.push(
-          ...files.slice(index).map((remaining) => ({
-            path: remaining.path,
-            reason: 'limit' as const,
-          })),
-        );
-        break;
-      }
-      await this.assertRealPathInsideWorkspace(canonicalWorkspacePath, file.uri);
-      const stat = await vscode.workspace.fs.stat(file.uri);
-      if (stat.type !== vscode.FileType.File) {
-        continue;
-      }
-      if (stat.size > remainingBytes) {
-        excluded.push({ path: file.path, reason: 'limit' });
-        continue;
-      }
-      const bytes = await vscode.workspace.fs.readFile(file.uri);
-      readBytes += bytes.byteLength;
-      readFiles += 1;
-      if (bytes.byteLength > remainingBytes) {
-        excluded.push({ path: file.path, reason: 'limit' });
-        continue;
-      }
-      const content = new TextDecoder('utf-8', { fatal: false }).decode(bytes);
-      candidates.push({
-        path: file.path,
-        content,
-      });
+    let failure: unknown;
+
+    // The reads run in bounded parallel; the accounting below stays sequential
+    // and in order, because which files fit depends on how many bytes the ones
+    // before them consumed. Deciding in parallel would change the context.
+    await forEachPrefetched(
+      files,
+      concurrency,
+      // Containment check and stat only. Reading bytes here would be faster
+      // still and would defeat the point of the size check below: a run would
+      // pull every near-limit candidate into memory just to discard it.
+      async (file) => {
+        await this.assertRealPathInsideWorkspace(canonicalWorkspacePath, file.uri);
+        return vscode.workspace.fs.stat(file.uri);
+      },
+      async (file, fetched, index) => {
+        const remainingBytes = maxBytes - readBytes;
+        if (remainingBytes <= 0 || readFiles >= maxFiles) {
+          excluded.push(
+            ...files.slice(index).map((remaining) => ({
+              path: remaining.path,
+              reason: 'limit' as const,
+            })),
+          );
+          return 'stop';
+        }
+        if (!fetched.ok) {
+          // Surfaced only for a file the sequential loop actually reached, so a
+          // speculatively prefetched neighbour cannot raise an error that the
+          // one-at-a-time path would never have produced.
+          failure = fetched.error;
+          return 'stop';
+        }
+        const stat = fetched.value;
+        if (stat.type !== vscode.FileType.File) {
+          return 'continue';
+        }
+        if (stat.size > remainingBytes) {
+          excluded.push({ path: file.path, reason: 'limit' });
+          return 'continue';
+        }
+        const bytes = await vscode.workspace.fs.readFile(file.uri);
+        readBytes += bytes.byteLength;
+        readFiles += 1;
+        if (bytes.byteLength > remainingBytes) {
+          excluded.push({ path: file.path, reason: 'limit' });
+          return 'continue';
+        }
+        candidates.push({
+          content: new TextDecoder('utf-8', { fatal: false }).decode(bytes),
+          path: file.path,
+        });
+        return 'continue';
+      },
+    );
+
+    if (failure !== undefined) {
+      throw failure instanceof Error ? failure : new Error(JSON.stringify(failure));
     }
     return { candidates, excluded };
   }

@@ -4,6 +4,7 @@ export function testRuntimeConfiguration(): RuntimeConfiguration {
   return {
     agentMode: 'AUTO',
     effortMode: 'ULTRA',
+    speedMode: '1X',
     backendCustomUrl: '',
     backendEnvironment: 'LOCAL',
     backendUrl: 'https://claw.local',
