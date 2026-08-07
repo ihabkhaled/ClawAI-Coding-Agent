@@ -40,6 +40,9 @@ export interface RuntimeToolExecutorPort {
   execute(invocation: ToolInvocation, signal?: AbortSignal): Promise<RuntimeToolExecutionOutput>;
 }
 
+/** Leaves room for the surrounding sentence inside the schema's 2,000 cap. */
+const MAX_FAILURE_REASON_CHARACTERS = 1_500;
+
 export interface RuntimeToolDispatchObserver {
   readonly onInvocationAdmitted: (invocation: ToolInvocation, budget: RuntimeBudgetState) => void;
 }
@@ -203,9 +206,9 @@ export class RuntimeToolDispatcher {
           this.assertCurrentEpochs();
           outcome = { status: 'succeeded', ...output };
         }
-      } catch {
+      } catch (error: unknown) {
         this.assertCurrentEpochs();
-        outcome = this.failureOutcome(deadline);
+        outcome = this.failureOutcome(deadline, error);
       }
       return this.complete(admission.invocation, startedAtMs, continuation, outcome);
     } finally {
@@ -243,7 +246,30 @@ export class RuntimeToolDispatcher {
     };
   }
 
-  private failureOutcome(deadline: RuntimeDeadline): {
+  /**
+   * Turns a thrown executor failure into the tool error the model is shown.
+   *
+   * `cause` used to be discarded — the catch above took no parameter — so every
+   * failure became the same sentence: "The trusted tool executor failed."
+   * Seventeen different models were screened against this runtime and all
+   * seventeen produced a valid `workspace.files list` request that failed with
+   * that message and 166 bytes, identical every time. Nothing in the panel, the
+   * Output channel, the run journal or the backend logs said why, so the one
+   * fact needed to fix it was the one fact thrown away. The model's own reply
+   * was "the trusted executor returned a non-retryable failure" — which is all
+   * it had.
+   *
+   * The reason is handed over raw on purpose. `buildRuntimeToolResult` already
+   * runs every tool error through `sanitizeError`, which redacts it and derives
+   * `redactionApplied` from whether its own pass changed anything. Redacting
+   * here as well left that pass nothing to do, so the flag came back false on a
+   * message that had in fact been scrubbed — a duplicated concern that made the
+   * honest signal dishonest.
+   */
+  private failureOutcome(
+    deadline: RuntimeDeadline,
+    cause?: unknown,
+  ): {
     readonly error: NonNullable<ToolResult['error']>;
     readonly status: ToolResult['status'];
   } {
@@ -269,11 +295,16 @@ export class RuntimeToolDispatcher {
         },
       };
     }
+    const reason =
+      cause instanceof Error ? cause.message.trim().slice(0, MAX_FAILURE_REASON_CHARACTERS) : '';
     return {
       status: 'failed',
       error: {
         code: 'TOOL_EXECUTION_FAILED',
-        message: 'The trusted tool executor failed.',
+        message:
+          reason.length === 0
+            ? 'The trusted tool executor failed.'
+            : `The trusted tool executor failed: ${reason}`,
         retryable: false,
         redactionApplied: false,
       },

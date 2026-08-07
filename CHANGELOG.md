@@ -2,6 +2,30 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.56.0
+
+Patch-level behaviour, minor bump: a failed tool says what went wrong.
+
+- `RuntimeToolDispatcher` caught an executor failure with `catch {` — no error
+  parameter — and replaced whatever was thrown with one fixed sentence, "The
+  trusted tool executor failed." A conformance screen of 21 hosted models found
+  17 of them producing a valid `workspace.files list` request that failed with
+  exactly that message and exactly 166 bytes, every time. Nothing in the panel,
+  the Output channel, the run journal or the backend logs said why. One model's
+  own reply was "the trusted executor returned a non-retryable failure", because
+  that was all it had been told.
+- The thrown reason now travels with the error, so the model can react to it and
+  a reviewer can read it.
+- It is passed on raw, deliberately. `buildRuntimeToolResult` already runs every
+  tool error through `sanitizeError`, which redacts it and derives
+  `redactionApplied` from whether its own pass changed anything. A first version
+  of this fix redacted in the dispatcher as well, which left that pass nothing to
+  do and reported `redactionApplied: false` for a message that had in fact been
+  scrubbed. Redaction stays in one place.
+- Three tests: the reason reaches the model, a blank executor message still
+  yields the bare sentence, and a secret in a failure message does not survive
+  into the result.
+
 ## 0.55.0
 
 Minor: speed modes exist, and the settings popover stops hiding half of itself.
