@@ -262,6 +262,62 @@ describe('runtime tool dispatcher', () => {
     expect(result.error?.redactionApplied).toBe(true);
   });
 
+  it('stays active after a failed step when the loop says continue, so the model can react', async () => {
+    // The failed result reaches the model with its reason, but the registry
+    // used to close as `failed` regardless of the continuation. The model's
+    // recovery turn then found a terminal registry: beginModelTurn threw
+    // RuntimeRunEndedError, the stream stopped following, and the coordinator
+    // cancelled a run the backend was still executing — the error was surfaced
+    // and then the one turn that could act on it was dropped.
+    let execution = 0;
+    const { dispatcher } = harness({
+      budget: { ...budget, maxModelTurns: 4, maxToolCalls: 2, maxToolRounds: 2 },
+      execute: () => {
+        execution += 1;
+        return execution === 1
+          ? Promise.reject(new Error('ENOENT: workspace root /foo/bar does not exist'))
+          : Promise.resolve({ structured: { files: 3 }, modelText: 'Three files inspected.' });
+      },
+    });
+
+    const failed = await dispatcher.dispatch(invocation, {
+      action: 'continue',
+      nextTurnId: 'turn_01JZZZZZZZZZZZZZZZZZZZZZY',
+    });
+
+    expect(failed.status).toBe('failed');
+    expect(dispatcher.snapshot.lifecycle).toBe('active');
+    expect(dispatcher.snapshot.registry.status).toBe('active');
+
+    dispatcher.recordModelLifecycle(false, 'turn_01JZZZZZZZZZZZZZZZZZZZZZY');
+    const recovered = await dispatcher.dispatch(
+      {
+        ...invocation,
+        invocationId: 'inv_01K33333333333333333333333',
+        idempotencyKey: 'idem_01K33333333333333333333333',
+        turnId: 'turn_01JZZZZZZZZZZZZZZZZZZZZZY',
+      },
+      continuation,
+    );
+
+    expect(recovered.status).toBe('succeeded');
+    expect(dispatcher.snapshot.lifecycle).toBe('completed');
+  });
+
+  it('still ends as failed when a step fails on a final continuation', async () => {
+    const { dispatcher } = harness({
+      execute: async () => {
+        throw new Error('fixture is unavailable');
+      },
+    });
+
+    const result = await dispatcher.dispatch(invocation, continuation);
+
+    expect(result.status).toBe('failed');
+    expect(dispatcher.snapshot.lifecycle).toBe('failed');
+    expect(dispatcher.snapshot.registry.status).toBe('failed');
+  });
+
   it('converts a policy failure into a safe replayable terminal result', async () => {
     const { dispatcher, execute } = harness({
       policy: async () => {
