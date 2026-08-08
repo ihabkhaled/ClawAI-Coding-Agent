@@ -69,6 +69,15 @@ export default tseslint.config(
     },
   },
   {
+    files: [
+      'src/core/runtime/runtime-event-stream.types.ts',
+      'src/services/runtime-event-stream-service.types.ts',
+    ],
+    rules: {
+      '@typescript-eslint/consistent-type-definitions': ['error', 'type'],
+    },
+  },
+  {
     files: ['tests/**/*.ts'],
     rules: {
       '@typescript-eslint/no-unsafe-assignment': 'off',

@@ -63,4 +63,35 @@ describe('production Runtime V2 tool catalog', () => {
       expect(definition.inputSchema.properties).toBeDefined();
     }
   });
+
+  it('advertises the exact structured-command contract the executor enforces', () => {
+    expect(structuredCommandToolDefinition.inputSchema.required).toEqual([
+      'executable',
+      'cwdRootKey',
+      'timeoutMs',
+      'outputLimitBytes',
+      'expectedEffect',
+    ]);
+    expect(structuredCommandToolDefinition.inputSchema.properties).not.toHaveProperty('targetId');
+    expect(structuredCommandToolDefinition.inputSchema.properties).toEqual(
+      expect.objectContaining({
+        executable: { type: 'string', minLength: 1, maxLength: 4_096 },
+        arguments: {
+          type: 'array',
+          items: { type: 'string', maxLength: 32_768 },
+          maxItems: 1_000,
+        },
+        cwdRootKey: { type: 'string', minLength: 1, maxLength: 100 },
+        cwd: { type: 'string', minLength: 1, maxLength: 4_096 },
+        timeoutMs: { type: 'integer', minimum: 100, maximum: 7_200_000 },
+        outputLimitBytes: { type: 'integer', minimum: 1_024, maximum: 16_777_216 },
+        expectedEffect: {
+          type: 'string',
+          enum: ['read', 'build', 'test', 'local-mutation', 'network', 'install'],
+        },
+      }),
+    );
+    expect(structuredCommandToolDefinition.description).toContain('expectedEffect');
+    expect(structuredCommandToolDefinition.description).toContain('"cwd":"."');
+  });
 });

@@ -14,7 +14,12 @@ export const structuredCommandToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',
   name: 'workspace.command',
   version: '2.0.0',
-  description: 'Run one bounded executable and argv without implicit shell interpolation.',
+  description: [
+    'Run one bounded executable and argv without implicit shell interpolation.',
+    'Use cwd "." for the workspace root.',
+    'expectedEffect must be read, build, test, local-mutation, network, or install.',
+    'Example arguments: {"executable":"npm","arguments":["test"],"cwdRootKey":"workspace-1","cwd":".","timeoutMs":120000,"outputLimitBytes":524288,"expectedEffect":"test"}.',
+  ].join(' '),
   operations: ['run'],
   riskClasses: ['process', 'network'],
   targetIds: ['target:workspace'],
@@ -33,7 +38,10 @@ export class StructuredCommandToolExecutor implements RuntimeToolExecutorPort {
       invocation.operation !== 'run'
     )
       throw new Error('Unknown structured command operation');
-    const specification = commandSpecSchema.parse(invocation.arguments);
+    const specification = commandSpecSchema.parse({
+      ...invocation.arguments,
+      targetId: invocation.targetId,
+    });
     this.files.workspaceRootUri(specification.cwdRootKey);
     const cwdUri = await this.files.uriFor(specification.cwdRootKey, specification.cwd, 'update');
     const result = await runCommandSpec(specification, cwdUri.fsPath, signal);

@@ -18,6 +18,7 @@ import {
   type ToolInvocation,
   type ToolResult,
 } from '../core/runtime/runtime-tool-contracts';
+import { normalizeToolInvocationForAdmission } from '../core/runtime/runtime-tool-normalization';
 import { buildRuntimeToolResult } from '../core/runtime/runtime-tool-result';
 
 export interface RuntimeToolPolicyDecision {
@@ -135,7 +136,8 @@ export class RuntimeToolDispatcher {
   ): Promise<ToolResult> {
     signal?.throwIfAborted();
     this.assertCurrentEpochs();
-    const admission = admitRuntimeInvocation(this.state.registry, value);
+    const normalized = normalizeToolInvocationForAdmission(value);
+    const admission = admitRuntimeInvocation(this.state.registry, normalized);
     if (admission.replayed) {
       const completed = this.state.results[admission.invocation.invocationId];
       if (completed === undefined) {

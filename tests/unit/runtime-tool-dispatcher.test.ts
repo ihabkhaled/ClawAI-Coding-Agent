@@ -1,6 +1,10 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { admitRuntimeInvocation } from '../../src/core/runtime/runtime-invocation-registry';
+import { structuredCommandToolDefinition } from '../../src/infrastructure/structured-command-tool-executor';
 import { RuntimeToolDispatcher } from '../../src/services/runtime-tool-dispatcher';
+
+import type { ToolDefinition, ToolInvocation } from '../../src/core/runtime/runtime-tool-contracts';
 
 const epochs = { account: 1, workspace: 2, target: 3, policy: 4 };
 const definition = {
@@ -32,6 +36,29 @@ const invocation = {
   idempotencyKey: 'idem_01JZZZZZZZZZZZZZZZZZZZZZZ',
   requestedAt: '2026-08-02T08:00:00.000Z',
 };
+const staleCommandInvocation: ToolInvocation = {
+  schemaVersion: '2.0',
+  invocationId: 'inv_01JZZZZZZZZZZZZZZZZZZZZZYY',
+  runId: 'run_01JZZZZZZZZZZZZZZZZZZZZZYY',
+  turnId: 'turn_01JZZZZZZZZZZZZZZZZZZZZYY',
+  toolName: structuredCommandToolDefinition.name,
+  toolVersion: structuredCommandToolDefinition.version,
+  operation: 'run',
+  arguments: {
+    executable: 'npm',
+    arguments: ['test'],
+    cwdRootKey: 'workspace-1',
+    cwd: '.',
+    timeoutMs: 120_000,
+    outputLimitBytes: 524_288,
+    expectedEffect: 'test',
+    targetId: 'target:stale-workspace',
+  },
+  targetId: 'target:workspace',
+  epochs,
+  idempotencyKey: 'idem_01JZZZZZZZZZZZZZZZZZZZZYY',
+  requestedAt: '2026-08-08T13:16:00.000Z',
+};
 const budget = {
   maxModelTurns: 2,
   maxToolCalls: 1,
@@ -50,8 +77,11 @@ function harness(
     policyDecision?: 'allow' | 'deny';
     currentEpochs?: () => typeof epochs;
     execute?: () => Promise<{ structured: { files: number }; modelText: string }>;
+    definition?: ToolDefinition;
+    invocation?: ToolInvocation;
   } = {},
 ) {
+  const selectedInvocation = overrides.invocation ?? invocation;
   const policy = vi.fn(
     overrides.policy ??
       (async () => ({
@@ -66,10 +96,10 @@ function harness(
   );
   let now = 1_000;
   const dispatcher = new RuntimeToolDispatcher({
-    runId: invocation.runId,
-    turnId: invocation.turnId,
+    runId: selectedInvocation.runId,
+    turnId: selectedInvocation.turnId,
     epochs,
-    definitions: [definition],
+    definitions: [overrides.definition ?? definition],
     budget: overrides.budget ?? budget,
     startedAtMs: now,
     currentEpochs: overrides.currentEpochs ?? (() => epochs),
@@ -343,6 +373,27 @@ describe('runtime tool dispatcher', () => {
     ).rejects.toThrow(/arguments/i);
     expect(policy).not.toHaveBeenCalled();
     expect(execute).not.toHaveBeenCalled();
+  });
+
+  it('removes a stale nested command target before strict registry admission', async () => {
+    const { dispatcher, execute, policy } = harness({
+      definition: structuredCommandToolDefinition,
+      invocation: staleCommandInvocation,
+    });
+
+    expect(() =>
+      admitRuntimeInvocation(dispatcher.snapshot.registry, staleCommandInvocation),
+    ).toThrow(/targetId.*not allowed/iu);
+
+    const result = await dispatcher.dispatch(staleCommandInvocation, continuation);
+    const admitted =
+      dispatcher.snapshot.registry.invocations[staleCommandInvocation.invocationId]?.invocation;
+
+    expect(result).toMatchObject({ status: 'succeeded' });
+    expect(admitted?.targetId).toBe('target:workspace');
+    expect(admitted?.arguments).not.toHaveProperty('targetId');
+    expect(policy).toHaveBeenCalledWith(admitted, expect.any(AbortSignal));
+    expect(execute).toHaveBeenCalledWith(admitted, expect.any(AbortSignal));
   });
 
   it('checks current epochs again before returning an executor result', async () => {
