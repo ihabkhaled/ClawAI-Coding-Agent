@@ -2,6 +2,28 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.57.2
+
+Patch: oversized tool output now becomes recoverable model feedback instead of
+ending the run.
+
+- Runtime V2 now validates the complete trusted-executor output before result
+  completion. Invalid structured data or oversized model text becomes a fixed,
+  non-retryable `TOOL_OUTPUT_INVALID` result without echoing raw adapter data or
+  schema diagnostics.
+- The failed result is stored and replayed by invocation identity. A
+  `continue` continuation remains active, the backend receives the canonical
+  failure, and the model can narrow its request or choose another tool on the
+  next turn. Possible mutations are explicitly not retried automatically.
+- Workspace list, glob, and search now share the Runtime V2 collection limit of 100. List pagination exposes `nextCursor`; saturated glob/search results are
+  marked `truncated`, including searches that inspect 100 candidate files but
+  find fewer matching lines. The tool catalog advertises the exact limit and
+  recovery guidance.
+- Dispatcher, run-service, catalog, and VS Code filesystem regressions pin
+  bounded output, safe failure materialization, exact replay, transport
+  submission, recovery turns, pagination, candidate saturation, and rejection
+  of explicit limits above 100.
+
 ## 0.57.1
 
 Patch: a rejected tool request can no longer leave a run spinning forever.

@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import {
   advanceRuntimeInvocationRegistryTurn,
   admitRuntimeInvocation,
@@ -5,7 +7,11 @@ import {
   createRuntimeInvocationRegistry,
   type RuntimeInvocationRegistry,
 } from '../core/runtime/runtime-invocation-registry';
-import { runtimeJsonObjectSchema } from '../core/runtime/runtime-json-value';
+import {
+  MAX_RUNTIME_JSON_STRING_LENGTH,
+  runtimeJsonObjectSchema,
+  type RuntimeJsonObject,
+} from '../core/runtime/runtime-json-value';
 import {
   consumeRuntimeBudget,
   createRuntimeBudgetState,
@@ -43,6 +49,12 @@ export interface RuntimeToolExecutorPort {
 
 /** Leaves room for the surrounding sentence inside the schema's 2,000 cap. */
 const MAX_FAILURE_REASON_CHARACTERS = 1_500;
+const runtimeToolExecutionOutputSchema = z
+  .object({
+    structured: runtimeJsonObjectSchema.optional(),
+    modelText: z.string().max(MAX_RUNTIME_JSON_STRING_LENGTH).optional(),
+  })
+  .strict();
 
 export interface RuntimeToolDispatchObserver {
   readonly onInvocationAdmitted: (invocation: ToolInvocation, budget: RuntimeBudgetState) => void;
@@ -76,6 +88,12 @@ interface RuntimeDeadline {
   readonly dispose: () => void;
   readonly signal: AbortSignal;
   readonly timedOut: () => boolean;
+}
+interface RuntimeToolDispatchOutcome {
+  readonly error?: ToolResult['error'];
+  readonly modelText?: string;
+  readonly status: ToolResult['status'];
+  readonly structured?: RuntimeJsonObject;
 }
 
 function epochsMatch(left: ToolInvocation['epochs'], right: ToolInvocation['epochs']): boolean {
@@ -177,12 +195,7 @@ export class RuntimeToolDispatcher {
     const deadline = this.createDeadline(signal);
     this.activeDeadlines.set(admission.invocation.invocationId, deadline);
     try {
-      let outcome:
-        | (RuntimeToolExecutionOutput & {
-            readonly status: ToolResult['status'];
-            readonly error?: ToolResult['error'];
-          })
-        | undefined;
+      let outcome: RuntimeToolDispatchOutcome | undefined;
       try {
         const decision = await this.awaitWithinDeadline(
           this.input.policy.evaluate(admission.invocation, deadline.signal),
@@ -206,7 +219,7 @@ export class RuntimeToolDispatcher {
           );
           deadline.signal.throwIfAborted();
           this.assertCurrentEpochs();
-          outcome = { status: 'succeeded', ...output };
+          outcome = this.validatedExecutionOutcome(output);
         }
       } catch (error: unknown) {
         this.assertCurrentEpochs();
@@ -313,6 +326,32 @@ export class RuntimeToolDispatcher {
     };
   }
 
+  private validatedExecutionOutcome(
+    output: RuntimeToolExecutionOutput,
+  ): RuntimeToolDispatchOutcome {
+    const parsed = runtimeToolExecutionOutputSchema.safeParse(output);
+    if (!parsed.success) return this.invalidOutputOutcome();
+    return {
+      status: 'succeeded',
+      ...(parsed.data.structured === undefined ? {} : { structured: parsed.data.structured }),
+      ...(parsed.data.modelText === undefined ? {} : { modelText: parsed.data.modelText }),
+    };
+  }
+
+  private invalidOutputOutcome(): RuntimeToolDispatchOutcome {
+    return {
+      status: 'failed',
+      error: {
+        code: 'TOOL_OUTPUT_INVALID',
+        message:
+          'The trusted tool returned output outside the bounded Runtime V2 contract. ' +
+          'Narrow read-only requests; do not repeat mutations automatically.',
+        retryable: false,
+        redactionApplied: false,
+      },
+    };
+  }
+
   private async awaitWithinDeadline<T>(value: Promise<T>, signal: AbortSignal): Promise<T> {
     if (signal.aborted) signal.throwIfAborted();
     let rejectForAbort: ((reason: Error) => void) | undefined;
@@ -343,10 +382,7 @@ export class RuntimeToolDispatcher {
     invocation: ToolInvocation,
     startedAtMs: number,
     continuation: Continuation,
-    outcome: RuntimeToolExecutionOutput & {
-      readonly status: ToolResult['status'];
-      readonly error?: ToolResult['error'];
-    },
+    outcome: RuntimeToolDispatchOutcome,
   ): ToolResult {
     const completedAtMs = this.input.now();
     const result = buildRuntimeToolResult({
@@ -357,9 +393,7 @@ export class RuntimeToolDispatcher {
       continuation,
       maxOutputBytes: this.state.budget.budget.maxToolResultBytes,
       status: outcome.status,
-      ...(outcome.structured === undefined
-        ? {}
-        : { structured: runtimeJsonObjectSchema.parse(outcome.structured) }),
+      ...(outcome.structured === undefined ? {} : { structured: outcome.structured }),
       ...(outcome.modelText === undefined ? {} : { modelText: outcome.modelText }),
       ...(outcome.error === undefined ? {} : { error: outcome.error }),
     });
