@@ -80,12 +80,12 @@ describe('effort modes', () => {
     }
   });
 
-  it('keeps the default identical to the budget every run used before', () => {
+  it('never gives the default less of anything than runs historically had', () => {
+    // A bigger ceiling cannot fail a run that used to pass; a smaller one can.
+    // The legacy literal is written out rather than imported, so editing the
+    // constant cannot quietly pass this.
     expect(DEFAULT_EFFORT_MODE).toBe('ULTRA');
-    expect(effortBudget(DEFAULT_EFFORT_MODE)).toEqual(LEGACY_FIXED_BUDGET);
-    // The literal the runtime carried before effort modes existed. Written out
-    // rather than imported, so deleting the constant cannot quietly pass this.
-    expect(effortBudget('ULTRA')).toEqual({
+    const legacy: RunBudget = {
       maxModelTurns: 40,
       maxToolCalls: 100,
       maxToolRounds: 100,
@@ -93,7 +93,21 @@ describe('effort modes', () => {
       maxRuntimeMs: 7_200_000,
       maxOutputBytes: 16_777_216,
       maxToolResultBytes: 1_048_576,
-    });
+    };
+    expect(LEGACY_FIXED_BUDGET).toEqual(legacy);
+    const budget = effortBudget(DEFAULT_EFFORT_MODE);
+    for (const dimension of scaling) {
+      expect(budget[dimension], dimension).toBeGreaterThanOrEqual(legacy[dimension]);
+    }
+    expect(budget.maxRepairAttempts).toBeGreaterThanOrEqual(legacy.maxRepairAttempts);
+  });
+
+  it('lets the top rung buy the protocol ceiling for model turns', () => {
+    // 40 turns died on a real feature mission: discovery of a large monorepo
+    // consumed the whole budget before a single file was written. The schema
+    // allows 100; a top rung below the ceiling is a silent cap on missions.
+    expect(effortBudget('ULTRA').maxModelTurns).toBe(100);
+    expect(() => runBudgetSchema.parse(effortBudget('ULTRA'))).not.toThrow();
   });
 
   it('documents an orchestration contract for every mode', () => {

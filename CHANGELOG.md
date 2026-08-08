@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.57.0
+
+Minor: a run can now work long enough to finish a feature.
+
+- ULTRA — the default effort — was byte-identical to the pre-effort-modes
+  fixed budget: 40 model turns. A feature-scale mission died of it live: the
+  agent spent every turn on legitimate discovery reads of a large monorepo and
+  was ended by the budget before writing a single file. The runtime protocol
+  schema allows 100 model turns and 500 tool calls; the top rung stopped at
+  less than half of that ceiling.
+- ULTRA now buys the protocol ceiling: 100 model turns, 250 tool calls. XHIGH
+  rises to 60 turns and 160 calls so the ladder keeps real steps. Every other
+  rung is unchanged.
+- The compatibility guarantee is restated in the direction that matters: the
+  default never buys LESS of anything than runs historically had. A bigger
+  ceiling cannot fail a run that used to pass; a smaller one can. The legacy
+  fixed budget stays pinned in a test as the floor.
+
 ## 0.56.2
 
 Patch: password-feature files are code, not credentials — and a refused path
