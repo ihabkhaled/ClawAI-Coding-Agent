@@ -2,6 +2,32 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.56.1
+
+Patch: a failed tool no longer ends the run before the model can react.
+
+- 0.56.0 made a failed tool say what went wrong, but the run still died before
+  the model's answer to that error could execute. `RuntimeToolDispatcher`
+  terminalized on every `failed` result regardless of the continuation, closing
+  the invocation registry — while `RuntimeRunService`, by design, kept the run
+  alive and submitted the error to the backend. The model reasoned about the
+  failure and asked for its next tool, and that recovery turn hit the closed
+  registry: `beginModelTurn` threw `RuntimeRunEndedError`, the stream stopped
+  following, and the coordinator cancelled the run as abandoned. The user saw a
+  cancelled run; the backend kept executing one nobody was listening to.
+- A `failed` step now defers to the continuation exactly as a succeeded one
+  does, mirroring `terminalSteeringLifecycle`: under `continue`, the failure is
+  the model's next input, not the run's end. `denied`, `cancelled`, and
+  `timed-out` still terminalize unconditionally — the first two are human
+  decisions to stop, the third means the run's whole deadline is spent.
+- Failure loops stay bounded: every dispatch still debits the tool-call and
+  tool-round budget, so a model that keeps failing runs out of budget, not out
+  of control.
+- Three tests: the dispatcher stays active after a failed step under
+  `continue` and executes the recovery invocation; a failed step on a `final`
+  continuation still ends the run as failed; and at the service level, the
+  model's recovery turn after a failed step dispatches end to end.
+
 ## 0.56.0
 
 Patch-level behaviour, minor bump: a failed tool says what went wrong.

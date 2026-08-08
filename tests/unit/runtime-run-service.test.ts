@@ -160,6 +160,44 @@ describe('RuntimeRunService', () => {
     expect(service.hasActiveRun()).toBe(true);
   });
 
+  it('dispatches the recovery turn the model asks for after a failed step', async () => {
+    // Keeping the run alive is not enough. The dispatcher used to close its
+    // registry on the failure, so the model's recovery call — the whole point
+    // of handing it the error — threw RuntimeRunEndedError, the stream stopped
+    // following, and the coordinator cancelled the run as abandoned.
+    let execution = 0;
+    const { service, submitted } = harness({
+      execute: () => {
+        execution += 1;
+        return execution === 1
+          ? Promise.reject(new Error('fixture is unavailable'))
+          : Promise.resolve({ modelText: 'Recovered.', structured: { files: 1 } });
+      },
+    });
+    await service.start(start);
+
+    const failed = await service.dispatch(invocation, {
+      action: 'continue',
+      nextTurnId: 'turn_01JZZZZZZZZZZZZZZZZZZZZZY',
+    });
+    expect(failed.status).toBe('failed');
+
+    service.beginModelTurn(false, 'turn_01JZZZZZZZZZZZZZZZZZZZZZY');
+    const recovered = await service.dispatch(
+      {
+        ...invocation,
+        invocationId: 'inv_01K33333333333333333333333',
+        idempotencyKey: 'idem_01K33333333333333333333333',
+        turnId: 'turn_01JZZZZZZZZZZZZZZZZZZZZZY',
+      },
+      { action: 'final' },
+    );
+
+    expect(recovered.status).toBe('succeeded');
+    expect(submitted).toHaveLength(2);
+    expect(service.hasActiveRun()).toBe(false);
+  });
+
   it('adopts the authoritative server-generated run identifier', async () => {
     const { cancelled, service } = harness({ startReceipt: { runId: 'run-id-other' } });
 

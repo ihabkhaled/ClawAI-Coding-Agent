@@ -409,14 +409,32 @@ export class RuntimeToolDispatcher {
     }
   }
 
+  /**
+   * `cancelled` and `denied` are human decisions to stop, and `timed-out`
+   * means the run's whole deadline is spent — those end the dispatcher
+   * whatever the continuation says. A `failed` step defers to the continuation
+   * exactly as a succeeded one does, mirroring the run service's
+   * `terminalSteeringLifecycle`: under `continue`, the failure is the model's
+   * next input, not the run's end.
+   *
+   * `failed` used to terminalize unconditionally, which closed the invocation
+   * registry while the run service — by design — kept the run alive and
+   * submitted the error to the backend. The model reasoned about it and asked
+   * for its next tool, and that recovery turn hit the closed registry:
+   * `beginModelTurn` threw RuntimeRunEndedError, the stream stopped following,
+   * and the coordinator cancelled the run as abandoned. The executor error was
+   * surfaced to the model and then the one turn that could act on it was
+   * dropped. Failure loops stay bounded because every dispatch still debits
+   * the tool-call and tool-round budget.
+   */
   private lifecycleFor(
     result: ToolResult,
     continuation: Continuation,
   ): RuntimeToolDispatcherSnapshot['lifecycle'] {
-    if (result.status === 'succeeded')
-      return continuation.action === 'continue' ? 'active' : 'completed';
     if (result.status === 'denied') return 'blocked';
     if (result.status === 'cancelled') return 'cancelled';
-    return 'failed';
+    if (result.status === 'timed-out') return 'failed';
+    if (continuation.action === 'continue') return 'active';
+    return result.status === 'succeeded' ? 'completed' : 'failed';
   }
 }
