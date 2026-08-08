@@ -1,3 +1,5 @@
+import { COMMAND_EXPECTED_EFFECTS } from '../command-spec';
+
 import type { RuntimeJsonObject } from './runtime-tool-contracts';
 
 const text = { type: 'string', maxLength: 1_048_576 } as const;
@@ -201,20 +203,26 @@ export const runtimeToolInputSchemas = {
     expectedStatuses: integers,
     processSessionId: text,
   }),
-  command: strict({
-    executable: text,
-    arguments: texts,
-    cwdRootKey: text,
-    cwd: text,
-    environment: opaque,
-    timeoutMs: integer,
-    outputLimitBytes: integer,
-    expectedEffect: text,
-    targetId: text,
-    elevation: flag,
-    stdin: text,
-    shell: opaque,
-  }),
+  command: strict(
+    {
+      executable: { type: 'string', minLength: 1, maxLength: 4_096 },
+      arguments: {
+        type: 'array',
+        items: { type: 'string', maxLength: 32_768 },
+        maxItems: 1_000,
+      },
+      cwdRootKey: { type: 'string', minLength: 1, maxLength: 100 },
+      cwd: { type: 'string', minLength: 1, maxLength: 4_096 },
+      environment: opaque,
+      timeoutMs: { type: 'integer', minimum: 100, maximum: 7_200_000 },
+      outputLimitBytes: { type: 'integer', minimum: 1_024, maximum: 16_777_216 },
+      expectedEffect: { type: 'string', enum: [...COMMAND_EXPECTED_EFFECTS] },
+      elevation: flag,
+      stdin: text,
+      shell: opaque,
+    },
+    ['executable', 'cwdRootKey', 'timeoutMs', 'outputLimitBytes', 'expectedEffect'],
+  ),
   container: strict({
     rootKey: text,
     engine: text,

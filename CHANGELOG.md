@@ -2,6 +2,31 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.57.1
+
+Patch: a rejected tool request can no longer leave a run spinning forever.
+
+- A tool request rejected by strict admission was launched beside the event
+  stream, but its failure was only latched. Heartbeats skipped it, a reconnect
+  could strand it, and the panel stayed on `Running` while the backend waited
+  for a result that could never arrive.
+- The first dispatch failure now interrupts response acquisition, body reads,
+  heartbeat-only streams, reconnects, and terminal waits. The exact failure is
+  surfaced promptly so the coordinator can cancel the broken run and the user
+  can retry.
+- Cancellation no longer waits for a pending tool dispatch or a stream whose
+  cancel hook refuses to settle. Strict file-tool validation remains unchanged;
+  malformed file requests fail fast instead of being silently rewritten.
+- Structured commands now take their target from the authoritative tool
+  envelope. The model no longer has to duplicate `targetId` inside arguments,
+  and a stale nested value cannot redirect execution. The catalog now exposes
+  the real required fields, six allowed `expectedEffect` values, the `cwd: "."`
+  convention, and a complete example.
+- Event-stream regression coverage pins normal dispatch and steering,
+  already-ended runs, heartbeat-only failure, reconnect failure, terminal waits,
+  and non-cooperative cancellation cleanup. Command-contract coverage pins
+  target authority and keeps the advertised schema aligned with execution.
+
 ## 0.57.0
 
 Minor: a run can now work long enough to finish a feature.

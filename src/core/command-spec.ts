@@ -4,6 +4,14 @@ import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
 
 const safeEnvironmentKey =
   /^(?!.*(?:KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH))[A-Z_][A-Z0-9_]{0,99}$/iu;
+export const COMMAND_EXPECTED_EFFECTS = [
+  'read',
+  'build',
+  'test',
+  'local-mutation',
+  'network',
+  'install',
+] as const;
 
 export const commandSpecSchema = z
   .object({
@@ -19,7 +27,7 @@ export const commandSpecSchema = z
     environment: z.record(z.string().regex(safeEnvironmentKey), z.string().max(32_768)).default({}),
     timeoutMs: z.number().int().min(100).max(7_200_000),
     outputLimitBytes: z.number().int().min(1_024).max(16_777_216),
-    expectedEffect: z.enum(['read', 'build', 'test', 'local-mutation', 'network', 'install']),
+    expectedEffect: z.enum(COMMAND_EXPECTED_EFFECTS),
     targetId: z.string().min(8).max(128),
     elevation: z.boolean().default(false),
     stdin: z.string().max(1_048_576).optional(),

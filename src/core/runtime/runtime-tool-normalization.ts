@@ -72,6 +72,23 @@ export function normalizeToolInvocation(input: ToolInvocationNormalizationInput)
   }
 }
 
+export function normalizeToolInvocationForAdmission(value: unknown): ToolInvocation {
+  const invocation = parseToolInvocation(value);
+  if (
+    invocation.toolName !== 'workspace.command' ||
+    invocation.toolVersion !== '2.0.0' ||
+    !Object.hasOwn(invocation.arguments, 'targetId')
+  ) {
+    return invocation;
+  }
+  return {
+    ...invocation,
+    arguments: Object.fromEntries(
+      Object.entries(invocation.arguments).filter(([key]) => key !== 'targetId'),
+    ),
+  };
+}
+
 export function decideToolInvocationRepair(
   repairAttemptsUsed: number,
 ): ToolInvocationRepairDecision {
