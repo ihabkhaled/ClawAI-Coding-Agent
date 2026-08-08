@@ -13,9 +13,14 @@ import { parseRunBudget, type RunBudget } from './runtime/runtime-tool-contracts
  * `effort-mode.test.ts` fails if any two profiles are equal or if the ladder
  * stops being monotonic.
  *
- * `ULTRA` is deliberately byte-identical to the budget that used to be
- * hardcoded, and it is the default. Selecting a lower effort is opt-in, so
- * nobody's existing run starts failing a limit it never had to respect.
+ * `ULTRA` is the default and is never smaller in any dimension than the budget
+ * that used to be hardcoded, so nobody's existing run starts failing a limit
+ * it never had to respect. It used to be byte-identical to that legacy budget
+ * — 40 model turns — and a feature-scale mission died of it: a live run spent
+ * every turn on legitimate discovery reads of a large monorepo and was ended
+ * by the budget before writing a single file. The protocol schema allows 100
+ * turns and 500 tool calls; the top rung now buys that ceiling instead of
+ * stopping at less than half of it.
  */
 export const EFFORT_MODES = ['LOW', 'MEDIUM', 'HIGH', 'MAX', 'XHIGH', 'ULTRA'] as const;
 
@@ -39,7 +44,7 @@ export const EFFORT_MODE_CONTRACTS: Readonly<Record<EffortMode, string>> = {
   XHIGH:
     'Deep repository reasoning, multiple verification passes, wider tests, more room to recover from a failed tool.',
   ULTRA:
-    'The highest bounded mode: full plan, implementation, independent review, security pass, affected gates and E2E. Equal to the fixed budget every run used before effort modes existed.',
+    'The highest bounded mode, sized for an entire feature in one run: discovery, implementation, migration, tests, gates and E2E. Buys the whole protocol ceiling for model turns.',
 };
 
 /**
@@ -90,17 +95,17 @@ const effortBudgets: Readonly<Record<EffortMode, RunBudget>> = {
     maxToolResultBytes: 1_048_576,
   },
   XHIGH: {
-    maxModelTurns: 34,
-    maxToolCalls: 85,
-    maxToolRounds: 80,
+    maxModelTurns: 60,
+    maxToolCalls: 160,
+    maxToolRounds: 90,
     maxRepairAttempts: 1,
     maxRuntimeMs: 5_400_000,
     maxOutputBytes: 12_582_912,
     maxToolResultBytes: 1_048_576,
   },
   ULTRA: {
-    maxModelTurns: 40,
-    maxToolCalls: 100,
+    maxModelTurns: 100,
+    maxToolCalls: 250,
     maxToolRounds: 100,
     maxRepairAttempts: 1,
     maxRuntimeMs: 7_200_000,
@@ -110,10 +115,20 @@ const effortBudgets: Readonly<Record<EffortMode, RunBudget>> = {
 };
 
 /**
- * The budget every run used before effort modes existed. Exported so a test can
- * assert ULTRA still equals it, which is what makes the default a no-op.
+ * The budget every run used before effort modes existed. Exported so a test
+ * can assert the default never buys LESS of anything than runs historically
+ * had — a bigger ceiling cannot fail a run that used to pass, a smaller one
+ * can.
  */
-export const LEGACY_FIXED_BUDGET: RunBudget = effortBudgets.ULTRA;
+export const LEGACY_FIXED_BUDGET: RunBudget = {
+  maxModelTurns: 40,
+  maxToolCalls: 100,
+  maxToolRounds: 100,
+  maxRepairAttempts: 1,
+  maxRuntimeMs: 7_200_000,
+  maxOutputBytes: 16_777_216,
+  maxToolResultBytes: 1_048_576,
+};
 
 /**
  * An unknown, misspelled or absent value resolves to the default rather than
