@@ -17,7 +17,17 @@ import type {
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
 
-const relativePath = z.string().max(4_096).refine(isSafeRelativeWorkspacePath);
+// The refine used to fail with zod's bare "Invalid input", which reached the
+// model as its whole explanation. A model holding a perfectly valid path was
+// told the path was invalid, so it resubmitted the same path until the budget
+// ran out — 38 times, in the run that surfaced this. Say what the rule is.
+const relativePath = z
+  .string()
+  .max(4_096)
+  .refine(
+    isSafeRelativeWorkspacePath,
+    'Path was refused by workspace policy: it must be relative to the workspace root and must not name a credential-shaped file (for example .env, passwords.txt, id_rsa)',
+  );
 // Enumeration is the one place the workspace root is a legitimate target, and
 // the only way an agent can discover anything before it knows a subdirectory
 // name. Root spellings are folded to the empty relative path here so the rest

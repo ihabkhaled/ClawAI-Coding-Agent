@@ -2,6 +2,34 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.56.2
+
+Patch: password-feature files are code, not credentials — and a refused path
+now says why.
+
+- The sensitive-name rule denied every path merely CONTAINING "password", so
+  an agent asked to build password reset could not read or write any file the
+  feature consists of — `password-reset.controller.ts`,
+  `reset-password/page.tsx`, even the task brief that assigned the work.
+  Screened live: a model produced the correct path 38 times, was refused every
+  time, and ran out of budget. The bare `token` word rule had the same
+  overreach one directory later (`…_add_password_reset_token/` migrations).
+- Password and token names now get word-boundary and shape care, the way
+  `token` already had boundaries: standalone names outside code modules stay
+  denied (`passwords.txt`, `token.txt`, `password.md`, a `passwords/`
+  directory, `etc/passwd`), any compound with a data-shaped extension stays
+  denied (`user-passwords.csv`, `password-dump.json`), and feature code and
+  prose pass. `secret`, `credential`, `api-key`, `private-key`, and
+  `access/refresh/auth`-token compounds keep the strict substring rule — those
+  name the credential itself. `.env`, key files, and the exact-name list are
+  untouched.
+- The path refine used to fail with zod's bare "Invalid input", which reached
+  the model as its whole explanation — a model holding a valid path was told
+  the path was invalid. The refusal now states the rule it applied.
+- Four tests pin the boundary from both sides: credential stores stay denied,
+  feature files pass, standalone names stay protected outside code modules,
+  data-shaped compounds stay denied.
+
 ## 0.56.1
 
 Patch: a failed tool no longer ends the run before the model can react.
