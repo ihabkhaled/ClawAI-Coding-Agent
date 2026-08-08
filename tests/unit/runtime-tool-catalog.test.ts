@@ -94,4 +94,14 @@ describe('production Runtime V2 tool catalog', () => {
     expect(structuredCommandToolDefinition.description).toContain('expectedEffect');
     expect(structuredCommandToolDefinition.description).toContain('"cwd":"."');
   });
+
+  it('advertises filesystem discovery limits that fit the Runtime V2 result envelope', () => {
+    expect(workspaceFilesystemToolDefinition.inputSchema.properties).toEqual(
+      expect.objectContaining({
+        limit: { type: 'integer', minimum: 1, maximum: 100 },
+        maxResults: { type: 'integer', minimum: 1, maximum: 100 },
+      }),
+    );
+    expect(workspaceFilesystemToolDefinition.description).toContain('at most 100 results');
+  });
 });

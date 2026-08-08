@@ -1,6 +1,10 @@
 import { z } from 'zod';
 
-import { boundedRuntimeJsonObject, type RuntimeJsonObject } from './runtime-json-value';
+import {
+  boundedRuntimeJsonObject,
+  MAX_RUNTIME_JSON_STRING_LENGTH,
+  type RuntimeJsonObject,
+} from './runtime-json-value';
 import {
   CAPABILITY_RISK_CLASSES,
   RUNTIME_ID_PATTERN,
@@ -133,7 +137,7 @@ export const toolResultSchema = z
     invocationId: z.string().regex(RUNTIME_ID_PATTERN),
     status: z.enum(['succeeded', 'failed', 'denied', 'cancelled', 'timed-out']),
     structured: boundedRuntimeJsonObject(TOOL_RESULT_BYTES).optional(),
-    modelText: z.string().max(65_536).optional(),
+    modelText: z.string().max(MAX_RUNTIME_JSON_STRING_LENGTH).optional(),
     error: toolErrorSchema.optional(),
     receipt: toolReceiptSchema,
     continuation: continuationSchema,

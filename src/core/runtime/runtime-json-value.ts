@@ -4,9 +4,9 @@ import { z } from 'zod';
 // inputSchema -> graph -> tasks -> task -> epochs. Keep the transport bounded
 // while leaving enough headroom for those first-party definitions.
 const MAX_JSON_DEPTH = 12;
-const MAX_JSON_ENTRIES = 100;
+export const MAX_RUNTIME_JSON_ENTRIES = 100;
 const MAX_JSON_KEY_LENGTH = 120;
-const MAX_JSON_STRING_LENGTH = 65_536;
+export const MAX_RUNTIME_JSON_STRING_LENGTH = 65_536;
 
 export type RuntimeJsonPrimitive = boolean | null | number | string;
 export type RuntimeJsonValue =
@@ -20,7 +20,7 @@ const jsonPrimitiveSchema = z.union([
   z.null(),
   z.boolean(),
   z.number(),
-  z.string().max(MAX_JSON_STRING_LENGTH),
+  z.string().max(MAX_RUNTIME_JSON_STRING_LENGTH),
 ]);
 const jsonKeySchema = z.string().min(1).max(MAX_JSON_KEY_LENGTH);
 
@@ -31,11 +31,11 @@ function jsonValueAtDepth(depth: number): z.ZodType<RuntimeJsonValue> {
   const child = jsonValueAtDepth(depth - 1);
   return z.union([
     jsonPrimitiveSchema,
-    z.array(child).max(MAX_JSON_ENTRIES),
+    z.array(child).max(MAX_RUNTIME_JSON_ENTRIES),
     z
       .record(jsonKeySchema, child)
       .refine(
-        (value) => Object.keys(value).length <= MAX_JSON_ENTRIES,
+        (value) => Object.keys(value).length <= MAX_RUNTIME_JSON_ENTRIES,
         'Runtime JSON object has too many entries',
       ),
   ]);
@@ -45,7 +45,7 @@ export const runtimeJsonValueSchema: z.ZodType<RuntimeJsonValue> = jsonValueAtDe
 export const runtimeJsonObjectSchema: z.ZodType<RuntimeJsonObject> = z
   .record(jsonKeySchema, runtimeJsonValueSchema)
   .refine(
-    (value) => Object.keys(value).length <= MAX_JSON_ENTRIES,
+    (value) => Object.keys(value).length <= MAX_RUNTIME_JSON_ENTRIES,
     'Runtime JSON object has too many entries',
   );
 

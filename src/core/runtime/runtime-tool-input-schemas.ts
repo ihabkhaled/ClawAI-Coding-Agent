@@ -1,5 +1,7 @@
 import { COMMAND_EXPECTED_EFFECTS } from '../command-spec';
 
+import { MAX_RUNTIME_JSON_ENTRIES } from './runtime-json-value';
+
 import type { RuntimeJsonObject } from './runtime-tool-contracts';
 
 const text = { type: 'string', maxLength: 1_048_576 } as const;
@@ -10,6 +12,11 @@ const opaque = { type: 'object', properties: {}, additionalProperties: true } as
 const texts = { type: 'array', items: text, maxItems: 10_000 } as const;
 const integers = { type: 'array', items: integer, maxItems: 1_000 } as const;
 const objects = { type: 'array', items: opaque, maxItems: 1_000 } as const;
+const filesystemResultLimit = {
+  type: 'integer',
+  minimum: 1,
+  maximum: MAX_RUNTIME_JSON_ENTRIES,
+} as const;
 
 function strict(
   properties: RuntimeJsonObject,
@@ -263,9 +270,9 @@ export const runtimeToolInputSchemas = {
     endLine: integer,
     maxBytes: integer,
     cursor: integer,
-    limit: integer,
+    limit: filesystemResultLimit,
     pattern: text,
-    maxResults: integer,
+    maxResults: filesystemResultLimit,
     query: text,
     transaction: opaque,
   }),

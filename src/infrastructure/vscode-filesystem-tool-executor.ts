@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { z } from 'zod';
 
 import { fileTransactionSchema } from '../core/file-transaction';
+import { MAX_RUNTIME_JSON_ENTRIES } from '../core/runtime/runtime-json-value';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 import {
   isSafeRelativeWorkspacePath,
@@ -53,14 +54,19 @@ const listSchema = z
     rootKey,
     path: directoryPath,
     cursor: z.number().int().nonnegative().default(0),
-    limit: z.number().int().min(1).max(1_000).default(200),
+    limit: z.number().int().min(1).max(MAX_RUNTIME_JSON_ENTRIES).default(MAX_RUNTIME_JSON_ENTRIES),
   })
   .strict();
 const globSchema = z
   .object({
     rootKey,
     pattern: z.string().min(1).max(1_000),
-    maxResults: z.number().int().min(1).max(10_000).default(1_000),
+    maxResults: z
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_RUNTIME_JSON_ENTRIES)
+      .default(MAX_RUNTIME_JSON_ENTRIES),
   })
   .strict();
 
@@ -82,6 +88,8 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'path is always relative to that folder and never absolute. ' +
     'To enumerate the folder itself, use the list operation with path "" — that is how to ' +
     'discover the top-level layout before any subdirectory name is known. ' +
+    'List, glob, and search return at most 100 results per call. Paginate list with cursor; ' +
+    'when glob or search reports truncated, narrow the pattern or query before continuing. ' +
     // Writing was undiscoverable: every mutation goes through a nested
     // transaction whose shape the catalog reports as an empty object, so a
     // model had to guess it and no model ever did. Spelling it out here is the
@@ -219,10 +227,11 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
       undefined,
       input.maxResults,
     );
+    const boundedMatches = matches.slice(0, input.maxResults);
     return {
       structured: {
-        paths: matches.map((uri) => vscode.workspace.asRelativePath(uri, false)),
-        truncated: matches.length === input.maxResults,
+        paths: boundedMatches.map((uri) => vscode.workspace.asRelativePath(uri, false)),
+        truncated: matches.length >= input.maxResults,
       },
     };
   }
@@ -238,8 +247,9 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
       undefined,
       input.maxResults,
     );
+    const candidateSetTruncated = files.length >= input.maxResults;
     const results: { path: string; line: number; preview: string }[] = [];
-    for (const uri of files) {
+    for (const uri of files.slice(0, input.maxResults)) {
       signal?.throwIfAborted();
       if (results.length >= input.maxResults) break;
       let text: string;
@@ -260,6 +270,11 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
         if (results.length >= input.maxResults) break;
       }
     }
-    return { structured: { results, truncated: results.length >= input.maxResults } };
+    return {
+      structured: {
+        results,
+        truncated: candidateSetTruncated || results.length >= input.maxResults,
+      },
+    };
   }
 }
