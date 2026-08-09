@@ -1,0 +1,31 @@
+{
+  "_type": "https://in-toto.io/Statement/v1",
+  "subject": [
+    {
+      "name": "clawai-coding-agent-0.59.1.vsix",
+      "digest": {
+        "sha256": "6206511b84c3385d1917b41b733e57c40ae17a49805ad7c645c9af17a6b1e0a1"
+      }
+    }
+  ],
+  "predicateType": "https://slsa.dev/provenance/v1",
+  "predicate": {
+    "buildDefinition": {
+      "buildType": "https://github.com/ihabkhaled/ClawAI-Coding-Agent/.github/workflows/release.yml",
+      "externalParameters": { "version": "0.59.1" },
+      "internalParameters": {},
+      "resolvedDependencies": [
+        { "uri": "pkg:npm/clawai-coding-agent@0.59.1" },
+        { "uri": "file:clawai-coding-agent-0.59.1.cdx.json" },
+        { "uri": "file:clawai-coding-agent-0.59.1.spdx.json" }
+      ]
+    },
+    "runDetails": {
+      "builder": { "id": "https://github.com/actions/runner" },
+      "metadata": {
+        "invocationId": "clawai-coding-agent-0.59.1",
+        "reproducible": true
+      }
+    }
+  }
+}

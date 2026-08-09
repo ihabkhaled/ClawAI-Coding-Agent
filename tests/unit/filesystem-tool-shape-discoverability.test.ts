@@ -67,13 +67,23 @@ describe('the filesystem catalog documents every kind it advertises', () => {
   it('teaches patch as exact hunks rather than a diff', () => {
     // These three facts are exactly what the failing run needed and did not have.
     expect(description).toContain('hunks');
-    expect(description).toContain('"before"');
-    expect(description).toContain('"after"');
+    expect(description).toContain('beforeLines');
+    expect(description).toContain('afterLines');
     expect(description).toMatch(/not a diff/i);
     expect(description).toMatch(/exactly once/i);
   });
 
   it('warns that update replaces the whole file', () => {
     expect(description).toMatch(/replaces the whole file/i);
+  });
+
+  // Both sides of the wire cap a tool description at 2000 characters, and the
+  // backend rejects the whole run-start request when it is exceeded — the panel
+  // shows only "Validation failed", with nothing naming the field. Every
+  // addition here competes for the same budget.
+  it('fits the protocol description limit on both sides of the wire', () => {
+    // Headroom on purpose: the whole run-start request is rejected at the cap,
+    // and the failure names no field.
+    expect(description.length).toBeLessThanOrEqual(1_600);
   });
 });

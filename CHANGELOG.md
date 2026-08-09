@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.59.1
+
+Patch: the tool description fits its budget again, so runs start.
+
+- Both sides of the wire cap a tool description at 2000 characters and the
+  backend rejects the ENTIRE run-start request when one exceeds it. The client
+  is told only "Validation failed", with nothing naming the field, so a run that
+  never began looked like a broken model. Documenting the operation shapes had
+  quietly grown this description past the cap.
+- The description is rewritten to say the same things in fewer words, and a
+  regression now holds it at 1600 characters — deliberate headroom, because the
+  failure mode is a dead run rather than a truncated string.
+- The chat service now logs the offending field and rule whenever a request
+  fails validation. The response already carried them; nothing wrote them down,
+  which is what made this take a bisect to find.
+
 ## 0.59.0
 
 Minor: source code can be sent as an array of lines, which is what actually
