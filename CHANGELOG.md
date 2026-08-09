@@ -2,6 +2,30 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.57.6
+
+Patch: patching a file on a Windows checkout works at all.
+
+- The read operation normalises a file to `
+` before the model ever sees it,
+  so a model looking at a CRLF checkout is shown LF and faithfully echoes LF
+  back in its hunk. The patch applier matched that against the raw bytes, so on
+  any CRLF checkout the context could never be found: every `patch` failed with
+  "Exact patch context is missing or ambiguous", which reads like the model got
+  the context wrong when the context was exactly right.
+- Measured on a live repository during a mission: the target file held 621 CRLF
+  and zero bare LF, the model's LF hunk matched zero times, and the same hunk
+  in CRLF matched exactly once. The agent burned several attempts on it and
+  fell back to rewriting whole files with `update`, which is what destroyed a
+  schema's comments.
+- A hunk is now converted to the line ending the document actually uses, in
+  both directions, and the replacement text is converted with it so a patch
+  cannot leave mixed endings behind. A hunk that matches the raw bytes exactly
+  is still honoured, so a mixed-ending file keeps working.
+- Regressions pin an LF hunk against a CRLF document, ending preservation, an
+  ordinary LF document, a hunk already written with CRLF, and that genuinely
+  missing or ambiguous context is still refused.
+
 ## 0.57.5
 
 Patch: the file tool now documents every operation it advertises, so editing a

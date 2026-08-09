@@ -105,16 +105,42 @@ export type FileTransactionOperation = z.infer<typeof fileTransactionOperationSc
 export const contentHash = (content: Uint8Array | string): string =>
   `sha256:${createHash('sha256').update(content).digest('hex')}`;
 
+/**
+ * Rewrites a hunk to the line ending the document actually uses.
+ *
+ * The read operation normalises a file to `\n` before the model ever sees it,
+ * so a model looking at a CRLF checkout is shown LF and faithfully echoes LF
+ * back in its hunk. Matching that against the raw bytes could never succeed:
+ * on a Windows checkout every `patch` failed with "Exact patch context is
+ * missing or ambiguous", which reads like the model got the context wrong when
+ * the context was exactly right. A live mission lost several attempts to it and
+ * fell back to rewriting whole files.
+ *
+ * Converting rather than accepting either form keeps the file's own convention:
+ * splicing LF into a CRLF document would leave mixed endings behind.
+ */
+function toDocumentNewlines(text: string, documentUsesCrlf: boolean): string {
+  const normalized = text.replaceAll('\r\n', '\n');
+  return documentUsesCrlf ? normalized.replaceAll('\n', '\r\n') : normalized;
+}
+
 export function applyExactHunks(
   content: string,
   hunks: readonly { before: string; after: string }[],
 ): string {
+  const documentUsesCrlf = content.includes('\r\n');
   let output = content;
   for (const hunk of hunks) {
-    const first = output.indexOf(hunk.before);
-    if (first < 0 || output.includes(hunk.before, first + hunk.before.length))
+    // The hunk as the document would have written it, falling back to exactly
+    // what was sent so a mixed-ending file can still be matched literally.
+    const converted = toDocumentNewlines(hunk.before, documentUsesCrlf);
+    const before = output.includes(converted) ? converted : hunk.before;
+    const after =
+      before === converted ? toDocumentNewlines(hunk.after, documentUsesCrlf) : hunk.after;
+    const first = output.indexOf(before);
+    if (first < 0 || output.includes(before, first + before.length))
       throw new Error('Exact patch context is missing or ambiguous');
-    output = `${output.slice(0, first)}${hunk.after}${output.slice(first + hunk.before.length)}`;
+    output = `${output.slice(0, first)}${after}${output.slice(first + before.length)}`;
   }
   return output;
 }
