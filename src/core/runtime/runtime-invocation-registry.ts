@@ -43,10 +43,25 @@ export interface RuntimeInvocationRegistry {
   readonly status: RuntimeInvocationRegistryStatus;
 }
 
+/**
+ * Why a request was admitted but must not execute.
+ *
+ * The model authors the tool name, the operation and the arguments, so getting
+ * any of them wrong is an ordinary mistake it can correct on the next turn —
+ * not a protocol violation. Reporting it as a rejection rather than throwing
+ * keeps the invocation on the record so the failure can be completed, stored
+ * and replayed like any other result.
+ */
+export interface RuntimeInvocationRejection {
+  readonly code: string;
+  readonly message: string;
+}
+
 export interface RuntimeInvocationAdmission {
   readonly invocation: ToolInvocation;
   readonly registry: RuntimeInvocationRegistry;
   readonly replayed: boolean;
+  readonly rejection?: RuntimeInvocationRejection;
 }
 
 interface RegistryInput {
@@ -467,8 +482,27 @@ export function admitRuntimeInvocation(
     throw new Error('Runtime invocation belongs to another turn');
   if (!epochsMatch(invocation.epochs, registry.epochs))
     throw new Error('Runtime invocation epochs are stale');
+  // A tool, version, operation or target the catalog never advertised still
+  // throws: that is catalog or epoch drift between the two sides of the
+  // protocol, not something the model can talk its way out of.
   const definition = exactDefinition(registry, invocation);
-  validateValue(invocation.arguments, definition.inputSchema, '$');
+  // The argument object is different. The model authored it, so a shape it got
+  // wrong is an ordinary mistake it can correct on the very next turn. Throwing
+  // here escaped dispatch entirely and cancelled the whole run: a live mission
+  // read the schema, wrote a file, then named `content` at the top level
+  // instead of inside `operations[]` and the run ended on
+  // `Tool arguments $.content is not allowed` without the model ever being told.
+  // The request is recorded and handed back as a rejection so it completes as
+  // an ordinary failed result the next turn can answer.
+  let rejection: RuntimeInvocationRejection | undefined;
+  try {
+    validateValue(invocation.arguments, definition.inputSchema, '$');
+  } catch (error: unknown) {
+    rejection = {
+      code: 'TOOL_ARGUMENTS_INVALID',
+      message: error instanceof Error ? error.message : 'Tool arguments are not valid',
+    };
+  }
   const identity = freezeDeep<RuntimeInvocationIdentity>({
     fingerprint,
     idempotencyKey: invocation.idempotencyKey,
@@ -477,6 +511,7 @@ export function admitRuntimeInvocation(
   return {
     invocation,
     replayed: false,
+    ...(rejection === undefined ? {} : { rejection }),
     registry: {
       ...registry,
       idempotencyKeys: {

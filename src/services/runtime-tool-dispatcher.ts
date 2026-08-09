@@ -192,6 +192,21 @@ export class RuntimeToolDispatcher {
       this.state = stateBeforeAdmission;
       throw error;
     }
+    // A request the registry refused never reaches policy or the executor, but
+    // it still completes as an ordinary failed result. That keeps a `continue`
+    // continuation alive, so the model is told exactly what was wrong with its
+    // arguments and can reissue the call correctly instead of losing the run.
+    if (admission.rejection !== undefined) {
+      return this.complete(admission.invocation, startedAtMs, continuation, {
+        status: 'failed',
+        error: {
+          code: admission.rejection.code,
+          message: admission.rejection.message,
+          retryable: false,
+          redactionApplied: false,
+        },
+      });
+    }
     const deadline = this.createDeadline(signal);
     this.activeDeadlines.set(admission.invocation.invocationId, deadline);
     try {

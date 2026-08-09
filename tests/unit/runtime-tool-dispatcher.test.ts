@@ -366,11 +366,17 @@ describe('runtime tool dispatcher', () => {
     expect(execute).not.toHaveBeenCalled();
   });
 
-  it('rejects unknown or invalid invocations before policy or effects', async () => {
+  // Invalid arguments are the model's mistake, so they come back as a failed
+  // result it can correct rather than ending the run. Nothing may execute.
+  it('returns invalid arguments as a failed result before policy or effects', async () => {
     const { dispatcher, execute, policy } = harness();
-    await expect(
-      dispatcher.dispatch({ ...invocation, arguments: { unexpected: true } }, continuation),
-    ).rejects.toThrow(/arguments/i);
+    const result = await dispatcher.dispatch(
+      { ...invocation, arguments: { unexpected: true } },
+      continuation,
+    );
+
+    expect(result).toMatchObject({ status: 'failed', error: { code: 'TOOL_ARGUMENTS_INVALID' } });
+    expect(result.error?.message).toMatch(/arguments/i);
     expect(policy).not.toHaveBeenCalled();
     expect(execute).not.toHaveBeenCalled();
   });
@@ -381,9 +387,10 @@ describe('runtime tool dispatcher', () => {
       invocation: staleCommandInvocation,
     });
 
-    expect(() =>
-      admitRuntimeInvocation(dispatcher.snapshot.registry, staleCommandInvocation),
-    ).toThrow(/targetId.*not allowed/iu);
+    expect(
+      admitRuntimeInvocation(dispatcher.snapshot.registry, staleCommandInvocation).rejection
+        ?.message,
+    ).toMatch(/targetId.*not allowed/iu);
 
     const result = await dispatcher.dispatch(staleCommandInvocation, continuation);
     const admitted =
