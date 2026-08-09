@@ -87,10 +87,9 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'Set rootKey to "workspace-1" for the first workspace folder, "workspace-2" for the second, ' +
     'and so on in the order they are opened; most workspaces have only "workspace-1". ' +
     'path is always relative to that folder and never absolute. ' +
-    'To enumerate the folder itself, use the list operation with path "" — that is how to ' +
-    'discover the top-level layout before any subdirectory name is known. ' +
-    'List, glob, and search return at most 100 results per call. Paginate list with cursor; ' +
-    'when glob or search reports truncated, narrow the pattern or query before continuing. ' +
+    'To enumerate the folder itself, use list with path "" — that is how to discover the ' +
+    'top-level layout before any subdirectory name is known. List, glob and search return at ' +
+    'most 100 results; paginate list with cursor, and narrow a truncated glob or search. ' +
     // Writing was undiscoverable: every mutation goes through a nested
     // transaction whose shape the catalog reports as an empty object, so a
     // model had to guess it and no model ever did. Spelling it out here is the
@@ -103,23 +102,22 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     // Every attempt failed, and the model fell back to rewriting the whole file
     // with update, which silently deleted about forty comments it never saw.
     // Every advertised kind now carries its shape.
-    'To WRITE, put a transaction in arguments: {"transaction":{"transactionId":"<unique id>",' +
-    '"summary":"<what and why>","operations":[<exactly one operation>]}}. ' +
-    'beforeHash is the "sha256:<hex>" read reported for the current bytes. Kinds: ' +
-    'create/update {kind,rootKey,path,content,beforeHash} — beforeHash null only for create; ' +
-    'update REPLACES THE WHOLE FILE, so anything not retyped is lost. ' +
-    'patch {kind,rootKey,path,beforeHash,hunks:[{"before":"<text present now>",' +
-    '"after":"<new text>"}]} — exact text replacement, NOT a diff: no @@ headers, no +/- ' +
-    'prefixes. Each "before" must occur exactly once, so include enough surrounding lines. ' +
-    'Prefer patch when changing part of a file that already exists. ' +
-    'rename/copy {kind,rootKey,path,destination,beforeHash}. ' +
-    'delete {kind,rootKey,path,beforeHash}. mkdir {kind,rootKey,path}. ' +
-    'artifact {kind,rootKey,path,mimeType,sizeBytes,contentHash,provenance,contentBase64}. ' +
-    'FOR SOURCE CODE send it as LINES, never as one string: use "contentLines" in place of ' +
-    '"content", and "beforeLines"/"afterLines" in place of "before"/"after". Each element is ' +
-    'ONE line with no line break inside it, and they are joined back together for you. A raw ' +
-    'line break inside a JSON string is what breaks these requests. "contentBase64", ' +
-    '"beforeBase64" and "afterBase64" also work. Never send two forms of the same field.',
+    // Every sentence here competes for the same 2000-character budget that both
+    // sides of the wire enforce, and exceeding it fails the whole run-start
+    // request with nothing naming the field. Keep additions terse.
+    'To WRITE send arguments {"transaction":{"transactionId":"<id>","summary":"<why>",' +
+    '"operations":[<one operation>]}}. beforeHash is the "sha256:<hex>" from read. ' +
+    'SEND CODE AS LINES: use contentLines (array, one line per element, no line break inside ' +
+    'any element) instead of content, and beforeLines/afterLines instead of before/after. A raw ' +
+    'line break inside a JSON string is what breaks these requests. Kinds: ' +
+    'create/update {kind,rootKey,path,contentLines,beforeHash} — beforeHash null only for ' +
+    'create; update REPLACES THE WHOLE FILE. ' +
+    'patch {kind,rootKey,path,beforeHash,hunks:[{beforeLines,afterLines}]} — exact text ' +
+    'replacement, NOT a diff: no @@ or +/- prefixes; each before must occur exactly once, so ' +
+    'include enough surrounding lines. Prefer patch for an existing file. ' +
+    'rename/copy add destination; delete needs beforeHash; mkdir takes path only; artifact ' +
+    'adds mimeType,sizeBytes,contentHash,provenance,contentBase64. ' +
+    'contentBase64/beforeBase64/afterBase64 also work. Never send two forms of one field.',
   operations: [
     'stat',
     'list',
