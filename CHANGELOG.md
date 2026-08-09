@@ -2,6 +2,26 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.57.4
+
+Patch: a malformed tool request no longer ends the run.
+
+- Strict admission threw on an unknown tool or an argument that failed the
+  advertised schema, and the throw escaped dispatch entirely, so the coordinator
+  cancelled the run. The model never learned what was wrong and never got to fix
+  it. A live mission was lost exactly this way: it read the schema, wrote a file,
+  then put `content` at the top level instead of inside `operations[]` and died
+  on `Tool arguments $.content is not allowed`.
+- Admission now records the request and reports a rejection instead of throwing.
+  The dispatcher completes it as an ordinary `failed` result carrying
+  `TOOL_ARGUMENTS_INVALID` and the exact validation message, so a `continue`
+  continuation stays alive and the next turn can reissue the call with the right
+  shape. Policy and the executor are never reached, so a refused request cannot
+  become an effect, and the result is stored and replayed by invocation identity
+  like any other.
+- Regressions pin the malformed-argument path, the unadvertised-tool path, the
+  surviving run lifecycle, and that a valid request still executes untouched.
+
 ## 0.57.3
 
 Patch: the agent can run commands again — every command root was rejected

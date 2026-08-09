@@ -56,6 +56,15 @@ function registry() {
   });
 }
 
+// Argument-shape violations are handed back as a rejection the model can
+// correct on its next turn, rather than thrown. Everything else about admission
+// still throws, so these assertions read the rejection instead.
+function rejectionMessage(...args: Parameters<typeof admitRuntimeInvocation>): string {
+  const admission = admitRuntimeInvocation(...args);
+  if (admission.rejection === undefined) throw new Error('expected an argument rejection');
+  return admission.rejection.message;
+}
+
 describe('runtime invocation registry', () => {
   it('rejects an empty current turn when creating an active registry', () => {
     expect(() =>
@@ -98,9 +107,9 @@ describe('runtime invocation registry', () => {
       { section: 'tests', limits: { tags: ['a', 'b', 'c', 'd'] } },
     ];
     for (const arguments_ of invalidArguments) {
-      expect(() =>
-        admitRuntimeInvocation(registry(), { ...invocation, arguments: arguments_ }),
-      ).toThrow(/arguments/i);
+      expect(rejectionMessage(registry(), { ...invocation, arguments: arguments_ })).toMatch(
+        /arguments/i,
+      );
     }
   });
 
@@ -305,9 +314,9 @@ describe('runtime invocation registry', () => {
       { ...valid.arguments, title: 'x' },
       { ...valid.arguments, title: 'long' },
     ]) {
-      expect(() =>
-        admitRuntimeInvocation(typedRegistry, { ...valid, arguments: arguments_ }),
-      ).toThrow(/arguments/i);
+      expect(rejectionMessage(typedRegistry, { ...valid, arguments: arguments_ })).toMatch(
+        /arguments/i,
+      );
     }
   });
 
@@ -331,21 +340,21 @@ describe('runtime invocation registry', () => {
       definitions: [boundedDefinition],
     });
 
-    expect(() => admitRuntimeInvocation(boundedRegistry, { ...invocation, arguments: {} })).toThrow(
+    expect(rejectionMessage(boundedRegistry, { ...invocation, arguments: {} })).toMatch(
       /too few properties/i,
     );
-    expect(() =>
-      admitRuntimeInvocation(boundedRegistry, {
+    expect(
+      rejectionMessage(boundedRegistry, {
         ...invocation,
         arguments: { config: {}, unexpected: true },
       }),
-    ).toThrow(/not allowed/i);
-    expect(() =>
-      admitRuntimeInvocation(boundedRegistry, {
+    ).toMatch(/not allowed/i);
+    expect(
+      rejectionMessage(boundedRegistry, {
         ...invocation,
         arguments: { config: 'not-an-object' },
       }),
-    ).toThrow(/must be an object/i);
+    ).toMatch(/must be an object/i);
   });
 
   it('allows absent optional bounds and rejects a max-property overflow', () => {
@@ -388,18 +397,18 @@ describe('runtime invocation registry', () => {
         arguments: { items: ['one', 'two'], rank: 1 },
       }).replayed,
     ).toBe(false);
-    expect(() =>
-      admitRuntimeInvocation(unboundedRegistry, {
+    expect(
+      rejectionMessage(unboundedRegistry, {
         ...invocation,
         arguments: { items: ['one'], rank: 'not-a-number' },
       }),
-    ).toThrow(/must be a number/i);
-    expect(() =>
-      admitRuntimeInvocation(maxedRegistry, {
+    ).toMatch(/must be a number/i);
+    expect(
+      rejectionMessage(maxedRegistry, {
         ...invocation,
         arguments: { first: 'one', second: 'two' },
       }),
-    ).toThrow(/too many properties/i);
+    ).toMatch(/too many properties/i);
   });
 
   it('treats an exact invocation and idempotency replay as inert', () => {
