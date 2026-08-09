@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 import { z } from 'zod';
 
 import { fileTransactionSchema } from '../core/file-transaction';
+import { normalizeTransactionEncoding } from '../core/file-transaction-encoding';
 import { MAX_RUNTIME_JSON_ENTRIES } from '../core/runtime/runtime-json-value';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 import {
@@ -113,7 +114,11 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'Prefer patch when changing part of a file that already exists. ' +
     'rename/copy {kind,rootKey,path,destination,beforeHash}. ' +
     'delete {kind,rootKey,path,beforeHash}. mkdir {kind,rootKey,path}. ' +
-    'artifact {kind,rootKey,path,mimeType,sizeBytes,contentHash,provenance,contentBase64}.',
+    'artifact {kind,rootKey,path,mimeType,sizeBytes,contentHash,provenance,contentBase64}. ' +
+    'FOR SOURCE CODE, SEND BASE64: use "contentBase64" in place of "content", and ' +
+    '"beforeBase64"/"afterBase64" in place of "before"/"after". Base64 contains no quote, ' +
+    'brace or newline for JSON to escape, so a code payload arrives intact instead of ' +
+    'breaking the request. Never send both forms of the same field.',
   operations: [
     'stat',
     'list',
@@ -154,7 +159,9 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     if (invocation.operation === 'list') return this.list(invocation.arguments);
     if (invocation.operation === 'glob') return this.glob(invocation.arguments);
     if (invocation.operation === 'search') return this.search(invocation.arguments, signal);
-    const transaction = fileTransactionSchema.parse(invocation.arguments.transaction);
+    const transaction = fileTransactionSchema.parse(
+      normalizeTransactionEncoding(invocation.arguments.transaction),
+    );
     if (
       transaction.operations.length !== 1 ||
       transaction.operations[0]?.kind !== invocation.operation
