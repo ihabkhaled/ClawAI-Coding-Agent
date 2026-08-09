@@ -48,6 +48,12 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
   workspaceRootUri(rootKey: string): vscode.Uri {
     const runtime = this.runtimeRoots.get(rootKey);
     if (runtime !== undefined) return runtime;
+    const advertisedIndex = advertisedWorkspaceRootIndex(rootKey);
+    const advertised =
+      advertisedIndex === undefined
+        ? undefined
+        : (vscode.workspace.workspaceFolders ?? [])[advertisedIndex];
+    if (advertised !== undefined) return advertised.uri;
     const workspace = (vscode.workspace.workspaceFolders ?? []).find(
       (folder) => workspaceFolderKey(folder.uri.toString()) === rootKey,
     );
