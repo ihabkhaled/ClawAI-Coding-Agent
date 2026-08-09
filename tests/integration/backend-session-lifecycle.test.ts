@@ -232,7 +232,14 @@ describe('BackendClient session lifecycle', () => {
 
     const firstProfile = firstClient.getProfile();
     const secondProfile = secondClient.getProfile();
+    // Both clients have to consume their initial 401 before the shared refresh
+    // completes. Waiting only for the refresh to be pending was a race: under
+    // load the first client could rotate and retry before the second client had
+    // sent anything, so that retry landed as profile call two — still a 401 —
+    // and the request failed instead of succeeding. The call counter, not the
+    // scheduler, decides when both clients are actually waiting.
     await vi.waitFor(() => {
+      expect(profileCalls).toBe(2);
       expect(completeRefresh).toBeTypeOf('function');
     });
 

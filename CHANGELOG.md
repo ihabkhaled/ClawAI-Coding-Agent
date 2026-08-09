@@ -2,6 +2,37 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.57.3
+
+Patch: the agent can run commands again — every command root was rejected
+before it did any work.
+
+- A runtime target advertises its folders as `workspace-1`, `workspace-2`, and
+  the structured-command catalog ships `{"cwdRootKey":"workspace-1"}` as its
+  worked example. The filesystem adapter resolved that advertised form for file
+  operations but not for command roots, which still matched only the SHA-256
+  folder key. Nothing registers the ordinary workspace as a runtime root — only
+  sub-agent worktrees do — so `workspace-1` matched nothing and the model was
+  refused the exact value it had been told to send.
+- Every consumer of a command root failed the same way, before touching disk:
+  structured commands, the quality gates, git, the database tool, the container
+  engine, elevation, the process supervisor, development-service discovery and
+  the intelligence index. A run could read and write files but could not run a
+  migration, a test or a lint to verify them, so feature-scale work could not be
+  completed or checked.
+- Command roots now resolve the advertised index exactly as file roots already
+  did. An explicitly registered runtime root still wins, so a sub-agent worktree
+  cannot be escaped, and an out-of-range index or a near-miss key is still
+  refused rather than falling back to the first folder.
+- Regressions pin the advertised key, multi-root folder separation, worktree
+  precedence, an out-of-range index, and near-miss rejection. The previous
+  coverage passed only because the test registered `workspace-1` as a runtime
+  root, which production never does; the new tests exercise the production path.
+- The shared-refresh session test no longer races the scheduler. It now waits
+  for both clients to consume their initial 401 before completing the rotation,
+  which removes an intermittent failure that only appeared under full-suite CPU
+  load.
+
 ## 0.57.2
 
 Patch: oversized tool output now becomes recoverable model feedback instead of
