@@ -44,6 +44,16 @@ function isRecord(value: unknown): value is Record<string, unknown> {
  * disagree about what the file should contain, and guessing which the model
  * meant is exactly the kind of quiet rewrite that loses work.
  */
+function replaceKey(
+  record: Record<string, unknown>,
+  removeKey: string,
+  field: string,
+  value: string,
+): Record<string, unknown> {
+  const rest = Object.fromEntries(Object.entries(record).filter(([key]) => key !== removeKey));
+  return { ...rest, [field]: value };
+}
+
 function substitute(record: Record<string, unknown>, field: string): Record<string, unknown> {
   const encodedKey = `${field}Base64`;
   const encoded = record[encodedKey];
@@ -52,18 +62,44 @@ function substitute(record: Record<string, unknown>, field: string): Record<stri
   if (record[field] !== undefined) {
     throw new Error(`Send either ${field} or ${encodedKey}, not both`);
   }
-  const rest = Object.fromEntries(Object.entries(record).filter(([key]) => key !== encodedKey));
-  return { ...rest, [field]: decodeBase64Text(encoded, encodedKey) };
+  return replaceKey(record, encodedKey, field, decodeBase64Text(encoded, encodedKey));
+}
+
+/**
+ * Joins a `<field>Lines` array into a single `<field>` string.
+ *
+ * Base64 removes the escaping problem but replaces it with an encoding one:
+ * asking a model to base64 a page of source is asking for a character-level
+ * transform it performs unreliably. A line array asks for neither. Each element
+ * is one short ordinary string, there is no newline inside any of them to
+ * escape, and a model writing code line by line is doing what it already does
+ * well. This is the form the catalog recommends first for source.
+ */
+function substituteLines(record: Record<string, unknown>, field: string): Record<string, unknown> {
+  const linesKey = `${field}Lines`;
+  const lines = record[linesKey];
+  if (lines === undefined) return record;
+  if (!Array.isArray(lines) || lines.some((line) => typeof line !== 'string')) {
+    throw new Error(`${linesKey} must be an array of strings`);
+  }
+  if (record[field] !== undefined) {
+    throw new Error(`Send either ${field} or ${linesKey}, not both`);
+  }
+  return replaceKey(record, linesKey, field, (lines as string[]).join('\n'));
+}
+
+function normalizeField(record: Record<string, unknown>, field: string): Record<string, unknown> {
+  return substituteLines(substitute(record, field), field);
 }
 
 function normalizeHunk(value: unknown): unknown {
   if (!isRecord(value)) return value;
-  return substitute(substitute(value, 'before'), 'after');
+  return normalizeField(normalizeField(value, 'before'), 'after');
 }
 
 function normalizeOperation(value: unknown): unknown {
   if (!isRecord(value)) return value;
-  const withContent = substitute(value, 'content');
+  const withContent = normalizeField(value, 'content');
   const hunks = withContent.hunks;
   if (!Array.isArray(hunks)) return withContent;
   return { ...withContent, hunks: hunks.map(normalizeHunk) };

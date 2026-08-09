@@ -80,3 +80,50 @@ describe('base64 file content', () => {
     });
   });
 });
+
+// Base64 removes the escaping problem but replaces it with an encoding one:
+// asking a model to base64 a page of source is a character-level transform it
+// performs unreliably. A line array asks for neither.
+describe('line-array file content', () => {
+  it('joins contentLines into the file text', () => {
+    const normalized = normalizeTransactionEncoding({
+      transactionId: 't1',
+      summary: 'add',
+      operations: [
+        {
+          kind: 'create',
+          rootKey: 'workspace-1',
+          path: 'a.ts',
+          contentLines: ['import { X } from "y";', '', 'export class A {', '  b(): void {}', '}'],
+        },
+      ],
+    }) as { operations: { content?: string }[] };
+
+    expect(normalized.operations[0]?.content).toBe(
+      ['import { X } from "y";', '', 'export class A {', '  b(): void {}', '}'].join('\n'),
+    );
+  });
+
+  it('joins both halves of a hunk', () => {
+    const normalized = normalizeTransactionEncoding({
+      operations: [{ kind: 'patch', hunks: [{ beforeLines: ['a', 'b'], afterLines: ['a', 'c'] }] }],
+    }) as { operations: { hunks: { before?: string; after?: string }[] }[] };
+
+    expect(normalized.operations[0]?.hunks[0]?.before).toBe(['a', 'b'].join('\n'));
+    expect(normalized.operations[0]?.hunks[0]?.after).toBe(['a', 'c'].join('\n'));
+  });
+
+  it('refuses both forms of the same field', () => {
+    expect(() =>
+      normalizeTransactionEncoding({
+        operations: [{ kind: 'create', content: 'x', contentLines: ['y'] }],
+      }),
+    ).toThrow(/not both/iu);
+  });
+
+  it('refuses a lines value that is not an array of strings', () => {
+    expect(() =>
+      normalizeTransactionEncoding({ operations: [{ kind: 'create', contentLines: [1, 2] }] }),
+    ).toThrow(/array of strings/iu);
+  });
+});

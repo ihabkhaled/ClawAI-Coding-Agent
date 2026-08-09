@@ -115,10 +115,11 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'rename/copy {kind,rootKey,path,destination,beforeHash}. ' +
     'delete {kind,rootKey,path,beforeHash}. mkdir {kind,rootKey,path}. ' +
     'artifact {kind,rootKey,path,mimeType,sizeBytes,contentHash,provenance,contentBase64}. ' +
-    'FOR SOURCE CODE, SEND BASE64: use "contentBase64" in place of "content", and ' +
-    '"beforeBase64"/"afterBase64" in place of "before"/"after". Base64 contains no quote, ' +
-    'brace or newline for JSON to escape, so a code payload arrives intact instead of ' +
-    'breaking the request. Never send both forms of the same field.',
+    'FOR SOURCE CODE send it as LINES, never as one string: use "contentLines" in place of ' +
+    '"content", and "beforeLines"/"afterLines" in place of "before"/"after". Each element is ' +
+    'ONE line with no line break inside it, and they are joined back together for you. A raw ' +
+    'line break inside a JSON string is what breaks these requests. "contentBase64", ' +
+    '"beforeBase64" and "afterBase64" also work. Never send two forms of the same field.',
   operations: [
     'stat',
     'list',

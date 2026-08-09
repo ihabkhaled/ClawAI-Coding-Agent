@@ -2,6 +2,26 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.59.0
+
+Minor: source code can be sent as an array of lines, which is what actually
+made writing code work.
+
+- 0.58.0 added base64 to dodge JSON escaping, but base64 trades an escaping
+  problem for an encoding one: asking a model to base64 a page of source is a
+  character-level transform it performs unreliably.
+- A line array asks for neither. `contentLines` stands in for `content`, and
+  `beforeLines`/`afterLines` for a hunk's halves. Each element is one ordinary
+  short string with no line break inside it, so nothing has to be escaped, and
+  writing code line by line is what a model already does well. The catalog now
+  recommends this form first for source and keeps base64 as the alternative.
+- Both forms are decoded before the strict transaction schema runs, so
+  containment, hashes, previews, receipts and rollback are untouched, and a
+  plain-text transaction behaves exactly as before. Sending two forms of one
+  field is refused rather than silently preferring either.
+- Regressions pin joining for create and for both halves of a hunk, the
+  both-forms refusal, and a non-string element being rejected.
+
 ## 0.58.0
 
 Minor: file content can be sent as base64, so writing code stops depending on
