@@ -2,6 +2,30 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.58.0
+
+Minor: file content can be sent as base64, so writing code stops depending on
+the model escaping it perfectly.
+
+- Writing a file means putting source into a JSON string, and every quote,
+  brace and newline in that source has to survive the model's own escaping. It
+  does not. A live mission created an 808-byte SQL migration successfully and
+  then failed every attempt at a TypeScript file: the request stopped being
+  parseable JSON before it arrived, and the run was told the model "started a
+  tool object and did not finish it" — true, and useless. The right operation
+  had been chosen and was lost to punctuation.
+- `contentBase64` now stands in for `content`, and `beforeBase64`/`afterBase64`
+  for a hunk's `before`/`after`. Base64 carries no character JSON must escape
+  and no brace or quote to confuse a parser, so a code payload arrives intact.
+  The catalog tells the model to prefer it for source code.
+- Decoding happens before the strict transaction schema runs, so every existing
+  path — containment, hashes, previews, receipts, rollback — is untouched and
+  a plain-text transaction behaves exactly as before. Sending both forms of one
+  field is refused rather than silently preferring either.
+- Regressions pin decoding, substitution for create and for both halves of a
+  hunk, an untouched plain-text transaction, the both-forms refusal, invalid
+  base64, and non-transaction input passing through.
+
 ## 0.57.6
 
 Patch: patching a file on a Windows checkout works at all.
