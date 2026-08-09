@@ -2,6 +2,29 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.57.5
+
+Patch: the file tool now documents every operation it advertises, so editing a
+file no longer destroys it.
+
+- The catalog advertised fourteen filesystem operations but spelled out the
+  transaction shape for only `create` and `update`. The nested transaction is
+  reported to the model as an empty object, so `patch`, `rename`, `copy`,
+  `delete`, `mkdir` and `artifact` were undiscoverable and had to be guessed.
+- `patch` takes exact hunks — `{"before":"<text present now>","after":"<new
+text>"}` — but nothing said so. A live mission tried three different spellings
+  of a unified diff (`"content":"PATCH\n@@ …"`, `"patch":"@@ …"`,
+  `"content":"@@ …"`), failed every time, and fell back to a whole-file `update`
+  that silently deleted about forty comments from a Prisma schema it had only
+  meant to add one model to.
+- Every advertised kind now carries its exact shape, `patch` is described as
+  exact replacement rather than a diff with the uniqueness requirement its
+  applier enforces, and `update` is labelled as replacing the whole file so the
+  cheaper and safer operation is the obvious one.
+- A regression derives the kind list from the transaction schema itself and
+  fails if any advertised kind stops being documented, so this gap cannot
+  silently return.
+
 ## 0.57.4
 
 Patch: a malformed tool request no longer ends the run.

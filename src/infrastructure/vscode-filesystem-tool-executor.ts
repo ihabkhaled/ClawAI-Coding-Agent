@@ -94,14 +94,26 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     // transaction whose shape the catalog reports as an empty object, so a
     // model had to guess it and no model ever did. Spelling it out here is the
     // only channel that reaches the model, exactly as with rootKey.
-    'To WRITE a file, put a transaction in arguments: ' +
-    '{"transaction":{"transactionId":"<unique id>","summary":"<what and why>",' +
-    '"operations":[{"kind":"create","rootKey":"workspace-1","path":"<relative path>",' +
-    '"content":"<full file text>","beforeHash":null}]}}. ' +
-    'Use kind "create" for a new file and "update" to replace an existing one, where beforeHash ' +
-    'is the "sha256:<hex>" the read operation reported for the current bytes — null only when ' +
-    'creating. Send exactly one operation per call and make its kind match the operation you ' +
-    'requested.',
+    //
+    // Documenting only create and update left the same hole for the other five
+    // kinds. A live mission tried to patch a file three times — as
+    // "content":"PATCH\n@@ …", as "patch":"@@ …", then as "content":"@@ …" —
+    // because nothing said patch takes exact hunks rather than a unified diff.
+    // Every attempt failed, and the model fell back to rewriting the whole file
+    // with update, which silently deleted about forty comments it never saw.
+    // Every advertised kind now carries its shape.
+    'To WRITE, put a transaction in arguments: {"transaction":{"transactionId":"<unique id>",' +
+    '"summary":"<what and why>","operations":[<exactly one operation>]}}. ' +
+    'beforeHash is the "sha256:<hex>" read reported for the current bytes. Kinds: ' +
+    'create/update {kind,rootKey,path,content,beforeHash} — beforeHash null only for create; ' +
+    'update REPLACES THE WHOLE FILE, so anything not retyped is lost. ' +
+    'patch {kind,rootKey,path,beforeHash,hunks:[{"before":"<text present now>",' +
+    '"after":"<new text>"}]} — exact text replacement, NOT a diff: no @@ headers, no +/- ' +
+    'prefixes. Each "before" must occur exactly once, so include enough surrounding lines. ' +
+    'Prefer patch when changing part of a file that already exists. ' +
+    'rename/copy {kind,rootKey,path,destination,beforeHash}. ' +
+    'delete {kind,rootKey,path,beforeHash}. mkdir {kind,rootKey,path}. ' +
+    'artifact {kind,rootKey,path,mimeType,sizeBytes,contentHash,provenance,contentBase64}.',
   operations: [
     'stat',
     'list',
