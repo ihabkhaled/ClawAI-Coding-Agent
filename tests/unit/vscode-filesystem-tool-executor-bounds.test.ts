@@ -109,6 +109,54 @@ describe('VS Code filesystem tool result bounds', () => {
     expect(output.structured).toMatchObject({ truncated: true });
   });
 
+  // `search` inherited `pattern` from the glob schema as required, so the
+  // obvious call — search the workspace for this string — failed on a field
+  // the tool description has no room to mention. Ten consecutive search calls
+  // were lost to it in a live mission.
+  it('searches the whole workspace when no narrowing pattern is given', async () => {
+    vi.mocked(vscode.workspace.findFiles).mockResolvedValue([
+      vscode.Uri.file('C:\\workspace\\a.ts'),
+    ]);
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(
+      new TextEncoder().encode('const needle = 1;'),
+    );
+
+    const output = await executor.execute(
+      invocation('search', { rootKey: 'workspace-1', query: 'needle' }),
+    );
+
+    expect(vscode.workspace.findFiles).toHaveBeenCalledWith(
+      expect.objectContaining({ pattern: '**/*' }),
+      undefined,
+      100,
+    );
+    expect(output.structured?.results).toEqual([
+      { path: 'a.ts', line: 1, preview: 'const needle = 1;' },
+    ]);
+  });
+
+  it('still honours an explicit narrowing pattern', async () => {
+    vi.mocked(vscode.workspace.findFiles).mockResolvedValue([]);
+
+    await executor.execute(
+      invocation('search', { rootKey: 'workspace-1', query: 'needle', pattern: 'src/**/*.ts' }),
+    );
+
+    expect(vscode.workspace.findFiles).toHaveBeenCalledWith(
+      expect.objectContaining({ pattern: 'src/**/*.ts' }),
+      undefined,
+      100,
+    );
+  });
+
+  // glob is the one operation whose entire purpose IS the pattern, so it must
+  // keep demanding one rather than silently enumerating the workspace.
+  it('still requires a pattern for glob', async () => {
+    await expect(executor.execute(invocation('glob', { rootKey: 'workspace-1' }))).rejects.toThrow(
+      /pattern/,
+    );
+  });
+
   it('reports a saturated search candidate set even when fewer lines match', async () => {
     vi.mocked(vscode.workspace.findFiles).mockResolvedValue(
       Array.from({ length: 100 }, (_entry, index) =>

@@ -71,6 +71,26 @@ const globSchema = z
       .default(MAX_RUNTIME_JSON_ENTRIES),
   })
   .strict();
+/**
+ * `search` is keyed by its `query`; the glob only narrows where to look.
+ *
+ * It used to inherit `pattern` from `globSchema` as REQUIRED, so a model that
+ * asked the obvious question — search the workspace for this string — sent
+ * `{rootKey, query}` and got back a raw zod "expected string, received
+ * undefined" naming a `pattern` field it had no reason to know about. The
+ * description had no room left to document it (39 characters under a cap whose
+ * overflow kills the whole run), and a model cannot guess an argument that is
+ * never mentioned. A live mission burned ten consecutive search calls on this
+ * and fell back to reading files one by one.
+ *
+ * Defaulting to the whole workspace makes the required form the natural one.
+ * `findFiles` is already bounded by `maxResults`, so the default cannot be
+ * more expensive than the cap the caller already accepted.
+ */
+const searchSchema = globSchema.extend({
+  query: z.string().min(1).max(10_000),
+  pattern: z.string().min(1).max(1_000).default('**/*'),
+});
 
 export const workspaceFilesystemToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',
@@ -272,7 +292,7 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     candidate: unknown,
     signal?: AbortSignal,
   ): Promise<RuntimeToolExecutionOutput> {
-    const input = globSchema.extend({ query: z.string().min(1).max(10_000) }).parse(candidate);
+    const input = searchSchema.parse(candidate);
     const root = this.adapter.rootUri(input.rootKey);
     const files = await vscode.workspace.findFiles(
       new vscode.RelativePattern(root, input.pattern),
