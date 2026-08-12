@@ -113,6 +113,31 @@ describe('runtime invocation registry', () => {
     }
   });
 
+  it('names the valid keys when rejecting an unrecognized argument', () => {
+    expect(
+      rejectionMessage(registry(), {
+        ...invocation,
+        arguments: { section: 'tests', unexpected: true },
+      }),
+    ).toContain('expected one of: section, limits');
+  });
+
+  it('omits the hint when the schema allows no properties at all', () => {
+    const emptyDefinition = {
+      ...definition,
+      inputSchema: { type: 'object', additionalProperties: false, properties: {} },
+    } as const;
+    const emptyRegistry = createRuntimeInvocationRegistry({
+      runId: invocation.runId,
+      turnId: invocation.turnId,
+      epochs,
+      definitions: [emptyDefinition],
+    });
+
+    const message = rejectionMessage(emptyRegistry, { ...invocation, arguments: { stray: true } });
+    expect(message).toMatch(/not allowed$/);
+  });
+
   it('rejects unsupported or ambiguous JSON Schema keywords', () => {
     expect(() =>
       createRuntimeInvocationRegistry({
@@ -349,6 +374,14 @@ describe('runtime invocation registry', () => {
         arguments: { config: {}, unexpected: true },
       }),
     ).toMatch(/not allowed/i);
+    // A model correcting an unrecognized key needs the valid ones named, not
+    // just told the one it sent was wrong — see the comment at the throw site.
+    expect(
+      rejectionMessage(boundedRegistry, {
+        ...invocation,
+        arguments: { config: {}, unexpected: true },
+      }),
+    ).toContain('expected one of: config');
     expect(
       rejectionMessage(boundedRegistry, {
         ...invocation,

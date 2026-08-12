@@ -291,6 +291,21 @@ function enumMatches(value: unknown, allowed: unknown): boolean {
   );
 }
 
+// Naming the key that broke was already an improvement over zod's bare
+// "Invalid input", but a model that guessed a plausible-but-wrong shape (flat
+// rootKey/path/content instead of a nested transaction) still had to guess
+// again from there. Naming the keys that WOULD have worked is the difference
+// between the model retrying blindly and correcting on the very next turn.
+function throwUnknownPropertyError(
+  path: string,
+  key: string,
+  properties: Readonly<Record<string, unknown>>,
+): never {
+  const allowed = Object.keys(properties);
+  const hint = allowed.length > 0 ? ` (expected one of: ${allowed.join(', ')})` : '';
+  throw new Error(`Tool arguments ${path}.${key} is not allowed${hint}`);
+}
+
 function validateObjectValue(
   value: RuntimeJsonObject,
   schema: RuntimeJsonObject,
@@ -307,7 +322,7 @@ function validateObjectValue(
     const childSchema = properties[key];
     if (childSchema === undefined) {
       if (schema.additionalProperties === true) continue;
-      throw new Error(`Tool arguments ${path}.${key} is not allowed`);
+      throwUnknownPropertyError(path, key, properties);
     }
     validateValue(entry, schemaObject(childSchema, `${path}.${key}`), `${path}.${key}`);
   }

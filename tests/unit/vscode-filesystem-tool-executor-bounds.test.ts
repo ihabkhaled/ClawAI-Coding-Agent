@@ -137,4 +137,64 @@ describe('VS Code filesystem tool result bounds', () => {
   ] as const)('rejects %s requests above the result envelope', async (operation, arguments_) => {
     await expect(executor.execute(invocation(operation, arguments_))).rejects.toThrow(/100/u);
   });
+
+  // The two checks below used to share one message, "must contain exactly the
+  // requested operation", for both a wrong operation count and a mismatched
+  // kind. A model that copied the envelope's `operation` from an earlier,
+  // unrelated call while correctly setting the new operation's `kind` got that
+  // sentence back and had no way to see which of the two disagreed.
+  it('names the actual count when a transaction holds more than one operation', async () => {
+    await expect(
+      executor.execute(
+        invocation('create', {
+          rootKey: 'workspace-1',
+          path: 'a.ts',
+          transaction: {
+            transactionId: 'tx-two-ops',
+            summary: 'two operations',
+            operations: [
+              {
+                kind: 'create',
+                rootKey: 'workspace-1',
+                path: 'a.ts',
+                content: '',
+                beforeHash: null,
+              },
+              {
+                kind: 'create',
+                rootKey: 'workspace-1',
+                path: 'b.ts',
+                content: '',
+                beforeHash: null,
+              },
+            ],
+          },
+        }),
+      ),
+    ).rejects.toThrow(/exactly one operation, got 2/);
+  });
+
+  it('names both sides of an operation/kind mismatch', async () => {
+    await expect(
+      executor.execute(
+        invocation('patch', {
+          rootKey: 'workspace-1',
+          path: 'a.ts',
+          transaction: {
+            transactionId: 'tx-mismatched-kind',
+            summary: 'envelope says patch, operation says create',
+            operations: [
+              {
+                kind: 'create',
+                rootKey: 'workspace-1',
+                path: 'a.ts',
+                content: '',
+                beforeHash: null,
+              },
+            ],
+          },
+        }),
+      ),
+    ).rejects.toThrow(/operation "patch" must match transaction.operations\[0\].kind "create"/);
+  });
 });

@@ -12,6 +12,7 @@ import {
 } from '../core/workspace-path-policy';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
+import type { FileTransaction } from '../core/file-transaction';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { FileTransactionService } from '../services/file-transaction-service';
 import type {
@@ -139,6 +140,23 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
   inputSchema: runtimeToolInputSchemas.files,
 };
 
+// Both checks below used to share one message, "must contain exactly the
+// requested operation", for a wrong operation count and a mismatched kind
+// alike. A model that copied the envelope's `operation` from an earlier,
+// unrelated call while correctly setting the new operation's `kind` got that
+// sentence back and had no way to see which of the two actually disagreed.
+function assertSingleMatchingOperation(transaction: FileTransaction, operation: string): void {
+  if (transaction.operations.length !== 1)
+    throw new Error(
+      `Filesystem mutation must contain exactly one operation, got ${String(transaction.operations.length)}`,
+    );
+  const kind = transaction.operations[0]?.kind ?? 'missing';
+  if (kind !== operation)
+    throw new Error(
+      `Filesystem mutation operation "${operation}" must match transaction.operations[0].kind "${kind}"`,
+    );
+}
+
 export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
   constructor(
     private readonly adapter: VscodeFileTransactionAdapter,
@@ -161,11 +179,7 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     const transaction = fileTransactionSchema.parse(
       normalizeTransactionEncoding(invocation.arguments.transaction),
     );
-    if (
-      transaction.operations.length !== 1 ||
-      transaction.operations[0]?.kind !== invocation.operation
-    )
-      throw new Error('Filesystem mutation must contain exactly the requested operation');
+    assertSingleMatchingOperation(transaction, invocation.operation);
     const preview = await this.transactions.preview(transaction, signal);
     const receipt = await this.transactions.apply(preview, signal);
     return { structured: { receipt } };
