@@ -2,6 +2,28 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.59.3
+
+Patch: searching the workspace no longer requires a glob the model was never
+told about.
+
+- `search` is keyed by its `query`, but it inherited `pattern` from the glob
+  schema as a REQUIRED field. The obvious call — search the workspace for this
+  string — sent `{rootKey, query}` and came back with a raw zod "expected
+  string, received undefined" naming a `pattern` argument the model had no
+  reason to know existed. The tool description could not help: it sits 39
+  characters under a hard cap whose overflow rejects the entire run-start
+  request, so there was no room to document the field.
+- Watched live, a mission lost ten consecutive `search` calls to this and fell
+  back to reading files one at a time to find a single constant.
+- `pattern` now defaults to `**/*` for `search`, which makes the natural call
+  the correct one. `findFiles` is already bounded by `maxResults`, so the
+  default can never cost more than the cap the caller already accepted.
+- `glob` still requires a pattern: enumerating a whole workspace is that
+  operation's entire purpose, and defaulting it would hide a real mistake.
+- Regressions pin the defaulted search, an explicit narrowing pattern still
+  being honoured, and glob still rejecting a missing pattern.
+
 ## 0.59.2
 
 Patch: rejected tool arguments now say what would have worked, not just what
