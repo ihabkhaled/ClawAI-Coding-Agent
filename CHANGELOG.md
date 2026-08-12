@@ -2,6 +2,28 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.59.2
+
+Patch: rejected tool arguments now say what would have worked, not just what
+didn't.
+
+- A live password-reset mission sent a file-write flat — `rootKey`/`path`/
+  `content` directly on `arguments`, the shape `read`/`list`/`stat` correctly
+  use — instead of nested inside `transaction.operations[]`. Admission
+  correctly rejected it with `Tool arguments $.content is not allowed`, but
+  that message only names the key that broke, not the key that would have
+  worked, so the model spent 7 tool calls cycling through `content`,
+  `contentLines`, and `contentBase64` at the same wrong nesting level before
+  giving up and reporting the tool as broken. The rejection now names every
+  valid sibling key: `... is not allowed (expected one of: transaction)`.
+- Separately, once a request nested correctly, a model that copied the
+  envelope's `operation` field from an earlier successful `patch` call while
+  correctly setting the new operation's `kind` to `create` got back
+  "Filesystem mutation must contain exactly the requested operation" — one
+  sentence covering two different checks (operation count, and operation/kind
+  agreement), naming neither the count nor which two values disagreed. The
+  checks are now separate and each names the actual values involved.
+
 ## 0.59.1
 
 Patch: the tool description fits its budget again, so runs start.
