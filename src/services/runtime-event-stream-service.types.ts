@@ -3,6 +3,15 @@ import type { Continuation, ToolInvocation } from '../core/runtime/runtime-tool-
 
 export type RuntimeStreamObserver = {
   readonly onEvent: (event: RuntimeEvent) => void | Promise<void>;
+  /**
+   * A broken stream is being reopened from the last cursor.
+   *
+   * Optional because resuming is not the run's business — the run continues
+   * either way. It exists so a reconnect leaves a trace: the previous
+   * behaviour, failing outright, at least said something, and a silent
+   * recovery that takes eight seconds should not look like a stall.
+   */
+  readonly onStreamResume?: (attempt: number, reason: unknown) => void;
 };
 
 export type RuntimeStreamRuntimePort = {

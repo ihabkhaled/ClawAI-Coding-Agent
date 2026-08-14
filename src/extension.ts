@@ -9,10 +9,8 @@ import { createRuntimeSnapshot } from './core/runtime/runtime-event-reducer';
 import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
 import { OutputLogger } from './infrastructure/output-logger';
-import {
-  buildRuntimeCapabilityManifest,
-  detectRuntimePrerequisites,
-} from './infrastructure/vscode-runtime-target-adapter';
+import { probeRuntimeHost } from './infrastructure/vscode-runtime-host-probe';
+import { buildRuntimeCapabilityManifest } from './infrastructure/vscode-runtime-target-adapter';
 import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-edit-adapter';
 import { AgentCoordinator } from './services/agent-coordinator';
 import { ConfigurationService } from './services/configuration-service';
@@ -25,6 +23,8 @@ import { DiffPreviewProvider } from './views/diff-preview-provider';
 import { StateTreeProvider } from './views/state-tree-provider';
 import { StatusBarController } from './views/status-bar-controller';
 import { ChatViewProvider } from './webview/chat-view-provider';
+
+import type { CapabilityManifest } from './core/runtime/capability-manifest';
 
 function registerCommands(
   context: vscode.ExtensionContext,
@@ -116,31 +116,12 @@ export function activate(context: vscode.ExtensionContext): void {
   const connectionConfiguration = new ConfigurationService();
   const configuration = connectionConfiguration.read();
   const workspaceScope = new WorkspaceScopeService();
-  const extensionKind =
-    context.extension.extensionKind === vscode.ExtensionKind.UI ? 'ui' : 'workspace';
-  const runtimeManifest = buildRuntimeCapabilityManifest(
-    {
-      architecture: process.arch,
-      extensionKind,
-      extensionVersion: extensionPackage.version,
-      platform: process.platform,
-      remoteName: vscode.env.remoteName,
-      shell: vscode.env.shell,
-      uiKind: vscode.env.uiKind === vscode.UIKind.Web ? 'web' : 'desktop',
-      vscodeVersion: vscode.version,
-      workspaceFolders: (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
-        name: folder.name,
-        scheme: folder.uri.scheme,
-        uri: folder.uri.toString(),
-      })),
-      workspaceTrusted: vscode.workspace.isTrusted,
-      prerequisites: detectRuntimePrerequisites(context.extensionUri.fsPath),
-    },
-    {
+  const buildManifest = (): CapabilityManifest =>
+    buildRuntimeCapabilityManifest(probeRuntimeHost(context, extensionPackage.version), {
       generatedAt: new Date().toISOString(),
       manifestId: `manifest:${Date.now().toString(36)}`,
-    },
-  );
+    });
+  const runtimeManifest = buildManifest();
   const state = new ExtensionState({
     agentRun: undefined,
     agentRuns: {},
@@ -281,10 +262,18 @@ export function activate(context: vscode.ExtensionContext): void {
         void coordinator.configurationChanged();
       }
     }),
+    // Trust and the folder set are the two facts the capability manifest is
+    // built from, so both have to rebuild it. Without this the manifest keeps
+    // the values it had at activation: a window that activated untrusted goes
+    // on advertising a target with no local capabilities even after the user
+    // grants trust, and every tool call fails with a capability error that
+    // names no cause.
     vscode.workspace.onDidGrantWorkspaceTrust(() => {
+      state.setCapabilityManifest(buildManifest());
       void coordinator.trustChanged();
     }),
     vscode.workspace.onDidChangeWorkspaceFolders(() => {
+      state.setCapabilityManifest(buildManifest());
       void coordinator.workspaceFoldersChanged();
     }),
     vscode.window.onDidChangeActiveTextEditor(() => {

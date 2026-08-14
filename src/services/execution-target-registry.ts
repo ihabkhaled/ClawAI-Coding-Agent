@@ -54,7 +54,16 @@ export class ExecutionTargetRegistry {
     if (registered.epoch !== invocation.epochs.target)
       throw new Error('Execution target approval epoch is stale');
     if (!registered.capabilities.has(invocation.toolName)) {
-      throw new Error('Execution target does not provide the requested capability');
+      // Naming the tool and the target is the difference between a report the
+      // user can act on and one that only says something is missing. The
+      // capability set is derived from the capability manifest, and the one
+      // fact that removes every local tool from it at once is an untrusted
+      // workspace — so when the target advertises nothing local, say so.
+      throw new Error(
+        `Execution target ${registered.target.id} does not provide ${invocation.toolName}. ` +
+          `It advertises: ${[...registered.capabilities].sort().join(', ') || '(none)'}. ` +
+          'A workspace that was untrusted when the extension activated advertises no local tools.',
+      );
     }
     return registered;
   }

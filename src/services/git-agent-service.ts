@@ -1,12 +1,10 @@
 import { createHash } from 'node:crypto';
 
 import { gitOperationSchema, type GitOperation, type GitReceipt } from '../core/git-operation';
+import { findStagedSecret } from '../core/staged-secret-scan';
 import { runCommandSpec } from '../infrastructure/bounded-command-runner';
 
 import type { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
-
-const secretPattern =
-  /(?:-----BEGIN (?:RSA |EC |OPENSSH )?PRIVATE KEY-----|(?:api[-_]?key|password|secret|token)\s*[:=]\s*[^\s]{8,})/iu;
 
 export class GitAgentService {
   constructor(
@@ -29,7 +27,11 @@ export class GitAgentService {
         ['diff', '--cached', '--no-ext-diff', '--binary'],
         signal,
       );
-      if (secretPattern.test(staged)) throw new Error('Staged secret scan blocked the commit');
+      const leaked = findStagedSecret(staged);
+      if (leaked !== undefined)
+        throw new Error(
+          `Staged secret scan blocked the commit: an added line assigns what looks like a live credential (${leaked.slice(0, 12)}…). Remove it, or move it to an environment variable, then stage again.`,
+        );
       stagedDiffHash = this.hash(staged);
       if (staged.trim().length === 0) throw new Error('Commit requires an explicitly staged diff');
       if (!(await this.reviewStagedDiff(staged, stagedDiffHash, signal)))

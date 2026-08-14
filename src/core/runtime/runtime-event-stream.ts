@@ -1,4 +1,6 @@
 import { parseRuntimeEvent, type RuntimeEvent } from './runtime-protocol.schemas';
+import { asStreamTransportFailure } from './runtime-stream-resume';
+import { TRANSIENT_RUNTIME_STATE_CODES } from './runtime-stream-resume.constants';
 
 import type { RuntimeDispatchState } from './runtime-event-stream.types';
 
@@ -77,6 +79,15 @@ export function readRuntimeStreamEvent(candidate: unknown): RuntimeEvent {
   try {
     return parseRuntimeEvent(candidate);
   } catch (error: unknown) {
+    // A backend that cannot reach its own state store is reporting on itself,
+    // not on the run — the run is in Redis and outlives the process. This
+    // arrives as an ordinary error frame over an HTTP 200 stream, so without
+    // tagging it the reconnect logic never sees a transport failure at all:
+    // the service restarts, answers the reopened stream with this code, and
+    // the run dies four seconds after asking for a commit that was still fine.
+    if (isTransientStateEnvelope(candidate)) {
+      asStreamTransportFailure(new Error(errorEnvelopeReason(candidate) ?? 'Runtime state store'));
+    }
     const reason = errorEnvelopeReason(candidate);
     if (reason !== undefined) throw new Error(reason);
     throw new Error(
@@ -84,6 +95,19 @@ export function readRuntimeStreamEvent(candidate: unknown): RuntimeEvent {
       { cause: error },
     );
   }
+}
+
+/**
+ * Whether an error frame describes the backend's own availability.
+ *
+ * Deliberately a fixed, tiny list. Every other code the backend can send is a
+ * statement about the run — a denied effect, a stale epoch, an invalid
+ * argument — and reopening the stream would replay it under a different name.
+ */
+function isTransientStateEnvelope(candidate: unknown): boolean {
+  if (candidate === null || typeof candidate !== 'object') return false;
+  const code = (candidate as Record<string, unknown>).code;
+  return typeof code === 'string' && TRANSIENT_RUNTIME_STATE_CODES.includes(code.trim());
 }
 
 function errorEnvelopeReason(candidate: unknown): string | undefined {

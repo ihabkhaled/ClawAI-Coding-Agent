@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { RUNTIME_EFFECT_APPROVAL_KIND } from '../core/approval-broker';
 import { describeExternalOutputRoots } from '../core/runtime/external-output-catalog';
+import { executableToolDefinitions } from '../core/runtime/runtime-executable-tools';
 import { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 import {
   BrowserToolExecutor,
@@ -432,7 +433,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       epochs: this.epochs,
       router: this.router,
       definitions: describeExternalOutputRoots(
-        this.router.definitions(),
+        executableToolDefinitions(this.router.definitions(), manifest),
         this.externalOutputs.snapshot(),
       ),
       policy: this.policy,

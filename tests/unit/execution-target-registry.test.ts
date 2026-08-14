@@ -84,11 +84,18 @@ describe('ExecutionTargetRegistry', () => {
     expect(registered?.networkReachability).not.toBe('internet');
   });
 
-  it('refuses a capability the target does not advertise', () => {
+  it('refuses a capability the target does not advertise, naming what it does', () => {
     const { registry, targetId } = registryWithLocalTarget();
 
+    // The old wording named neither the tool nor the target. A run that hit it
+    // reported only that "the runtime has no working capability", which is
+    // true and unactionable — the missing fact was that the workspace had been
+    // untrusted when the extension activated.
     expect(() => registry.select(invocationFor('workspace.browser', targetId))).toThrow(
-      /does not provide the requested capability/u,
+      /does not provide workspace\.browser/u,
+    );
+    expect(() => registry.select(invocationFor('workspace.browser', targetId))).toThrow(
+      /It advertises: .*workspace\.files/u,
     );
   });
 
