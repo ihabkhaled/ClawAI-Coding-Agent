@@ -246,6 +246,9 @@ test('rejects oversized attachments before reading their bytes', async ({ page }
 });
 
 test('keeps Send disabled when state refreshes during an attachment read', async ({ page }) => {
+  // A draft is needed first: Send stays disabled while the prompt is empty, so
+  // without it the final assertion could not tell the two reasons apart.
+  await page.locator('#prompt').fill('Inspect the pasted file');
   await page.evaluate(() => {
     class DeferredFileReader {
       error: DOMException | null = null;

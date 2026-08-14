@@ -182,12 +182,47 @@ export class SessionVault {
       if (current.revision !== observedRevision) {
         return 'changed';
       }
-      const tokens = await refresh(current.tokens);
-      signal.throwIfAborted();
-      if (await this.saveIfCurrent(backendUrl, tokens, observedRevision)) {
-        return 'refreshed';
+      const rotatedFrom = current.sessionId;
+      return this.commitRotation(key, await refresh(current.tokens), rotatedFrom);
+    });
+  }
+
+  /**
+   * Store a pair the backend has already rotated.
+   *
+   * The old refresh token dies the instant the backend answers, so dropping the
+   * replacement is not a safe no-op: it leaves a consumed credential in storage,
+   * the next refresh replays it, the backend reads the replay as a stolen token
+   * and revokes the entire family, and the panel falls back to "Connect to
+   * ClawAI" — with a live agent run still in flight. This used to happen
+   * whenever the record's revision moved during the round trip, or the refresh
+   * was cancelled after the response arrived.
+   *
+   * Only two outcomes may reject the replacement, and both mean the session it
+   * belongs to is gone: the record was cleared (logout), or a different account
+   * session now owns the slot. Plain revision drift may not.
+   */
+  private async commitRotation(
+    key: string,
+    tokens: TokenPairInput,
+    rotatedFrom: string | undefined,
+  ): Promise<RefreshSessionOutcome> {
+    const validated = tokenPairSchema.parse(tokens);
+    return this.mutate(key, async (current) => {
+      if (current.tokens === null) {
+        return 'missing';
       }
-      return (await this.read(key)).record.tokens === null ? 'missing' : 'changed';
+      if (current.sessionId !== rotatedFrom) {
+        return 'changed';
+      }
+      await this.write(key, {
+        ...(current.replacement === undefined ? {} : { replacement: current.replacement }),
+        revision: current.revision + 1,
+        sessionId: current.sessionId ?? randomUUID(),
+        tokens: validated,
+        version: SESSION_RECORD_VERSION,
+      });
+      return 'refreshed';
     });
   }
 

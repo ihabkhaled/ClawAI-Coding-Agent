@@ -18,6 +18,7 @@ import {
   type RuntimeBudgetState,
 } from '../core/runtime/runtime-run-budget';
 import {
+  parseToolInvocation,
   type Continuation,
   type RunBudget,
   type ToolDefinition,
@@ -154,6 +155,11 @@ export class RuntimeToolDispatcher {
   ): Promise<ToolResult> {
     signal?.throwIfAborted();
     this.assertCurrentEpochs();
+    // The backend hashed the model's ORIGINAL arguments when it admitted this
+    // invocation. Normalisation below may strip `targetId`, so the raw copy is
+    // kept and used for the receipt hash; otherwise workspace.command receipts
+    // fail the backend equality check with RECEIPT_ARGUMENT_MISMATCH.
+    const admittedArguments = parseToolInvocation(value).arguments;
     const normalized = normalizeToolInvocationForAdmission(value);
     const admission = admitRuntimeInvocation(this.state.registry, normalized);
     if (admission.replayed) {
@@ -205,7 +211,7 @@ export class RuntimeToolDispatcher {
           retryable: false,
           redactionApplied: false,
         },
-      });
+      }, admittedArguments);
     }
     const deadline = this.createDeadline(signal);
     this.activeDeadlines.set(admission.invocation.invocationId, deadline);
@@ -240,7 +246,7 @@ export class RuntimeToolDispatcher {
         this.assertCurrentEpochs();
         outcome = this.failureOutcome(deadline, error);
       }
-      return this.complete(admission.invocation, startedAtMs, continuation, outcome);
+      return this.complete(admission.invocation, startedAtMs, continuation, outcome, admittedArguments);
     } finally {
       this.activeDeadlines.delete(admission.invocation.invocationId);
       deadline.dispose();
@@ -398,10 +404,12 @@ export class RuntimeToolDispatcher {
     startedAtMs: number,
     continuation: Continuation,
     outcome: RuntimeToolDispatchOutcome,
+    receiptArguments?: ToolInvocation["arguments"],
   ): ToolResult {
     const completedAtMs = this.input.now();
     const result = buildRuntimeToolResult({
       invocation,
+      ...(receiptArguments === undefined ? {} : { receiptArguments }),
       receiptId: this.input.receiptId(),
       startedAt: new Date(startedAtMs).toISOString(),
       completedAt: new Date(completedAtMs).toISOString(),

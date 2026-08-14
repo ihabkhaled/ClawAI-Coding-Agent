@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { accessTokenNeedsRefresh } from '../core/access-token-expiry';
+import { ACCESS_TOKEN_REFRESH_SKEW_MS } from '../core/access-token-expiry.constants';
 import { backendErrorReason } from '../core/backend-error-body';
 import { joinApiUrl, normalizeBackendUrl } from '../core/configuration';
 import { redactText } from '../core/redaction';
@@ -8,9 +10,9 @@ import { type SessionVault, type TokenPair } from '../core/session-vault';
 import {
   BackendRequestError,
   BackendSessionChangedError,
-  BackendSessionExpiredError,
   backendTransportFailureMessage,
   bindBackendSession,
+  isBackendSessionBoundaryError,
 } from './backend-errors';
 import { BackendRuntimeClient } from './backend-runtime-client';
 import {
@@ -45,8 +47,8 @@ import {
   ResponseBodyLimitError,
   responseWithIdleTimeout,
   type ResponseLease,
-  waitForCaller,
 } from './response-lease';
+import { SessionRefresher } from './session-refresher';
 
 import type {
   BackendClientOptions,
@@ -75,9 +77,8 @@ export class BackendClient {
   private readonly sessionVault: SessionVault;
   private readonly timeoutMs: number;
   private readonly runtime: BackendRuntimeClient;
+  private readonly refresher = new SessionRefresher((signal) => this.performRefresh(signal));
   private boundSessionId: string | null = null;
-  private refreshController: AbortController | null = null;
-  private refreshPromise: Promise<void> | null = null;
 
   constructor(options: BackendClientOptions) {
     this.backendUrl = normalizeBackendUrl(options.backendUrl);
@@ -127,7 +128,7 @@ export class BackendClient {
   }
 
   async logout(): Promise<void> {
-    this.refreshController?.abort(new Error('ClawAI session ended.'));
+    this.refresher.abort(new Error('ClawAI session ended.'));
     const current = await this.sessionVault.loadBound(this.backendUrl);
     if (current === null) {
       return;
@@ -323,6 +324,7 @@ export class BackendClient {
   }
 
   private async openAuthenticatedStream(path: string, signal?: AbortSignal): Promise<Response> {
+    await this.ensureFreshSession(signal);
     let response = await this.send(path, {
       accept: 'text/event-stream',
       auth: true,
@@ -331,7 +333,7 @@ export class BackendClient {
     });
     if (response.response.status === 401) {
       await discardResponseBody(response);
-      await this.refreshSession(signal);
+      await this.refresher.run(signal);
       response = await this.send(path, {
         accept: 'text/event-stream',
         auth: true,
@@ -357,6 +359,7 @@ export class BackendClient {
       timeoutMs?: number;
     } = {},
   ): Promise<T> {
+    await this.ensureFreshSession(options.signal);
     const attempt = {
       auth: true as const,
       method: options.method ?? ('GET' as const),
@@ -367,38 +370,44 @@ export class BackendClient {
     let response = await this.send(path, attempt);
     if (response.response.status === 401) {
       await discardResponseBody(response);
-      await this.refreshSession(options.signal);
+      await this.refresher.run(options.signal);
       response = await this.send(path, attempt);
     }
     return this.parse(response, schema);
   }
 
-  private refreshSession(signal?: AbortSignal): Promise<void> {
-    let promise = this.refreshPromise;
-    if (promise === null) {
-      const controller = new AbortController();
-      promise = this.performRefresh(controller.signal);
-      const ownedPromise = promise;
-      this.refreshPromise = promise;
-      this.refreshController = controller;
-      void ownedPromise.then(
-        () => {
-          this.finishRefresh(ownedPromise, controller);
-        },
-        () => {
-          this.finishRefresh(ownedPromise, controller);
-        },
-      );
+  /**
+   * Rotate the session before it can fail, not after it already has.
+   *
+   * Reacting to a 401 alone left a hole nothing could close: an agent run in
+   * flight would spend a request on the failure, and any refresh that lost its
+   * race dropped the panel to "Connect to ClawAI" with the run still going. A
+   * request that is about to travel on a nearly dead access token rotates it
+   * first, so the expiry is never observed by the backend or the user.
+   *
+   * A rotation that fails for a transient reason is swallowed on purpose: the
+   * current token has not expired yet, the request is still worth sending, and
+   * the 401 path retries the rotation if it turns out it was needed. Only a
+   * genuinely dead session propagates, because that one needs sign-in.
+   */
+  private async ensureFreshSession(signal?: AbortSignal): Promise<void> {
+    const session = await this.sessionVault.loadBound(this.backendUrl);
+    if (session === null) {
+      return;
     }
-    return waitForCaller(promise, signal);
-  }
-
-  private finishRefresh(promise: Promise<void>, controller: AbortController): void {
-    if (this.refreshPromise === promise) {
-      this.refreshPromise = null;
+    this.boundSessionId = bindBackendSession(this.boundSessionId, session.sessionId);
+    if (
+      !accessTokenNeedsRefresh(session.tokens.accessToken, Date.now(), ACCESS_TOKEN_REFRESH_SKEW_MS)
+    ) {
+      return;
     }
-    if (this.refreshController === controller) {
-      this.refreshController = null;
+    try {
+      await this.refresher.run(signal);
+    } catch (error: unknown) {
+      signal?.throwIfAborted();
+      if (isBackendSessionBoundaryError(error)) {
+        throw error;
+      }
     }
   }
 
@@ -406,34 +415,41 @@ export class BackendClient {
     const outcome = await this.sessionVault.refreshIfCurrent(
       this.backendUrl,
       signal,
-      async (tokens) => {
-        let result;
-        try {
-          const response = await this.send('/auth/refresh', {
-            auth: false,
-            body: {
-              refreshToken: tokens.refreshToken,
-            },
-            method: 'POST',
-            signal,
-          });
-          result = await this.parse(response, refreshResultSchema);
-        } catch (error) {
-          if (error instanceof BackendRequestError && error.status === 401) {
-            if (this.boundSessionId !== null) {
-              await this.sessionVault.clearIfSession(this.backendUrl, this.boundSessionId);
-            }
-            throw new BackendSessionExpiredError();
-          }
-          throw error;
-        }
-        signal.throwIfAborted();
-        return result.tokens;
-      },
+      (tokens) => this.rotateSession(tokens.refreshToken, signal),
       this.boundSessionId ?? undefined,
     );
     if (outcome === 'missing') {
       throw new BackendRequestError('Connect to ClawAI to continue.', 401, false);
+    }
+  }
+
+  /**
+   * Exchange the stored refresh token for a rotated pair.
+   *
+   * The rotated pair is returned even when the caller's signal aborted while
+   * the response was in flight. The backend has already consumed the old token
+   * by then, so throwing here would leave a dead credential in storage and make
+   * the next refresh look like a replay attack — the vault decides whether the
+   * replacement is still wanted.
+   */
+  private async rotateSession(refreshToken: string, signal: AbortSignal): Promise<TokenPair> {
+    try {
+      const response = await this.send('/auth/refresh', {
+        auth: false,
+        body: { refreshToken },
+        method: 'POST',
+        signal,
+      });
+      const result = await this.parse(response, refreshResultSchema);
+      return result.tokens;
+    } catch (error: unknown) {
+      if (error instanceof BackendRequestError && error.status === 401) {
+        if (this.boundSessionId !== null) {
+          await this.sessionVault.clearIfSession(this.backendUrl, this.boundSessionId);
+        }
+        throw this.refresher.terminate();
+      }
+      throw error;
     }
   }
 
