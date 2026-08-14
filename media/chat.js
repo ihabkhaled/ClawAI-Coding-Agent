@@ -78,15 +78,19 @@ const elements = {
   selectedModelCount: byId('selectedModelCount'),
   selectedModelStrip: byId('selectedModelStrip'),
   sendButton: byId('sendButton'),
+  sendButtonLabel: byId('sendButtonLabel'),
   sessionButton: byId('sessionButton'),
   skipLink: byId('skipLink'),
   streamStatus: byId('streamStatus'),
   tokenCount: byId('tokenCount'),
   toastStack: byId('toastStack'),
   trustBadge: byId('trustBadge'),
+  themeMode: byId('themeMode'),
   workspaceName: byId('workspaceName'),
   workspaceActions: byId('workspaceActions'),
   workspaceIdentity: byId('workspaceIdentity'),
+  workspaceMenu: byId('workspaceMenu'),
+  workspaceMenuToggle: byId('workspaceMenuToggle'),
   workspaceSelect: byId('workspaceSelect'),
   waitingRunCount: byId('waitingRunCount'),
   waitingRunList: byId('waitingRunList'),
@@ -195,6 +199,12 @@ let attachmentReadGeneration = 0;
 let reservedAttachmentBytes = 0;
 let reservedAttachmentCount = 0;
 const MAX_PROMPT_HISTORY = 100;
+// Keeps the composer in step with `.prompt-field { max-height }`: the field
+// grows with the draft up to this height and scrolls beyond it.
+const MAX_PROMPT_HEIGHT = 240;
+const CLOSE_ICON_PATH = 'm4 4 8 8M12 4l-8 8';
+const REFRESH_FEEDBACK_MS = 8000;
+const THEME_MODES = new Set(['system', 'light', 'dark']);
 const persistedViewState = vscode.getState?.() ?? {};
 const promptHistory = Array.isArray(persistedViewState.promptHistory)
   ? persistedViewState.promptHistory
@@ -205,12 +215,90 @@ let promptHistoryIndex = promptHistory.length;
 let promptHistoryDraft = '';
 let historyTokenTotal = 0;
 let historyTokensReported = false;
+// "Don't show again" survives a reload; the X only silences the current panel.
+const silencedWarnings = new Set(
+  Array.isArray(persistedViewState.silencedWarnings)
+    ? persistedViewState.silencedWarnings.filter((entry) => typeof entry === 'string')
+    : [],
+);
+const dismissedWarnings = new Set();
+let refreshFeedbackTimer = 0;
 
 function estimateTokens(value) {
   if (typeof value !== 'string' || value.length === 0) {
     return 0;
   }
   return Math.max(1, Math.ceil(new window.TextEncoder().encode(value).length / 4));
+}
+
+// The composer grows with the draft instead of sitting at a fixed three rows.
+// A hidden field reports a zero scroll height, so the inline height is dropped
+// and the stylesheet's minimum takes over until the panel is visible again.
+function autoGrowPrompt() {
+  const field = elements.prompt;
+  field.style.height = 'auto';
+  const height = Math.min(field.scrollHeight, MAX_PROMPT_HEIGHT);
+  field.style.height = height > 0 ? `${height}px` : '';
+}
+
+// Sending an empty prompt is already a no-op, so the button says so up front.
+// Runs in flight stay sendable: the composer queues them behind the active run.
+function syncSendAvailability() {
+  const blocked = !currentState.connected || attachmentsReading;
+  elements.sendButton.disabled = blocked || elements.prompt.value.trim().length === 0;
+}
+
+// System follows whatever VS Code injects; light and dark force the panel and
+// survive a reload through the webview's own state.
+function applyThemeMode(mode) {
+  const theme = THEME_MODES.has(mode) ? mode : 'system';
+  elements.themeMode.value = theme;
+  if (theme === 'system') {
+    delete document.body.dataset.theme;
+  } else {
+    document.body.dataset.theme = theme;
+  }
+}
+
+function persistThemeMode(mode) {
+  vscode.setState?.({ ...(vscode.getState?.() ?? {}), themeMode: mode });
+}
+
+function setWorkspaceMenuOpen(open) {
+  elements.workspaceMenu.dataset.open = open ? 'true' : 'false';
+  elements.workspaceMenuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
+}
+
+function closeWorkspaceMenu(returnFocus = false) {
+  if (elements.workspaceMenu.dataset.open !== 'true') {
+    return;
+  }
+  setWorkspaceMenuOpen(false);
+  if (returnFocus) {
+    elements.workspaceMenuToggle.focus();
+  }
+}
+
+function closeMoreSettings(returnFocus = false) {
+  if (!elements.moreSettings.open) {
+    return;
+  }
+  elements.moreSettings.open = false;
+  if (returnFocus) {
+    elements.moreSettings.querySelector('summary')?.focus();
+  }
+}
+
+// A select can only ever show one line, so the full option text lives in the
+// title and is one hover away when the panel is too narrow for the label.
+function syncControlTitles() {
+  const selects = document.querySelectorAll(
+    '.compact-control select, .history-select, .workspace-select',
+  );
+  for (const select of selects) {
+    const selected = select.options[select.selectedIndex];
+    select.title = selected === undefined ? '' : selected.textContent;
+  }
 }
 
 function tokenLabel(receipt) {
@@ -240,8 +328,10 @@ function renderConversationTokenCount() {
     (historyTokenTotal === 0 || historyTokensReported) &&
     receipts.every((receipt) => receipt.source === 'reported');
   const source = allReported ? 'reported' : 'estimated';
-  elements.tokenCount.textContent = `${total} ${labels.tokens} · ${labels[source]}`;
+  const summary = `${total} ${labels.tokens} · ${labels[source]}`;
+  elements.tokenCount.textContent = summary;
   elements.conversationTokenMeter.dataset.source = source;
+  describeText(elements.conversationTokenMeter, summary);
 }
 
 function updateRequestMeta(requestId) {
@@ -294,9 +384,9 @@ function appendActivity(requestId, key, title, description = '', tokens = 0) {
   const marker = textElement('span', 'activity-marker', '');
   const copy = document.createElement('span');
   copy.className = 'activity-copy';
-  copy.append(textElement('strong', '', title));
+  copy.append(describeText(textElement('strong', '', title), title));
   if (description.length > 0) {
-    copy.append(textElement('small', '', description));
+    copy.append(describeText(textElement('small', '', description), description));
   }
   item.append(marker, copy);
   if (tokens > 0) {
@@ -425,18 +515,36 @@ function appendMessageAttachments(card, attachments) {
   card.append(list);
 }
 
-function createFileIcon() {
+// Same 16px grid and stroke weight as the markup icon set, so glyphs built here
+// are indistinguishable from the ones rendered by the extension host.
+function createStrokeIcon(className, path) {
   const namespace = 'http://www.w3.org/2000/svg';
   const icon = document.createElementNS(namespace, 'svg');
-  icon.setAttribute('class', 'attachment-file-icon claw-icon');
+  icon.setAttribute('class', `${className} claw-icon`.trim());
   icon.setAttribute('viewBox', '0 0 16 16');
   icon.setAttribute('fill', 'none');
   icon.setAttribute('stroke', 'currentColor');
+  icon.setAttribute('stroke-width', '1.5');
+  icon.setAttribute('stroke-linecap', 'round');
+  icon.setAttribute('stroke-linejoin', 'round');
   icon.setAttribute('aria-hidden', 'true');
   const outline = document.createElementNS(namespace, 'path');
-  outline.setAttribute('d', 'M3 1.5h6l4 4v9H3zM9 1.5v4h4M5.5 9h5M5.5 11.5h5');
+  outline.setAttribute('d', path);
   icon.append(outline);
   return icon;
+}
+
+function createFileIcon() {
+  return createStrokeIcon('attachment-file-icon', 'M3 1.5h6l4 4v9H3zM9 1.5v4h4M5.5 9h5M5.5 11.5h5');
+}
+
+// Any row that can run out of room carries its own text as a tooltip, so a
+// clipped label is never more than a hover away from being readable.
+function describeText(element, text) {
+  if (typeof text === 'string' && text.trim().length > 0) {
+    element.title = text;
+  }
+  return element;
 }
 
 function appendMetaItem(meta, item) {
@@ -597,7 +705,7 @@ function appendChangeReceipt(body, plan, undoAvailable = false, previewId = '') 
     const fileTokens = estimateTokens(`${file.path}\n${file.content ?? ''}`);
     item.append(
       textElement('span', 'change-operation', operationLabel(file.operation)),
-      textElement('code', '', file.path),
+      describeText(textElement('code', '', file.path), file.path),
       textElement('span', 'change-token', `${fileTokens} ${labels.tokens} · ${labels.estimated}`),
     );
     files.append(item);
@@ -626,18 +734,91 @@ function appendChangeReceipt(body, plan, undoAvailable = false, previewId = '') 
   body.after(receipt);
 }
 
+// The refresh control reports what it did: it spins, announces, and releases
+// on the next state frame — or after a bounded wait, so it can never spin on.
+function requestModelRefresh() {
+  vscode.postMessage({ type: 'refreshModels' });
+  elements.refreshModelsButton.dataset.busy = 'true';
+  elements.refreshModelsButton.disabled = true;
+  elements.announcer.textContent = labels.refreshingModels;
+  window.clearTimeout(refreshFeedbackTimer);
+  refreshFeedbackTimer = window.setTimeout(endModelRefreshFeedback, REFRESH_FEEDBACK_MS);
+}
+
+function endModelRefreshFeedback() {
+  window.clearTimeout(refreshFeedbackTimer);
+  refreshFeedbackTimer = 0;
+  if (elements.refreshModelsButton.dataset.busy !== 'true') {
+    return;
+  }
+  delete elements.refreshModelsButton.dataset.busy;
+  elements.refreshModelsButton.disabled = false;
+  elements.announcer.textContent = labels.modelsRefreshed;
+}
+
+function persistSilencedWarnings() {
+  vscode.setState?.({
+    ...(vscode.getState?.() ?? {}),
+    silencedWarnings: [...silencedWarnings],
+  });
+}
+
+function warningMessage(warning) {
+  if (warning === 'ollama') {
+    return labels.warningOllama;
+  }
+  if (warning === 'llamacpp') {
+    return labels.warningLlamacpp;
+  }
+  return warning;
+}
+
+function warningActionButton(text, onActivate) {
+  const button = describeText(textElement('button', 'warning-action', text), text);
+  button.type = 'button';
+  button.addEventListener('click', onActivate);
+  return button;
+}
+
+// A provider that failed to load is a footnote: one compact line with a retry,
+// a dismiss for this panel and a persisted "don't show again".
 function renderWarnings(warnings) {
   elements.modelWarnings.replaceChildren();
   for (const warning of warnings) {
-    const message =
-      warning === 'ollama'
-        ? labels.warningOllama
-        : warning === 'llamacpp'
-          ? labels.warningLlamacpp
-          : warning;
-    const item = textElement('div', 'warning-card', message);
-    item.prepend(textElement('span', 'warning-shape', '!'));
-    elements.modelWarnings.append(item);
+    const key = String(warning);
+    if (silencedWarnings.has(key) || dismissedWarnings.has(key)) {
+      continue;
+    }
+    const message = warningMessage(warning);
+    const card = document.createElement('div');
+    card.className = 'warning-card';
+    card.append(
+      textElement('span', 'warning-shape', '!'),
+      describeText(textElement('span', 'warning-text', message), message),
+    );
+    const actions = document.createElement('span');
+    actions.className = 'warning-actions';
+    actions.append(
+      warningActionButton(labels.retry, requestModelRefresh),
+      warningActionButton(labels.dontShowAgain, () => {
+        silencedWarnings.add(key);
+        persistSilencedWarnings();
+        renderWarnings(currentState.modelWarnings ?? []);
+      }),
+    );
+    const dismiss = document.createElement('button');
+    dismiss.type = 'button';
+    dismiss.className = 'warning-dismiss';
+    dismiss.title = labels.dismiss;
+    dismiss.setAttribute('aria-label', labels.dismiss);
+    dismiss.append(createStrokeIcon('', CLOSE_ICON_PATH));
+    dismiss.addEventListener('click', () => {
+      dismissedWarnings.add(key);
+      renderWarnings(currentState.modelWarnings ?? []);
+    });
+    actions.append(dismiss);
+    card.append(actions);
+    elements.modelWarnings.append(card);
   }
 }
 
@@ -862,7 +1043,7 @@ function appendRunDetails(item, run) {
     const item = document.createElement('li');
     item.append(
       textElement('span', 'change-operation', operationLabel(file.operation)),
-      textElement('code', '', file.path),
+      describeText(textElement('code', '', file.path), file.path),
     );
     list.append(item);
   }
@@ -870,8 +1051,8 @@ function appendRunDetails(item, run) {
     const commandItem = document.createElement('li');
     commandItem.append(
       textElement('span', 'change-operation command-operation', '›'),
-      textElement('code', '', command.command),
-      textElement('small', '', command.purpose),
+      describeText(textElement('code', '', command.command), command.command),
+      describeText(textElement('small', '', command.purpose), command.purpose),
     );
     list.append(commandItem);
   }
@@ -932,15 +1113,15 @@ function renderRunDeck(queue, agentRuns = {}) {
     const copy = document.createElement('span');
     copy.className = 'run-copy';
     copy.append(
-      textElement('strong', 'run-model', request.modelLabel),
-      textElement('span', 'run-prompt', request.prompt),
+      describeText(textElement('strong', 'run-model', request.modelLabel), request.modelLabel),
+      describeText(textElement('span', 'run-prompt', request.prompt), request.prompt),
     );
     const meta = document.createElement('span');
     meta.className = 'run-meta';
     const elapsed = textElement('time', 'run-elapsed', elapsedLabel(request.startedAt));
     elapsed.dataset.startedAt = String(request.startedAt);
     meta.append(
-      textElement('span', 'run-phase', agentPhaseLabel(run)),
+      describeText(textElement('span', 'run-phase', agentPhaseLabel(run)), agentPhaseLabel(run)),
       tokenChip(
         requestTokens.get(request.id) ?? {
           input: 0,
@@ -979,8 +1160,8 @@ function renderRunDeck(queue, agentRuns = {}) {
     const copy = document.createElement('span');
     copy.className = 'waiting-run-copy';
     copy.append(
-      textElement('strong', '', request.modelLabel),
-      textElement('span', '', request.prompt),
+      describeText(textElement('strong', '', request.modelLabel), request.modelLabel),
+      describeText(textElement('span', '', request.prompt), request.prompt),
       textElement(
         'small',
         'waiting-reason',
@@ -1313,8 +1494,10 @@ function renderState(state) {
   elements.routeMode.textContent =
     state.routingMode === 'AUTO' ? labels.routeAutomatic : labels.routeSelected;
   const active = state.models.find((model) => model.key === state.selectedModel);
-  elements.routeModel.textContent =
+  const routeModelLabel =
     state.routingMode === 'AUTO' ? 'AUTO' : (active?.displayName ?? state.selectedModel);
+  elements.routeModel.textContent = routeModelLabel;
+  describeText(elements.routeToggle, `${routeModelLabel} · ${elements.routeMode.textContent}`);
   elements.activeModeBadge.textContent =
     (pendingAgentMode ?? state.agentMode) === 'PLAN' ? labels.planMode : labels.auto;
   const contextReceipt = state.contextReceipt;
@@ -1330,13 +1513,13 @@ function renderState(state) {
       ? labels.agentBehaviorPlanning
       : labels.agentBehaviorCoding;
   elements.sessionButton.textContent = state.connected ? labels.logout : labels.connect;
-  elements.sendButton.disabled = !state.connected || attachmentsReading;
+  syncSendAvailability();
   const activeRequests = state.generationQueue?.active ?? [];
   const atCapacity = activeRequests.length >= (state.generationQueue?.capacity ?? 2);
   const conversationBusy = activeRequests.some(
     (request) => request.concurrencyKey === currentSession?.sessionId,
   );
-  elements.sendButton.querySelector('span').textContent =
+  elements.sendButtonLabel.textContent =
     atCapacity || conversationBusy ? labels.queue : labels.send;
   elements.prompt.disabled = false;
   elements.modelSelect.disabled = false;
@@ -1349,6 +1532,7 @@ function renderState(state) {
   elements.effortMode.value = pendingEffortMode ?? state.effortMode ?? 'ULTRA';
   elements.speedMode.value = pendingSpeedMode ?? state.speedMode ?? '1X';
   elements.permissionMode.value = pendingPermissionMode ?? state.permissionMode;
+  endModelRefreshFeedback();
   renderModels(state.models);
   renderHistory(state.history);
   renderWarnings(state.modelWarnings ?? []);
@@ -1357,6 +1541,8 @@ function renderState(state) {
   renderRuntimeTimeline(state.runtime);
   renderApproval(state.approvalRequest);
   renderContextHint();
+  syncControlTitles();
+  autoGrowPrompt();
   const wasAuthorizing = !previousState.connected && previousState.backendStatus === 'loading';
   if (!connectionViewInitialized) {
     connectionViewInitialized = true;
@@ -1398,9 +1584,10 @@ function renderRuntimeTimeline(runtime) {
     card.open = runId === runtime.activeRunId;
     const summary = document.createElement('summary');
     const identity = textElement('span', 'runtime-run-identity', '');
+    const runPhase = run.phase || labels.activity;
     identity.append(
-      textElement('strong', '', run.phase || labels.activity),
-      textElement('small', 'runtime-run-id', runId),
+      describeText(textElement('strong', '', runPhase), runPhase),
+      describeText(textElement('small', 'runtime-run-id', runId), runId),
     );
     summary.append(
       textElement('span', 'runtime-signal', ''),
@@ -1417,9 +1604,11 @@ function renderRuntimeTimeline(runtime) {
       const turnCard = document.createElement('article');
       turnCard.className = 'runtime-turn-card';
       turnCard.dataset.status = turn.status;
+      const turnSummary = turn.summary || labels.reasoning;
+      const turnMeta = `${turnId} · ${formatBytes(turn.textBytes ?? 0)}`;
       turnCard.append(
-        textElement('strong', '', turn.summary || labels.reasoning),
-        textElement('small', 'runtime-metadata', `${turnId} · ${formatBytes(turn.textBytes ?? 0)}`),
+        describeText(textElement('strong', '', turnSummary), turnSummary),
+        describeText(textElement('small', 'runtime-metadata', turnMeta), turnMeta),
       );
       body.append(turnCard);
     }
@@ -1468,8 +1657,8 @@ function runtimeInvocation(invocationId, invocation) {
   const summary = document.createElement('summary');
   const title = textElement('span', 'runtime-tool-title', '');
   title.append(
-    textElement('strong', '', invocation.toolName),
-    textElement('small', '', invocation.operation),
+    describeText(textElement('strong', '', invocation.toolName), invocation.toolName),
+    describeText(textElement('small', '', invocation.operation), invocation.operation),
   );
   summary.append(
     textElement('span', 'runtime-tool-glyph', '◆'),
@@ -1479,19 +1668,13 @@ function runtimeInvocation(invocationId, invocation) {
   const receipt = invocation.receipt;
   const body = document.createElement('div');
   body.className = 'runtime-tool-detail';
-  body.append(textElement('code', '', invocationId));
+  body.append(describeText(textElement('code', '', invocationId), invocationId));
   if (receipt) {
+    const timing = `${String(receipt.durationMs)} ms · ${formatBytes(receipt.outputBytes)}`;
+    const provenance = `${receipt.receiptId}${receipt.truncated ? ` · ${labels.truncated}` : ''}${receipt.redactionApplied ? ` · ${labels.redacted}` : ''}`;
     body.append(
-      textElement(
-        'span',
-        'runtime-metadata',
-        `${String(receipt.durationMs)} ms · ${formatBytes(receipt.outputBytes)}`,
-      ),
-      textElement(
-        'span',
-        'runtime-metadata',
-        `${receipt.receiptId}${receipt.truncated ? ` · ${labels.truncated}` : ''}${receipt.redactionApplied ? ` · ${labels.redacted}` : ''}`,
-      ),
+      describeText(textElement('span', 'runtime-metadata', timing), timing),
+      describeText(textElement('span', 'runtime-metadata', provenance), provenance),
     );
   }
   card.append(summary, body);
@@ -1545,6 +1728,8 @@ function navigatePromptHistory(direction) {
       : promptHistory[promptHistoryIndex];
   elements.prompt.value = value;
   elements.prompt.setSelectionRange(value.length, value.length);
+  autoGrowPrompt();
+  syncSendAvailability();
   return true;
 }
 
@@ -1587,7 +1772,7 @@ function setAttachmentBusy(busy) {
   elements.form.classList.toggle('reading-attachments', busy);
   elements.form.setAttribute('aria-busy', busy ? 'true' : 'false');
   elements.attachmentButton.disabled = busy;
-  elements.sendButton.disabled = busy || !currentState.connected;
+  syncSendAvailability();
 }
 
 function revokePreview(attachment) {
@@ -1614,7 +1799,10 @@ function renderAttachments() {
     const details = document.createElement('span');
     details.className = 'attachment-details';
     details.append(
-      textElement('strong', 'attachment-name', attachment.filename),
+      describeText(
+        textElement('strong', 'attachment-name', attachment.filename),
+        attachment.filename,
+      ),
       textElement('small', '', formatBytes(attachment.sizeBytes)),
     );
     const remove = textElement('button', 'attachment-remove', '×');
@@ -1808,9 +1996,10 @@ function resetAccountComposer() {
   setAttachmentBusy(false);
   clearComposerAttachments();
   elements.attachmentButton.disabled = false;
-  elements.sendButton.disabled = !currentState.connected;
   elements.attachmentInput.value = '';
   elements.prompt.value = '';
+  autoGrowPrompt();
+  syncSendAvailability();
   promptHistory.splice(0);
   promptHistoryIndex = 0;
   promptHistoryDraft = '';
@@ -1936,6 +2125,8 @@ function submitPrompt(retryInput) {
   if (retryInput === undefined) {
     rememberPrompt(content);
     elements.prompt.value = '';
+    autoGrowPrompt();
+    syncSendAvailability();
     clearComposerAttachments();
   }
 }
@@ -2013,9 +2204,7 @@ elements.openFolderButton.addEventListener('click', () => {
   vscode.postMessage({ type: 'openFolder' });
 });
 
-elements.refreshModelsButton.addEventListener('click', () => {
-  vscode.postMessage({ type: 'refreshModels' });
-});
+elements.refreshModelsButton.addEventListener('click', requestModelRefresh);
 
 elements.workspaceSelect.addEventListener('change', () => {
   vscode.postMessage({
@@ -2157,6 +2346,8 @@ elements.prompt.addEventListener('input', () => {
     promptHistoryIndex = promptHistory.length;
     promptHistoryDraft = elements.prompt.value;
   }
+  autoGrowPrompt();
+  syncSendAvailability();
 });
 
 elements.prompt.addEventListener('keydown', (event) => {
@@ -2191,6 +2382,8 @@ for (const suggestion of document.querySelectorAll('[data-prompt-kind]')) {
       elements.agentMode.value = 'PLAN';
       elements.agentMode.dispatchEvent(new Event('change'));
     }
+    autoGrowPrompt();
+    syncSendAvailability();
     elements.prompt.focus();
   });
 }
@@ -2201,10 +2394,14 @@ document.addEventListener('keydown', (event) => {
     closeConnectionSettings();
     return;
   }
+  if (event.key === 'Escape' && elements.workspaceMenu.dataset.open === 'true') {
+    event.preventDefault();
+    closeWorkspaceMenu(true);
+    return;
+  }
   if (event.key === 'Escape' && elements.moreSettings.open) {
     event.preventDefault();
-    elements.moreSettings.open = false;
-    elements.moreSettings.querySelector('summary')?.focus();
+    closeMoreSettings(true);
     return;
   }
   if ((event.ctrlKey || event.metaKey) && event.key === 'Enter') {
@@ -2212,10 +2409,37 @@ document.addEventListener('keydown', (event) => {
   }
 });
 
-document.addEventListener('pointerdown', (event) => {
-  if (elements.moreSettings.open && !elements.moreSettings.contains(event.target)) {
-    elements.moreSettings.open = false;
+// Any press outside an open popover closes it. Both events are handled because
+// a native select consumes the pointer sequence its own way.
+function closePopoversOutside(target) {
+  if (elements.moreSettings.open && !elements.moreSettings.contains(target)) {
+    closeMoreSettings();
   }
+  if (
+    elements.workspaceMenu.dataset.open === 'true' &&
+    !elements.workspaceActions.contains(target)
+  ) {
+    closeWorkspaceMenu();
+  }
+}
+
+document.addEventListener('pointerdown', (event) => {
+  closePopoversOutside(event.target);
+});
+
+document.addEventListener('click', (event) => {
+  closePopoversOutside(event.target);
+});
+
+document.addEventListener('change', syncControlTitles);
+
+elements.workspaceMenuToggle.addEventListener('click', () => {
+  setWorkspaceMenuOpen(elements.workspaceMenu.dataset.open !== 'true');
+});
+
+elements.themeMode.addEventListener('change', () => {
+  applyThemeMode(elements.themeMode.value);
+  persistThemeMode(elements.themeMode.value);
 });
 
 function updateEstimatedOutput(requestId, content) {
@@ -2416,6 +2640,10 @@ window.addEventListener('message', (event) => {
 });
 
 setConversationVisibility();
+setWorkspaceMenuOpen(false);
+applyThemeMode(persistedViewState.themeMode);
+syncControlTitles();
+syncSendAvailability();
 elements.attachmentInput.accept = [...ALLOWED_ATTACHMENT_MIME_TYPES].join(',');
 const runElapsedTimer = window.setInterval(updateRunElapsedTimes, 1000);
 window.addEventListener(

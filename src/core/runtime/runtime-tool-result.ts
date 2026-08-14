@@ -22,6 +22,14 @@ function freezeDeep<T>(value: T): T {
 
 export interface RuntimeToolResultInput {
   readonly invocation: ToolInvocation;
+  /**
+   * The arguments the BACKEND admitted, when they differ from the ones this
+   * invocation executes with. Only workspace.command 2.0.0 differs today: its
+   * `targetId` is stripped from `arguments` so the strict input schema accepts
+   * it, while the backend hashed the model's original request. Omit it and the
+   * executing arguments are hashed, which is correct for every other tool.
+   */
+  readonly receiptArguments?: ToolInvocation['arguments'];
   readonly receiptId: string;
   readonly startedAt: string;
   readonly completedAt: string;
@@ -203,7 +211,16 @@ export function buildRuntimeToolResult(input: RuntimeToolResultInput): ToolResul
         schemaVersion: '2.0',
         receiptId: input.receiptId,
         invocationId: invocation.invocationId,
-        argumentHash: sha256(invocation.arguments),
+        // Hashes the arguments AS ADMITTED, which is not always the arguments
+        // this invocation executes with. `normalizeToolInvocationForAdmission`
+        // strips `targetId` out of `arguments` for workspace.command 2.0.0 so
+        // the strict input schema accepts it — but the backend recorded its own
+        // hash from the model's ORIGINAL request, `targetId` included. Hashing
+        // the stripped copy made every workspace.command receipt fail the
+        // backend's equality check with RECEIPT_ARGUMENT_MISMATCH, so the agent
+        // could read files but never run a command. The receipt attests what was
+        // admitted; normalisation is an execution detail and must not change it.
+        argumentHash: sha256(input.receiptArguments ?? invocation.arguments),
         resultHash: sha256(resultBody),
         startedAt: input.startedAt,
         completedAt: input.completedAt,

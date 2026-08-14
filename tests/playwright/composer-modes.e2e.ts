@@ -48,8 +48,9 @@ test('shows the whole settings popover instead of clipping it to the composer ca
   expect(geometry.bottom).toBeLessThanOrEqual(geometry.viewport);
 
   // Every label must be on screen. The bug hid these without hiding the select
-  // underneath, so the control looked present and unlabelled.
-  for (const label of ['AGENT', 'EFFORT', 'SPEED', 'APPROVAL', 'CONTEXT', 'WEB RESEARCH']) {
+  // underneath, so the control looked present and unlabelled. Effort now lives
+  // on the composer rail beside Send, so it is no longer part of this set.
+  for (const label of ['AGENT', 'SPEED', 'APPROVAL', 'CONTEXT', 'WEB RESEARCH', 'THEME']) {
     await expect(
       page.locator('.secondary-controls .compact-control span', { hasText: label }).first(),
     ).toBeInViewport();
@@ -73,7 +74,8 @@ test('offers three speed modes and posts the selection', async ({ page }) => {
 test('offers all six effort modes and keeps a selection through a state round trip', async ({
   page,
 }) => {
-  await page.locator('#moreSettingsSummary').click();
+  // Effort sits on the composer rail, so it needs no popover to reach it.
+  await expect(page.locator('#effortMode')).toBeVisible();
   await expect(page.locator('#effortMode option')).toHaveCount(6);
   await expect(page.locator('#effortMode')).toHaveValue('ULTRA');
 

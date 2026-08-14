@@ -10,6 +10,8 @@ export default defineConfig({
       reporter: ['text', 'json-summary'],
       include: [
         'src/backend/backend-client.ts',
+        'src/backend/session-refresher.ts',
+        'src/core/access-token-expiry.ts',
         'src/core/configuration.ts',
         'src/core/chat-attachment.ts',
         'src/core/context-collector.ts',

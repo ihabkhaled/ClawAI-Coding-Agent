@@ -38,6 +38,9 @@ test('keeps settings interactive and dismisses them outside or with Escape', asy
 });
 
 test('uses pointer feedback for enabled interactive controls only', async ({ page }) => {
+  // Send only offers itself once there is something to send, so the draft comes
+  // first — an empty composer keeps the button disabled by design.
+  await page.locator('#prompt').fill('Review the composer');
   for (const selector of [
     '#moreSettingsSummary',
     '#sendButton',

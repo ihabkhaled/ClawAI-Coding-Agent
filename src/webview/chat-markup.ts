@@ -5,30 +5,12 @@ import {
   FRONTEND_LOCAL_URL,
 } from '../core/configuration';
 
-export interface ChatMarkupInput {
-  cspSource: string;
-  language: string;
-  nonce: string;
-  logoUri: string;
-  scriptUri: string;
-  styleUri: string;
-  translate(message: string): string;
-}
+import { renderComposerMarkup } from './chat-composer-markup';
+import { iconMarkup } from './chat-icons';
 
-type ClawIconName = 'attach' | 'explain' | 'plan' | 'review' | 'test';
+import type { ChatMarkupInput } from './chat-markup.types';
 
-const iconPaths: Record<ClawIconName, string> = {
-  attach:
-    '<path d="M6 8.5 11.5 3a2.5 2.5 0 0 1 3.5 3.5L8.5 13a4 4 0 0 1-5.5-5.5L9 1.5"/><path d="m5.5 9 6-6"/>',
-  explain: '<circle cx="8" cy="8" r="6"/><path d="M8 11V7.5M8 5h.01"/>',
-  plan: '<path d="M2 4h12M2 8h8M2 12h5"/><path d="m10 12 1.5 1.5L15 10"/>',
-  review: '<path d="m2 8 3 3 7-7"/><path d="M14 8a6 6 0 1 1-3-5.2"/>',
-  test: '<path d="M6 2v4l-4 7a2 2 0 0 0 2 3h8a2 2 0 0 0 2-3l-4-7V2"/><path d="M5 10h6M5 2h6"/>',
-};
-
-export function iconMarkup(name: ClawIconName): string {
-  return `<svg class="claw-icon" viewBox="0 0 16 16" fill="none" stroke="currentColor" stroke-width="1.5" stroke-linecap="round" stroke-linejoin="round" aria-hidden="true">${iconPaths[name]}</svg>`;
-}
+export type { ChatMarkupInput } from './chat-markup.types';
 
 function escapeHtml(value: string): string {
   return value
@@ -93,15 +75,18 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         </div>
       </div>
       <div id="workspaceActions" class="workspace-actions" hidden>
-        <label class="sr-only" for="historySelect">${translated('Conversation history')}</label>
-        <select id="historySelect" class="history-select" aria-label="${translated('Conversation history')}">
-          <option value="">${translated('Recent conversations')}</option>
-        </select>
-        <button id="openFolderButton" class="quiet-button" type="button" hidden>${translated('Open folder')}</button>
-        <button id="refreshModelsButton" class="icon-button" type="button" title="${translated('Refresh models')}" aria-label="${translated('Refresh models')}">↻</button>
-        <button id="newChatButton" class="icon-button" type="button" title="${translated('New conversation')}" aria-label="${translated('New conversation')}">＋</button>
-        <button id="languageButton" class="quiet-button language-button" type="button" title="${translated('Change display language')}" aria-label="${translated('Change display language')}"><span aria-hidden="true">文</span><span>${escapeHtml(languageName)}</span><span aria-hidden="true">⌄</span></button>
-        <button id="sessionButton" class="quiet-button" type="button">${translated('Connect')}</button>
+        <button id="workspaceMenuToggle" class="icon-button workspace-menu-toggle" type="button" aria-expanded="false" aria-controls="workspaceMenu" title="${translated('More actions')}" aria-label="${translated('More actions')}">${iconMarkup('more')}</button>
+        <div id="workspaceMenu" class="workspace-menu">
+          <label class="sr-only" for="historySelect">${translated('Conversation history')}</label>
+          <select id="historySelect" class="history-select" aria-label="${translated('Conversation history')}" title="${translated('Recent conversations')}">
+            <option value="">${translated('Recent conversations')}</option>
+          </select>
+          <button id="openFolderButton" class="quiet-button" type="button" hidden>${translated('Open folder')}</button>
+          <button id="refreshModelsButton" class="icon-button" type="button" title="${translated('Refresh models')}" aria-label="${translated('Refresh models')}">${iconMarkup('refresh')}</button>
+          <button id="newChatButton" class="icon-button" type="button" title="${translated('New conversation')}" aria-label="${translated('New conversation')}">${iconMarkup('plus')}</button>
+          <button id="languageButton" class="quiet-button language-button" type="button" title="${translated('Change display language')}" aria-label="${translated('Change display language')}">${iconMarkup('globe')}<span class="language-name">${escapeHtml(languageName)}</span><span class="chevron" aria-hidden="true">${iconMarkup('chevron')}</span></button>
+          <button id="sessionButton" class="quiet-button" type="button">${translated('Connect')}</button>
+        </div>
       </div>
     </header>
 
@@ -166,11 +151,11 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
             <strong id="routeModel">AUTO</strong>
             <small id="backendLabel">${translated('Disconnected')}</small>
           </span>
-          <span class="chevron" aria-hidden="true">⌄</span>
+          <span class="chevron" aria-hidden="true">${iconMarkup('chevron')}</span>
         </button>
         <span id="conversationTokenMeter" class="token-chip conversation-token-meter" role="status" aria-live="polite" aria-label="${translated('Conversation token usage')}">
-          <span class="token-symbol" aria-hidden="true">◈</span>
-          <span id="tokenCount">—</span>
+          <span class="token-symbol" aria-hidden="true">&#9672;</span>
+          <span id="tokenCount">&mdash;</span>
         </span>
         <span id="activeModeBadge" class="badge accent-badge">${translated('Auto')}</span>
       </div>
@@ -233,99 +218,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       <p id="modelSelectionHelp" class="model-selection-help">${translated('Choose between 2 and 5 models.')}</p>
     </section>
 
-    <form id="composer" class="composer">
-      <div class="composer-card">
-        <div id="contextHint" class="context-hint">
-          <span class="context-icon" aria-hidden="true">⌁</span>
-          <span id="contextHintText">${translated('Smart context will choose the best available source')}</span>
-        </div>
-        <label class="sr-only" for="prompt">${translated('Ask ClawAI')}</label>
-        <textarea id="prompt" rows="3" maxlength="20000" placeholder="${translated('Ask ClawAI to inspect, plan, or build…')}" required></textarea>
-        <div id="attachmentTray" class="attachment-tray" hidden>
-          <div id="attachmentList" class="attachment-list" role="list" aria-label="${translated('Attachments')}"></div>
-          <p id="attachmentStatus" class="attachment-status" role="status" aria-live="polite"></p>
-        </div>
-        <div class="control-rail primary-control-rail">
-          <input id="attachmentInput" class="sr-only" type="file" multiple>
-          <button id="attachmentButton" class="icon-button attachment-button" type="button" title="${translated('Attach files')}" aria-label="${translated('Attach files')}">
-            ${iconMarkup('attach')}
-          </button>
-          <label class="compact-control model-control"><span>${translated('Model')}</span>
-            <select id="modelSelect" aria-label="${translated('Model')}">
-              <option value="AUTO">${translated('Automatic routing')}</option>
-            </select>
-          </label>
-          <label class="compact-control run-control"><span>${translated('Run')}</span>
-            <select id="runMode">
-              <option value="agent">${translated('Agent')}</option>
-              <option value="chat">${translated('Chat')}</option>
-              <option value="compare">${translated('Compare')}</option>
-              <option value="judge">${translated('Compare + Judge')}</option>
-            </select>
-          </label>
-          <details id="moreSettings" class="more-settings">
-            <summary id="moreSettingsSummary">${translated('More settings')}</summary>
-            <div class="secondary-controls">
-              <label class="compact-control"><span>${translated('Agent')}</span>
-                <select id="agentMode">
-                  <option value="AUTO">${translated('Auto')}</option>
-                  <option value="PLAN">${translated('Plan mode')}</option>
-                </select>
-              </label>
-              <label class="compact-control"><span>${translated('Effort')}</span>
-                <select id="effortMode">
-                  <option value="LOW">${translated('Low')}</option>
-                  <option value="MEDIUM">${translated('Medium')}</option>
-                  <option value="HIGH">${translated('High')}</option>
-                  <option value="MAX">${translated('Max')}</option>
-                  <option value="XHIGH">${translated('xHigh')}</option>
-                  <option value="ULTRA">${translated('Ultra')}</option>
-                </select>
-              </label>
-              <label class="compact-control"><span>${translated('Speed')}</span>
-                <select id="speedMode">
-                  <option value="1X">${translated('1X')}</option>
-                  <option value="1.5X">${translated('1.5X')}</option>
-                  <option value="2X">${translated('2X')}</option>
-                </select>
-              </label>
-              <label class="compact-control"><span>${translated('Approval')}</span>
-                <select id="permissionMode">
-                  <option value="PLAN">${translated('Plan')}</option>
-                  <option value="ASK">${translated('Ask for Approval')}</option>
-                  <option value="AUTO_EDIT">${translated('Auto Edit')}</option>
-                  <option value="AUTONOMOUS_SCOPED">${translated('Autonomous Scoped')}</option>
-                  <option value="ENTERPRISE_LOCKED">${translated('Enterprise Locked')}</option>
-                </select>
-              </label>
-              <label class="compact-control"><span>${translated('Context')}</span>
-                <select id="contextMode">
-                  <option value="smart">${translated('Smart context')}</option>
-                  <option value="file">${translated('Active file')}</option>
-                  <option value="selection">${translated('Selection')}</option>
-                  <option value="workspace">${translated('Workspace')}</option>
-                  <option value="none">${translated('None')}</option>
-                </select>
-              </label>
-              <label class="compact-control"><span>${translated('Web research')}</span>
-                <select id="researchMode">
-                  <option value="NONE">${translated('Off')}</option>
-                  <option value="SEARCH">${translated('Search')}</option>
-                  <option value="SEARCH_FETCH">${translated('Search + fetch')}</option>
-                  <option value="SEARCH_EXTRACT">${translated('Search + extract')}</option>
-                </select>
-              </label>
-              <button id="externalOutputButton" class="quiet-button external-output-button" type="button">${translated('Output folders')}</button>
-              <button id="connectionSettingsButton" class="quiet-button external-output-button" type="button">${translated('App connections')}</button>
-            </div>
-          </details>
-          <div class="actions">
-            <button id="sendButton" class="send-button" type="submit" aria-label="${translated('Send')}"><span>${translated('Send')}</span><b aria-hidden="true">↑</b></button>
-          </div>
-        </div>
-      </div>
-      <p class="composer-footnote">${translated('Ctrl/⌘ + Enter to send · approval follows the selected mode')}</p>
-    </form>
+    ${renderComposerMarkup(translated)}
     </div>
     <p id="streamStatus" class="sr-only" role="status" aria-live="polite"></p>
     <p id="announcer" class="sr-only" aria-live="assertive"></p>
@@ -417,6 +310,10 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-copy="${translated('Copy response')}"
     data-copy-model="${translated('Copy model response')}"
     data-copied="${translated('Copied')}"
+    data-dismiss="${translated('Dismiss')}"
+    data-dont-show-again="${translated("Don't show again")}"
+    data-refreshing-models="${translated('Refreshing models…')}"
+    data-models-refreshed="${translated('Model list updated')}"
     data-error="${translated('Error')}"
     data-failed="${translated('Failed')}"
     data-file-changes="${translated('File changes')}"
