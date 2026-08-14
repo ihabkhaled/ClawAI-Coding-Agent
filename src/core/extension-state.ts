@@ -16,6 +16,7 @@ import type { EffortMode } from './effort-mode';
 import type { GenerationQueueSnapshot } from './generation-queue';
 import type { ModelCatalogEntry } from './model-catalog';
 import type { PermissionMode } from './permission-policy.types';
+import type { CapabilityManifest } from './runtime/capability-manifest';
 import type { RuntimeProtocolSelection } from './runtime/runtime-negotiation';
 import type { SpeedMode } from './speed-mode';
 import type { WorkspaceScopeSnapshot } from './workspace-scope.types';
@@ -88,6 +89,24 @@ export class ExtensionState {
     this.snapshotValue = {
       ...this.snapshotValue,
       runtime: createRuntimeSnapshot(this.snapshotValue.runtime.capabilityManifest),
+    };
+    this.publish();
+  }
+
+  /**
+   * Replaces the capability manifest and clears the runtime snapshot with it.
+   *
+   * The manifest describes what the execution target can actually do, so it
+   * stops being true the moment workspace trust is granted or the folder set
+   * changes. Everything already reduced from the old manifest — negotiated
+   * protocol, live run, tool results — describes a target that no longer
+   * exists, which is why this resets rather than merges.
+   */
+  setCapabilityManifest(capabilityManifest: CapabilityManifest): void {
+    if (capabilityManifest === this.snapshotValue.runtime.capabilityManifest) return;
+    this.snapshotValue = {
+      ...this.snapshotValue,
+      runtime: createRuntimeSnapshot(capabilityManifest),
     };
     this.publish();
   }

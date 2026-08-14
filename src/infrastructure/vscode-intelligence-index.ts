@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import * as vscode from 'vscode';
 
+
 import {
   evidenceHash,
   instructionAuthority,
@@ -12,6 +13,11 @@ import {
   type WorkspaceIntelligenceGraph,
 } from '../core/workspace-intelligence-graph';
 import { isSensitiveWorkspacePath } from '../core/workspace-path-policy';
+
+import {
+  WORKSPACE_SCAN_EXCLUDE_GLOB,
+  WORKSPACE_SCAN_MAX_RESULTS,
+} from './workspace-scan.constants';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { IntelligenceIndexPort } from '../services/workspace-intelligence-service';
@@ -70,8 +76,8 @@ export class VscodeIntelligenceIndex implements IntelligenceIndexPort, vscode.Di
     const root = this.files.workspaceRootUri(this.rootKey());
     const uris = await vscode.workspace.findFiles(
       new vscode.RelativePattern(root, '**/*'),
-      '**/{.git,node_modules,vendor,target,dist,build,.next,coverage}/**',
-      50_000,
+      WORKSPACE_SCAN_EXCLUDE_GLOB,
+      WORKSPACE_SCAN_MAX_RESULTS,
     );
     const activePaths = new Set<string>();
     for (const uri of uris) {
