@@ -185,6 +185,52 @@ describe('SubAgentCoordinatorService', () => {
       changedPaths: ['src/ui.ts'],
     });
   });
+
+  it('releases a worktree when the task fails without throwing, so a retry can reuse it', async () => {
+    // The nested runtime can end with a `run.failed` event and still return
+    // its outcome normally rather than throwing, so this path bypasses the
+    // coordinator's own catch block. Nothing has a commit to integrate for a
+    // failed task, and nothing else ever releases its worktree — a retry of
+    // the same worktreeId used to fail immediately with "already active".
+    const isolated = {
+      ...task('implement-ui', [], ['src/ui.ts'], 'implementer'),
+      worktreeId: 'agent-ui',
+    };
+    const workspace = {
+      prepare: vi.fn(async () => undefined),
+      finalize: vi.fn(async (_task: SubAgentTask, outcome: SubAgentOutcome) => outcome),
+      abandon: vi.fn(async () => undefined),
+    };
+    const executor = {
+      execute: vi.fn(async () => ({
+        taskId: isolated.taskId,
+        status: 'failed' as const,
+        changedPaths: [],
+        tokens: 0,
+        toolCalls: 0,
+        artifacts: [],
+        blocker: 'Nested runtime failed',
+      })),
+    };
+    const coordinator = new SubAgentCoordinatorService(
+      executor,
+      new FileLeaseManager(),
+      () => epochs,
+      { status: () => undefined, outcome: () => undefined },
+      workspace,
+    );
+
+    const [outcome] = await coordinator.run({
+      graphId: 'graph-failed-worktree',
+      parentRunId: 'runtime-parent-0001',
+      maxConcurrency: 1,
+      tasks: [isolated],
+    });
+
+    expect(workspace.finalize).not.toHaveBeenCalled();
+    expect(workspace.abandon).toHaveBeenCalledWith(isolated);
+    expect(outcome?.status).toBe('failed');
+  });
 });
 
 function task(

@@ -2,6 +2,13 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.6
+
+Patch: a `runtime.agents` task that failed or was cancelled leaked its worktree forever, so retrying the same graph always failed immediately with "Sub-agent worktree is already active".
+
+- `VscodeSubAgentWorktreeAdapter` tracks one active worktree per `worktreeId` and only releases it via `abandon()`. `SubAgentCoordinatorService.start()` called `abandon()` on every path where `prepare()`/`execute()` threw an exception, but a sub-agent that ends with `run.failed` returns its outcome normally rather than throwing — that path went straight to `finish()`, which only releases the file lease, never the worktree. A succeeded task's worktree is correctly left alive on purpose (its commit waits there for a later `runtime.integration` call to cherry-pick it onto the target branch), which is exactly why this one case was never exercised before. Hit live: after fixing the git worktree path-length bug, batch-02 failed in-band once, and every following attempt at the same 2-task graph failed immediately for both tasks with the "already active" error, reported correctly by 0.61.5's more honest failure messages.
+- `settleWorkspace()` now abandons the worktree whenever the outcome isn't `succeeded`, matching the coordinator's existing rule for the two thrown-exception paths. Covered directly: a coordinator test with a mocked workspace port asserting `abandon()` is called for an in-band failed outcome and `finalize()` is not, alongside the existing test proving the reverse holds for a success.
+
 ## 0.61.5
 
 Patch: a failed `runtime.agents` sub-agent always reported the same unhelpful "Nested runtime failed", with no way to tell one failure from another.
