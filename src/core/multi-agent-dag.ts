@@ -2,6 +2,37 @@ import { z } from 'zod';
 
 import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
 
+/**
+ * Accepts an empty `{}` wherever an empty array is valid, then hands the
+ * schema a real `[]`.
+ *
+ * Redis 7.4's Lua cjson cannot represent an empty array — `[]` and `{}` both
+ * decode to a table with no entries, and `cjson.encode` writes `{}` for
+ * either. Every runtime event this extension receives is decoded and
+ * re-encoded inside the backend's Lua state machine on its way here, so a
+ * `runtime.agents` graph admitted with `integrationSeams: []` for an
+ * independent task arrived at this exact schema as `{}` and failed validation
+ * outright — "must be an array" — even though the model sent a perfectly
+ * valid empty array and the backend recorded it correctly. A populated array
+ * survives the round trip untouched; only the empty case is ambiguous, so
+ * only the empty case is repaired here.
+ */
+function tolerateEmptyObjectAsArray<ArraySchema extends z.ZodType>(
+  arraySchema: ArraySchema,
+): z.ZodType<z.infer<ArraySchema>> {
+  return z.preprocess((value) => {
+    if (
+      value !== null &&
+      typeof value === 'object' &&
+      !Array.isArray(value) &&
+      Object.keys(value).length === 0
+    ) {
+      return [];
+    }
+    return value;
+  }, arraySchema);
+}
+
 export const subAgentRoleSchema = z.enum([
   'explorer',
   'implementer',
@@ -18,16 +49,20 @@ export const subAgentTaskSchema = z
     goal: z.string().min(1).max(20_000),
     modelPolicy: z
       .object({
-        allowedProviders: z.array(z.string().min(1).max(100)).max(100),
-        allowedModels: z.array(z.string().min(1).max(200)).max(500),
+        allowedProviders: tolerateEmptyObjectAsArray(z.array(z.string().min(1).max(100)).max(100)),
+        allowedModels: tolerateEmptyObjectAsArray(z.array(z.string().min(1).max(200)).max(500)),
         localPreferred: z.boolean(),
         minimumContextTokens: z.number().int().nonnegative().max(10_000_000),
       })
       .strict(),
-    contextNodeIds: z.array(z.string().min(3).max(500)).max(10_000),
-    dependencies: z.array(z.string().regex(/^[a-z][a-z0-9-]{1,99}$/u)).max(1_000),
-    writeSet: z.array(z.string().refine(isSafeRelativeWorkspacePath)).max(10_000),
-    integrationSeams: z.array(z.string().min(1).max(1_000)).max(1_000),
+    contextNodeIds: tolerateEmptyObjectAsArray(z.array(z.string().min(3).max(500)).max(10_000)),
+    dependencies: tolerateEmptyObjectAsArray(
+      z.array(z.string().regex(/^[a-z][a-z0-9-]{1,99}$/u)).max(1_000),
+    ),
+    writeSet: tolerateEmptyObjectAsArray(
+      z.array(z.string().refine(isSafeRelativeWorkspacePath)).max(10_000),
+    ),
+    integrationSeams: tolerateEmptyObjectAsArray(z.array(z.string().min(1).max(1_000)).max(1_000)),
     worktreeId: z.string().min(3).max(200),
     budget: z
       .object({
@@ -37,7 +72,7 @@ export const subAgentTaskSchema = z
         maxRetries: z.number().int().nonnegative().max(5),
       })
       .strict(),
-    tools: z.array(z.string().min(2).max(80)).max(256),
+    tools: tolerateEmptyObjectAsArray(z.array(z.string().min(2).max(80)).max(256)),
     riskCeiling: z.enum(['R0', 'R1', 'R2', 'R3']),
     acceptanceChecks: z.array(z.string().min(1).max(2_000)).min(1).max(200),
     epochs: z

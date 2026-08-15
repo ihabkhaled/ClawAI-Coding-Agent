@@ -67,28 +67,36 @@ const effortBudgets: Readonly<Record<EffortMode, RunBudget>> = {
     maxOutputBytes: 1_048_576,
     maxToolResultBytes: 131_072,
   },
+  // MEDIUM and HIGH were calibrated on DISCOVERY runs, where a turn reads one
+  // file and reasons about it. Edit-heavy work spends turns differently: every
+  // read, every verification command and every retry is a turn, and a single
+  // "fix this stylesheet" task spent twenty of them reading a 60 KB file in
+  // pieces before it could write anything. Three supervised sessions in a row
+  // ended in "Runtime run exceeded its model turn budget" with the work half
+  // done — the budget, not the model, was the thing that failed. Doubling both
+  // keeps the ladder's shape and its ordering against MAX.
   MEDIUM: {
-    maxModelTurns: 12,
-    maxToolCalls: 25,
-    maxToolRounds: 20,
+    maxModelTurns: 24,
+    maxToolCalls: 50,
+    maxToolRounds: 40,
     maxRepairAttempts: 1,
     maxRuntimeMs: 900_000,
     maxOutputBytes: 2_097_152,
     maxToolResultBytes: 262_144,
   },
   HIGH: {
-    maxModelTurns: 20,
-    maxToolCalls: 45,
-    maxToolRounds: 40,
+    maxModelTurns: 40,
+    maxToolCalls: 90,
+    maxToolRounds: 80,
     maxRepairAttempts: 1,
     maxRuntimeMs: 1_800_000,
     maxOutputBytes: 4_194_304,
     maxToolResultBytes: 524_288,
   },
   MAX: {
-    maxModelTurns: 28,
-    maxToolCalls: 65,
-    maxToolRounds: 60,
+    maxModelTurns: 56,
+    maxToolCalls: 130,
+    maxToolRounds: 88,
     maxRepairAttempts: 1,
     maxRuntimeMs: 3_600_000,
     maxOutputBytes: 8_388_608,

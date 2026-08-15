@@ -2,6 +2,34 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.2
+
+Patch: a `runtime.agents` graph with any empty array field could not actually run.
+
+- 0.61.1 fixed the receipt hash disagreement so a completed sub-agent graph could report back, but the underlying value this extension executes with was still corrupted by the same Lua round trip: `contextNodeIds`, `dependencies`, `writeSet`, `integrationSeams` and `tools` all arrive here as `{}` instead of `[]` whenever the model sends them empty, and `subAgentGraphSchema` rejected that outright — "must be an array" — for a graph the backend had admitted correctly.
+- Every array field on a sub-agent task now accepts an empty `{}` and repairs it to `[]` before validating. A populated array is unaffected; a populated object in an array field's place is still rejected, since only the empty case is genuinely ambiguous.
+
+## 0.61.1
+
+Patch: `runtime.agents` (parallel sub-agents) could never return a result.
+
+- Redis 7.4's Lua `cjson` cannot represent an empty array — `cjson.encode(cjson.decode('[]'))` returns `{}`, verified directly against the running server, and `cjson.array_mt` is not available to mark one as a list. Every runtime event is decoded and re-encoded inside the Lua state machine on its way to this extension, so a `runtime.agents` graph admitted with `integrationSeams: []` arrived here as `{}`. The receipt hash this extension computed from what it received then disagreed with the hash the backend had recorded at admission, and the backend rejected every completed graph as `RECEIPT_ARGUMENT_MISMATCH` — no parallel sub-agent run could ever report back, full stop.
+- Both sides now treat an empty array and an empty object as the same value when hashing, matching what the Lua round trip actually preserves. Diagnosed by capturing the exact argument JSON on both sides of one failing call and diffing them byte for byte.
+- Also raises `MEDIUM`, `HIGH` and `MAX` effort turn/tool-call budgets and adds a longer backoff before giving up on an empty provider response — both were cutting real edit-heavy runs short.
+
+## 0.61.0
+
+Minor: effort budgets retuned for editing work.
+
+- `MEDIUM`, `HIGH` and `MAX` were calibrated on discovery runs, where a turn
+  reads one file and reasons about it. Editing spends turns differently — every
+  read, verification command and retry is a turn — and three supervised
+  sessions in a row ended in "Runtime run exceeded its model turn budget" with
+  the work half finished. One "fix this stylesheet" task spent twenty turns
+  reading a 60 KB file in pieces before it could write anything. The ladder
+  keeps its shape and its ordering; the rungs are simply wide enough for the
+  job.
+
 ## 0.60.0
 
 Minor: commands, restarts, capability discovery, secret scanning, and the chat panel all get more reliable.
