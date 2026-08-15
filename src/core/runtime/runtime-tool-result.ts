@@ -48,8 +48,18 @@ function canonicalJson(value: unknown): string {
   if (typeof value === 'string') {
     return JSON.stringify(value);
   }
+  // An EMPTY array serialises exactly as an empty OBJECT, matching
+  // stableRuntimeV2Json in claw-chat-service. Redis 7.4's Lua cjson cannot
+  // distinguish them — `cjson.encode(cjson.decode('[]'))` is `{}` — and every
+  // runtime event is decoded and re-encoded inside the Lua state machine, so an
+  // argument admitted as `[]` reaches this extension as `{}`. Hashing them
+  // differently made the receipt disagree with the backend's admission hash and
+  // the RESULT script rejected it as RECEIPT_ARGUMENT_MISMATCH, which broke
+  // `runtime.agents` outright: its graph carries empty `integrationSeams`
+  // arrays, so no parallel sub-agent run could ever return a result. Both sides
+  // must apply this rule or the hashes diverge again.
   if (Array.isArray(value)) {
-    return `[${value.map((entry) => canonicalJson(entry)).join(',')}]`;
+    return value.length === 0 ? '{}' : `[${value.map((entry) => canonicalJson(entry)).join(',')}]`;
   }
   if (typeof value === 'object') {
     return `{${Object.entries(value)

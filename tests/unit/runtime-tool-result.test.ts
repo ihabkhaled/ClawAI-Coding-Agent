@@ -169,4 +169,45 @@ describe('runtime tool result builder', () => {
       buildRuntimeToolResult({ ...base, status: 'succeeded', maxOutputBytes: 0 }),
     ).toThrow(/limit/i);
   });
+
+  /**
+   * Redis 7.4's Lua cjson cannot represent an empty array — both `[]` and `{}`
+   * decode to a table with no entries and `cjson.encode` writes `{}` for
+   * either. Every runtime event is decoded and re-encoded inside the Lua state
+   * machine on its way here, so an argument admitted as `[]` arrives at this
+   * extension as `{}`. Hashing the two differently broke `runtime.agents`
+   * outright: its graph carries empty `integrationSeams` arrays, the backend
+   * hashed `[]` at admission, this extension hashed the `{}` it received, and
+   * every completed sub-agent graph was rejected as RECEIPT_ARGUMENT_MISMATCH
+   * — no parallel run could ever report back.
+   */
+  it('hashes an empty array identically to an empty object', () => {
+    const withArray = buildRuntimeToolResult({
+      ...base,
+      invocation: { ...invocation, arguments: { integrationSeams: [] } },
+      status: 'succeeded',
+    });
+    const withObject = buildRuntimeToolResult({
+      ...base,
+      invocation: { ...invocation, arguments: { integrationSeams: {} } },
+      status: 'succeeded',
+    });
+
+    expect(withArray.receipt.argumentHash).toBe(withObject.receipt.argumentHash);
+  });
+
+  it('still distinguishes a non-empty array from an object', () => {
+    const withArray = buildRuntimeToolResult({
+      ...base,
+      invocation: { ...invocation, arguments: { seams: ['a'] } },
+      status: 'succeeded',
+    });
+    const withObject = buildRuntimeToolResult({
+      ...base,
+      invocation: { ...invocation, arguments: { seams: { 0: 'a' } } },
+      status: 'succeeded',
+    });
+
+    expect(withArray.receipt.argumentHash).not.toBe(withObject.receipt.argumentHash);
+  });
 });

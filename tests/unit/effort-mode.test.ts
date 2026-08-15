@@ -127,8 +127,13 @@ describe('effort modes', () => {
   });
 
   it('returns a fresh object so a caller cannot mutate the shared profile', () => {
+    // Compares against a second read rather than a hardcoded number: the point
+    // of this test is isolation between callers, and pinning HIGH's turn count
+    // here made it fail for the unrelated reason that the budget was retuned.
+    const baseline = effortBudget('HIGH').maxModelTurns;
     const first = effortBudget('HIGH');
     first.maxModelTurns = 999;
-    expect(effortBudget('HIGH').maxModelTurns).toBe(20);
+    expect(effortBudget('HIGH').maxModelTurns).toBe(baseline);
+    expect(effortBudget('HIGH').maxModelTurns).not.toBe(999);
   });
 });
