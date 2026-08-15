@@ -203,15 +203,21 @@ export class RuntimeToolDispatcher {
     // continuation alive, so the model is told exactly what was wrong with its
     // arguments and can reissue the call correctly instead of losing the run.
     if (admission.rejection !== undefined) {
-      return this.complete(admission.invocation, startedAtMs, continuation, {
-        status: 'failed',
-        error: {
-          code: admission.rejection.code,
-          message: admission.rejection.message,
-          retryable: false,
-          redactionApplied: false,
+      return this.complete(
+        admission.invocation,
+        startedAtMs,
+        continuation,
+        {
+          status: 'failed',
+          error: {
+            code: admission.rejection.code,
+            message: admission.rejection.message,
+            retryable: false,
+            redactionApplied: false,
+          },
         },
-      }, admittedArguments);
+        admittedArguments,
+      );
     }
     const deadline = this.createDeadline(signal);
     this.activeDeadlines.set(admission.invocation.invocationId, deadline);
@@ -246,7 +252,13 @@ export class RuntimeToolDispatcher {
         this.assertCurrentEpochs();
         outcome = this.failureOutcome(deadline, error);
       }
-      return this.complete(admission.invocation, startedAtMs, continuation, outcome, admittedArguments);
+      return this.complete(
+        admission.invocation,
+        startedAtMs,
+        continuation,
+        outcome,
+        admittedArguments,
+      );
     } finally {
       this.activeDeadlines.delete(admission.invocation.invocationId);
       deadline.dispose();
@@ -404,7 +416,7 @@ export class RuntimeToolDispatcher {
     startedAtMs: number,
     continuation: Continuation,
     outcome: RuntimeToolDispatchOutcome,
-    receiptArguments?: ToolInvocation["arguments"],
+    receiptArguments?: ToolInvocation['arguments'],
   ): ToolResult {
     const completedAtMs = this.input.now();
     const result = buildRuntimeToolResult({

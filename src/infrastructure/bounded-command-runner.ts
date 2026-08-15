@@ -64,7 +64,13 @@ export function runBoundedCommand(
   });
 }
 
-const inheritedEnvironmentKeys = [
+// gh reads its auth state from %APPDATA%\GitHub CLI\hosts.yml; without APPDATA
+// every gh command fails with "You are not logged into any GitHub hosts". This was
+// proven by spawning `gh auth status` with the allowlist and adding one variable at
+// a time; APPDATA alone made it succeed. LOCALAPPDATA and the XDG_* directories are
+// included for the same class of config/data/cache location requirements, and none of
+// these variables carry credentials.
+export const inheritedEnvironmentKeys = [
   'PATH',
   'Path',
   'SystemRoot',
@@ -73,6 +79,11 @@ const inheritedEnvironmentKeys = [
   'TMP',
   'HOME',
   'USERPROFILE',
+  'APPDATA',
+  'LOCALAPPDATA',
+  'XDG_CONFIG_HOME',
+  'XDG_DATA_HOME',
+  'XDG_CACHE_HOME',
   'LANG',
   'LC_ALL',
 ] as const;

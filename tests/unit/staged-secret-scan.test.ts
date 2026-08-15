@@ -9,7 +9,10 @@ describe('findStagedSecret', () => {
   // Every line here appeared in the password-reset diff the previous scan
   // refused to commit. Each one is ordinary source text.
   it.each([
-    ['a type annotation named like a token', '+  async sendPasswordReset(email: string, rawToken: string): Promise<void> {'],
+    [
+      'a type annotation named like a token',
+      '+  async sendPasswordReset(email: string, rawToken: string): Promise<void> {',
+    ],
     ['a route constant', "+  FORGOT_PASSWORD: '/forgot-password',"],
     ['a test fixture', "+    const token = 'reset-token-abc';"],
     ['another test fixture', "+    const token = 'secret-token-xyz';"],
@@ -25,13 +28,18 @@ describe('findStagedSecret', () => {
     ['an AWS access key', '+const key = "<fake-secret-removed>";'],
     ['a GitHub token', '+GITHUB_TOKEN=<fake-secret-removed>'],
     ['a Stripe live key', '+const stripe = "<fake-secret-removed>";'],
-    ['a JWT', '+const jwt = "<fake-secret-removed>"'],
+    [
+      'a JWT',
+      '+const jwt = "<fake-secret-removed>"',
+    ],
   ])('blocks %s', (_label, line) => {
     expect(findStagedSecret(added(line))).toBeDefined();
   });
 
   it('blocks a generated credential assigned to a credential name', () => {
-    expect(findStagedSecret(added('+  password: "<fake-secret-removed>",'))).toBe('<fake-secret-removed>');
+    expect(findStagedSecret(added('+  password: "<fake-secret-removed>",'))).toBe(
+      '<fake-secret-removed>',
+    );
   });
 
   it('ignores a secret that is being removed', () => {
