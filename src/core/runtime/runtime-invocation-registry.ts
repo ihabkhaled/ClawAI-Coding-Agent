@@ -397,10 +397,25 @@ function validateObjectType(value: unknown, schema: RuntimeJsonObject, path: str
 }
 
 function validateArrayType(value: unknown, schema: RuntimeJsonObject, path: string): void {
-  if (!Array.isArray(value)) {
-    throw new Error(`Tool arguments ${path} must be an array`);
+  if (Array.isArray(value)) {
+    validateArrayValue(value, schema, path);
+    return;
   }
-  validateArrayValue(value, schema, path);
+  // Redis 7.4's Lua cjson cannot represent an empty array — `[]` and `{}`
+  // both decode to a table with no entries, so `cjson.encode` writes `{}` for
+  // either. Every runtime.agents argument is decoded and re-encoded inside
+  // the backend's Lua state machine, so a graph admitted with an empty
+  // `integrationSeams` array arrives HERE, at admission-time validation,
+  // as `{}` — and this was the earliest of three gates the value passes
+  // through, so it rejected the call before the tolerant schema in
+  // multi-agent-dag.ts ever got a chance to run. Validating it as an empty
+  // array lets the call through; that later schema still repairs the actual
+  // value before the coordinator uses it.
+  if (isObject(value) && Object.keys(value).length === 0) {
+    validateArrayValue([], schema, path);
+    return;
+  }
+  throw new Error(`Tool arguments ${path} must be an array`);
 }
 
 function validateBooleanType(value: unknown, path: string): void {
