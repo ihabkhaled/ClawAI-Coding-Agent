@@ -192,9 +192,7 @@ export class SubAgentCoordinatorService {
       } finally {
         clearTimeout(timeout);
       }
-      if (outcome.status === 'succeeded' && this.workspaces !== undefined) {
-        outcome = await this.workspaces.finalize(runtime.task, outcome, runtime.controller.signal);
-      }
+      outcome = await this.settleWorkspace(runtime, outcome);
       this.assertOutcome(runtime, outcome);
       this.finish(runtime, outcome);
     } catch (error) {
@@ -209,6 +207,24 @@ export class SubAgentCoordinatorService {
         blocker: error instanceof Error ? error.message : 'Sub-agent failed',
       });
     }
+  }
+
+  // A succeeded task's worktree stays alive on purpose — its commit is only
+  // reachable there until a later runtime.integration call cherry-picks it
+  // onto the target branch and releases it. A task that failed, was blocked,
+  // or was cancelled in-band (no thrown exception, so start()'s catch block
+  // never runs) has no commit coming, and nothing else will ever release its
+  // worktree — every retry of the same task then failed immediately with
+  // "Sub-agent worktree is already active" until this released it here too.
+  private async settleWorkspace(
+    runtime: TaskRuntime,
+    outcome: SubAgentOutcome,
+  ): Promise<SubAgentOutcome> {
+    if (outcome.status === 'succeeded' && this.workspaces !== undefined) {
+      return this.workspaces.finalize(runtime.task, outcome, runtime.controller.signal);
+    }
+    await this.workspaces?.abandon(runtime.task);
+    return outcome;
   }
 
   private assertOutcome(runtime: TaskRuntime, outcome: SubAgentOutcome): void {
