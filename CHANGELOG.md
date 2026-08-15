@@ -2,6 +2,13 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.3
+
+Patch: runtime.agents still rejected a valid empty array, one gate earlier than 0.61.2 fixed.
+
+- 0.61.2 fixed the hash agreement and the coordinator's own schema, but a THIRD, separate hand-rolled JSON-Schema validator in `runtime-invocation-registry.ts` runs first, at admission time, and had no tolerance for the same empty-array/empty-object ambiguity — so a graph with an empty `integrationSeams` array still failed immediately with `must be an array`, before either of the earlier fixes ever got a chance to run. Found by hand-building a real two-task graph with verified zero write-set collisions and watching it fail anyway.
+- That gate now accepts an empty object wherever an array is expected, same as the other two. A populated object, or any other wrong type, is still rejected.
+
 ## 0.61.2
 
 Patch: a `runtime.agents` graph with any empty array field could not actually run.
