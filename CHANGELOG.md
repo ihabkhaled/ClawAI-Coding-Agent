@@ -2,6 +2,13 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.5
+
+Patch: a failed `runtime.agents` sub-agent always reported the same unhelpful "Nested runtime failed", with no way to tell one failure from another.
+
+- The nested runtime's own `run.failed` event carries a real `{code, message}` reason, but `RuntimeSubAgentExecutor.observe()` discarded it and hardcoded the generic string regardless of cause. Every distinct failure — a blocked model, a policy rejection, a provider timeout — looked identical in the coordinator's report, leaving nothing to act on. Hit directly: a live two-task `runtime.agents` graph reported `Nested runtime failed` for both tasks with no further detail once an earlier worktree bug was fixed, and there was no way to tell whether the fix had even taken effect.
+- `describeSubAgentFailure()` now reads that reason and reports the real code and message. Covered directly with unit tests for every combination of present/absent code and message, kept dependency-free rather than reusing the VS Code host's own reason-formatting helper, which would have pulled a `vscode` import into an otherwise headless module.
+
 ## 0.61.4
 
 Patch: `workspace.command` could not run `npm`, `npx`, or any other batch-file tool on Windows.

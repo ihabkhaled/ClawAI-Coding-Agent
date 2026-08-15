@@ -38,6 +38,22 @@ interface SubAgentTelemetry {
   blocker?: string;
 }
 
+// The nested runtime's own `run.failed` event carries the real reason (code +
+// message), but this executor's report to the user only ever showed the
+// generic "Nested runtime failed" — every distinct failure looked identical,
+// with nothing to act on. This surfaces what the nested runtime actually said.
+export function describeSubAgentFailure(payload: Record<string, unknown>): string {
+  const reason = payload.reason;
+  if (reason === null || typeof reason !== 'object') return 'Nested runtime failed';
+  const record = reason as Record<string, unknown>;
+  const code = typeof record.code === 'string' ? record.code : '';
+  const message = typeof record.message === 'string' ? record.message : '';
+  if (code.length === 0 && message.length === 0) return 'Nested runtime failed';
+  if (message.length === 0) return `Nested runtime failed: ${code}`;
+  if (code.length === 0) return `Nested runtime failed: ${message}`;
+  return `Nested runtime failed: ${message} (${code})`;
+}
+
 export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
   constructor(private readonly dependencies: RuntimeSubAgentDependencies) {}
 
@@ -190,7 +206,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
     if (event.type === 'run.cancelled') telemetry.status = 'cancelled';
     if (event.type === 'run.failed') {
       telemetry.status = 'failed';
-      telemetry.blocker = 'Nested runtime failed';
+      telemetry.blocker = describeSubAgentFailure(event.payload);
     }
   }
 
