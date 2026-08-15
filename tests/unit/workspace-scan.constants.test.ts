@@ -19,7 +19,16 @@ describe('workspace scan exclusions', () => {
   });
 
   it('keeps excluding the dependency and build output it always did', () => {
-    for (const directory of ['.git', 'node_modules', 'vendor', 'target', 'dist', 'build', '.next', 'coverage']) {
+    for (const directory of [
+      '.git',
+      'node_modules',
+      'vendor',
+      'target',
+      'dist',
+      'build',
+      '.next',
+      'coverage',
+    ]) {
       expect(WORKSPACE_SCAN_EXCLUDED_DIRECTORIES).toContain(directory);
     }
   });

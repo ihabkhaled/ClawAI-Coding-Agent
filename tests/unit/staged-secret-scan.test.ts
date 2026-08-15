@@ -9,7 +9,10 @@ describe('findStagedSecret', () => {
   // Every line here appeared in the password-reset diff the previous scan
   // refused to commit. Each one is ordinary source text.
   it.each([
-    ['a type annotation named like a token', '+  async sendPasswordReset(email: string, rawToken: string): Promise<void> {'],
+    [
+      'a type annotation named like a token',
+      '+  async sendPasswordReset(email: string, rawToken: string): Promise<void> {',
+    ],
     ['a route constant', "+  FORGOT_PASSWORD: '/forgot-password',"],
     ['a test fixture', "+    const token = 'reset-token-abc';"],
     ['another test fixture', "+    const token = 'secret-token-xyz';"],
@@ -25,13 +28,18 @@ describe('findStagedSecret', () => {
     ['an AWS access key', '+const key = "AKIAIOSFODNN7HXQMPLE";'],
     ['a GitHub token', '+GITHUB_TOKEN=ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8'],
     ['a Stripe live key', '+const stripe = "sk_live_51H8xKlMnOpQrStUvWxYz";'],
-    ['a JWT', '+const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r"'],
+    [
+      'a JWT',
+      '+const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r"',
+    ],
   ])('blocks %s', (_label, line) => {
     expect(findStagedSecret(added(line))).toBeDefined();
   });
 
   it('blocks a generated credential assigned to a credential name', () => {
-    expect(findStagedSecret(added('+  password: "aB3xK9pQ7mZ2wL5vR8tD",'))).toBe('aB3xK9pQ7mZ2wL5vR8tD');
+    expect(findStagedSecret(added('+  password: "aB3xK9pQ7mZ2wL5vR8tD",'))).toBe(
+      'aB3xK9pQ7mZ2wL5vR8tD',
+    );
   });
 
   it('ignores a secret that is being removed', () => {

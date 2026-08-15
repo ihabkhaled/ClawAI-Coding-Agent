@@ -2,7 +2,6 @@ import { createHash } from 'node:crypto';
 
 import * as vscode from 'vscode';
 
-
 import {
   evidenceHash,
   instructionAuthority,

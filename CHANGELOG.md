@@ -2,6 +2,16 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.60.0
+
+Minor: commands, restarts, capability discovery, secret scanning, and the chat panel all get more reliable.
+
+- Structured commands now inherit the host config-directory environment (`APPDATA`, `XDG_CONFIG_HOME`, `XDG_DATA_HOME`, and the rest of the XDG family). `gh`, `npm`, `docker`, and other tools that store credentials and settings under those roots can now find their own configuration; without `APPDATA` every `gh` invocation failed with "You are not logged into any GitHub hosts".
+- A run reopens its event stream after the backend restarts instead of failing with a terminal connection error.
+- The model is offered only tools the active execution target advertises, and the capability manifest is rebuilt when workspace trust is granted so the available tool set stays accurate.
+- The staged secret scan now judges the value rather than the name, so a type annotation such as `token: string` or a route constant named `passwordResetPath` no longer blocks a commit.
+- The chat panel holds its layout correctly at every width, and sessions refresh their access token automatically before it expires.
+
 ## 0.59.3
 
 Patch: searching the workspace no longer requires a glob the model was never
