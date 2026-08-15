@@ -2,6 +2,14 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.4
+
+Patch: `workspace.command` could not run `npm`, `npx`, or any other batch-file tool on Windows.
+
+- Node's `child_process.spawn()` cannot execute a `.bat`/`.cmd` file directly with `shell: false` — Windows has no native way to run a batch script as a process image, so `CreateProcess` rejects it and Node surfaces `spawn EINVAL`. `npm`, `npx`, `pnpm`, `yarn`, and `gradlew.bat` all resolve to batch files on Windows, so every one of them failed this way; it first surfaced as `npm run package` failing mid-release. Reproduced directly with `spawn('...\\npm.cmd', ['--version'], {shell:false})`, which throws the identical error.
+- `bounded-command-runner.ts` now spawns through `cross-spawn` instead of `node:child_process` directly. It resolves the same executable path this extension already verifies and hashes, and only adds the `cmd.exe` wrapper (with argument escaping audited against real-world shell-injection cases) when the resolved file is actually a batch script — every other command, on every platform, spawns exactly as before.
+- Covered by a regression test that writes a real `.cmd` file to a temp directory and spawns it through `runCommandSpec`, gated to Windows since that's the only platform the bug exists on.
+
 ## 0.61.3
 
 Patch: runtime.agents still rejected a valid empty array, one gate earlier than 0.61.2 fixed.

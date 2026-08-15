@@ -53,6 +53,7 @@ assert.deepEqual(
   [
     '@homebridge/node-pty-prebuilt-multiarch',
     'chromium-bidi',
+    'cross-spawn',
     'jszip',
     'node-pty',
     'playwright-core',
