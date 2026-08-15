@@ -1,12 +1,25 @@
-import { spawn } from 'node:child_process';
 import { createHash } from 'node:crypto';
 import { access, readFile } from 'node:fs/promises';
 import path from 'node:path';
+
+import spawn from 'cross-spawn';
 
 import { commandSpecSchema, type CommandResult, type CommandSpec } from '../core/command-spec';
 import { redactText } from '../core/redaction';
 
 import type { CommandExecutionResult } from '../services/agent-run-service.types';
+import type { ChildProcess, ChildProcessWithoutNullStreams } from 'node:child_process';
+
+// cross-spawn's type declarations always return the general `ChildProcess`
+// shape, unlike node:child_process's own overloads which narrow to
+// `ChildProcessWithoutNullStreams` when `stdio` is omitted. We never pass a
+// `stdio` option, so the streams are always piped at runtime; this asserts
+// that instead of forcing it with `!`.
+function assertPipedStdio(child: ChildProcess): asserts child is ChildProcessWithoutNullStreams {
+  if (child.stdout === null || child.stderr === null || child.stdin === null) {
+    throw new Error('Spawned process did not provide piped stdio.');
+  }
+}
 
 export function runBoundedCommand(
   executable: string,
@@ -18,6 +31,7 @@ export function runBoundedCommand(
   const outputLimit = 1024 * 1024;
   return new Promise((resolve, reject) => {
     const child = spawn(executable, arguments_, { cwd, shell: false, windowsHide: true });
+    assertPipedStdio(child);
     let stdout = '';
     let stderr = '';
     let truncated = false;
@@ -156,6 +170,7 @@ export async function runCommandSpec(
       shell: false,
       windowsHide: true,
     });
+    assertPipedStdio(child);
     const chunks = { stdout: [] as Buffer[], stderr: [] as Buffer[], bytes: 0 };
     let truncated = false;
     let timedOut = false;
