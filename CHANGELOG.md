@@ -2,6 +2,13 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.7
+
+Patch: a `runtime.agents` graph's status and outcome events — including the full `blocker` text 0.61.5 started reporting — went to a coordinator observer that was wired as a no-op (`{ status: () => undefined, outcome: () => undefined }`). Nothing about a sub-agent's progress or failure reason was ever written anywhere durable; the only copy of a `blocker` string existed in the tool-result JSON handed back through the chat backend, which independently clips any persisted tool-result content to 400 characters. For a graph that failed with a longer blocker, the real reason was unrecoverable from any source once that message was written.
+
+- `VscodeSubAgentDiagnosticsSink` implements `SubAgentCoordinatorObserver` and appends one JSON line per status change and per outcome to `<globalStorage>/sub-agent-diagnostics.log`, alongside logging the same untruncated content through the existing `OutputLogger`. `VscodeRuntimeStudio` now wires this sink instead of the no-op observer. Best-effort: a write failure is reported to the logger, never thrown, so a diagnostics-log problem can't fail a real sub-agent run.
+- Covered with a unit test asserting a 2,000-character blocker round-trips intact through the log file, and a second test asserting a write failure onto an unwritable path is reported to the logger rather than thrown.
+
 ## 0.61.6
 
 Patch: a `runtime.agents` task that failed or was cancelled leaked its worktree forever, so retrying the same graph always failed immediately with "Sub-agent worktree is already active".

@@ -68,6 +68,7 @@ import {
   VscodeRunJournalStorage,
 } from '../infrastructure/vscode-run-journal-adapter';
 import { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-binding-store';
+import { VscodeSubAgentDiagnosticsSink } from '../infrastructure/vscode-sub-agent-diagnostics-sink';
 import { VscodeSubAgentWorktreeAdapter } from '../infrastructure/vscode-sub-agent-worktree-adapter';
 
 import { BrowserControllerService } from './browser-controller-service';
@@ -310,7 +311,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       runtimeSubAgent,
       new FileLeaseManager(),
       () => this.epochs,
-      { status: () => undefined, outcome: () => undefined },
+      new VscodeSubAgentDiagnosticsSink(logger, context.globalStorageUri),
       subAgentWorktrees,
     );
     const quality = new QualityToolExecutor(this.files);
