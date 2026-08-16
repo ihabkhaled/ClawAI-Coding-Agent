@@ -2,6 +2,13 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.9
+
+Patch: two panel-styling fixes.
+
+- The composer's focus state stacked a solid `--vscode-focusBorder` border and a duplicate 1px box-shadow ring of the same color, doubling the visual weight of the outline every time the prompt textarea was focused. `.composer-card:focus-within` in `media/chat.css` now changes only the border color, matching the single-weight focus treatment every other focusable control in the panel already uses.
+- The status strip (`.agent-status`) and run deck (`.run-deck`) at the top of the panel carried the same padding used for content-heavy areas, so the header consistently ate a large share of the panel before any conversation was visible. Both now use tighter vertical padding/gap.
+
 ## 0.61.8
 
 Patch: the chat panel's per-message activity list (`workspace.files · read`, `workspace.command · run`, etc.) never scrolled as new entries streamed in. A message bubble scrolled into view once when it was first created, but every activity item appended into it afterward — often dozens per run — left the viewport wherever it happened to be, so watching a live run meant manually scrolling down after every few tool calls.

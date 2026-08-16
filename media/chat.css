@@ -858,8 +858,8 @@ pre {
 
 .agent-status {
   display: grid;
-  gap: var(--sp-2);
-  padding: var(--sp-2) var(--sp-3);
+  gap: var(--sp-1);
+  padding: var(--sp-1) var(--sp-3);
   border-block-end: 1px solid var(--claw-line);
   background: var(--claw-chrome);
 }
@@ -1078,7 +1078,7 @@ pre {
    -------------------------------------------------------------------------- */
 
 .run-deck {
-  padding: var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
   border: 1px solid var(--claw-line);
   border-radius: var(--radius-md);
   background: var(--claw-surface-sunken);
@@ -2194,7 +2194,6 @@ pre {
 
 .composer-card:focus-within {
   border-color: var(--vscode-focusBorder);
-  box-shadow: 0 0 0 1px var(--vscode-focusBorder);
 }
 
 .composer.dragging-files .composer-card {
