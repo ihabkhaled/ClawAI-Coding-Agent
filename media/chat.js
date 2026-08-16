@@ -398,6 +398,7 @@ function appendActivity(requestId, key, title, description = '', tokens = 0) {
     );
   }
   list.append(item);
+  item.scrollIntoView({ block: 'end', behavior: 'auto' });
 }
 
 function updateActivityTokens(requestId, key, tokens) {

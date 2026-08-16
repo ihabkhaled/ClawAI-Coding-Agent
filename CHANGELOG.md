@@ -2,6 +2,12 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.8
+
+Patch: the chat panel's per-message activity list (`workspace.files · read`, `workspace.command · run`, etc.) never scrolled as new entries streamed in. A message bubble scrolled into view once when it was first created, but every activity item appended into it afterward — often dozens per run — left the viewport wherever it happened to be, so watching a live run meant manually scrolling down after every few tool calls.
+
+- `appendActivity()` in `media/chat.js` now scrolls each new item into view as it's added, the same way a new message bubble already did. Both call sites that feed it — `publishRunActivity()` (phase/file/command activity) and `appendStreamActivity()` (reasoning and stream events) — get this for free since they both go through the one function.
+
 ## 0.61.7
 
 Patch: a `runtime.agents` graph's status and outcome events — including the full `blocker` text 0.61.5 started reporting — went to a coordinator observer that was wired as a no-op (`{ status: () => undefined, outcome: () => undefined }`). Nothing about a sub-agent's progress or failure reason was ever written anywhere durable; the only copy of a `blocker` string existed in the tool-result JSON handed back through the chat backend, which independently clips any persisted tool-result content to 400 characters. For a graph that failed with a longer blocker, the real reason was unrecoverable from any source once that message was written.
