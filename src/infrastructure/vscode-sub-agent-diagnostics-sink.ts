@@ -1,6 +1,8 @@
 import { appendFileSync, mkdirSync } from 'node:fs';
 import path from 'node:path';
 
+import { redactValue } from '../core/redaction';
+
 import type { OutputLogger } from './output-logger';
 import type { SubAgentOutcome, SubAgentTaskStatus } from '../core/multi-agent-dag';
 import type { SubAgentCoordinatorObserver } from '../services/sub-agent-coordinator-service';
@@ -29,7 +31,7 @@ export class VscodeSubAgentDiagnosticsSink implements SubAgentCoordinatorObserve
   private append(entry: unknown): void {
     try {
       mkdirSync(path.dirname(this.logFile), { recursive: true });
-      appendFileSync(this.logFile, `${JSON.stringify(entry)}\n`, 'utf8');
+      appendFileSync(this.logFile, `${JSON.stringify(redactValue(entry))}\n`, 'utf8');
     } catch (error: unknown) {
       this.logger.warn('Failed to write sub-agent diagnostics log', error);
     }
