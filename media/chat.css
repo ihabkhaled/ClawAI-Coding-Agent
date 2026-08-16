@@ -2192,10 +2192,6 @@ pre {
   overflow: visible;
 }
 
-.composer-card:focus-within {
-  border-color: var(--vscode-focusBorder);
-}
-
 .composer.dragging-files .composer-card {
   border-color: var(--vscode-focusBorder);
   background: color-mix(in srgb, var(--vscode-input-background) 85%, var(--claw-accent));
