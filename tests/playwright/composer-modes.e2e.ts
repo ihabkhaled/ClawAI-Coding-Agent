@@ -13,6 +13,15 @@ test.beforeEach(async ({ page }) => {
   await sendState(page);
 });
 
+test('does not draw a second border around the prompt when it is focused', async ({ page }) => {
+  const prompt = page.locator('#prompt');
+
+  await prompt.focus();
+
+  await expect(prompt).toBeFocused();
+  await expect(prompt).toHaveCSS('outline-style', 'none');
+});
+
 test('shows the whole settings popover instead of clipping it to the composer card', async ({
   page,
 }) => {

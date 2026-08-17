@@ -2243,6 +2243,10 @@ pre {
   scrollbar-color: var(--vscode-scrollbarSlider-background) transparent;
 }
 
+.prompt-field:focus-visible {
+  outline: none;
+}
+
 .prompt-field::placeholder {
   color: var(--vscode-input-placeholderForeground);
 }
