@@ -15,7 +15,14 @@ afterEach(async () => {
     await rm(directory, { force: true, recursive: true });
 });
 
-function createLogger(): { info: unknown[][]; warn: unknown[][]; sink: { info: (message: string, details?: unknown) => void; warn: (message: string, error?: unknown) => void } } {
+function createLogger(): {
+  info: unknown[][];
+  warn: unknown[][];
+  sink: {
+    info: (message: string, details?: unknown) => void;
+    warn: (message: string, error?: unknown) => void;
+  };
+} {
   const info: unknown[][] = [];
   const warn: unknown[][] = [];
   return {
@@ -49,7 +56,10 @@ describe('VscodeSubAgentDiagnosticsSink', () => {
     sink.outcome(outcome);
 
     const contents = await readFile(path.join(storage, 'sub-agent-diagnostics.log'), 'utf8');
-    const lines = contents.trim().split('\n').map((line) => JSON.parse(line) as Record<string, unknown>);
+    const lines = contents
+      .trim()
+      .split('\n')
+      .map((line) => JSON.parse(line) as Record<string, unknown>);
     expect(lines).toHaveLength(2);
     expect(lines[0]).toMatchObject({ kind: 'status', taskId: 'batch-02', status: 'running' });
     expect(lines[1]).toMatchObject({ kind: 'outcome' });
@@ -64,7 +74,9 @@ describe('VscodeSubAgentDiagnosticsSink', () => {
       fsPath: '\0invalid-path-that-cannot-be-created',
     });
 
-    expect(() => { sink.status('batch-02', 'running'); }).not.toThrow();
+    expect(() => {
+      sink.status('batch-02', 'running');
+    }).not.toThrow();
     expect(logger.warn).toHaveLength(1);
   });
 });

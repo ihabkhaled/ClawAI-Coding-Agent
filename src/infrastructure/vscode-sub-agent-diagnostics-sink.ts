@@ -19,7 +19,10 @@ export class VscodeSubAgentDiagnosticsSink implements SubAgentCoordinatorObserve
   }
 
   status(taskId: string, status: SubAgentTaskStatus, detail?: string): void {
-    this.logger.info(`Sub-agent ${taskId} status: ${status}`, detail === undefined ? undefined : { detail });
+    this.logger.info(
+      `Sub-agent ${taskId} status: ${status}`,
+      detail === undefined ? undefined : { detail },
+    );
     this.append({ kind: 'status', taskId, status, detail, at: new Date().toISOString() });
   }
 
