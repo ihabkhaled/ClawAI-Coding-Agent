@@ -2,6 +2,10 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.11
+
+Patch: focusing the prompt still activated the global textarea focus outline, which was clipped by the composer card and appeared as a bright border around the prompt and composer. The prompt now suppresses that redundant outline while retaining its caret and leaving keyboard focus indicators on every other control unchanged.
+
 ## 0.61.10
 
 Patch: 0.61.9 only removed the duplicate box-shadow from the composer's focus ring; the border-color change to `--vscode-focusBorder` was still there and still read as an unwanted blue outline around the whole composer, hint line included. `.composer-card:focus-within` in `media/chat.css` is removed — the composer now keeps its normal border on focus, no color change at all.
