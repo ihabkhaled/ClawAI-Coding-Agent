@@ -2,6 +2,10 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.12
+
+Patch: restore green release automation by formatting the diagnostics sink and its unit test, and by committing the complete versioned VSIX release assets required by the release gate.
+
 ## 0.61.11
 
 Patch: focusing the prompt still activated the global textarea focus outline, which was clipped by the composer card and appeared as a bright border around the prompt and composer. The prompt now suppresses that redundant outline while retaining its caret and leaving keyboard focus indicators on every other control unchanged.
