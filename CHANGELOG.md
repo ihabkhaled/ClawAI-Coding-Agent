@@ -2,6 +2,10 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.14
+
+Patch: recover automatically from one explicit `CLOUD_PROVIDER_EMPTY_RESPONSE` without asking the user to restart the edit workflow. The retry resends the identical generation request once, remains abort-aware, and still requires the resulting strict edit plan to pass the existing trust, preview, and approval gates. The Runtime Protocol filesystem guidance is also compressed below the production 1,600-character catalog limit while retaining the targeted-discovery, small-mutation, and parser-safe Base64 instructions introduced in 0.61.13.
+
 ## 0.61.13
 
 Patch: make Runtime Protocol 2.0 file work faster and more reliable. The model-visible filesystem contract now tells coding agents to act after a targeted search and read instead of repeatedly rediscovering unchanged files, to send one small mutation per call, and to use the existing Base64 fields for source containing braces, quotes, or backslashes so backend stream heuristics do not mistake complete source payloads for unfinished tool objects.

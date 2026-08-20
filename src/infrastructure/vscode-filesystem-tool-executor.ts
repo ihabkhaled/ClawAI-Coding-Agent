@@ -104,14 +104,10 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
   // "root", an absolute path — all resolve to nothing, so every single
   // invocation failed before touching the disk.
   description:
-    'Bounded workspace discovery, reads, and transactional file mutation. ' +
-    'Set rootKey to "workspace-1" for the first workspace folder, "workspace-2" for the second, ' +
-    'and so on in the order they are opened; most workspaces have only "workspace-1". ' +
-    'path is always relative to that folder and never absolute. ' +
-    'To enumerate the folder itself, use list with path "" — that is how to discover the ' +
-    'top-level layout before any subdirectory name is known. List, glob and search return at ' +
-    'most 100 results; paginate list with cursor, and narrow a truncated glob or search. After ' +
-    'one targeted search and read, act on that evidence; do not rediscover unchanged files. ' +
+    'Bounded workspace discovery, reads, and transactional mutation. rootKey is "workspace-1" ' +
+    'for the first opened folder, then "workspace-2"; most use only "workspace-1". Paths are ' +
+    'relative. List the root with path "". List/glob/search return at most 100 results; narrow ' +
+    'truncated results. After one targeted search and read, act; do not rediscover unchanged files. ' +
     // Writing was undiscoverable: every mutation goes through a nested
     // transaction whose shape the catalog reports as an empty object, so a
     // model had to guess it and no model ever did. Spelling it out here is the
@@ -127,21 +123,17 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     // Every sentence here competes for the same 2000-character budget that both
     // sides of the wire enforce, and exceeding it fails the whole run-start
     // request with nothing naming the field. Keep additions terse.
-    'To WRITE send arguments {"transaction":{"transactionId":"<id>","summary":"<why>",' +
-    '"operations":[<one operation>]}}. beforeHash is the "sha256:<hex>" from read. ' +
-    'SEND CODE AS LINES: use contentLines (array, one line per element, no line break inside ' +
-    'any element) instead of content, and beforeLines/afterLines instead of before/after. A raw ' +
-    'line break inside a JSON string is what breaks these requests. Kinds: ' +
-    'create/update {kind,rootKey,path,contentLines,beforeHash} — beforeHash null only for ' +
-    'create; update REPLACES THE WHOLE FILE. ' +
-    'patch {kind,rootKey,path,beforeHash,hunks:[{beforeLines,afterLines}]} — exact text ' +
-    'replacement, NOT a diff: no @@ or +/- prefixes; each before must occur exactly once, so ' +
-    'include enough surrounding lines. Prefer patch for an existing file. ' +
+    'WRITE arguments: {"transaction":{"transactionId":"<id>","summary":"<why>",' +
+    '"operations":[<one operation>]}}. beforeHash is the read "sha256:<hex>". Use contentLines ' +
+    'instead of content and beforeLines/afterLines for hunks; each array item is one line. Kinds: ' +
+    'create/update {kind,rootKey,path,contentLines,beforeHash}; beforeHash is null only for create; ' +
+    'update replaces the whole file. patch {kind,rootKey,path,beforeHash,hunks:' +
+    '[{beforeLines,afterLines}]} is exact replacement, not a diff; before must occur exactly once. ' +
     'rename/copy add destination; delete needs beforeHash; mkdir takes path only; artifact ' +
     'adds mimeType,sizeBytes,contentHash,provenance,contentBase64. ' +
-    'Use one small mutation per call. For source containing braces, quotes or backslashes, use ' +
-    'contentBase64/beforeBase64/afterBase64 so stream heuristics cannot mistake source for an ' +
-    'unfinished tool object. Never send two forms of one field.',
+    'One small mutation per call. For source containing braces, quotes or backslashes, use ' +
+    'contentBase64/beforeBase64/afterBase64 to avoid false unfinished-object detection. Never ' +
+    'send two forms of one field.',
   operations: [
     'stat',
     'list',

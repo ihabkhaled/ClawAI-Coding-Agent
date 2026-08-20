@@ -25,6 +25,101 @@ const configuration: RuntimeConfiguration = {
 };
 
 describe('AgentRunService malformed model repair', () => {
+  it('retries one explicit empty provider response before parsing the edit plan', async () => {
+    const send = vi
+      .fn<AgentRunChatPort['send']>()
+      .mockRejectedValueOnce(
+        new Error(
+          'Cloud provider OLLAMA returned no message content (CLOUD_PROVIDER_EMPTY_RESPONSE)',
+        ),
+      )
+      .mockResolvedValueOnce({
+        threadId: 'thread-1',
+        content: JSON.stringify({ summary: 'No change needed', files: [], commands: [] }),
+        tokens: { input: 1, output: 1, source: 'estimated', total: 2 },
+      });
+    const events: Record<string, unknown>[] = [];
+    const service = new AgentRunService(
+      {
+        resolve: () => 'workspace',
+        collect: vi.fn(async () => ({
+          files: [],
+          receipt: { excluded: [], included: [], totalBytes: 0, truncated: false },
+        })),
+        projectRules: vi.fn(async () => ''),
+      },
+      {
+        authorize: vi.fn(async () => true),
+        isPlanMode: () => false,
+        preparePrompt: (content) => content,
+      },
+      { send },
+      { execute: vi.fn(), previewAndApply: vi.fn() },
+    );
+
+    await expect(
+      service.run(
+        {
+          configuration,
+          content: 'Inspect one file',
+          contextMode: 'workspace',
+          selection: {
+            model: 'qwen2.5-coder',
+            provider: 'OLLAMA',
+            routingMode: 'MANUAL_MODEL',
+          },
+          signal: new AbortController().signal,
+        },
+        { onEvent: (event) => events.push(event), onPhase: vi.fn(), onThread: vi.fn() },
+      ),
+    ).resolves.toMatchObject({ status: 'planned', content: 'No change needed' });
+    expect(send).toHaveBeenCalledTimes(2);
+    expect(send.mock.calls[1]?.[0]).toEqual(send.mock.calls[0]?.[0]);
+    expect(events).toContainEqual({ type: 'AGENT_DRAFT_RESET' });
+  });
+
+  it('propagates a second empty provider response without starting a retry loop', async () => {
+    const empty = new Error(
+      'Cloud provider OLLAMA returned no message content (CLOUD_PROVIDER_EMPTY_RESPONSE)',
+    );
+    const send = vi.fn<AgentRunChatPort['send']>().mockRejectedValue(empty);
+    const service = new AgentRunService(
+      {
+        resolve: () => 'workspace',
+        collect: vi.fn(async () => ({
+          files: [],
+          receipt: { excluded: [], included: [], totalBytes: 0, truncated: false },
+        })),
+        projectRules: vi.fn(async () => ''),
+      },
+      {
+        authorize: vi.fn(async () => true),
+        isPlanMode: () => false,
+        preparePrompt: (content) => content,
+      },
+      { send },
+      { execute: vi.fn(), previewAndApply: vi.fn() },
+    );
+
+    await expect(
+      service.run(
+        {
+          configuration,
+          content: 'Inspect one file',
+          contextMode: 'workspace',
+          selection: {
+            model: 'qwen2.5-coder',
+            provider: 'OLLAMA',
+            routingMode: 'MANUAL_MODEL',
+          },
+          signal: new AbortController().signal,
+        },
+        { onEvent: vi.fn(), onPhase: vi.fn(), onThread: vi.fn() },
+      ),
+    ).rejects.toBe(empty);
+    expect(send).toHaveBeenCalledTimes(2);
+  });
+
   it('repairs one malformed response in the original thread and aggregates usage', async () => {
     const files = new Map<string, string>();
     const phases: AgentRunSnapshot[] = [];
