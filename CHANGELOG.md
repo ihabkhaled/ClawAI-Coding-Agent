@@ -2,6 +2,10 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.63.1
+
+Patch: the agent can once again write a source file longer than 100 lines. Runtime Protocol 2.0 sends a file body as one array entry per line, but arrays shared the 100-item object-entry ceiling, so any file over 100 lines was rejected — and the resulting validation error surfaced as an opaque internal error that ended the whole run instead of a correctable tool failure. Arrays now carry their own, much larger ceiling; the per-argument byte budget continues to do the real bounding, and the tighter object-entry ceiling is unchanged.
+
 ## 0.63.0
 
 Minor: large flagship deliveries now survive interruption, run independent work in parallel, and recover from a failure instead of stopping at it.
