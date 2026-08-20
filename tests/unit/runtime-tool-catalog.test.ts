@@ -104,4 +104,14 @@ describe('production Runtime V2 tool catalog', () => {
     );
     expect(workspaceFilesystemToolDefinition.description).toContain('at most 100 results');
   });
+
+  it('tells the model to stop redundant discovery and send parser-safe mutations', () => {
+    expect(workspaceFilesystemToolDefinition.description).toContain(
+      'do not rediscover unchanged files',
+    );
+    expect(workspaceFilesystemToolDefinition.description).toContain('one small mutation per call');
+    expect(workspaceFilesystemToolDefinition.description).toContain('source containing braces');
+    expect(workspaceFilesystemToolDefinition.description).toContain('contentBase64');
+    expect(workspaceFilesystemToolDefinition.description.length).toBeLessThanOrEqual(2_000);
+  });
 });

@@ -2,6 +2,10 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.61.13
+
+Patch: make Runtime Protocol 2.0 file work faster and more reliable. The model-visible filesystem contract now tells coding agents to act after a targeted search and read instead of repeatedly rediscovering unchanged files, to send one small mutation per call, and to use the existing Base64 fields for source containing braces, quotes, or backslashes so backend stream heuristics do not mistake complete source payloads for unfinished tool objects.
+
 ## 0.61.12
 
 Patch: restore green release automation by formatting the diagnostics sink and its unit test, and by committing the complete versioned VSIX release assets required by the release gate.
