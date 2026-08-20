@@ -6,7 +6,10 @@ import {
   type SubAgentTaskStatus,
 } from '../core/multi-agent-dag';
 
+import { classifyRuntimeFailure, isRetryingStrategy } from './runtime-recovery-policy';
+
 import type { FileLeaseManager } from './file-lease-manager';
+import type { RuntimeRecoveryRecord, RuntimeRecoveryStrategy } from './runtime-recovery-policy';
 
 export interface SubAgentExecutionPort {
   execute(
@@ -31,12 +34,20 @@ export interface SubAgentWorkspacePort {
   abandon(task: SubAgentTask): Promise<void>;
 }
 
+interface TaskSpend {
+  readonly tokens: number;
+  readonly toolCalls: number;
+  readonly modelTurns: number;
+}
+
 interface TaskRuntime {
   readonly task: SubAgentTask;
-  readonly controller: AbortController;
+  controller: AbortController;
   readonly steering: string[];
+  readonly recovery: RuntimeRecoveryRecord[];
   status: SubAgentTaskStatus;
   attempts: number;
+  spent: TaskSpend;
   outcome?: SubAgentOutcome;
 }
 
@@ -64,9 +75,15 @@ export class SubAgentCoordinatorService {
     private readonly workspaces?: SubAgentWorkspacePort,
   ) {}
 
-  async run(candidate: unknown, signal?: AbortSignal): Promise<readonly SubAgentOutcome[]> {
+  async run(
+    candidate: unknown,
+    signal?: AbortSignal,
+    admittedMaxConcurrency = 32,
+  ): Promise<readonly SubAgentOutcome[]> {
     if (this.graph !== undefined) throw new Error('A sub-agent graph is already active');
     const graph = subAgentGraphSchema.parse(candidate);
+    const maxConcurrency = this.admittedConcurrency(graph.maxConcurrency, admittedMaxConcurrency);
+
     this.graph = graph;
     this.stopped = false;
     this.tasks = new Map(
@@ -76,8 +93,10 @@ export class SubAgentCoordinatorService {
           task,
           controller: new AbortController(),
           steering: [],
+          recovery: [],
           status: 'queued' as const,
           attempts: 0,
+          spent: { tokens: 0, toolCalls: 0, modelTurns: 0 },
         },
       ]),
     );
@@ -89,7 +108,7 @@ export class SubAgentCoordinatorService {
       while (!this.isTerminal()) {
         signal?.throwIfAborted();
         this.propagateDependencyFailures();
-        const slots = graph.maxConcurrency - this.running().length;
+        const slots = maxConcurrency - this.running().length;
         const ready = this.ready().slice(0, Math.max(0, slots));
         for (const runtime of ready) void this.start(runtime);
         if (ready.length === 0) await this.waitForChange(signal);
@@ -102,6 +121,13 @@ export class SubAgentCoordinatorService {
       for (const runtime of this.tasks.values()) this.leases.release(runtime.task.taskId);
       this.graph = undefined;
     }
+  }
+
+  private admittedConcurrency(graphMaximum: number, admittedMaximum: number): number {
+    if (!Number.isInteger(admittedMaximum) || admittedMaximum < 1 || admittedMaximum > 32) {
+      throw new Error('Invalid admitted sub-agent concurrency');
+    }
+    return Math.min(graphMaximum, admittedMaximum);
   }
 
   steer(taskId: string, message: string): void {
@@ -194,19 +220,85 @@ export class SubAgentCoordinatorService {
       }
       outcome = await this.settleWorkspace(runtime, outcome);
       this.assertOutcome(runtime, outcome);
-      this.finish(runtime, outcome);
+      this.concludeAttempt(runtime, outcome, false);
     } catch (error) {
       await this.workspaces?.abandon(runtime.task);
-      this.finish(runtime, {
-        taskId: runtime.task.taskId,
-        status: runtime.controller.signal.aborted ? 'cancelled' : 'failed',
-        changedPaths: [],
-        tokens: 0,
-        toolCalls: 0,
-        artifacts: [],
-        blocker: error instanceof Error ? error.message : 'Sub-agent failed',
-      });
+      this.concludeAttempt(
+        runtime,
+        {
+          taskId: runtime.task.taskId,
+          status: runtime.controller.signal.aborted ? 'cancelled' : 'failed',
+          changedPaths: [],
+          tokens: 0,
+          toolCalls: 0,
+          artifacts: [],
+          blocker: error instanceof Error ? error.message : 'Sub-agent failed',
+        },
+        true,
+      );
     }
+  }
+
+  // A failed attempt is not automatically terminal. The recovery ladder decides
+  // whether the same hypothesis may be tried again, and the task's own
+  // `maxRetries` caps that independently, so neither can overrule the other.
+  private concludeAttempt(runtime: TaskRuntime, outcome: SubAgentOutcome, thrown: boolean): void {
+    runtime.spent = this.accumulatedSpend(runtime, outcome);
+    if (outcome.status !== 'failed') {
+      this.finish(runtime, this.withAccumulatedSpend(runtime, outcome));
+      return;
+    }
+    const decision = classifyRuntimeFailure(
+      {
+        blocker: outcome.blocker ?? 'Sub-agent failed',
+        thrown,
+        mutating: runtime.task.writeSet.length > 0,
+      },
+      runtime.recovery,
+    );
+    runtime.recovery.push(decision);
+    if (!this.mayRetry(runtime, decision.strategy)) {
+      this.finish(runtime, this.withAccumulatedSpend(runtime, outcome));
+      return;
+    }
+    // A retry needs its own controller: the previous attempt's may already be
+    // aborted by the runtime-budget timeout or by a cancel, and reusing it
+    // would make the new attempt fail instantly on an already-aborted signal.
+    runtime.controller = new AbortController();
+    runtime.status = 'queued';
+    this.observer.status(runtime.task.taskId, 'queued', decision.reason);
+    this.changed();
+  }
+
+  // Retrying a graph that is already stopping would re-queue a task nothing can
+  // ever dispatch, leaving `run()` awaiting a wake-up that never comes.
+  private mayRetry(runtime: TaskRuntime, strategy: RuntimeRecoveryStrategy): boolean {
+    return (
+      isRetryingStrategy(strategy) &&
+      !this.stopped &&
+      !runtime.controller.signal.aborted &&
+      runtime.attempts <= runtime.task.budget.maxRetries
+    );
+  }
+
+  // Every attempt spends real budget, so a retried task reports what all of its
+  // attempts consumed rather than only the last one.
+  private accumulatedSpend(runtime: TaskRuntime, outcome: SubAgentOutcome): TaskSpend {
+    return {
+      tokens: runtime.spent.tokens + outcome.tokens,
+      toolCalls: runtime.spent.toolCalls + outcome.toolCalls,
+      modelTurns: runtime.spent.modelTurns + (outcome.modelTurns ?? 0),
+    };
+  }
+
+  private withAccumulatedSpend(runtime: TaskRuntime, outcome: SubAgentOutcome): SubAgentOutcome {
+    return {
+      ...outcome,
+      tokens: runtime.spent.tokens,
+      toolCalls: runtime.spent.toolCalls,
+      ...(outcome.modelTurns === undefined ? {} : { modelTurns: runtime.spent.modelTurns }),
+      attempts: runtime.attempts,
+    };
   }
 
   // A succeeded task's worktree stays alive on purpose — its commit is only

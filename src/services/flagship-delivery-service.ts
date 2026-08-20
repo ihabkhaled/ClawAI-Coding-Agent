@@ -1,5 +1,8 @@
 import {
   flagshipRequestSchema,
+  flagshipRequestHash,
+  flagshipStructuredStageDataSchema,
+  type FlagshipEpochs,
   type FlagshipRequest,
   type FlagshipSnapshot,
   type FlagshipStage,
@@ -30,6 +33,14 @@ export interface FlagshipStagePort {
 
 export interface FlagshipCheckpointPort {
   save(snapshot: FlagshipSnapshot): Promise<void>;
+  load(deliveryId: string): Promise<FlagshipSnapshot | undefined>;
+  remove(deliveryId: string): Promise<void>;
+}
+
+export interface FlagshipCheckpointReconcilerPort {
+  hostIdentityHash(): string;
+  hostInstanceId(): string;
+  reconcile(checkpoint: FlagshipSnapshot, request: FlagshipRequest): Promise<boolean>;
 }
 
 export interface FlagshipObserverPort {
@@ -45,12 +56,25 @@ export class FlagshipDeliveryService {
     private readonly stage: FlagshipStagePort,
     private readonly checkpoints: FlagshipCheckpointPort,
     private readonly observer: FlagshipObserverPort,
+    private readonly reconciler: FlagshipCheckpointReconcilerPort = {
+      hostIdentityHash: () => '',
+      // The snapshot schema requires a non-empty instance id, so a composition
+      // without a reconciler must still persist a valid checkpoint.
+      hostInstanceId: () => 'flagship:unreconciled-host',
+      reconcile: () => Promise.resolve(false),
+    },
     private readonly now: () => number = Date.now,
   ) {}
 
-  async run(candidate: unknown, signal?: AbortSignal): Promise<FlagshipSnapshot> {
+  async run(
+    candidate: unknown,
+    signal?: AbortSignal,
+    currentEpochs?: FlagshipEpochs,
+  ): Promise<FlagshipSnapshot> {
     if (this.active !== undefined) throw new Error('A flagship delivery is already active');
-    const request = flagshipRequestSchema.parse(candidate);
+    const parsedRequest = flagshipRequestSchema.parse(candidate);
+    const request =
+      currentEpochs === undefined ? parsedRequest : { ...parsedRequest, epochs: currentEpochs };
     const startedAtMs = this.now();
     const controller = new AbortController();
     const cancel = () => {
@@ -59,38 +83,37 @@ export class FlagshipDeliveryService {
     signal?.addEventListener('abort', cancel, { once: true });
     this.active = {
       controller,
-      snapshot: {
-        deliveryId: request.deliveryId,
-        runId: request.runId,
-        stage: 'discover',
-        lifecycle: 'running',
-        attempts: {},
-        evidenceReferences: [],
-        unverifiedClaims: [],
-        steering: [],
-        stageSummaries: {},
-        usage: { modelTurns: 0, toolCalls: 0, subAgents: 0 },
-        commits: [],
-        startedAt: new Date(startedAtMs).toISOString(),
-        updatedAt: new Date(startedAtMs).toISOString(),
-      },
+      snapshot: await this.initialSnapshot(
+        request,
+        startedAtMs,
+        this.reconciler.hostIdentityHash(),
+        this.reconciler.hostInstanceId(),
+      ),
     };
     try {
       await this.executeStages(request, startedAtMs, controller.signal);
-      if (this.requireActive().snapshot.lifecycle !== 'running')
-        return this.requireActive().snapshot;
-      this.update({
-        lifecycle: this.requireActive().snapshot.unverifiedClaims.length === 0 ? 'done' : 'partial',
-      });
-      await this.checkpoint();
+      if (this.requireActive().snapshot.lifecycle === 'running') {
+        this.update({
+          lifecycle:
+            this.requireActive().snapshot.unverifiedClaims.length === 0 ? 'done' : 'partial',
+        });
+        await this.checkpoint();
+      }
+      await this.discardUnresumableCheckpoint(request.deliveryId);
       return this.requireActive().snapshot;
     } catch (error) {
       const cancelled = controller.signal.aborted;
       this.update({
         lifecycle: cancelled ? 'cancelled' : 'failed',
-        stopReason: error instanceof Error ? error.message : 'Flagship delivery failed',
+        stopReason: (error instanceof Error ? error.message : 'Flagship delivery failed').slice(
+          0,
+          20_000,
+        ),
       });
-      await this.checkpoint();
+      // A failing delivery must still report why it failed, so persistence is
+      // not allowed to replace the stop reason with its own error.
+      await this.checkpoint().catch(() => undefined);
+      await this.discardUnresumableCheckpoint(request.deliveryId).catch(() => undefined);
       return this.requireActive().snapshot;
     } finally {
       signal?.removeEventListener('abort', cancel);
@@ -105,14 +128,20 @@ export class FlagshipDeliveryService {
     startedAtMs: number,
     signal: AbortSignal,
   ): Promise<void> {
-    for (let index = 0; index < stages.length; index += 1) {
+    const resumeIndex = stages.indexOf(this.requireActive().snapshot.nextStage ?? 'discover');
+    for (let index = Math.max(0, resumeIndex); index < stages.length; index += 1) {
       const currentStage = stages[index];
       if (currentStage === undefined) return;
       await this.waitIfPaused(signal);
       this.assertBudget(startedAtMs, request);
       this.update({ stage: currentStage });
-      if (await this.executeStage(currentStage, request, signal))
+      if (await this.executeStage(currentStage, request, signal)) {
+        this.update({ nextStage: 'plan' });
         index = Math.max(-1, stages.indexOf('plan') - 1);
+      } else if (this.requireActive().snapshot.lifecycle === 'running') {
+        const nextStage = stages[index + 1];
+        if (nextStage !== undefined) this.update({ nextStage });
+      }
       if (this.requireActive().snapshot.lifecycle !== 'running') return;
       await this.checkpoint();
     }
@@ -157,7 +186,7 @@ export class FlagshipDeliveryService {
         : result.status === 'recoverable-failure'
           ? 'partial'
           : 'failed';
-    this.update({ lifecycle, stopReason: result.summary });
+    this.update({ lifecycle, stopReason: result.summary.slice(0, 20_000) });
   }
 
   steer(message: string): void {
@@ -190,25 +219,91 @@ export class FlagshipDeliveryService {
 
   private mergeResult(result: FlagshipStageResult): void {
     const snapshot = this.requireActive().snapshot;
-    const resolved = new Set(result.resolvedClaims ?? []);
     this.update({
-      evidenceReferences: [
-        ...new Set([...snapshot.evidenceReferences, ...result.evidenceReferences]),
-      ],
-      unverifiedClaims: [
-        ...new Set(
-          [...snapshot.unverifiedClaims, ...result.unverifiedClaims].filter(
-            (claim) => !resolved.has(claim),
-          ),
-        ),
-      ],
-      usage: {
-        modelTurns: snapshot.usage.modelTurns + (result.usage?.modelTurns ?? 0),
-        toolCalls: snapshot.usage.toolCalls + (result.usage?.toolCalls ?? 0),
-        subAgents: snapshot.usage.subAgents + (result.usage?.subAgents ?? 0),
+      evidenceReferences: this.mergedEvidenceReferences(snapshot, result),
+      unverifiedClaims: this.mergedUnverifiedClaims(snapshot, result),
+      usage: this.mergedUsage(snapshot, result),
+      commits: this.mergedCommits(snapshot, result),
+      stageSummaries: {
+        ...snapshot.stageSummaries,
+        [snapshot.stage]: result.summary.slice(0, 20_000),
       },
-      commits: result.clearCommits ? [] : [...snapshot.commits, ...(result.commits ?? [])],
-      stageSummaries: { ...snapshot.stageSummaries, [snapshot.stage]: result.summary },
+      ...this.structuredResultPatch(snapshot, result),
+    });
+  }
+
+  private mergedEvidenceReferences(
+    snapshot: FlagshipSnapshot,
+    result: FlagshipStageResult,
+  ): readonly string[] {
+    return [...new Set([...snapshot.evidenceReferences, ...result.evidenceReferences])];
+  }
+
+  private mergedUnverifiedClaims(
+    snapshot: FlagshipSnapshot,
+    result: FlagshipStageResult,
+  ): readonly string[] {
+    const resolved = new Set(result.resolvedClaims ?? []);
+    return [
+      ...new Set(
+        [...snapshot.unverifiedClaims, ...result.unverifiedClaims].filter(
+          (claim) => !resolved.has(claim),
+        ),
+      ),
+    ];
+  }
+
+  private mergedUsage(
+    snapshot: FlagshipSnapshot,
+    result: FlagshipStageResult,
+  ): FlagshipSnapshot['usage'] {
+    return {
+      modelTurns: snapshot.usage.modelTurns + (result.usage?.modelTurns ?? 0),
+      toolCalls: snapshot.usage.toolCalls + (result.usage?.toolCalls ?? 0),
+      subAgents: snapshot.usage.subAgents + (result.usage?.subAgents ?? 0),
+    };
+  }
+
+  private mergedCommits(
+    snapshot: FlagshipSnapshot,
+    result: FlagshipStageResult,
+  ): readonly FlagshipSnapshot['commits'][number][] {
+    return result.clearCommits ? [] : [...snapshot.commits, ...(result.commits ?? [])];
+  }
+
+  private structuredResultPatch(
+    snapshot: FlagshipSnapshot,
+    result: FlagshipStageResult,
+  ): Partial<FlagshipSnapshot> {
+    const structured = this.structuredStageData(result);
+    return {
+      ...(structured.graph === undefined ? {} : { graph: structured.graph }),
+      ...(structured.graphHash === undefined ? {} : { graphHash: structured.graphHash }),
+      taskOutcomes: [...(snapshot.taskOutcomes ?? []), ...(structured.taskOutcomes ?? [])],
+      taskAttemptHistory: [
+        ...(snapshot.taskAttemptHistory ?? []),
+        ...(structured.taskAttemptHistory ?? []),
+      ],
+      recoveryHistory: [...(snapshot.recoveryHistory ?? []), ...(structured.recoveryHistory ?? [])],
+      acceptanceReceipts: [
+        ...(snapshot.acceptanceReceipts ?? []),
+        ...(structured.acceptanceReceipts ?? []),
+      ],
+    };
+  }
+
+  private structuredStageData(result: FlagshipStageResult) {
+    return flagshipStructuredStageDataSchema.parse({
+      ...(result.graph === undefined ? {} : { graph: result.graph }),
+      ...(result.graphHash === undefined ? {} : { graphHash: result.graphHash }),
+      ...(result.taskOutcomes === undefined ? {} : { taskOutcomes: result.taskOutcomes }),
+      ...(result.taskAttemptHistory === undefined
+        ? {}
+        : { taskAttemptHistory: result.taskAttemptHistory }),
+      ...(result.recoveryHistory === undefined ? {} : { recoveryHistory: result.recoveryHistory }),
+      ...(result.acceptanceReceipts === undefined
+        ? {}
+        : { acceptanceReceipts: result.acceptanceReceipts }),
     });
   }
 
@@ -256,6 +351,78 @@ export class FlagshipDeliveryService {
 
   private checkpoint(): Promise<void> {
     return this.checkpoints.save(this.requireActive().snapshot);
+  }
+
+  // Only running and paused checkpoints can ever be resumed, so every other
+  // terminal lifecycle would otherwise accumulate in workspace state forever.
+  private async discardUnresumableCheckpoint(deliveryId: string): Promise<void> {
+    const { lifecycle } = this.requireActive().snapshot;
+    if (lifecycle === 'running' || lifecycle === 'paused') return;
+    await this.checkpoints.remove(deliveryId);
+  }
+
+  private async initialSnapshot(
+    request: FlagshipRequest,
+    startedAtMs: number,
+    hostIdentityHash: string,
+    hostInstanceId: string,
+  ): Promise<FlagshipSnapshot> {
+    const checkpoint = await this.checkpoints.load(request.deliveryId);
+    if (
+      checkpoint !== undefined &&
+      this.isCompatible(checkpoint, request, hostIdentityHash) &&
+      (await this.reconciler.reconcile(checkpoint, request))
+    ) {
+      return {
+        ...checkpoint,
+        hostInstanceId,
+        epochs: request.epochs,
+        stage: checkpoint.nextStage ?? checkpoint.stage,
+        lifecycle: 'running',
+        reconciliation: 'verified',
+        updatedAt: new Date(startedAtMs).toISOString(),
+      };
+    }
+    return {
+      deliveryId: request.deliveryId,
+      runId: request.runId,
+      requestHash: flagshipRequestHash(request),
+      hostIdentityHash,
+      hostInstanceId,
+      epochs: request.epochs,
+      stage: 'discover',
+      nextStage: 'discover',
+      lifecycle: 'running',
+      reconciliation: 'required',
+      attempts: {},
+      evidenceReferences: [],
+      unverifiedClaims: [],
+      steering: [],
+      stageSummaries: {},
+      usage: { modelTurns: 0, toolCalls: 0, subAgents: 0 },
+      commits: [],
+      graphHash: '',
+      taskOutcomes: [],
+      taskAttemptHistory: [],
+      recoveryHistory: [],
+      acceptanceReceipts: [],
+      startedAt: new Date(startedAtMs).toISOString(),
+      updatedAt: new Date(startedAtMs).toISOString(),
+    };
+  }
+
+  private isCompatible(
+    checkpoint: FlagshipSnapshot,
+    request: FlagshipRequest,
+    hostIdentityHash: string,
+  ): boolean {
+    return (
+      (checkpoint.lifecycle === 'running' || checkpoint.lifecycle === 'paused') &&
+      checkpoint.nextStage !== undefined &&
+      checkpoint.runId === request.runId &&
+      checkpoint.requestHash === flagshipRequestHash(request) &&
+      checkpoint.hostIdentityHash === hostIdentityHash
+    );
   }
 
   private requireActive(): { snapshot: FlagshipSnapshot; controller: AbortController } {
