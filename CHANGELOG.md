@@ -2,6 +2,10 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.62.0
+
+Minor: Runtime Protocol 2.0 now enforces explicit, unambiguous one-file discovery constraints from the user's prompt. When a prompt names `ONE FILE ONLY` and an `at most N read/discovery` limit, workspace reads are restricted to named files, repeated discovery stops at the stated limit with a concise correction, and writes remain available only for the named target. Ordinary prompts keep the existing unrestricted, budget-bounded behavior.
+
 ## 0.61.14
 
 Patch: recover automatically from one explicit `CLOUD_PROVIDER_EMPTY_RESPONSE` without asking the user to restart the edit workflow. The retry resends the identical generation request once, remains abort-aware, and still requires the resulting strict edit plan to pass the existing trust, preview, and approval gates. The Runtime Protocol filesystem guidance is also compressed below the production 1,600-character catalog limit while retaining the targeted-discovery, small-mutation, and parser-safe Base64 instructions introduced in 0.61.13.

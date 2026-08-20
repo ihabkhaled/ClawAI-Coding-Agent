@@ -14,6 +14,7 @@ import {
 } from '../core/runtime/runtime-steering-queue';
 import { parseToolInvocation } from '../core/runtime/runtime-tool-contracts';
 
+import { ExplicitScopeExecutor, parseExplicitRunScope } from './runtime-explicit-scope';
 import { RuntimeToolDispatcher } from './runtime-tool-dispatcher';
 
 import type { RuntimeToolExecutorPort, RuntimeToolPolicyPort } from './runtime-tool-dispatcher';
@@ -207,6 +208,11 @@ export class RuntimeRunService {
       const admittedInput = { ...input, runId: receipt.runId };
       this.assertCurrentEpochs(input.epochs);
       const controller = new AbortController();
+      const explicitScope = parseExplicitRunScope(input.prompt);
+      const executor =
+        explicitScope === undefined
+          ? this.dependencies.executor
+          : new ExplicitScopeExecutor(this.dependencies.executor, explicitScope);
       this.completed = undefined;
       this.active = {
         controller,
@@ -217,7 +223,7 @@ export class RuntimeRunService {
           currentEpochs: this.dependencies.currentEpochs,
           definitions: admittedInput.definitions,
           epochs: admittedInput.epochs,
-          executor: this.dependencies.executor,
+          executor,
           now: () => this.dependencies.clock.now(),
           policy: this.dependencies.policy,
           receiptId: this.dependencies.receiptId,

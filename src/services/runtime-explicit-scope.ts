@@ -1,0 +1,91 @@
+import type {
+  RuntimeToolExecutionOutput,
+  RuntimeToolExecutorPort,
+} from './runtime-tool-dispatcher';
+import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+
+export interface ExplicitRunScope {
+  readonly discoveryPaths: readonly string[];
+  readonly maxDiscoveryCalls: number;
+  readonly mutationPath: string;
+}
+
+const TARGET_PATTERN = /\bONE\s+(?:NEW\s+)?FILE\s+ONLY:\s*([^\s,;]+)/iu;
+const DISCOVERY_LIMIT_PATTERN =
+  /\bat most\s+(one|[1-9]\d?)\s+(?:targeted\s+)?(?:read|discovery)(?:\s+calls?)?/iu;
+const FILE_PATH_PATTERN = /(?:[A-Za-z0-9_.-]+\/)+[A-Za-z0-9_.-]+/gu;
+const DISCOVERY_OPERATIONS = new Set(['binary-metadata', 'glob', 'list', 'read', 'search', 'stat']);
+const MUTATION_OPERATIONS = new Set(['create', 'delete', 'mkdir', 'patch', 'rename', 'update']);
+
+function cleanPath(value: string): string {
+  return value.replace(/[.)\]}]+$/u, '').replaceAll('\\', '/');
+}
+
+export function parseExplicitRunScope(prompt: string): ExplicitRunScope | undefined {
+  const targetMatch = TARGET_PATTERN.exec(prompt);
+  const limitMatch = DISCOVERY_LIMIT_PATTERN.exec(prompt);
+  if (targetMatch?.[1] === undefined || limitMatch?.[1] === undefined) return undefined;
+  const mutationPath = cleanPath(targetMatch[1]);
+  const maxDiscoveryCalls = limitMatch[1].toLocaleLowerCase() === 'one' ? 1 : Number(limitMatch[1]);
+  const discoveryPaths = [
+    ...new Set(
+      [mutationPath, ...(prompt.match(FILE_PATH_PATTERN) ?? [])]
+        .map(cleanPath)
+        .filter((path) => path.includes('.')),
+    ),
+  ];
+  return { discoveryPaths, maxDiscoveryCalls, mutationPath };
+}
+
+function invocationPaths(invocation: ToolInvocation): readonly string[] {
+  const directPath = invocation.arguments.path;
+  if (typeof directPath === 'string') return [cleanPath(directPath)];
+  const transaction = invocation.arguments.transaction;
+  if (typeof transaction !== 'object' || transaction === null) return [];
+  const operations = (transaction as Record<string, unknown>).operations;
+  if (!Array.isArray(operations)) return [];
+  return operations.flatMap((operation) => {
+    if (typeof operation !== 'object' || operation === null) return [];
+    const record = operation as Record<string, unknown>;
+    return [record.path, record.destination]
+      .filter((path): path is string => typeof path === 'string')
+      .map(cleanPath);
+  });
+}
+
+export class ExplicitScopeExecutor implements RuntimeToolExecutorPort {
+  private discoveryCalls = 0;
+
+  constructor(
+    private readonly delegate: RuntimeToolExecutorPort,
+    private readonly scope: ExplicitRunScope,
+  ) {}
+
+  async execute(
+    invocation: ToolInvocation,
+    signal?: AbortSignal,
+  ): Promise<RuntimeToolExecutionOutput> {
+    if (invocation.toolName === 'workspace.files') this.assertAllowed(invocation);
+    return this.delegate.execute(invocation, signal);
+  }
+
+  private assertAllowed(invocation: ToolInvocation): void {
+    const paths = invocationPaths(invocation);
+    if (MUTATION_OPERATIONS.has(invocation.operation)) {
+      if (paths.length === 0 || paths.some((path) => path !== this.scope.mutationPath)) {
+        throw new Error(`Write is outside the explicit one-file scope: ${this.scope.mutationPath}`);
+      }
+      return;
+    }
+    if (!DISCOVERY_OPERATIONS.has(invocation.operation)) return;
+    if (paths.length === 0 || paths.some((path) => !this.scope.discoveryPaths.includes(path))) {
+      throw new Error('Discovery path is outside the explicit run scope. Use only named files.');
+    }
+    if (this.discoveryCalls >= this.scope.maxDiscoveryCalls) {
+      throw new Error(
+        `Discovery limit reached (${String(this.scope.maxDiscoveryCalls)}). Stop reading and perform the requested write.`,
+      );
+    }
+    this.discoveryCalls += 1;
+  }
+}
