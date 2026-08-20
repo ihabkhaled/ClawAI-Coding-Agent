@@ -5,6 +5,10 @@ import { z } from 'zod';
 // while leaving enough headroom for those first-party definitions.
 const MAX_JSON_DEPTH = 12;
 export const MAX_RUNTIME_JSON_ENTRIES = 100;
+// Arrays carry file bodies — `workspace.files` sends one array entry per source
+// line — so they cannot share the object-entry cap without making every file
+// over 100 lines unwritable. The byte budget remains the real bound.
+export const MAX_RUNTIME_JSON_ARRAY_ITEMS = 4_000;
 const MAX_JSON_KEY_LENGTH = 120;
 export const MAX_RUNTIME_JSON_STRING_LENGTH = 65_536;
 
@@ -31,7 +35,7 @@ function jsonValueAtDepth(depth: number): z.ZodType<RuntimeJsonValue> {
   const child = jsonValueAtDepth(depth - 1);
   return z.union([
     jsonPrimitiveSchema,
-    z.array(child).max(MAX_RUNTIME_JSON_ENTRIES),
+    z.array(child).max(MAX_RUNTIME_JSON_ARRAY_ITEMS),
     z
       .record(jsonKeySchema, child)
       .refine(

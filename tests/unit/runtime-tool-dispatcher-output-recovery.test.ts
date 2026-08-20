@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { MAX_RUNTIME_JSON_ARRAY_ITEMS } from '../../src/core/runtime/runtime-json-value';
 import {
   RuntimeToolDispatcher,
   type RuntimeToolExecutionOutput,
@@ -77,7 +78,10 @@ describe('runtime tool dispatcher output recovery', () => {
       return execution === 1
         ? {
             structured: {
-              paths: Array.from({ length: 101 }, (_entry, index) => `src/file-${String(index)}.ts`),
+              paths: Array.from(
+                { length: MAX_RUNTIME_JSON_ARRAY_ITEMS + 1 },
+                (_entry, index) => `src/file-${String(index)}.ts`,
+              ),
               truncated: false,
             },
           }
