@@ -57,6 +57,10 @@ const runtimeToolExecutionOutputSchema = z
   })
   .strict();
 
+export function isRuntimeToolExecutionOutputValid(value: unknown): boolean {
+  return runtimeToolExecutionOutputSchema.safeParse(value).success;
+}
+
 export interface RuntimeToolDispatchObserver {
   readonly onInvocationAdmitted: (invocation: ToolInvocation, budget: RuntimeBudgetState) => void;
 }

@@ -84,4 +84,26 @@ describe('explicit Runtime V2 scope', () => {
       ),
     ).resolves.toEqual({ structured: { ok: true } });
   });
+
+  it('does not consume discovery allowance when executor output is invalid', async () => {
+    const execute = vi
+      .fn()
+      .mockResolvedValueOnce({ structured: { invalid: undefined } })
+      .mockResolvedValueOnce({ structured: { path: 'src/target.ts' } });
+    const executor = new ExplicitScopeExecutor(
+      { execute },
+      {
+        discoveryPaths: ['src/target.ts'],
+        maxDiscoveryCalls: 1,
+        mutationPath: 'src/target.ts',
+      },
+    );
+    const read = invocation('read', { rootKey: 'workspace-1', path: 'src/target.ts' });
+
+    await executor.execute(read);
+
+    await expect(executor.execute(read)).resolves.toEqual({
+      structured: { path: 'src/target.ts' },
+    });
+  });
 });

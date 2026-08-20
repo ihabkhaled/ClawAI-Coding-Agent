@@ -2,6 +2,10 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.62.1
+
+Patch: explicit Runtime V2 discovery limits now count only successful, contract-valid discovery results. A malformed or failed read releases its reserved allowance so the model can correct the request once, while successful reads and concurrent attempts remain bounded by the user's stated limit. Exact named-file scope checks are unchanged.
+
 ## 0.62.0
 
 Minor: Runtime Protocol 2.0 now enforces explicit, unambiguous one-file discovery constraints from the user's prompt. When a prompt names `ONE FILE ONLY` and an `at most N read/discovery` limit, workspace reads are restricted to named files, repeated discovery stops at the stated limit with a concise correction, and writes remain available only for the named target. Ordinary prompts keep the existing unrestricted, budget-bounded behavior.
