@@ -7,6 +7,7 @@ import {
   issuePayloads,
   renderImplementationPlanMarkdown,
 } from '../core/implementation-plan';
+import { subAgentGraphSchema } from '../core/multi-agent-dag';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -50,6 +51,10 @@ export class PlanningToolExecutor implements RuntimeToolExecutorPort {
   ): Promise<RuntimeToolExecutionOutput> {
     if (invocation.toolName !== planningToolDefinition.name)
       throw new Error('Unknown planning tool');
+    if (invocation.operation === 'validate') {
+      const graph = subAgentGraphSchema.safeParse(invocation.arguments.plan);
+      if (graph.success) return { structured: { graph: graph.data, valid: true } };
+    }
     const plan = implementationPlanSchema.parse(invocation.arguments.plan);
     if (invocation.operation === 'validate') return { structured: { plan, valid: true } };
     if (invocation.operation === 'render-markdown') {

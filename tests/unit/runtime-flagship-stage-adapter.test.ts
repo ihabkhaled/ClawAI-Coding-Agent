@@ -1,47 +1,70 @@
 import { describe, expect, it, vi } from 'vitest';
 
-import { flagshipRequestSchema } from '../../src/core/flagship-delivery';
 import {
   CoordinatedFlagshipSubAgentPort,
   RuntimeFlagshipStageAdapter,
 } from '../../src/services/runtime-flagship-stage-adapter';
+import {
+  flagshipImplementationGraph,
+  flagshipStageRequest,
+  flagshipStageSnapshot,
+} from '../helpers/flagship-stage';
 
 import type { SubAgentTask } from '../../src/core/multi-agent-dag';
 
-const request = flagshipRequestSchema.parse({
-  deliveryId: 'Flagship_Test_0001',
-  runId: 'runtime-flagship-test',
-  goal: 'Implement a bounded feature.',
-  strategy: 'cross-stack-feature',
-  repositories: ['workspace-root'],
-  writeSet: ['src/feature.ts'],
-  acceptanceChecks: ['Feature tests pass'],
-  budget: {
-    maxRuntimeMs: 172_800_000,
-    maxStageAttempts: 2,
-    maxModelTurns: 1_000,
-    maxToolCalls: 100_000,
-    maxSubAgents: 5,
-  },
-});
-
-const snapshot = {
-  deliveryId: request.deliveryId,
-  runId: request.runId,
-  stage: 'implement' as const,
-  lifecycle: 'running' as const,
-  attempts: {},
-  evidenceReferences: [],
-  unverifiedClaims: [],
-  steering: ['Preserve the public API.'],
-  stageSummaries: {},
-  usage: { modelTurns: 0, toolCalls: 0, subAgents: 0 },
-  commits: [],
-  startedAt: '2026-08-02T12:00:00.000Z',
-  updatedAt: '2026-08-02T12:00:00.000Z',
-};
+const request = flagshipStageRequest();
+const snapshot = flagshipStageSnapshot();
+const implementationGraph = flagshipImplementationGraph();
 
 describe('RuntimeFlagshipStageAdapter', () => {
+  it('persists a host-validated plan graph and executes it in the implementation stage', async () => {
+    const execute = vi.fn(async (task: SubAgentTask) => ({
+      taskId: task.taskId,
+      status: 'succeeded' as const,
+      changedPaths: [],
+      tokens: 10,
+      toolCalls: 1,
+      modelTurns: 1,
+      artifacts: ['evidence:plan'],
+      graph: implementationGraph,
+    }));
+    const executeGraph = vi.fn(async () =>
+      implementationGraph.tasks.map((task) => ({
+        taskId: task.taskId,
+        status: 'succeeded' as const,
+        changedPaths: task.writeSet,
+        tokens: 10,
+        toolCalls: 1,
+        modelTurns: 1,
+        artifacts: [`evidence:${task.taskId}`],
+      })),
+    );
+    const adapter = new RuntimeFlagshipStageAdapter({ execute, executeGraph }, () => ({
+      account: 1,
+      workspace: 2,
+      target: 3,
+      policy: 4,
+    }));
+
+    const planResult = await adapter.execute(
+      'plan',
+      request,
+      snapshot,
+      new AbortController().signal,
+    );
+    expect(planResult).toMatchObject({ status: 'succeeded', graph: implementationGraph });
+
+    await expect(
+      adapter.execute(
+        'implement',
+        request,
+        { ...snapshot, graph: planResult.graph },
+        new AbortController().signal,
+      ),
+    ).resolves.toMatchObject({ status: 'succeeded', graph: implementationGraph });
+    expect(executeGraph).toHaveBeenCalledOnce();
+  });
+
   it('routes a flagship stage through the worktree-owning coordinator', async () => {
     const run = vi.fn(async () => [
       {
@@ -86,16 +109,16 @@ describe('RuntimeFlagshipStageAdapter', () => {
     );
   });
 
-  it('creates a bounded scoped implementation task and preserves steering', async () => {
+  it('retains bounded single-task execution for non-implementation stages', async () => {
     const execute = vi.fn(async (_task: SubAgentTask, steering: () => readonly string[]) => ({
-      taskId: 'flagship-test-0001-implement',
+      taskId: 'flagship-test-0001-verify',
       status: 'succeeded' as const,
-      changedPaths: ['src/feature.ts'],
+      changedPaths: [],
       tokens: 100,
       toolCalls: 3,
       artifacts: [...steering(), 'evidence:tests'],
     }));
-    const adapter = new RuntimeFlagshipStageAdapter({ execute }, () => ({
+    const adapter = new RuntimeFlagshipStageAdapter({ execute, executeGraph: vi.fn() }, () => ({
       account: 1,
       workspace: 2,
       target: 3,
@@ -103,16 +126,16 @@ describe('RuntimeFlagshipStageAdapter', () => {
     }));
 
     await expect(
-      adapter.execute('implement', request, snapshot, new AbortController().signal),
+      adapter.execute('verify', request, snapshot, new AbortController().signal),
     ).resolves.toMatchObject({
       status: 'succeeded',
       evidenceReferences: ['Preserve the public API.', 'evidence:tests'],
     });
     expect(execute).toHaveBeenCalledWith(
       expect.objectContaining({
-        taskId: 'flagship-test-0001-implement',
-        worktreeId: 'flagship-test-0001-implement',
-        writeSet: ['src/feature.ts'],
+        taskId: 'flagship-test-0001-verify',
+        worktreeId: 'workspace-root',
+        writeSet: [],
         budget: expect.objectContaining({
           maxTokens: 4_096_000,
           maxToolCalls: 10_000,
@@ -126,7 +149,7 @@ describe('RuntimeFlagshipStageAdapter', () => {
 
   it('records authorization rails without asking a model to approve itself', async () => {
     const execute = vi.fn();
-    const adapter = new RuntimeFlagshipStageAdapter({ execute }, () => ({
+    const adapter = new RuntimeFlagshipStageAdapter({ execute, executeGraph: vi.fn() }, () => ({
       account: 1,
       workspace: 2,
       target: 3,
@@ -153,7 +176,7 @@ describe('RuntimeFlagshipStageAdapter', () => {
       gates: [{ gateId: 'project:unit:0', passed: true }],
     }));
     const adapter = new RuntimeFlagshipStageAdapter(
-      { execute },
+      { execute, executeGraph: vi.fn() },
       () => ({ account: 1, workspace: 2, target: 3, policy: 4 }),
       { integrate },
     );

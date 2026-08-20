@@ -18,7 +18,10 @@ import {
 } from '../infrastructure/database-tool-executor';
 import { DeterministicEvidenceArchive } from '../infrastructure/deterministic-evidence-archive';
 import { VscodeElevationVerificationAdapter } from '../infrastructure/elevation-tool-executor';
-import { VscodeFlagshipCheckpointStore } from '../infrastructure/flagship-tool-executor';
+import {
+  VscodeFlagshipCheckpointReconciler,
+  VscodeFlagshipCheckpointStore,
+} from '../infrastructure/flagship-tool-executor';
 import { GitToolExecutor, gitToolDefinition } from '../infrastructure/git-tool-executor';
 import {
   RuntimeIntegrationGitAdapter,
@@ -105,6 +108,7 @@ import {
   hashRuntimeValue,
   runtimeBrowserScope,
   runtimeFingerprint,
+  runtimeFlagshipHostIdentityHash,
   steerRuntime,
 } from './runtime-studio-helpers';
 import { advancedToolRegistrations } from './runtime-studio-registrations';
@@ -327,6 +331,17 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       ),
       new VscodeFlagshipCheckpointStore(context.workspaceState),
       { update: () => undefined },
+      new VscodeFlagshipCheckpointReconciler(
+        () => this.workspaceScope.snapshot().selectedFolderKey ?? 'workspace:missing',
+        () => this.epochs,
+        () =>
+          runtimeFlagshipHostIdentityHash(
+            this.state,
+            this.configuration,
+            this.workspaceScope,
+            this.targetManifestHash,
+          ),
+      ),
     );
     const elevation = new ElevationBrokerService(
       new PackagedNativeElevationAdapter(

@@ -151,4 +151,7 @@ export interface SubAgentOutcome {
   readonly modelTurns?: number;
   readonly artifacts: readonly string[];
   readonly blocker?: string;
+  readonly graph?: SubAgentGraph;
+  /** How many attempts the coordinator spent before this terminal outcome. */
+  readonly attempts?: number;
 }

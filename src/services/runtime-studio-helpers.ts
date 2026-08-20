@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import * as vscode from 'vscode';
 
+import { flagshipHostIdentityHash } from '../core/flagship-delivery';
 import { browserToolDefinition } from '../infrastructure/browser-tool-executor';
 
 import { TargetAwareToolRouter } from './target-aware-tool-router';
@@ -67,6 +68,31 @@ export function runtimeBrowserScope(configuration: RuntimeConfiguration): Browse
     allowDownloads: false,
     maxDownloadBytes: 104_857_600,
   };
+}
+
+export function runtimeFlagshipHostIdentityHash(
+  state: ExtensionState,
+  configuration: ConfigurationService,
+  workspaceScope: WorkspaceScopeService,
+  targetManifestHash: string | undefined,
+): string {
+  const workspaceId = workspaceScope.snapshot().selectedFolderKey ?? 'workspace:missing';
+  const workspaceRoot =
+    workspaceId === 'workspace:missing'
+      ? 'workspace:missing'
+      : workspaceScope.selectedFolder().uri.toString();
+  const current = configuration.read();
+  return flagshipHostIdentityHash({
+    accountId: state.snapshot.user?.id ?? 'account:anonymous',
+    workspaceId,
+    workspaceRoot,
+    targetIdentity: targetManifestHash ?? 'target:unavailable',
+    policyIdentity: [
+      current.backendUrl,
+      current.permissionMode,
+      String(vscode.workspace.isTrusted),
+    ].join('|'),
+  });
 }
 
 interface RuntimeFingerprintDependencies {

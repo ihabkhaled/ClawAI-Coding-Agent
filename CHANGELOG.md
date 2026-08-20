@@ -2,6 +2,15 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.63.0
+
+Minor: large flagship deliveries now survive interruption, run independent work in parallel, and recover from a failure instead of stopping at it.
+
+- **Durable resume.** A flagship delivery checkpoints its validated progress and resumes at the next unfinished stage after an extension-host restart, instead of replaying work it already completed. A resumed checkpoint is accepted only when the account, workspace, target, and policy identity all still match; a changed request or a live identity change starts fresh rather than reusing stale mutations. Completed and unresumable checkpoints are cleaned up instead of accumulating.
+- **Parallel implementation.** The planning stage now produces a host-validated task graph, and implementation dispatches that whole graph. Independent tasks run concurrently up to the admitted concurrency cap, dependent tasks wait for every declared dependency, and colliding write sets are refused before anything executes. Each task's share of the remaining turn and tool budget is reserved before dispatch, and a graph claiming writes outside the request's authorized write set is refused.
+- **Classified recovery.** A failed sub-agent task is now classified — malformed tool output, empty provider response, discovery loop, timeout, or gate failure — and each class follows its own bounded strategy ladder, escalating from a constrained retry to a fallback model to a replan. One hypothesis can never be tried more than three times. A failure that leaves a mutating task's effects unknown is never replayed. A replan identifies the failed task and everything downstream of it, so independent successes are kept.
+- Retried attempts now report the budget every attempt consumed and how many attempts were made, so aggregate ceilings stay enforceable and reported evidence matches reality.
+
 ## 0.62.2
 
 Patch: explicit one-file small-patch requests can no longer silently replace a large existing file with a tiny model response. Legacy edit plans are checked against their before/after preview, while Runtime Protocol 2.0 rejects full updates, deletes, and oversized destructive hunks unless the prompt explicitly authorizes replacing the entire file. New-file creation and ordinary targeted edits are unchanged.

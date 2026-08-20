@@ -6,16 +6,130 @@ import {
   ScopedSubAgentPolicy,
 } from '../../src/services/runtime-sub-agent-executor';
 import { SubAgentCoordinatorService } from '../../src/services/sub-agent-coordinator-service';
+import {
+  subAgentEpochs as epochs,
+  subAgentInvocation as invocation,
+  subAgentTask as task,
+  subAgentTransaction as transaction,
+  successfulOutcome,
+} from '../helpers/sub-agent';
 
-import type { SubAgentOutcome, SubAgentTask } from '../../src/core/multi-agent-dag';
-import type {
-  RuntimeJsonObject,
-  ToolInvocation,
-} from '../../src/core/runtime/runtime-tool-contracts';
-
-const epochs = { account: 1, workspace: 1, target: 1, policy: 1 };
+import type { SubAgentGraph, SubAgentOutcome, SubAgentTask } from '../../src/core/multi-agent-dag';
 
 describe('SubAgentCoordinatorService', () => {
+  it('limits disjoint ready tasks to the admitted concurrency cap', async () => {
+    const started: string[] = [];
+    let release = (): void => undefined;
+    const gate = new Promise<void>((resolve) => {
+      release = resolve;
+    });
+    const executor = {
+      execute: vi.fn(async (current: SubAgentTask) => {
+        started.push(current.taskId);
+        await gate;
+        return successfulOutcome(current.taskId);
+      }),
+    };
+    const coordinator = new SubAgentCoordinatorService(
+      executor,
+      new FileLeaseManager(),
+      () => epochs,
+      { status: () => undefined, outcome: () => undefined },
+    );
+    const run = coordinator.run(
+      {
+        graphId: 'graph-admitted-concurrency',
+        parentRunId: 'runtime-parent-0001',
+        maxConcurrency: 2,
+        tasks: [
+          task('lane-a', [], ['src/a.ts'], 'implementer'),
+          task('lane-b', [], ['src/b.ts'], 'implementer'),
+        ],
+      },
+      undefined,
+      1,
+    );
+
+    await vi.waitFor(() => {
+      expect(started.length).toBeGreaterThan(0);
+    });
+    await new Promise<void>((resolve) => {
+      setImmediate(resolve);
+    });
+    const startedBeforeRelease = [...started];
+    release();
+    await expect(run).resolves.toHaveLength(2);
+
+    expect(startedBeforeRelease).toEqual(['lane-a']);
+  });
+
+  it('waits for every dependency while two disjoint ready tasks run concurrently', async () => {
+    const started: string[] = [];
+    const releases = new Map<string, () => void>();
+    const executor = {
+      execute: vi.fn(async (current: SubAgentTask) => {
+        started.push(current.taskId);
+        if (current.dependencies.length === 0) {
+          await new Promise<void>((resolve) => releases.set(current.taskId, resolve));
+        }
+        return successfulOutcome(current.taskId);
+      }),
+    };
+    const coordinator = new SubAgentCoordinatorService(
+      executor,
+      new FileLeaseManager(),
+      () => epochs,
+      { status: () => undefined, outcome: () => undefined },
+    );
+    const run = coordinator.run({
+      graphId: 'graph-dependency-waiting',
+      parentRunId: 'runtime-parent-0001',
+      maxConcurrency: 2,
+      tasks: [
+        task('lane-a', [], ['src/a.ts'], 'implementer'),
+        task('lane-b', [], ['src/b.ts'], 'implementer'),
+        task('integrate-lanes', ['lane-a', 'lane-b'], ['src/integration.ts'], 'implementer'),
+      ],
+    });
+
+    await vi.waitFor(() => {
+      expect(started).toEqual(['lane-a', 'lane-b']);
+    });
+    releases.get('lane-a')?.();
+    await new Promise<void>((resolve) => {
+      setImmediate(resolve);
+    });
+    expect(started).not.toContain('integrate-lanes');
+    releases.get('lane-b')?.();
+    await expect(run).resolves.toHaveLength(3);
+    expect(started).toEqual(['lane-a', 'lane-b', 'integrate-lanes']);
+  });
+
+  it('rejects colliding graph write sets before starting a task', async () => {
+    const executor = {
+      execute: vi.fn(async (current: SubAgentTask) => successfulOutcome(current.taskId)),
+    };
+    const coordinator = new SubAgentCoordinatorService(
+      executor,
+      new FileLeaseManager(),
+      () => epochs,
+      { status: () => undefined, outcome: () => undefined },
+    );
+
+    await expect(
+      coordinator.run({
+        graphId: 'graph-write-collision',
+        parentRunId: 'runtime-parent-0001',
+        maxConcurrency: 2,
+        tasks: [
+          task('lane-a', [], ['src/shared.ts'], 'implementer'),
+          task('lane-b', [], ['src/shared.ts'], 'implementer'),
+        ],
+      }),
+    ).rejects.toThrow(/write collision/iu);
+    expect(executor.execute).not.toHaveBeenCalled();
+  });
+
   it('runs dependency-ready tasks, preserves steering, and enforces declared leases', async () => {
     const order: string[] = [];
     const executor = {
@@ -115,6 +229,74 @@ describe('SubAgentCoordinatorService', () => {
       message: 'Risk ceiling exceeded',
     });
     expect(delegate.evaluate).not.toHaveBeenCalled();
+  });
+
+  it('retains a host-validated planning graph in sub-agent telemetry', async () => {
+    const planGraph = {
+      graphId: 'graph-planner-output',
+      parentRunId: 'runtime-parent-0001',
+      maxConcurrency: 1,
+      tasks: [task('planned-task', [], ['src/planned.ts'], 'implementer')],
+    } satisfies SubAgentGraph;
+    const delegate = {
+      execute: vi.fn(async () => ({ structured: { graph: planGraph, valid: true } })),
+    };
+    const telemetry: {
+      changedPaths: Set<string>;
+      artifacts: Set<string>;
+      tokens: number;
+      toolCalls: number;
+      modelTurns: number;
+      status: 'failed';
+      graph?: SubAgentGraph;
+    } = {
+      changedPaths: new Set<string>(),
+      artifacts: new Set<string>(),
+      tokens: 0,
+      toolCalls: 0,
+      modelTurns: 0,
+      status: 'failed' as const,
+    };
+    const plannerTask = {
+      ...task('plan-work', [], [], 'explorer'),
+      tools: ['workspace.planning'],
+    };
+    const executor = new ScopedSubAgentExecutor(plannerTask, delegate, telemetry);
+
+    await executor.execute(
+      invocation('workspace.planning', 'validate', { plan: planGraph, output: {} }),
+    );
+
+    expect(telemetry.graph).toEqual(planGraph);
+  });
+
+  it('keeps unusable artifact strings out of sub-agent evidence', async () => {
+    const delegate = { execute: vi.fn(async () => ({ structured: { ok: true } })) };
+    const telemetry = {
+      changedPaths: new Set<string>(),
+      artifacts: new Set<string>(),
+      tokens: 0,
+      toolCalls: 0,
+      modelTurns: 0,
+      status: 'failed' as const,
+    };
+    const executor = new ScopedSubAgentExecutor(
+      { ...task('implement-ui', [], ['src/ui.ts'], 'implementer'), tools: ['workspace.browser'] },
+      delegate,
+      telemetry,
+    );
+
+    await executor.execute(
+      invocation('workspace.browser', 'screenshot', { artifactPath: '', output: '   ' }),
+    );
+    await executor.execute(
+      invocation('workspace.browser', 'screenshot', { artifactPath: 'x'.repeat(2_001) }),
+    );
+    await executor.execute(
+      invocation('workspace.browser', 'screenshot', { artifactPath: 'evidence/shot.png' }),
+    );
+
+    expect([...telemetry.artifacts]).toEqual(['evidence/shot.png']);
   });
 
   it('does not retry an ambiguous failed task with a fresh idempotency key', async () => {
@@ -232,61 +414,3 @@ describe('SubAgentCoordinatorService', () => {
     expect(outcome?.status).toBe('failed');
   });
 });
-
-function task(
-  taskId: string,
-  dependencies: readonly string[],
-  writeSet: readonly string[],
-  role: 'explorer' | 'implementer',
-): SubAgentTask {
-  return {
-    taskId,
-    role,
-    goal: `Complete ${taskId}`,
-    modelPolicy: {
-      allowedProviders: ['OLLAMA'],
-      allowedModels: ['qwen3:1.7b'],
-      localPreferred: true,
-      minimumContextTokens: 1_000,
-    },
-    contextNodeIds: [],
-    dependencies: [...dependencies],
-    writeSet: [...writeSet],
-    integrationSeams: [],
-    worktreeId: 'workspace-root',
-    budget: { maxTokens: 1_000, maxToolCalls: 10, maxRuntimeMs: 10_000, maxRetries: 0 },
-    tools: ['workspace.files'],
-    riskCeiling: 'R3',
-    acceptanceChecks: ['Task completes'],
-    epochs,
-  };
-}
-
-function invocation(
-  toolName: string,
-  operation: string,
-  argumentsValue: ToolInvocation['arguments'],
-): ToolInvocation {
-  return {
-    schemaVersion: '2.0',
-    invocationId: 'invocation:subagent-test',
-    runId: 'runtime:subagent-test',
-    turnId: 'turn:subagent-test',
-    toolName,
-    toolVersion: '1.0.0',
-    operation,
-    arguments: argumentsValue,
-    targetId: 'target:workspace-root',
-    epochs,
-    idempotencyKey: 'idempotency:subagent-test',
-    requestedAt: '2026-08-02T12:00:00.000Z',
-  };
-}
-
-function transaction(rootKey: string, path: string): RuntimeJsonObject {
-  return {
-    transactionId: 'transaction-subagent-test',
-    summary: 'Apply a scoped test edit',
-    operations: [{ kind: 'mkdir', rootKey, path }],
-  };
-}

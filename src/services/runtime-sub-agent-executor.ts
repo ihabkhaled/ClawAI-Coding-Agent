@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import { fileTransactionSchema } from '../core/file-transaction';
+import { subAgentGraphSchema } from '../core/multi-agent-dag';
 
 import { RuntimeRunService } from './runtime-run-service';
 
@@ -13,7 +14,7 @@ import type {
 } from './runtime-tool-dispatcher';
 import type { SubAgentExecutionPort } from './sub-agent-coordinator-service';
 import type { BackendClient } from '../backend/backend-client';
-import type { SubAgentOutcome, SubAgentTask } from '../core/multi-agent-dag';
+import type { SubAgentGraph, SubAgentOutcome, SubAgentTask } from '../core/multi-agent-dag';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
@@ -36,6 +37,7 @@ interface SubAgentTelemetry {
   modelTurns: number;
   status: SubAgentOutcome['status'];
   blocker?: string;
+  graph?: SubAgentGraph;
 }
 
 // The nested runtime's own `run.failed` event carries the real reason (code +
@@ -146,6 +148,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       modelTurns: telemetry.modelTurns,
       artifacts: [...telemetry.artifacts],
       ...(telemetry.blocker === undefined ? {} : { blocker: telemetry.blocker }),
+      ...(telemetry.graph === undefined ? {} : { graph: telemetry.graph }),
     };
   }
 
@@ -279,7 +282,9 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
     this.assertRoot(invocation);
     this.captureWrites(invocation);
     this.captureArtifact(invocation);
-    return this.delegate.execute(invocation, signal);
+    const output = await this.delegate.execute(invocation, signal);
+    this.capturePlanGraph(invocation, output);
+    return output;
   }
 
   private assertRoot(invocation: ToolInvocation): void {
@@ -326,12 +331,26 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
 
   private captureArtifact(invocation: ToolInvocation): void {
     for (const candidate of [invocation.arguments.artifactPath, invocation.arguments.output]) {
-      if (typeof candidate === 'string') this.telemetry.artifacts.add(candidate);
+      if (typeof candidate === 'string') this.addArtifact(candidate);
       if (candidate !== null && typeof candidate === 'object' && 'path' in candidate) {
         const path = candidate.path;
-        if (typeof path === 'string') this.telemetry.artifacts.add(path);
+        if (typeof path === 'string') this.addArtifact(path);
       }
     }
+  }
+
+  // Evidence references are bounded min(1).max(2000) by the flagship snapshot
+  // schema. A sub-agent controls these strings, so an empty or oversized one
+  // would otherwise throw during checkpoint persistence and discard the run.
+  private addArtifact(candidate: string): void {
+    const artifact = candidate.trim();
+    if (artifact.length > 0 && artifact.length <= 2_000) this.telemetry.artifacts.add(artifact);
+  }
+
+  private capturePlanGraph(invocation: ToolInvocation, output: RuntimeToolExecutionOutput): void {
+    if (invocation.toolName !== 'workspace.planning' || invocation.operation !== 'validate') return;
+    const graph = subAgentGraphSchema.safeParse(output.structured?.graph);
+    if (graph.success) this.telemetry.graph = graph.data;
   }
 }
 
