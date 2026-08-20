@@ -3,6 +3,7 @@ import {
   type RuntimeToolExecutionOutput,
   type RuntimeToolExecutorPort,
 } from './runtime-tool-dispatcher';
+import { parseSmallPatchPolicy, type SmallPatchPolicy } from './small-patch-safety';
 
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 
@@ -10,6 +11,7 @@ export interface ExplicitRunScope {
   readonly discoveryPaths: readonly string[];
   readonly maxDiscoveryCalls: number;
   readonly mutationPath: string;
+  readonly smallPatch: SmallPatchPolicy;
 }
 
 const TARGET_PATTERN = /\bONE\s+(?:NEW\s+)?FILE\s+ONLY:\s*([^\s,;]+)/iu;
@@ -36,7 +38,12 @@ export function parseExplicitRunScope(prompt: string): ExplicitRunScope | undefi
         .filter((path) => path.includes('.')),
     ),
   ];
-  return { discoveryPaths, maxDiscoveryCalls, mutationPath };
+  return {
+    discoveryPaths,
+    maxDiscoveryCalls,
+    mutationPath,
+    smallPatch: parseSmallPatchPolicy(prompt),
+  };
 }
 
 function invocationPaths(invocation: ToolInvocation): readonly string[] {
@@ -53,6 +60,32 @@ function invocationPaths(invocation: ToolInvocation): readonly string[] {
       .filter((path): path is string => typeof path === 'string')
       .map(cleanPath);
   });
+}
+
+function hunkIsDestructive(hunk: { before?: string; after?: string }): boolean {
+  const beforeLines = hunk.before?.split(/\r?\n/u).length ?? 0;
+  const afterLines = hunk.after?.split(/\r?\n/u).length ?? 0;
+  return (hunk.before?.length ?? 0) > 4_096 || (beforeLines > 100 && afterLines * 2 < beforeLines);
+}
+
+function operationIsDestructive(operation: {
+  kind?: string;
+  hunks?: { before?: string; after?: string }[];
+}): boolean {
+  return (
+    operation.kind === 'update' ||
+    operation.kind === 'delete' ||
+    (operation.hunks?.some(hunkIsDestructive) ?? false)
+  );
+}
+
+function assertSmallPatchMutation(invocation: ToolInvocation, policy: SmallPatchPolicy): void {
+  if (!policy.enabled || policy.allowReplacement) return;
+  const transaction = invocation.arguments.transaction as
+    { operations?: { kind?: string; hunks?: { before?: string; after?: string }[] }[] } | undefined;
+  if (transaction?.operations?.some(operationIsDestructive) === true) {
+    throw new Error('Explicit small-patch runs must use a targeted, non-destructive patch.');
+  }
 }
 
 export class ExplicitScopeExecutor implements RuntimeToolExecutorPort {
@@ -85,6 +118,7 @@ export class ExplicitScopeExecutor implements RuntimeToolExecutorPort {
       if (paths.length === 0 || paths.some((path) => path !== this.scope.mutationPath)) {
         throw new Error(`Write is outside the explicit one-file scope: ${this.scope.mutationPath}`);
       }
+      assertSmallPatchMutation(invocation, this.scope.smallPatch);
       return false;
     }
     if (!DISCOVERY_OPERATIONS.has(invocation.operation)) return false;

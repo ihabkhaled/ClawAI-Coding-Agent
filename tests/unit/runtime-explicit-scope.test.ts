@@ -35,6 +35,7 @@ describe('explicit Runtime V2 scope', () => {
       discoveryPaths: ['src/new.ts', 'src/reference.ts'],
       maxDiscoveryCalls: 1,
       mutationPath: 'src/new.ts',
+      smallPatch: { enabled: false, allowReplacement: false },
     });
   });
 
@@ -52,6 +53,7 @@ describe('explicit Runtime V2 scope', () => {
         discoveryPaths: ['src/new.ts', 'src/reference.ts'],
         maxDiscoveryCalls: 1,
         mutationPath: 'src/new.ts',
+        smallPatch: { enabled: false, allowReplacement: false },
       },
     );
 
@@ -96,6 +98,7 @@ describe('explicit Runtime V2 scope', () => {
         discoveryPaths: ['src/target.ts'],
         maxDiscoveryCalls: 1,
         mutationPath: 'src/target.ts',
+        smallPatch: { enabled: false, allowReplacement: false },
       },
     );
     const read = invocation('read', { rootKey: 'workspace-1', path: 'src/target.ts' });
@@ -105,5 +108,38 @@ describe('explicit Runtime V2 scope', () => {
     await expect(executor.execute(read)).resolves.toEqual({
       structured: { path: 'src/target.ts' },
     });
+  });
+
+  it('rejects full-file updates when the explicit request permits only additions', async () => {
+    const execute = vi.fn();
+    const executor = new ExplicitScopeExecutor(
+      { execute },
+      {
+        discoveryPaths: ['src/large.ts'],
+        maxDiscoveryCalls: 1,
+        mutationPath: 'src/large.ts',
+        smallPatch: { enabled: true, allowReplacement: false },
+      },
+    );
+    await expect(
+      executor.execute(
+        invocation('update', {
+          transaction: {
+            transactionId: 'tx:update',
+            summary: 'replace',
+            operations: [
+              {
+                kind: 'update',
+                rootKey: 'workspace-1',
+                path: 'src/large.ts',
+                content: 'short',
+                beforeHash: null,
+              },
+            ],
+          },
+        }),
+      ),
+    ).rejects.toThrow('targeted, non-destructive patch');
+    expect(execute).not.toHaveBeenCalled();
   });
 });

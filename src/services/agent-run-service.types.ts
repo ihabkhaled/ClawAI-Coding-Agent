@@ -58,6 +58,7 @@ export interface AgentRunEditPort extends AgentRunCommandPort {
     plan: EditPlan,
     signal: AbortSignal,
     session?: AgentRunSessionPort,
+    prompt?: string,
   ): Promise<SafeEditResult>;
 }
 

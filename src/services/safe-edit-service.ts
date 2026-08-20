@@ -1,5 +1,7 @@
 import { WorkspaceMutationGate } from '../core/workspace-mutation-gate';
 
+import { assertSmallPatchIsNonDestructive, parseSmallPatchPolicy } from './small-patch-safety';
+
 import type { SessionControlPort } from './session-control.types';
 import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
 
@@ -71,10 +73,11 @@ export class SafeEditService {
     plan: EditPlan,
     signal?: AbortSignal,
     session?: SessionControlPort,
+    prompt = '',
   ): Promise<SafeEditResult> {
     const operationSignal = signal ?? new AbortController().signal;
     return this.mutationGate.runExclusive(operationSignal, () =>
-      this.previewAndApplyExclusive(plan, signal, session),
+      this.previewAndApplyExclusive(plan, signal, session, prompt),
     );
   }
 
@@ -102,6 +105,7 @@ export class SafeEditService {
     plan: EditPlan,
     signal?: AbortSignal,
     session?: SessionControlPort,
+    prompt = '',
   ): Promise<SafeEditResult> {
     signal?.throwIfAborted();
     if (!this.workspace.isTrusted()) {
@@ -109,6 +113,10 @@ export class SafeEditService {
     }
     const review = await this.workspace.preview(plan);
     const { previews } = review;
+    const policy = parseSmallPatchPolicy(prompt);
+    for (const preview of previews) {
+      assertSmallPatchIsNonDestructive(preview.before, preview.after, preview.path, policy);
+    }
     signal?.throwIfAborted();
     const confirmation = await this.confirm(previews, plan.summary, session, signal);
     signal?.throwIfAborted();

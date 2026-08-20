@@ -173,6 +173,7 @@ export class AgentRunService {
         rules,
         callbacks,
         session,
+        input.content,
         await prepareFileIds(input),
       );
     } catch (error: unknown) {
@@ -241,6 +242,7 @@ export class AgentRunService {
     rules: string,
     callbacks: AgentRunCallbacks,
     session: AgentRunSessionPort,
+    prompt: string,
     fileIds: string[] | undefined,
   ): Promise<AgentRunResult> {
     callbacks.onPhase(createAgentRunSnapshot('generating'));
@@ -298,6 +300,7 @@ export class AgentRunService {
         input.signal,
         callbacks,
         session,
+        input.content,
       );
       if (diagnostic.status !== 'applied' || diagnostic.commandResults === undefined) {
         return diagnostic;
@@ -341,6 +344,7 @@ export class AgentRunService {
       input.signal,
       callbacks,
       session,
+      input.content,
     );
   }
 
@@ -353,6 +357,7 @@ export class AgentRunService {
     signal: AbortSignal,
     callbacks: AgentRunCallbacks,
     session: AgentRunSessionPort,
+    prompt: string,
   ): Promise<AgentRunResult> {
     signal.throwIfAborted();
     if (hasNoPlannedActions(plan)) {
@@ -368,7 +373,7 @@ export class AgentRunService {
     const editResult =
       plan.files.length === 0
         ? { applied: true, previews: [] }
-        : await this.edits.previewAndApply(plan, signal, session);
+        : await this.edits.previewAndApply(plan, signal, session, prompt);
     const filesApplied = plan.files.length > 0 && editResult.applied;
     enforcePostEditCancellation(signal, filesApplied);
     const commandOutcome = await this.attemptCommands(

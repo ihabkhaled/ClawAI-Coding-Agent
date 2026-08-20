@@ -35,6 +35,24 @@ const plan = {
 };
 
 describe('SafeEditService', () => {
+  it('rejects a massive legacy edit-plan shrink during an explicit small-patch run', async () => {
+    const before = Array.from({ length: 200 }, (_, index) => `line ${String(index)}`).join('\n');
+    const workspace = workspacePort(true);
+    vi.mocked(workspace.preview).mockResolvedValue({
+      workspaceFolderUri: 'file:///workspace',
+      previews: [{ path: 'src/large.ts', before, after: 'export interface Added {}' }],
+    });
+    const service = new SafeEditService(workspace, async () => true);
+    await expect(
+      service.previewAndApply(
+        plan,
+        undefined,
+        undefined,
+        'ONE FILE ONLY: src/large.ts. Add ONLY one exported interface; do not change anything else.',
+      ),
+    ).rejects.toThrow('destructive whole-file replacement');
+    expect(workspace.applyAtomically).not.toHaveBeenCalled();
+  });
   it('serializes complete preview and apply transactions', async () => {
     let finishFirstPreview: (() => void) | undefined;
     let previewCalls = 0;
