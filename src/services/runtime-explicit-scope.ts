@@ -1,7 +1,9 @@
-import type {
-  RuntimeToolExecutionOutput,
-  RuntimeToolExecutorPort,
+import {
+  isRuntimeToolExecutionOutputValid,
+  type RuntimeToolExecutionOutput,
+  type RuntimeToolExecutorPort,
 } from './runtime-tool-dispatcher';
+
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 
 export interface ExplicitRunScope {
@@ -55,6 +57,7 @@ function invocationPaths(invocation: ToolInvocation): readonly string[] {
 
 export class ExplicitScopeExecutor implements RuntimeToolExecutorPort {
   private discoveryCalls = 0;
+  private pendingDiscoveryCalls = 0;
 
   constructor(
     private readonly delegate: RuntimeToolExecutorPort,
@@ -65,27 +68,34 @@ export class ExplicitScopeExecutor implements RuntimeToolExecutorPort {
     invocation: ToolInvocation,
     signal?: AbortSignal,
   ): Promise<RuntimeToolExecutionOutput> {
-    if (invocation.toolName === 'workspace.files') this.assertAllowed(invocation);
-    return this.delegate.execute(invocation, signal);
+    const discovery = invocation.toolName === 'workspace.files' && this.assertAllowed(invocation);
+    if (discovery) this.pendingDiscoveryCalls += 1;
+    try {
+      const output = await this.delegate.execute(invocation, signal);
+      if (discovery && isRuntimeToolExecutionOutputValid(output)) this.discoveryCalls += 1;
+      return output;
+    } finally {
+      if (discovery) this.pendingDiscoveryCalls -= 1;
+    }
   }
 
-  private assertAllowed(invocation: ToolInvocation): void {
+  private assertAllowed(invocation: ToolInvocation): boolean {
     const paths = invocationPaths(invocation);
     if (MUTATION_OPERATIONS.has(invocation.operation)) {
       if (paths.length === 0 || paths.some((path) => path !== this.scope.mutationPath)) {
         throw new Error(`Write is outside the explicit one-file scope: ${this.scope.mutationPath}`);
       }
-      return;
+      return false;
     }
-    if (!DISCOVERY_OPERATIONS.has(invocation.operation)) return;
+    if (!DISCOVERY_OPERATIONS.has(invocation.operation)) return false;
     if (paths.length === 0 || paths.some((path) => !this.scope.discoveryPaths.includes(path))) {
       throw new Error('Discovery path is outside the explicit run scope. Use only named files.');
     }
-    if (this.discoveryCalls >= this.scope.maxDiscoveryCalls) {
+    if (this.discoveryCalls + this.pendingDiscoveryCalls >= this.scope.maxDiscoveryCalls) {
       throw new Error(
         `Discovery limit reached (${String(this.scope.maxDiscoveryCalls)}). Stop reading and perform the requested write.`,
       );
     }
-    this.discoveryCalls += 1;
+    return true;
   }
 }
