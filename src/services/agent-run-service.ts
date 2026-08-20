@@ -2,6 +2,7 @@ import { createAgentRunSnapshot } from '../core/agent-run';
 import { EMPTY_CONTEXT } from '../core/empty-context';
 import { addTokenReceipts } from '../core/token-telemetry';
 
+import { sendAgentRunChat } from './agent-run-chat-retry';
 import {
   enforcePostEditCancellation,
   hasNoPlannedActions,
@@ -486,7 +487,7 @@ export class AgentRunService {
     };
   }
 
-  private send(
+  private async send(
     input: AgentRunInput,
     content: string,
     callbacks: AgentRunCallbacks,
@@ -495,26 +496,15 @@ export class AgentRunService {
     threadId?: string,
     context?: CollectedContext,
   ): ReturnType<AgentRunChatPort['send']> {
-    const resolvedThreadId = threadId ?? input.threadId;
-    return this.chat.send(
-      {
-        content: session.preparePrompt(content),
-        clientIntent: input.content,
-        context: context?.files ?? [],
-        ...(context === undefined ? {} : { contextReceipt: context.receipt }),
-        ...input.selection,
-        ...(input.researchMode === undefined ? {} : { researchMode: input.researchMode }),
-        ...(fileIds === undefined ? {} : { fileIds }),
-        ...(resolvedThreadId === undefined ? {} : { threadId: resolvedThreadId }),
-      },
-      (event) => {
-        callbacks.onEvent(event);
-      },
-      input.signal,
-      (threadId) => {
-        callbacks.onThread(threadId);
-      },
-      input.onAccepted,
-    );
+    return sendAgentRunChat({
+      chat: this.chat,
+      run: input,
+      content,
+      callbacks,
+      session,
+      fileIds,
+      ...(threadId === undefined ? {} : { threadId }),
+      ...(context === undefined ? {} : { context }),
+    });
   }
 }
