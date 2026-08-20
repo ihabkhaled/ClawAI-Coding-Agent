@@ -110,7 +110,8 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'path is always relative to that folder and never absolute. ' +
     'To enumerate the folder itself, use list with path "" — that is how to discover the ' +
     'top-level layout before any subdirectory name is known. List, glob and search return at ' +
-    'most 100 results; paginate list with cursor, and narrow a truncated glob or search. ' +
+    'most 100 results; paginate list with cursor, and narrow a truncated glob or search. After ' +
+    'one targeted search and read, act on that evidence; do not rediscover unchanged files. ' +
     // Writing was undiscoverable: every mutation goes through a nested
     // transaction whose shape the catalog reports as an empty object, so a
     // model had to guess it and no model ever did. Spelling it out here is the
@@ -138,7 +139,9 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'include enough surrounding lines. Prefer patch for an existing file. ' +
     'rename/copy add destination; delete needs beforeHash; mkdir takes path only; artifact ' +
     'adds mimeType,sizeBytes,contentHash,provenance,contentBase64. ' +
-    'contentBase64/beforeBase64/afterBase64 also work. Never send two forms of one field.',
+    'Use one small mutation per call. For source containing braces, quotes or backslashes, use ' +
+    'contentBase64/beforeBase64/afterBase64 so stream heuristics cannot mistake source for an ' +
+    'unfinished tool object. Never send two forms of one field.',
   operations: [
     'stat',
     'list',
