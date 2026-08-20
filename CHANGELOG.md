@@ -2,6 +2,10 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.62.2
+
+Patch: explicit one-file small-patch requests can no longer silently replace a large existing file with a tiny model response. Legacy edit plans are checked against their before/after preview, while Runtime Protocol 2.0 rejects full updates, deletes, and oversized destructive hunks unless the prompt explicitly authorizes replacing the entire file. New-file creation and ordinary targeted edits are unchanged.
+
 ## 0.62.1
 
 Patch: explicit Runtime V2 discovery limits now count only successful, contract-valid discovery results. A malformed or failed read releases its reserved allowance so the model can correct the request once, while successful reads and concurrent attempts remain bounded by the user's stated limit. Exact named-file scope checks are unchanged.
