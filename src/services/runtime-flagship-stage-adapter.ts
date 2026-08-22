@@ -1,3 +1,9 @@
+import {
+  acceptanceReceiptsFrom,
+  budgetShare,
+  graphSummaryLine,
+  outcomeIdentitiesMatch,
+} from '../core/flagship-acceptance';
 import { subAgentGraphSchema } from '../core/multi-agent-dag';
 
 import { affectedReplanTaskIds } from './runtime-recovery-policy';
@@ -197,19 +203,15 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
           ...task.budget,
           maxTokens: Math.min(
             task.budget.maxTokens,
-            this.budgetShare(remaining.turns, taskCount, index) * 4_096,
+            budgetShare(remaining.turns, taskCount, index) * 4_096,
           ),
           maxToolCalls: Math.min(
             task.budget.maxToolCalls,
-            this.budgetShare(remaining.tools, taskCount, index),
+            budgetShare(remaining.tools, taskCount, index),
           ),
         },
       })),
     });
-  }
-
-  private budgetShare(total: number, count: number, index: number): number {
-    return Math.floor(total / count) + (index < total % count ? 1 : 0);
   }
 
   private missingGraphResult(): FlagshipStageResult {
@@ -227,7 +229,12 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
     graph: SubAgentGraph,
     outcomes: readonly SubAgentOutcome[],
   ): FlagshipStageResult {
-    if (!this.outcomeIdentitiesMatch(graph, outcomes)) {
+    if (
+      !outcomeIdentitiesMatch(
+        graph.tasks.map(({ taskId }) => taskId),
+        outcomes.map(({ taskId }) => taskId),
+      )
+    ) {
       return {
         status: 'recoverable-failure',
         summary: 'Coordinator returned an invalid implementation task identity set',
@@ -259,7 +266,7 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
     );
     return {
       status,
-      summary: this.graphSummary(graph, outcomes, status, replanScope),
+      summary: graphSummaryLine(graph.tasks.length, outcomes.length, status, replanScope),
       evidenceReferences: [...new Set(outcomes.flatMap(({ artifacts }) => artifacts))],
       unverifiedClaims: succeeded ? [] : ['implement did not complete'],
       resolvedClaims: succeeded ? ['implement did not complete'] : [],
@@ -294,27 +301,6 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
         return task === undefined ? [] : this.outcomeCommits(task, outcome);
       }),
     };
-  }
-
-  private graphSummary(
-    graph: SubAgentGraph,
-    outcomes: readonly SubAgentOutcome[],
-    status: FlagshipStageResult['status'],
-    replanScope: readonly string[],
-  ): string {
-    const progress = `${String(outcomes.length)}/${String(graph.tasks.length)} terminal tasks`;
-    if (replanScope.length === 0) return `Implementation graph ${status}: ${progress}`;
-    return `Implementation graph ${status}: ${progress}; replan scope: ${replanScope.join(', ')}`;
-  }
-
-  private outcomeIdentitiesMatch(
-    graph: SubAgentGraph,
-    outcomes: readonly SubAgentOutcome[],
-  ): boolean {
-    if (outcomes.length !== graph.tasks.length) return false;
-    const expected = new Set(graph.tasks.map(({ taskId }) => taskId));
-    const actual = new Set(outcomes.map(({ taskId }) => taskId));
-    return actual.size === outcomes.length && [...actual].every((taskId) => expected.has(taskId));
   }
 
   private graphStageStatus(outcomes: readonly SubAgentOutcome[]): FlagshipStageResult['status'] {
@@ -472,6 +458,7 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
       failureClass: 'git',
       usage: { modelTurns: 0, toolCalls: 0, subAgents: 0 },
       clearCommits: receipt.status === 'integrated',
+      acceptanceReceipts: acceptanceReceiptsFrom(receipt.integrationId, receipt.gates),
     };
   }
 

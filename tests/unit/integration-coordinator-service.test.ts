@@ -108,4 +108,44 @@ describe('IntegrationCoordinatorService', () => {
     ).rejects.toThrow(/provenance is invalid/iu);
     expect(git.cherryPick).not.toHaveBeenCalled();
   });
+
+  it('refuses to call an integration clean when a mandatory gate produced no result', async () => {
+    // every() is true for an empty array, so a runner that silently produced
+    // nothing used to report a fully integrated change with zero gates run.
+    const fingerprints = ['clean', 'clean', 'after-a', 'after-a', 'after-b'];
+    const git = {
+      workingFingerprint: vi.fn(async () => fingerprints.shift() ?? 'after-b'),
+      verifyCommit: vi.fn(async () => true),
+      cherryPick: vi.fn(async () => ({ conflicts: [] })),
+      abortCherryPick: vi.fn(async () => undefined),
+      releaseWorktree: vi.fn(async () => undefined),
+    };
+    const quality = { run: vi.fn(async () => []) };
+
+    const receipt = await new IntegrationCoordinatorService(git, quality).integrate(request);
+
+    expect(receipt.status).toBe('gates-failed');
+    expect(receipt.gates).toEqual([]);
+  });
+
+  it('refuses when only some of the mandatory gates reported back', async () => {
+    const fingerprints = ['clean', 'clean', 'after-a', 'after-a', 'after-b'];
+    const git = {
+      workingFingerprint: vi.fn(async () => fingerprints.shift() ?? 'after-b'),
+      verifyCommit: vi.fn(async () => true),
+      cherryPick: vi.fn(async () => ({ conflicts: [] })),
+      abortCherryPick: vi.fn(async () => undefined),
+      releaseWorktree: vi.fn(async () => undefined),
+    };
+    const quality = {
+      run: vi.fn(async () => [{ gateId: 'project:unit:0', passed: true }]),
+    };
+
+    const receipt = await new IntegrationCoordinatorService(git, quality).integrate({
+      ...request,
+      mandatoryGateIds: ['project:unit:0', 'project:lint:0'],
+    });
+
+    expect(receipt.status).toBe('gates-failed');
+  });
 });

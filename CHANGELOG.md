@@ -2,6 +2,13 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.63.3
+
+Patch: a flagship delivery now records which quality gates ran, and cannot mistake silence for a pass.
+
+- Every gate the trusted host runs during integration is written to the delivery snapshot as an acceptance receipt, pass or fail. The results used to be discarded, so "the gates passed" survived only as wording in a summary; a failed gate now stays in the record with the integration it came from.
+- An integration is no longer reported clean when a mandatory gate returned no result at all. An empty result set satisfied the every-gate-passed check, so a quality runner that silently produced nothing looked identical to one that passed everything. A mandatory gate with no result is now treated as failed.
+
 ## 0.63.2
 
 Patch: two correctness fixes in flagship recovery.
