@@ -245,9 +245,17 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
     }
     const succeeded = outcomes.every(({ status }) => status === 'succeeded');
     const status = this.graphStageStatus(outcomes);
+    // A cancelled task produced no result and no commit, exactly like a failed
+    // one. Counting only failures left the scope empty, so the stage reported
+    // requiresReplan: false and the delivery re-ran the identical graph — the
+    // same task cancelled again. Descendants of both are already covered by
+    // affectedReplanTaskIds, and dependency fallout arrives as blocked, whose
+    // failed root is counted here.
     const replanScope = affectedReplanTaskIds(
       graph.tasks,
-      outcomes.filter(({ status: each }) => each === 'failed').map(({ taskId }) => taskId),
+      outcomes
+        .filter(({ status: each }) => each === 'failed' || each === 'cancelled')
+        .map(({ taskId }) => taskId),
     );
     return {
       status,
