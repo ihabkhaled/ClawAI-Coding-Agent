@@ -2,6 +2,12 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.63.3
+
+Patch: a run that exhausts its budget now ends visibly instead of stalling.
+
+- Budget exhaustion threw a bare `Error`, so nothing upstream recognised it as a terminal condition. No terminal event was published, the caller's compensation path saw an unfinished run and cancelled it, and the backend recorded `lifecycle: cancelled` with no reason. The activity panel kept a live spinner over a run that had stopped minutes earlier, which is indistinguishable from a slow run. Exhaustion is now a typed `RuntimeBudgetExhaustedError` and the run ends as `run.failed` carrying `RUNTIME_BUDGET_EXHAUSTED` and the limit that was reached, so the reason reaches the reader and no cancel compensation is needed.
+
 ## 0.63.2
 
 Patch: two correctness fixes in flagship recovery.

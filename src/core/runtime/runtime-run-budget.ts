@@ -1,5 +1,24 @@
 import { parseRunBudget, type RunBudget } from './runtime-tool-contracts';
 
+/**
+ * A run that ran out of an allowance rather than one that broke.
+ *
+ * Exhaustion used to surface as a bare `Error`. Nothing upstream could tell it
+ * apart from a crash, so no terminal event was published, the run was
+ * compensated with a cancel, and the activity panel kept a live spinner over a
+ * run that had already stopped — three supervised sessions in a row ended that
+ * way with no reason on screen. The type carries the limit that was reached so
+ * the run can end as `run.failed` with a reason a reader can act on.
+ */
+export class RuntimeBudgetExhaustedError extends Error {
+  readonly code = 'RUNTIME_BUDGET_EXHAUSTED';
+
+  constructor(readonly limit: string) {
+    super(`Runtime run exceeded its ${limit} budget`);
+    this.name = 'RuntimeBudgetExhaustedError';
+  }
+}
+
 export interface RuntimeBudgetUsage {
   readonly modelTurns: number;
   readonly toolCalls: number;
@@ -67,7 +86,7 @@ function assertClock(state: RuntimeBudgetState, nowMs: number): void {
     throw new Error('Runtime budget clock cannot move backwards');
   }
   if (nowMs - state.startedAtMs > state.budget.maxRuntimeMs) {
-    throw new Error('Runtime run exceeded its wall-clock budget');
+    throw new RuntimeBudgetExhaustedError('wall-clock');
   }
 }
 
@@ -81,7 +100,7 @@ export function consumeRuntimeBudget(
     const limit = usageLimits[key];
     const next = state.usage[key] + debitValue(debit[key]);
     if (next > state.budget[limit.budget]) {
-      throw new Error(`Runtime run exceeded its ${limit.label} budget`);
+      throw new RuntimeBudgetExhaustedError(limit.label);
     }
     return next;
   };

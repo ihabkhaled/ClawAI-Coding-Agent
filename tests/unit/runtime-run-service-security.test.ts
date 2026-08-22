@@ -120,7 +120,17 @@ describe('RuntimeRunService security boundaries', () => {
       expect(policy).not.toHaveBeenCalled();
       expect(execute).not.toHaveBeenCalled();
       expect(submitted).toEqual([]);
-      expect(events.map((entry) => (entry as { type: string }).type)).toEqual(['run.created']);
+      // Nothing ran, and the run says so. The terminal event carries the limit
+      // that was reached: exhaustion used to publish no lifecycle at all, which
+      // left the caller to compensate with a cancel and the reader with a
+      // spinner over a run that had already stopped.
+      expect(events.map((entry) => (entry as { type: string }).type)).toEqual([
+        'run.created',
+        'run.failed',
+      ]);
+      expect(
+        (events.at(-1) as { payload: { reason?: { code: string } } }).payload.reason?.code,
+      ).toBe('RUNTIME_BUDGET_EXHAUSTED');
     },
   );
 
@@ -151,10 +161,11 @@ describe('RuntimeRunService security boundaries', () => {
     expect(
       events.filter((entry) => (entry as { type: string }).type === 'tool.completed'),
     ).toHaveLength(1);
-    expect(events.map((entry) => (entry as { type: string }).type).slice(-3)).toEqual([
+    expect(events.map((entry) => (entry as { type: string }).type).slice(-4)).toEqual([
       'tool.requested',
       'tool.started',
       'run.budget.updated',
+      'run.failed',
     ]);
   });
 
@@ -335,8 +346,9 @@ describe('RuntimeRunService security boundaries', () => {
 
       await rejection;
       expect(submitted).toEqual([]);
-      expect(events.map((entry) => (entry as { type: string }).type).slice(-1)).toEqual([
+      expect(events.map((entry) => (entry as { type: string }).type).slice(-2)).toEqual([
         'run.budget.updated',
+        'run.failed',
       ]);
     } finally {
       vi.useRealTimers();
