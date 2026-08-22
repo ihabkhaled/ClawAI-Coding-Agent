@@ -2,6 +2,14 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.64.0
+
+Minor: the host now decides when a request warrants the flagship pipeline, instead of leaving it to the model to opt in.
+
+- A brief that enumerates three or more deliverables is admitted automatically, and the flagship tool tells the model it is required for this request and why. Below that the pipeline stays out of the way: a single change is cheaper done directly than planned as a graph, and a planning round for two items costs more than it saves.
+- Admission keys on enumerated deliverables rather than length, so a long bug report is still one bug. Sub-bullets under a single change do not count, and an enumerator inside a sentence does not either.
+- The decision is applied before the tool catalog is hashed, so the description the model reads is the one the run committed to.
+
 ## 0.63.3
 
 Patch: a flagship delivery now records which quality gates ran, and cannot mistake silence for a pass.

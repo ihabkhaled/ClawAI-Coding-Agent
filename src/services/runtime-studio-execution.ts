@@ -1,6 +1,7 @@
 import { randomUUID } from 'node:crypto';
 
 import { effortBudget } from '../core/effort-mode';
+import { flagshipAdmission, withFlagshipRequirement } from '../core/flagship-admission';
 import { isRuntimeRunEnded } from '../core/runtime/runtime-event-reducer';
 
 import { RuntimeJournalTracker } from './runtime-journal-tracker';
@@ -88,7 +89,13 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
   const { input, manifest, epochs, router } = dependencies;
   // The caller supplies the catalog so it can describe roots that only exist
   // for this run, such as an approved external output folder.
-  const definitions = dependencies.definitions ?? router.definitions();
+  const baseDefinitions = dependencies.definitions ?? router.definitions();
+  // The host decides whether a brief warrants the flagship pipeline, rather
+  // than leaving it to the model to opt in. The decision is applied before the
+  // catalog hash below, so the description the model reads is the one this run
+  // committed to.
+  const admission = flagshipAdmission(input.prompt);
+  const definitions = withFlagshipRequirement(baseDefinitions, admission);
   // Read once and reuse: the run and the journal entry that describes it must
   // agree on what this run was allowed to spend, and the setting can change
   // under a long run.
