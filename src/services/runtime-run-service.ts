@@ -3,6 +3,7 @@ import {
   reduceRuntimeEvent,
   type RuntimeSnapshot,
 } from '../core/runtime/runtime-event-reducer';
+import { RuntimeBudgetExhaustedError } from '../core/runtime/runtime-run-budget';
 import {
   acknowledgeSteering,
   applySteering as applyQueuedSteering,
@@ -258,7 +259,47 @@ export class RuntimeRunService {
     }
   }
 
+  /**
+   * A run that exhausts an allowance has to END, visibly.
+   *
+   * `consumeRuntimeBudget` throws when a limit is reached. Nothing here used to
+   * recognise that, so no terminal event was published; the caller's `finally`
+   * then saw an unfinished run and compensated with a cancel. The backend
+   * recorded `lifecycle: cancelled`, no reason reached the webview, and the
+   * activity panel kept a live spinner over a run that had stopped minutes
+   * earlier. Ending as `run.failed` with the limit that was hit turns a silent
+   * stall into something a reader can act on.
+   */
   async dispatch(value: unknown, continuation: Continuation): Promise<ToolResult> {
+    try {
+      return await this.dispatchWithinBudget(value, continuation);
+    } catch (error) {
+      if (error instanceof RuntimeBudgetExhaustedError) this.endOnBudgetExhaustion(error);
+      throw error;
+    }
+  }
+
+  private endOnBudgetExhaustion(error: RuntimeBudgetExhaustedError): void {
+    const active = this.active;
+    if (active === undefined) return;
+    active.steering = closeSteeringQueue(active.steering, 'failed');
+    this.publish(
+      active,
+      eventFor(
+        active,
+        'run.failed',
+        { reason: { code: error.code, message: error.message } },
+        this.dependencies.clock.now(),
+      ),
+    );
+    this.completed = active;
+    this.active = undefined;
+  }
+
+  private async dispatchWithinBudget(
+    value: unknown,
+    continuation: Continuation,
+  ): Promise<ToolResult> {
     const active = this.active ?? this.requireCompletedReplay(value);
     active.controller.signal.throwIfAborted();
     const invocation = this.assertInvocation(value, active);
