@@ -108,9 +108,17 @@ export class IntegrationCoordinatorService {
       request.mandatoryGateIds,
       signal,
     );
+    // every() is true for an empty array, so a quality runner that produced no
+    // results at all would have reported a clean integration with nothing
+    // actually verified. A mandatory gate that returned no result is treated as
+    // a failed gate, not an absent one.
+    const missing = request.mandatoryGateIds.filter(
+      (gateId) => !gates.some((gate) => gate.gateId === gateId),
+    );
     return {
       integrationId: request.integrationId,
-      status: gates.every(({ passed }) => passed) ? 'integrated' : 'gates-failed',
+      status:
+        missing.length === 0 && gates.every(({ passed }) => passed) ? 'integrated' : 'gates-failed',
       integratedCommits: integrated,
       conflicts: [],
       semanticConflicts: [],
