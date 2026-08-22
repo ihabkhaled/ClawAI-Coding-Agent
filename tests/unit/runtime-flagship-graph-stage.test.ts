@@ -280,4 +280,29 @@ describe('RuntimeFlagshipStageAdapter implementation graph', () => {
     expect(execute).not.toHaveBeenCalled();
     expect(executeGraph).not.toHaveBeenCalled();
   });
+
+  it('replans a cancelled task instead of re-running the identical graph', async () => {
+    // A cancelled task leaves no result and no commit, so repeating the same
+    // graph would only cancel it again. It has to reach the planner.
+    const executeGraph = vi.fn(async () => [
+      { ...successfulGraphOutcome('implement-api'), status: 'cancelled' as const },
+      successfulGraphOutcome('implement-ui'),
+    ]);
+    const adapter = new RuntimeFlagshipStageAdapter(
+      { execute: vi.fn(), executeGraph },
+      flagshipHostEpochs,
+    );
+
+    const result = await adapter.execute(
+      'implement',
+      request,
+      { ...snapshot, graph: implementationGraph },
+      new AbortController().signal,
+    );
+
+    expect(result.requiresReplan).toBe(true);
+    expect(result.recoveryHistory?.[0]?.strategy).toBe('replan');
+    expect(result.summary).toContain('implement-api');
+    expect(result.summary).not.toContain('implement-ui');
+  });
 });

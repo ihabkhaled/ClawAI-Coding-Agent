@@ -18,7 +18,11 @@ interface RecordedStatus {
 }
 
 function coordinator(
-  execute: (task: SubAgentTask) => Promise<ReturnType<typeof successfulOutcome>>,
+  execute: (
+    task: SubAgentTask,
+    steering: () => readonly string[],
+    signal: AbortSignal,
+  ) => Promise<ReturnType<typeof successfulOutcome>>,
   statuses: RecordedStatus[] = [],
 ): SubAgentCoordinatorService {
   return new SubAgentCoordinatorService({ execute }, new FileLeaseManager(), () => subAgentEpochs, {
@@ -191,5 +195,40 @@ describe('SubAgentCoordinatorService recovery', () => {
 
     expect(execute).toHaveBeenCalledTimes(1);
     expect(outcome?.status).toBe('blocked');
+  });
+
+  it('spends one runtime ceiling across every attempt rather than re-arming it', async () => {
+    const abortedOnAttempt: boolean[] = [];
+    let attempts = 0;
+    const execute = vi.fn(
+      async (task: SubAgentTask, _steering: () => readonly string[], signal: AbortSignal) => {
+        attempts += 1;
+        if (attempts === 1) {
+          // Burn most of the ceiling, then fail in a way the ladder retries.
+          await new Promise((resolve) => setTimeout(resolve, 700));
+          abortedOnAttempt.push(signal.aborted);
+          return failedOutcome(
+            task.taskId,
+            'Nested runtime failed: none (CLOUD_PROVIDER_EMPTY_RESPONSE)',
+          );
+        }
+        // Re-arming would hand this attempt another full allowance. Inheriting
+        // the remainder instead means it starts already out of time.
+        await new Promise((resolve) => setTimeout(resolve, 600));
+        abortedOnAttempt.push(signal.aborted);
+        return successfulOutcome(task.taskId);
+      },
+    );
+    const retryable = subAgentTask('implement-api', [], ['src/api.ts'], 'implementer');
+
+    await coordinator(execute).run(
+      graph({
+        ...retryable,
+        budget: { ...retryable.budget, maxRetries: 2, maxRuntimeMs: 1_000 },
+      }),
+    );
+
+    expect(attempts).toBeGreaterThan(1);
+    expect(abortedOnAttempt[1]).toBe(true);
   });
 });

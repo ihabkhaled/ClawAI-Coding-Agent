@@ -48,6 +48,7 @@ interface TaskRuntime {
   status: SubAgentTaskStatus;
   attempts: number;
   spent: TaskSpend;
+  deadlineAt?: number;
   outcome?: SubAgentOutcome;
 }
 
@@ -205,9 +206,16 @@ export class SubAgentCoordinatorService {
       return;
     }
     try {
+      // maxRuntimeMs is the task ceiling, not a per-attempt allowance. Arming
+      // it fresh on every retry made the real wall-clock bound
+      // (maxRetries + 1) x maxRuntimeMs, so a task could run far longer than
+      // its declared budget. The deadline is set on the first attempt and
+      // every later attempt inherits whatever remains.
+      runtime.deadlineAt ??= Date.now() + runtime.task.budget.maxRuntimeMs;
+      const remainingMs = Math.max(0, runtime.deadlineAt - Date.now());
       const timeout = setTimeout(() => {
         runtime.controller.abort(new Error('Sub-agent runtime budget exhausted'));
-      }, runtime.task.budget.maxRuntimeMs);
+      }, remainingMs);
       let outcome: SubAgentOutcome;
       try {
         outcome = await this.executor.execute(

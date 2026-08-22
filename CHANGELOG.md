@@ -2,6 +2,13 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.63.2
+
+Patch: two correctness fixes in flagship recovery.
+
+- A task's runtime ceiling is now spent once across every attempt instead of being re-armed on each retry, which had made the real wall-clock bound (maxRetries + 1) times maxRuntimeMs. A retry inherits whatever remains of the original allowance.
+- A cancelled implementation task now reaches the planner. Only failures counted toward the replan scope, so a cancelled task reported nothing to replan and the delivery re-ran the identical graph, cancelling the same task again.
+
 ## 0.63.1
 
 Patch: the agent can once again write a source file longer than 100 lines. Runtime Protocol 2.0 sends a file body as one array entry per line, but arrays shared the 100-item object-entry ceiling, so any file over 100 lines was rejected — and the resulting validation error surfaced as an opaque internal error that ended the whole run instead of a correctable tool failure. Arrays now carry their own, much larger ceiling; the per-argument byte budget continues to do the real bounding, and the tighter object-entry ceiling is unchanged.
