@@ -2,18 +2,47 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
-## 0.63.4
+## 0.64.2
+
+Patch: two runtime fixes rebased onto the 0.64 line. Both were first cut as 0.63.3 and 0.63.4, before main moved to 0.64; they are re-released here unchanged in behaviour.
+
+### From 0.63.4
 
 Patch: a second VS Code window no longer signs the first one out.
 
 - One ClawAI session is shared per backend origin across every window, but binding refused any session id it had not seen before. Signing in from a second window rotated the shared record, and the first window's next bind threw and dropped it to the Connect gate with its queued message lost — so two windows could never both work, and reconnecting one evicted the other. The account, not the session id, is now what may not change underneath a client: a rotation owned by the same account is adopted, a takeover by a different account still fails closed, and a record written before accounts were stored keeps the old strict behaviour rather than being adopted on faith.
 - The account id is recorded on the shared session record at sign-in. It comes from the profile the extension already fetches, and `POST /auth/vscode/authorize/exchange` now returns it alongside the tokens so the binding decision does not depend on a second round trip.
 
-## 0.63.3
+### From 0.63.3
 
 Patch: a run that exhausts its budget now ends visibly instead of stalling.
 
 - Budget exhaustion threw a bare `Error`, so nothing upstream recognised it as a terminal condition. No terminal event was published, the caller's compensation path saw an unfinished run and cancelled it, and the backend recorded `lifecycle: cancelled` with no reason. The activity panel kept a live spinner over a run that had stopped minutes earlier, which is indistinguishable from a slow run. Exhaustion is now a typed `RuntimeBudgetExhaustedError` and the run ends as `run.failed` carrying `RUNTIME_BUDGET_EXHAUSTED` and the limit that was reached, so the reason reaches the reader and no cancel compensation is needed.
+
+## 0.64.1
+
+Patch: a file too large to read can now be read — and therefore edited — instead of failing every attempt.
+
+- A read defaulted to 262,144 bytes while the Runtime V2 contract caps any single string at 65,536, so reading a large file produced a structurally invalid result and came back as `TOOL_OUTPUT_INVALID`. Because `patch` needs the sha256 from a successful read, any file over the cap could never be modified at all. Every locale file in a large monorepo is well past that ceiling, which put translation work permanently out of reach. Reads are now bounded by what the contract can actually carry, and page instead of failing.
+- A partial read still reports the whole-file hash, so a ranged read is a valid anchor for a patch. The result also carries `totalLines` and a `nextStartLine` cursor so the model can walk a large file to the end.
+- Truncation lands on a line boundary. A mid-line cut handed the model a partial line it would then use as a patch anchor, which could never match.
+- A missing file now says `No such file: <path>`, a directory says to use the list operation, and genuinely binary content says so. All three used to share "Requested file is not readable text", and a model told a file it had just created was unreadable kept probing it instead of moving on.
+- A transaction carrying several operations now reports the actual rule — exactly one operation per call — instead of a per-operation schema failure about a missing `beforeHash`, which sent models off inventing hashes for files that did not exist yet.
+
+## 0.64.0
+
+Minor: the host now decides when a request warrants the flagship pipeline, instead of leaving it to the model to opt in.
+
+- A brief that enumerates three or more deliverables is admitted automatically, and the flagship tool tells the model it is required for this request and why. Below that the pipeline stays out of the way: a single change is cheaper done directly than planned as a graph, and a planning round for two items costs more than it saves.
+- Admission keys on enumerated deliverables rather than length, so a long bug report is still one bug. Sub-bullets under a single change do not count, and an enumerator inside a sentence does not either.
+- The decision is applied before the tool catalog is hashed, so the description the model reads is the one the run committed to.
+
+## 0.63.3
+
+Patch: a flagship delivery now records which quality gates ran, and cannot mistake silence for a pass.
+
+- Every gate the trusted host runs during integration is written to the delivery snapshot as an acceptance receipt, pass or fail. The results used to be discarded, so "the gates passed" survived only as wording in a summary; a failed gate now stays in the record with the integration it came from.
+- An integration is no longer reported clean when a mandatory gate returned no result at all. An empty result set satisfied the every-gate-passed check, so a quality runner that silently produced nothing looked identical to one that passed everything. A mandatory gate with no result is now treated as failed.
 
 ## 0.63.2
 
