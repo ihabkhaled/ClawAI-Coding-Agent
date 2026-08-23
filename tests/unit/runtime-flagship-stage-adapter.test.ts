@@ -212,4 +212,64 @@ describe('RuntimeFlagshipStageAdapter', () => {
     );
     expect(execute).not.toHaveBeenCalled();
   });
+
+  it('records a host acceptance receipt for every gate the integration ran', async () => {
+    const integrate = vi.fn(async () => ({
+      integrationId: 'integration-flagship-test',
+      status: 'gates-failed' as const,
+      integratedCommits: [],
+      conflicts: [],
+      semanticConflicts: [],
+      gates: [
+        { gateId: 'project:unit:0', passed: true },
+        { gateId: 'project:lint:0', passed: false },
+      ],
+    }));
+    const adapter = new RuntimeFlagshipStageAdapter(
+      { execute: vi.fn(), executeGraph: vi.fn() },
+      () => ({ account: 1, workspace: 2, target: 3, policy: 4 }),
+      { integrate },
+    );
+    const requestWithGates = {
+      ...request,
+      mandatoryGateIds: ['project:unit:0', 'project:lint:0'],
+    };
+    const snapshotWithCommit = {
+      ...snapshot,
+      commits: [
+        {
+          taskId: 'flagship-test-0001-implement',
+          worktreeId: 'flagship-test-0001-implement',
+          commit: 'a'.repeat(40),
+          changedPaths: ['src/feature.ts'],
+          integrationSeams: [],
+        },
+      ],
+    };
+
+    const result = await adapter.execute(
+      'integrate',
+      requestWithGates,
+      snapshotWithCommit,
+      new AbortController().signal,
+    );
+
+    // A failed gate is recorded rather than dropped, so the snapshot carries
+    // why the delivery stopped instead of only that it did.
+    expect(result.status).toBe('blocked');
+    expect(result.acceptanceReceipts).toEqual([
+      {
+        receiptId: 'integration-flagship-test-project:unit:0',
+        gateId: 'project:unit:0',
+        status: 'passed',
+        evidenceReference: 'integration:integration-flagship-test',
+      },
+      {
+        receiptId: 'integration-flagship-test-project:lint:0',
+        gateId: 'project:lint:0',
+        status: 'failed',
+        evidenceReference: 'integration:integration-flagship-test',
+      },
+    ]);
+  });
 });
