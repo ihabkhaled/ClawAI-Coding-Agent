@@ -2,6 +2,16 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.64.1
+
+Patch: a file too large to read can now be read — and therefore edited — instead of failing every attempt.
+
+- A read defaulted to 262,144 bytes while the Runtime V2 contract caps any single string at 65,536, so reading a large file produced a structurally invalid result and came back as `TOOL_OUTPUT_INVALID`. Because `patch` needs the sha256 from a successful read, any file over the cap could never be modified at all. Every locale file in a large monorepo is well past that ceiling, which put translation work permanently out of reach. Reads are now bounded by what the contract can actually carry, and page instead of failing.
+- A partial read still reports the whole-file hash, so a ranged read is a valid anchor for a patch. The result also carries `totalLines` and a `nextStartLine` cursor so the model can walk a large file to the end.
+- Truncation lands on a line boundary. A mid-line cut handed the model a partial line it would then use as a patch anchor, which could never match.
+- A missing file now says `No such file: <path>`, a directory says to use the list operation, and genuinely binary content says so. All three used to share "Requested file is not readable text", and a model told a file it had just created was unreadable kept probing it instead of moving on.
+- A transaction carrying several operations now reports the actual rule — exactly one operation per call — instead of a per-operation schema failure about a missing `beforeHash`, which sent models off inventing hashes for files that did not exist yet.
+
 ## 0.64.0
 
 Minor: the host now decides when a request warrants the flagship pipeline, instead of leaving it to the model to opt in.

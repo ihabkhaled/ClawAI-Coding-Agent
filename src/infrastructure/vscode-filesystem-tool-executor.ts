@@ -3,7 +3,10 @@ import { z } from 'zod';
 
 import { fileTransactionSchema } from '../core/file-transaction';
 import { normalizeTransactionEncoding } from '../core/file-transaction-encoding';
-import { MAX_RUNTIME_JSON_ENTRIES } from '../core/runtime/runtime-json-value';
+import {
+  MAX_RUNTIME_JSON_ENTRIES,
+  MAX_RUNTIME_JSON_STRING_LENGTH,
+} from '../core/runtime/runtime-json-value';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 import {
   isSafeRelativeWorkspacePath,
@@ -41,13 +44,21 @@ const directoryPath = z
   .refine(isSafeWorkspaceDirectoryPath)
   .transform(normalizeWorkspaceDirectoryPath);
 const rootKey = z.string().min(1).max(100);
+// A read used to default to 262_144 bytes while the Runtime V2 JSON contract
+// caps any single string at MAX_RUNTIME_JSON_STRING_LENGTH (65_536). Reading a
+// large file therefore produced a structurally invalid result and came back as
+// TOOL_OUTPUT_INVALID — and since `patch` needs the sha256 from a successful
+// read, files above the cap could never be edited at all. Every locale file in
+// the ClawAI monorepo is over 200 kB, so i18n was unreachable. The ceiling now
+// matches the contract, and an oversized range is paged instead of failed.
+const MAX_READ_BYTES = MAX_RUNTIME_JSON_STRING_LENGTH;
 const readSchema = z
   .object({
     rootKey,
     path: relativePath,
     startLine: z.number().int().min(1).default(1),
     endLine: z.number().int().min(1).max(100_000).optional(),
-    maxBytes: z.number().int().min(1).max(1_048_576).default(262_144),
+    maxBytes: z.number().int().min(1).max(MAX_READ_BYTES).default(MAX_READ_BYTES),
   })
   .strict();
 const pathSchema = z.object({ rootKey, path: relativePath }).strict();
@@ -160,6 +171,17 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
 // alike. A model that copied the envelope's `operation` from an earlier,
 // unrelated call while correctly setting the new operation's `kind` got that
 // sentence back and had no way to see which of the two actually disagreed.
+function assertSingleOperationCount(candidate: unknown): void {
+  if (typeof candidate !== 'object' || candidate === null) return;
+  const operations = (candidate as { operations?: unknown }).operations;
+  if (!Array.isArray(operations)) return;
+  if (operations.length !== 1)
+    throw new Error(
+      `Filesystem mutation must contain exactly one operation, got ${String(operations.length)}. ` +
+        'Send one file per tool call.',
+    );
+}
+
 function assertSingleMatchingOperation(transaction: FileTransaction, operation: string): void {
   if (transaction.operations.length !== 1)
     throw new Error(
@@ -191,6 +213,12 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     if (invocation.operation === 'list') return this.list(invocation.arguments);
     if (invocation.operation === 'glob') return this.glob(invocation.arguments);
     if (invocation.operation === 'search') return this.search(invocation.arguments, signal);
+    // Count the operations BEFORE the schema runs. A model that sent four
+    // creates in one transaction used to get back a per-operation Zod failure
+    // ("operations[3].beforeHash: expected string, received undefined") and
+    // would then try to invent a hash for a file that did not exist yet,
+    // burning its whole turn budget without ever learning the real rule.
+    assertSingleOperationCount(invocation.arguments.transaction);
     const transaction = fileTransactionSchema.parse(
       normalizeTransactionEncoding(invocation.arguments.transaction),
     );
@@ -210,23 +238,53 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
       beforeHash: null,
     };
     const snapshot = await this.adapter.snapshot(operation);
-    if (snapshot.text === undefined) throw new Error('Requested file is not readable text');
+    // "Requested file is not readable text" used to cover all three of these.
+    // A model told a file it had just created was "not readable text" kept
+    // probing it instead of moving on, so each case now says which one it is.
+    if (snapshot.kind === 'missing') {
+      throw new Error(`No such file: ${input.path}`);
+    }
+    if (snapshot.kind === 'directory') {
+      throw new Error(`${input.path} is a directory - use the list operation`);
+    }
+    if (snapshot.text === undefined) {
+      throw new Error(`${input.path} is not UTF-8 text and cannot be read`);
+    }
     const lines = snapshot.text.split(/\r?\n/u);
-    const end = Math.min(input.endLine ?? lines.length, lines.length);
-    const selected = lines.slice(input.startLine - 1, end).join('\n');
-    const bytes = new TextEncoder().encode(selected);
-    const bounded =
-      bytes.byteLength <= input.maxBytes
-        ? selected
-        : new TextDecoder().decode(bytes.slice(0, input.maxBytes));
+    const totalLines = lines.length;
+    const end = Math.min(input.endLine ?? totalLines, totalLines);
+    const encoder = new TextEncoder();
+    const window = lines.slice(input.startLine - 1, end);
+    const selected = window.join('\n');
+    // Truncate on a LINE boundary. Cutting mid-line handed the model a partial
+    // line it would then use as a patch anchor, which could never match.
+    let deliveredEndLine = end;
+    let bounded = selected;
+    if (encoder.encode(selected).byteLength > input.maxBytes) {
+      let taken = '';
+      let line = input.startLine;
+      for (const candidateLine of window) {
+        const next = taken.length === 0 ? candidateLine : `${taken}\n${candidateLine}`;
+        if (encoder.encode(next).byteLength > input.maxBytes) break;
+        taken = next;
+        line += 1;
+      }
+      bounded = taken;
+      deliveredEndLine = Math.max(input.startLine, line - 1);
+    }
+    const truncated = deliveredEndLine < end;
     return {
       structured: {
         path: input.path,
         startLine: input.startLine,
-        endLine: end,
+        endLine: deliveredEndLine,
         content: bounded,
-        truncated: bounded.length !== selected.length,
+        truncated,
+        // The WHOLE-FILE hash, even for a partial read, so a ranged read still
+        // produces a valid `beforeHash` for a patch.
         hash: snapshot.hash,
+        totalLines,
+        ...(truncated ? { nextStartLine: deliveredEndLine + 1 } : {}),
       },
     };
   }
