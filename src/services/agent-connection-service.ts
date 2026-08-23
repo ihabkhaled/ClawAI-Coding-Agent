@@ -184,6 +184,10 @@ export class AgentConnectionService {
             backendUrl,
             authorized.tokens,
             generation,
+            // Stamp the account onto the shared session record. Another window
+            // that later finds this session can then adopt it instead of
+            // treating it as a stranger and dropping to the Connect gate.
+            authorized.user.id,
           );
           if (committedGeneration === null) {
             throw new AuthorizationCancelledError();
