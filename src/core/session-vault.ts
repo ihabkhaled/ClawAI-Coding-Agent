@@ -30,6 +30,17 @@ const replacementSchema = z
 
 const storedSessionSchema = z
   .object({
+    /**
+     * Which ClawAI account this session belongs to.
+     *
+     * One session is shared per backend origin across every window. Without an
+     * account on the record, a window that finds a different sessionId cannot
+     * tell the same user signing in again from a different account taking the
+     * slot, so it assumed the worst and fell back to the Connect gate. Optional
+     * because records written before this existed have no account, and those
+     * keep the old strict behaviour rather than being adopted blindly.
+     */
+    accountId: z.string().min(1).optional(),
     replacement: replacementSchema.optional(),
     revision: z.number().int().nonnegative(),
     sessionId: z.uuid().optional(),
@@ -42,6 +53,7 @@ export type TokenPair = z.output<typeof tokenPairSchema>;
 export type TokenPairInput = z.input<typeof tokenPairSchema>;
 export type RefreshSessionOutcome = 'changed' | 'missing' | 'refreshed';
 export interface BoundSession {
+  accountId?: string;
   sessionId: string;
   tokens: TokenPair;
 }
@@ -115,6 +127,7 @@ export class SessionVault {
     backendUrl: string,
     tokens: TokenPairInput,
     expectedGeneration: number,
+    accountId?: string,
   ): Promise<number | null> {
     const validated = tokenPairSchema.parse(tokens);
     const key = sessionKey(backendUrl);
@@ -124,6 +137,10 @@ export class SessionVault {
       }
       const committedRevision = current.revision + 1;
       await this.write(key, {
+        // The account that will own the session once this replacement is
+        // finalized. Recorded now so a window that adopts the finalized session
+        // can tell it is still the same user rather than a takeover.
+        ...(accountId === undefined ? {} : { accountId }),
         replacement: {
           baseRevision: expectedGeneration,
           candidateSessionId: randomUUID(),
@@ -237,6 +254,7 @@ export class SessionVault {
       return resolved.tokens === null
         ? null
         : {
+            ...(resolved.accountId === undefined ? {} : { accountId: resolved.accountId }),
             sessionId: resolved.sessionId,
             tokens: resolved.tokens,
           };
@@ -297,6 +315,7 @@ export class SessionVault {
         return false;
       }
       await this.write(key, {
+        ...(current.accountId === undefined ? {} : { accountId: current.accountId }),
         revision: current.revision + 1,
         sessionId: current.replacement.candidateSessionId ?? randomUUID(),
         tokens: current.replacement.candidateTokens,
