@@ -33,6 +33,10 @@ export class VscodeRuntimeBindingStore implements RuntimeBindingStorePort {
     return Promise.resolve(bindings.find((binding) => binding.runId === runId));
   }
 
+  list(): Promise<readonly RuntimeCommandBinding[]> {
+    return Promise.resolve(this.read());
+  }
+
   async save(binding: RuntimeCommandBinding): Promise<void> {
     const bindings = this.read().filter(({ runId }) => runId !== binding.runId);
     await this.state.update(this.key, [...bindings.slice(-99), binding]);

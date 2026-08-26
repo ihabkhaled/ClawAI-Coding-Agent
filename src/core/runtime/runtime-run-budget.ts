@@ -70,6 +70,14 @@ export function createRuntimeBudgetState(
   };
 }
 
+export function restoreRuntimeBudgetState(state: RuntimeBudgetState): RuntimeBudgetState {
+  return consumeRuntimeBudget(
+    createRuntimeBudgetState(state.budget, state.startedAtMs),
+    state.usage,
+    state.startedAtMs,
+  );
+}
+
 function debitValue(value: number | undefined): number {
   const debit = value ?? 0;
   if (!Number.isInteger(debit)) {

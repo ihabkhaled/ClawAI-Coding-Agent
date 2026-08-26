@@ -1,8 +1,5 @@
 import * as vscode from 'vscode';
 
-import { RUNTIME_EFFECT_APPROVAL_KIND } from '../core/approval-broker';
-import { describeExternalOutputRoots } from '../core/runtime/external-output-catalog';
-import { executableToolDefinitions } from '../core/runtime/runtime-executable-tools';
 import { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 import {
   BrowserToolExecutor,
@@ -117,6 +114,8 @@ import { RuntimeToolRouter } from './runtime-tool-router';
 import { ServerReadinessService } from './server-readiness-service';
 import { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
 import { SubAgentWorktreeService } from './sub-agent-worktree-service';
+import { vscodeRuntimeExecutionDependencies } from './vscode-runtime-execution';
+import { recoverVscodeRuntime } from './vscode-runtime-recovery';
 import { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 
 import type { ExternalOutputGrantStore } from './agent-coordinator.types';
@@ -126,6 +125,7 @@ import type { RuntimeStudioInput } from './runtime-studio.types';
 import type { TargetAwareToolRouter } from './target-aware-tool-router';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { BackendClient } from '../backend/backend-client';
+import type { RUNTIME_EFFECT_APPROVAL_KIND } from '../core/approval-broker';
 import type { ApprovalBroker } from '../core/approval-broker';
 import type { ExtensionState } from '../core/extension-state';
 import type { CapabilityManifest } from '../core/runtime/capability-manifest';
@@ -136,38 +136,37 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   private readonly files: VscodeFileTransactionAdapter;
   private readonly transactions: FileTransactionService;
   private readonly processes = new ProcessSupervisorService();
-  private readonly transport: BackendRuntimeTransport;
-  private readonly stream: RuntimeEventStreamService;
-  private readonly router: RuntimeToolRouter;
+  readonly transport: BackendRuntimeTransport;
+  private readonly bindingStore: VscodeRuntimeBindingStore;
+  readonly stream: RuntimeEventStreamService;
+  readonly router: RuntimeToolRouter;
   private readonly targets: ExecutionTargetRegistry;
-  private readonly policy: RuntimePolicyV2Adapter;
+  readonly policy: RuntimePolicyV2Adapter;
   private readonly intelligenceIndex: VscodeIntelligenceIndex;
-  private readonly observability: LocalObservabilityService;
-  private readonly flagship: FlagshipDeliveryService;
+  readonly observability: LocalObservabilityService;
+  readonly flagship: FlagshipDeliveryService;
   private readonly git: GitAgentService;
-  private readonly journals: RunJournalService;
+  readonly journals: RunJournalService;
   private active: RuntimeRunService | undefined;
   private activeRunId: string | undefined;
   private activeInput: RuntimeStudioInput | undefined;
   private targetManifestHash: string | undefined;
-  private epochs: ToolInvocation['epochs'] = { account: 0, workspace: 0, target: 0, policy: 0 };
+  epochs: ToolInvocation['epochs'] = { account: 0, workspace: 0, target: 0, policy: 0 };
 
   constructor(
     private readonly context: vscode.ExtensionContext,
-    private readonly state: ExtensionState,
-    private readonly configuration: ConfigurationService,
+    readonly state: ExtensionState,
+    readonly configuration: ConfigurationService,
     private readonly workspaceScope: WorkspaceScopeService,
-    private readonly externalOutputs: ExternalOutputGrantStore,
+    readonly externalOutputs: ExternalOutputGrantStore,
     private readonly approvals: ApprovalBroker,
     backend: () => BackendClient,
-    logger: OutputLogger,
+    private readonly logger: OutputLogger,
   ) {
     this.files = new VscodeFileTransactionAdapter(externalOutputs);
     this.transactions = new FileTransactionService(this.files);
-    this.transport = new BackendRuntimeTransport(
-      backend,
-      new VscodeRuntimeBindingStore(context.workspaceState),
-    );
+    this.bindingStore = new VscodeRuntimeBindingStore(context.workspaceState);
+    this.transport = new BackendRuntimeTransport(backend, this.bindingStore);
     this.stream = new RuntimeEventStreamService(this.transport);
     this.observability = new LocalObservabilityService(new VscodeObservabilitySink(logger));
     this.targets = new ExecutionTargetRegistry({
@@ -429,7 +428,28 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     }
   }
 
-  private routeTargets(runtimeManifest: CapabilityManifest): TargetAwareToolRouter {
+  async recover(input: RuntimeStudioInput): Promise<boolean> {
+    if (this.active !== undefined) return false;
+    const manifest = this.state.snapshot.runtime.capabilityManifest;
+    if (manifest === undefined) return false;
+    return recoverVscodeRuntime(
+      {
+        bindings: this.bindingStore,
+        journals: this.journals,
+        logger: this.logger,
+        fingerprint: (signal) => this.fingerprint(signal),
+        setEpochs: (epochs) => {
+          this.epochs = epochs;
+        },
+        execution: (recoveryInput, recoveryManifest) =>
+          vscodeRuntimeExecutionDependencies(this, recoveryInput, recoveryManifest),
+      },
+      input,
+      manifest,
+    );
+  }
+
+  routeTargets(runtimeManifest: CapabilityManifest): TargetAwareToolRouter {
     const result = buildRuntimeTargetRouter({
       manifest: runtimeManifest,
       targets: this.targets,
@@ -443,49 +463,34 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   }
 
   private async runStudio(input: RuntimeStudioInput, manifest: CapabilityManifest): Promise<void> {
-    await executeRuntimeStudio({
-      input,
-      manifest,
-      epochs: this.epochs,
-      router: this.router,
-      definitions: describeExternalOutputRoots(
-        executableToolDefinitions(this.router.definitions(), manifest),
-        this.externalOutputs.snapshot(),
-      ),
-      policy: this.policy,
-      transport: this.transport,
-      stream: this.stream,
-      observability: this.observability,
-      journals: this.journals,
-      flagship: this.flagship,
-      state: this.state,
-      configuration: () => this.configuration.read(),
-      targetRouter: (runtimeManifest) => this.routeTargets(runtimeManifest),
-      fingerprint: (signal) =>
-        runtimeFingerprint(
-          {
-            state: this.state,
-            configuration: this.configuration,
-            workspaceScope: this.workspaceScope,
-            git: this.git,
-          },
-          this.epochs,
-          signal,
-        ),
-      hash: hashRuntimeValue,
-      setActive: (runtime, runId) => {
-        this.active = runtime;
-        this.activeRunId = runId;
-      },
-      releaseApprovals: () => {
-        this.approvals.cancelKind(RUNTIME_EFFECT_APPROVAL_KIND);
-      },
-    });
+    await executeRuntimeStudio(vscodeRuntimeExecutionDependencies(this, input, manifest));
   }
 
-  async cancel(): Promise<void> {
-    await this.active?.cancel();
+  fingerprint(signal: AbortSignal) {
+    return runtimeFingerprint(
+      {
+        state: this.state,
+        configuration: this.configuration,
+        workspaceScope: this.workspaceScope,
+        git: this.git,
+      },
+      this.epochs,
+      signal,
+    );
   }
+
+  readonly hash = hashRuntimeValue;
+
+  setActiveRuntime(runtime: RuntimeRunService | undefined, runId?: string): void {
+    this.active = runtime;
+    this.activeRunId = runId;
+  }
+
+  cancelApprovals = (kind: typeof RUNTIME_EFFECT_APPROVAL_KIND): void => {
+    this.approvals.cancelKind(kind);
+  };
+
+  cancel = (): Promise<void> => this.active?.cancel() ?? Promise.resolve();
 
   pause(): void {
     this.flagship.pause();

@@ -23,13 +23,13 @@ describe('RuntimeEventStreamService backend event integration', () => {
       requestedAt: '2026-08-02T10:00:01.000Z',
     };
     const events = [
-      event(0, 'tool.requested', {
+      event(8, 'tool.requested', {
         invocationId: invocation.invocationId,
         invocation,
         operation: invocation.operation,
         toolName: invocation.toolName,
       }),
-      event(1, 'run.completed', {}),
+      event(9, 'run.completed', {}),
     ];
     const binding: RuntimeCommandBinding = {
       threadId: 'thread-id-0001',
@@ -66,6 +66,7 @@ describe('RuntimeEventStreamService backend event integration', () => {
       runtime,
       { onEvent: observed },
       new AbortController().signal,
+      7,
     );
 
     expect(observed).toHaveBeenCalledTimes(2);
@@ -74,6 +75,7 @@ describe('RuntimeEventStreamService backend event integration', () => {
       invocation,
       expect.objectContaining({ action: 'continue' }),
     );
+    expect(backend.openRuntimeStream).toHaveBeenCalledWith(binding, 7, expect.any(AbortSignal));
   });
 
   it('continues consuming steering while a long-running tool remains active', async () => {

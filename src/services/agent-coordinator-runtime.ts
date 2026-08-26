@@ -148,6 +148,35 @@ export async function cancelEverything(input: {
   await cancelRemoteGenerations(input.backend, input.logger, input.threadIds());
 }
 
+export async function cancelCoordinator(input: {
+  readonly requestId?: string;
+  readonly backend: BackendClient;
+  readonly logger: OutputLogger;
+  readonly generations: { cancel(requestId: string): boolean; cancelAll(): void };
+  readonly threads: { take(requestId: string): string | null; takeAll(): string[] };
+  readonly connection: { cancelConnection(): Promise<boolean> };
+  readonly approvals: { cancelCurrent(): void };
+  readonly runtimeStudio: { cancel(): Promise<void> };
+}): Promise<void> {
+  if (input.requestId !== undefined) {
+    return cancelTargetGeneration(
+      () => input.generations.cancel(input.requestId ?? ''),
+      () => input.threads.take(input.requestId ?? ''),
+      input.backend,
+      input.logger,
+    );
+  }
+  if (await input.connection.cancelConnection()) return;
+  input.approvals.cancelCurrent();
+  await cancelEverything({
+    backend: input.backend,
+    generations: input.generations,
+    logger: input.logger,
+    runtimeStudio: input.runtimeStudio,
+    threadIds: () => input.threads.takeAll(),
+  });
+}
+
 async function stopBestEffort(
   stage: string,
   stop: () => Promise<void>,

@@ -16,8 +16,10 @@ import {
 import { parseToolInvocation } from '../core/runtime/runtime-tool-contracts';
 
 import { ExplicitScopeExecutor, parseExplicitRunScope } from './runtime-explicit-scope';
+import { recoverRuntimeRun } from './runtime-run-recovery';
 import { RuntimeToolDispatcher } from './runtime-tool-dispatcher';
 
+import type { RuntimeRunRecovery } from './runtime-run-recovery';
 import type { RuntimeToolExecutorPort, RuntimeToolPolicyPort } from './runtime-tool-dispatcher';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type {
@@ -259,6 +261,12 @@ export class RuntimeRunService {
     }
   }
 
+  recover(input: RuntimeRunStart, recovery: RuntimeRunRecovery): void {
+    if (this.active !== undefined || this.starting)
+      throw new Error('A runtime run is already active');
+    this.active = recoverRuntimeRun(input, recovery, this.dependencies);
+  }
+
   /**
    * A run that exhausts an allowance has to END, visibly.
    *
@@ -393,9 +401,7 @@ export class RuntimeRunService {
     return result;
   }
 
-  hasActiveRun(): boolean {
-    return this.active !== undefined;
-  }
+  hasActiveRun = (): boolean => this.active !== undefined;
 
   /**
    * Stop the run. Cancelling when nothing is active is success, not an error.

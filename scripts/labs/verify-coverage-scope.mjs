@@ -20,8 +20,12 @@ export const NAMED_CRITICAL_FILES = Object.freeze([
   'src/infrastructure/backend-runtime-transport.ts',
   'src/infrastructure/vscode-runtime-binding-store.ts',
   'src/services/runtime-event-stream-service.ts',
+  'src/services/runtime-recovery-launcher.ts',
+  'src/services/runtime-run-recovery.ts',
   'src/services/runtime-run-service.ts',
+  'src/services/runtime-startup-recovery.ts',
   'src/services/safe-edit-service.ts',
+  'src/services/vscode-runtime-recovery.ts',
   'src/webview/chat-inbound-message.ts',
 ]);
 

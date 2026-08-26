@@ -22,8 +22,7 @@ import { pickCompareInput, pickModelKey } from './agent-coordinator-prompts';
 import {
   agentConcurrencyKey,
   applyModelSelection,
-  cancelEverything,
-  cancelTargetGeneration,
+  cancelCoordinator,
   createBackendClient,
   prepareGeneration,
   removeSettledAgentRun,
@@ -51,6 +50,7 @@ import { ModelService } from './model-service';
 import { PromptExecutionService } from './prompt-execution-service';
 import { RequestAdmissionService } from './request-admission-service';
 import { RuntimeProtocolService } from './runtime-protocol-service';
+import { RuntimeRecoveryLauncher } from './runtime-recovery-launcher';
 import { RuntimeUiProjector } from './runtime-ui-projection';
 import { confirmSafeEdits } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
@@ -87,6 +87,7 @@ export class AgentCoordinator implements vscode.Disposable {
   private readonly generations: GenerationScheduler;
   private readonly conversations: ConversationSessionService;
   private readonly activeThreads = new GenerationThreadRegistry();
+  private readonly runtimeRecovery: RuntimeRecoveryLauncher;
   private readonly runtimeStudio: VscodeRuntimeStudio;
   private readonly boundaries: AgentCoordinatorBoundaries;
   private readonly workflowActions: AgentCoordinatorWorkflowActions;
@@ -119,6 +120,12 @@ export class AgentCoordinator implements vscode.Disposable {
       this.approvals,
       () => this.backend,
       this.logger,
+    );
+    this.runtimeRecovery = new RuntimeRecoveryLauncher(
+      this.state,
+      this.runtimeStudio,
+      this.logger,
+      () => this.view,
     );
     this.generations = new GenerationScheduler({
       after: async (signal) => {
@@ -312,6 +319,7 @@ export class AgentCoordinator implements vscode.Disposable {
       vscode.workspace.isTrusted,
     );
     await this.connection.initialize();
+    this.runtimeRecovery.start();
   }
 
   async configurationChanged(): Promise<void> {
@@ -349,9 +357,11 @@ export class AgentCoordinator implements vscode.Disposable {
 
   async connect(backendUrl: string): Promise<void> {
     await this.connection.connect(backendUrl);
+    this.runtimeRecovery.start();
   }
 
   dispose(): void {
+    this.runtimeRecovery.dispose();
     this.approvals.dispose();
     this.generations.dispose();
     this.browserAuthorization.dispose();
@@ -491,24 +501,15 @@ export class AgentCoordinator implements vscode.Disposable {
   }
 
   async cancel(requestId?: string): Promise<void> {
-    if (requestId !== undefined) {
-      return cancelTargetGeneration(
-        () => this.generations.cancel(requestId),
-        () => this.activeThreads.take(requestId),
-        this.backend,
-        this.logger,
-      );
-    }
-    if (await this.connection.cancelConnection()) {
-      return;
-    }
-    this.approvals.cancelCurrent();
-    await cancelEverything({
+    await cancelCoordinator({
+      ...(requestId === undefined ? {} : { requestId }),
       backend: this.backend,
-      generations: this.generations,
       logger: this.logger,
+      generations: this.generations,
+      threads: this.activeThreads,
+      connection: this.connection,
+      approvals: this.approvals,
       runtimeStudio: this.runtimeStudio,
-      threadIds: () => this.activeThreads.takeAll(),
     });
   }
 

@@ -77,6 +77,9 @@ describe('durable encrypted journals', () => {
     expect(stored).toBeDefined();
     expect(stored).not.toContain(journal.goal);
     expect(await service.load(journal.runId)).toMatchObject({ runId: journal.runId, pinned: true });
+    await expect(service.list()).resolves.toEqual([
+      expect.objectContaining({ runId: journal.runId }),
+    ]);
     expect(await service.search('release')).toHaveLength(1);
     expect(JSON.stringify(await service.safeExport(journal.runId))).not.toContain('secret-value');
     await service.delete(journal.runId);

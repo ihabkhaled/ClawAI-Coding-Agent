@@ -1,3 +1,5 @@
+import { z } from 'zod';
+
 import {
   appendJournalEventSequence,
   durableRunJournalSchema,
@@ -21,7 +23,20 @@ type RuntimeJournalStart = Pick<
   | 'fingerprints'
   | 'budget'
   | 'createdAt'
+  | 'recovery'
 >;
+
+const budgetCheckpointSchema = z.object({
+  limits: z.record(z.string(), z.number()),
+  usage: z.object({
+    modelTurns: z.number().int().nonnegative(),
+    toolCalls: z.number().int().nonnegative(),
+    toolRounds: z.number().int().nonnegative(),
+    repairAttempts: z.number().int().nonnegative(),
+    outputBytes: z.number().int().nonnegative(),
+    toolResultBytes: z.number().int().nonnegative(),
+  }),
+});
 
 const readOperations = new Set([
   'stat',
@@ -61,6 +76,11 @@ export class RuntimeJournalTracker {
     await this.storage.save(this.journal);
   }
 
+  resume(journal: DurableRunJournal): void {
+    if (this.journal !== undefined) throw new Error('Runtime journal is already attached');
+    this.journal = durableRunJournalSchema.parse(journal);
+  }
+
   async record(event: RuntimeEvent): Promise<void> {
     const journal = this.requireJournal();
     if (event.runId !== journal.runId)
@@ -91,6 +111,16 @@ export class RuntimeJournalTracker {
     if (event.type === 'run.completed') next = { ...next, lifecycle: 'completed' };
     if (event.type === 'run.cancelled') next = { ...next, lifecycle: 'cancelled' };
     if (event.type === 'run.failed') next = { ...next, lifecycle: 'needs-revalidation' };
+    if (event.type === 'run.budget.updated' && next.recovery !== undefined) {
+      const checkpoint = budgetCheckpointSchema.parse(event.payload);
+      next = {
+        ...next,
+        recovery: {
+          ...next.recovery,
+          budgetState: { ...next.recovery.budgetState, usage: checkpoint.usage },
+        },
+      };
+    }
     this.journal = next;
     await this.storage.save(next);
   }

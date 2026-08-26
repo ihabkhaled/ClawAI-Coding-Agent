@@ -1,4 +1,5 @@
 const assert = require('node:assert/strict');
+const { setTimeout: delay } = require('node:timers/promises');
 const vscode = require('vscode');
 const manifest = require('../../package.json');
 
@@ -35,6 +36,10 @@ async function run() {
     !extension.packageJSON.activationEvents.includes('onUri'),
     'loopback browser authorization does not expose a custom URI callback',
   );
+
+  await vscode.commands.executeCommand('clawAI.openChat');
+  await delay(100);
+  assert.ok(extension.isActive, 'the installed workbench command keeps the extension active');
 }
 
 module.exports = { run };

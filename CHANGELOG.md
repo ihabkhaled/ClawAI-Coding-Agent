@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.64.4
+
+Patch: active Runtime V2 runs can recover safely after an extension-host restart.
+
+- New runs persist an encrypted, versioned recovery capsule containing the exact
+  backend binding contract, bounded tool catalog, cursor, and consumed budget.
+- Startup recovery runs only after authentication, validates account/workspace/
+  target/policy/files/Git fingerprints and live handles, and fails closed on
+  legacy journals, drift, uncertain non-repeatable effects, or missing bindings.
+- Eligible runs are adopted without a duplicate start request, reopen SSE after
+  the last accepted sequence, preserve consumed allowances, and keep checkpointing
+  authoritative budget and terminal events.
+- The real VS Code host test now opens the ClawAI workbench command, allowing the
+  exact installed VSIX path to prove activation, command registration, and UI
+  resolution together with the unchanged Playwright visual suite.
+
 ## 0.64.3
 
 Laboratory release: makes readiness claims evidence-bound and release identity
