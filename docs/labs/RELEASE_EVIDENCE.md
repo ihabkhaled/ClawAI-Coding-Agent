@@ -47,14 +47,14 @@ each exact installed directory activates in VS Code 1.135.0 and passes the host
 command/config assertions, including opening the real workbench command. Release
 parity has no local failures and its wrong-installed-version negative control
 detects the mismatch. Provenance binds the artifact to source commit
-`e805c16ff22738a774a1fefada70601c306e3eec`.
+`f9acf40de82506064cd16a697646f4d57f31eb39`.
 
 | Artifact   | SHA-256                                                            |
 | ---------- | ------------------------------------------------------------------ |
-| VSIX       | `d775ace81ca0e3d54268882e205f71778b2c00cb65ee99cf4dec0761a353f9d0` |
+| VSIX       | `202ec2b622d493b795efe7ca0c9bfc583eb39d397746e6606189c0f4d49f885e` |
 | CycloneDX  | `812729fc666ea0d4904884f3512866e3f5c24194cd1fb5dc237f3763fbf830a6` |
 | SPDX       | `193d244e2bedf6851e6ef75a6584a533e69395a7dcf680b4c63ffcd96044b824` |
-| Provenance | `0b4774126310ffcdfa8eb5f8246b9e76830262fd72587143fdebc542483673c8` |
+| Provenance | `0ad9c47c97c2c77ee7e091e5abdee429adc6b6a475fc4c138b7d4bb600138fa7` |
 
 Mutation, large-scale, self-hosting, and live-provider lanes remain open and earn
 no points. Public push, tag, GitHub release, Marketplace publication, and
