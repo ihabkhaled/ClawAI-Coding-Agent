@@ -2,6 +2,23 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.64.3
+
+Laboratory release: makes readiness claims evidence-bound and release identity
+verifiable.
+
+- Adds typed experiment records, a weighted readiness scorer with hard caps, a
+  sanitized baseline bootstrap, and local/installed/artifact parity probes.
+- Binds SLSA provenance to the clean source commit and verifies that binding in
+  release CI and package audits.
+- Enforces coverage for 39 critical runtime/security files and keeps the source,
+  extension-host, Playwright, localization, packaging, and dependency gates in
+  the CI path.
+- Corrects README and Runtime V2 API truth, including authenticated run, result,
+  steering, cancel, and resumable SSE routes.
+- Refreshes and visually verifies the six intentionally changed Windows UI
+  baselines without weakening screenshot assertions.
+
 ## 0.64.2
 
 Patch: two runtime fixes rebased onto the 0.64 line. Both were first cut as 0.63.3 and 0.63.4, before main moved to 0.64; they are re-released here unchanged in behaviour.

@@ -28,29 +28,20 @@ jobs:
       - name: Install
         run: npm ci --ignore-scripts
 
-      - name: Format
-        run: npm run format:check
+      - name: Verify generated localization
+        shell: bash
+        run: |
+          npm run l10n:build
+          git diff --exit-code -- package.nls.json package.nls.*.json l10n
 
-      - name: Lint
-        run: npm run lint
-
-      - name: Typecheck
-        run: npm run typecheck
-
-      - name: Unit and integration tests
-        run: npm test
+      - name: Run source checks
+        run: npm run check
 
       - name: Install Playwright browser
         run: npx playwright install --with-deps chromium
 
       - name: Webview end-to-end tests
         run: npm run test:playwright
-
-      - name: Bundle
-        run: npm run build
-
-      - name: Audit manifest and security invariants
-        run: npm run package:audit
 
       - name: Audit runtime dependencies
         run: npm audit --omit=dev --audit-level=high

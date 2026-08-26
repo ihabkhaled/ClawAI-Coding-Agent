@@ -78,6 +78,56 @@ describe('BackendClient runtime protocol', () => {
 
     await expect((await client(fetcher)).getRuntimeProtocol()).rejects.toThrow();
   });
+
+  it('uses the documented authenticated Runtime V2 routes', async () => {
+    const requests: { url: string; init?: RequestInit }[] = [];
+    const fetcher = vi.fn<typeof fetch>(async (url, init) => {
+      const requestUrl = String(url);
+      requests.push({ url: requestUrl, ...(init === undefined ? {} : { init }) });
+      if (requestUrl.includes('/stream/')) {
+        return new Response('', { headers: { 'content-type': 'text/event-stream' } });
+      }
+      if (requestUrl.endsWith('/runtime/runs')) {
+        return Response.json({
+          runId: 'run-id-0001',
+          generation: 'generation-id-0001',
+          messageId: 'message-id-0001',
+          sequence: 1,
+          replayed: false,
+        });
+      }
+      return Response.json({
+        runId: 'run-id-0001',
+        sequence: 2,
+        eventId: 'event-id-0002',
+        replayed: false,
+      });
+    });
+    const backend = await client(fetcher);
+    const binding = {
+      threadId: 'thread-id-0001',
+      runId: 'run-id-0001',
+      generation: 'generation-id-0001',
+      epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
+    };
+
+    await backend.startRuntime({ threadId: binding.threadId } as never);
+    await backend.openRuntimeStream(binding, 7);
+    await backend.submitRuntimeResult(binding, 'result-key-0001', {} as never);
+    await backend.steerRuntime(binding, { message: 'Continue safely.' });
+    await backend.cancelRuntime(binding, 'cancel-key-0001');
+
+    expect(requests.map(({ url }) => url)).toEqual([
+      `${backendUrl}/api/v1/chat-messages/runtime/runs`,
+      `${backendUrl}/api/v1/chat-messages/stream/thread-id-0001?protocol=v2&runId=run-id-0001&generation=generation-id-0001&after=7`,
+      `${backendUrl}/api/v1/chat-messages/runtime/runs/run-id-0001/results?threadId=thread-id-0001`,
+      `${backendUrl}/api/v1/chat-messages/runtime/runs/run-id-0001/steering?threadId=thread-id-0001`,
+      `${backendUrl}/api/v1/chat-messages/runtime/runs/run-id-0001/cancel?threadId=thread-id-0001`,
+    ]);
+    for (const request of requests) {
+      expect(new Headers(request.init?.headers).get('authorization')).toBe('Bearer access-token');
+    }
+  });
 });
 
 /**
