@@ -79,6 +79,10 @@ export class BackendClient {
   private readonly runtime: BackendRuntimeClient;
   private readonly refresher = new SessionRefresher((signal) => this.performRefresh(signal));
   private boundSessionId: string | null = null;
+  // Which account the bound session belongs to. Set the first time this client
+  // binds and used to tell the same user re-authorizing in another window from
+  // a different account taking over the shared session slot.
+  private boundAccountId: string | undefined = undefined;
 
   constructor(options: BackendClientOptions) {
     this.backendUrl = normalizeBackendUrl(options.backendUrl);
@@ -127,13 +131,22 @@ export class BackendClient {
     return result.tokens;
   }
 
+  /** Bind to a session from the shared vault, adopting a same-account rotation. */
+  private bindSession(session: { accountId?: string; sessionId: string }): void {
+    this.boundSessionId = bindBackendSession(this.boundSessionId, session.sessionId, {
+      current: this.boundAccountId,
+      incoming: session.accountId,
+    });
+    this.boundAccountId = session.accountId ?? this.boundAccountId;
+  }
+
   async logout(): Promise<void> {
     this.refresher.abort(new Error('ClawAI session ended.'));
     const current = await this.sessionVault.loadBound(this.backendUrl);
     if (current === null) {
       return;
     }
-    this.boundSessionId = bindBackendSession(this.boundSessionId, current.sessionId);
+    this.bindSession(current);
     const tokens = await this.sessionVault.clearIfSession(this.backendUrl, current.sessionId);
     if (tokens === null) {
       throw new BackendSessionChangedError();
@@ -395,7 +408,7 @@ export class BackendClient {
     if (session === null) {
       return;
     }
-    this.boundSessionId = bindBackendSession(this.boundSessionId, session.sessionId);
+    this.bindSession(session);
     if (
       !accessTokenNeedsRefresh(session.tokens.accessToken, Date.now(), ACCESS_TOKEN_REFRESH_SKEW_MS)
     ) {
@@ -478,7 +491,7 @@ export class BackendClient {
       if (session === null) {
         throw new BackendRequestError('Connect to ClawAI to continue.', 401, false);
       }
-      this.boundSessionId = bindBackendSession(this.boundSessionId, session.sessionId);
+      this.bindSession(session);
       headers.Authorization = `Bearer ${session.tokens.accessToken}`;
     }
 

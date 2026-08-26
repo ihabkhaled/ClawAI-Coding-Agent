@@ -243,6 +243,9 @@ describe('AgentConnectionService', () => {
       'https://new.example',
       authorizedTokens,
       0,
+      // The account is stamped onto the shared session record so a second
+      // window can adopt this session instead of dropping to the Connect gate.
+      'user-1',
     );
     expect(subject.authorization.signIn.mock.invocationCallOrder[0]).toBeLessThan(
       subject.configurationService.saveBackendUrl.mock.invocationCallOrder[0] ?? 0,

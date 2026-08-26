@@ -2,6 +2,23 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.64.2
+
+Patch: two runtime fixes rebased onto the 0.64 line. Both were first cut as 0.63.3 and 0.63.4, before main moved to 0.64; they are re-released here unchanged in behaviour.
+
+### From 0.63.4
+
+Patch: a second VS Code window no longer signs the first one out.
+
+- One ClawAI session is shared per backend origin across every window, but binding refused any session id it had not seen before. Signing in from a second window rotated the shared record, and the first window's next bind threw and dropped it to the Connect gate with its queued message lost — so two windows could never both work, and reconnecting one evicted the other. The account, not the session id, is now what may not change underneath a client: a rotation owned by the same account is adopted, a takeover by a different account still fails closed, and a record written before accounts were stored keeps the old strict behaviour rather than being adopted on faith.
+- The account id is recorded on the shared session record at sign-in. It comes from the profile the extension already fetches, and `POST /auth/vscode/authorize/exchange` now returns it alongside the tokens so the binding decision does not depend on a second round trip.
+
+### From 0.63.3
+
+Patch: a run that exhausts its budget now ends visibly instead of stalling.
+
+- Budget exhaustion threw a bare `Error`, so nothing upstream recognised it as a terminal condition. No terminal event was published, the caller's compensation path saw an unfinished run and cancelled it, and the backend recorded `lifecycle: cancelled` with no reason. The activity panel kept a live spinner over a run that had stopped minutes earlier, which is indistinguishable from a slow run. Exhaustion is now a typed `RuntimeBudgetExhaustedError` and the run ends as `run.failed` carrying `RUNTIME_BUDGET_EXHAUSTED` and the limit that was reached, so the reason reaches the reader and no cancel compensation is needed.
+
 ## 0.64.1
 
 Patch: a file too large to read can now be read — and therefore edited — instead of failing every attempt.
