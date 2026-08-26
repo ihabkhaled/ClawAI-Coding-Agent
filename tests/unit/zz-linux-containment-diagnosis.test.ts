@@ -82,10 +82,7 @@ describe('DIAGNOSIS: what the adapter sees on this platform', () => {
 
     const adapter = new VscodeFileTransactionAdapter();
     adapter.registerRuntimeRoot('workspace-1', workspaceRoot);
-    const executor = new VscodeFilesystemToolExecutor(
-      adapter,
-      new FileTransactionService(adapter),
-    );
+    const executor = new VscodeFilesystemToolExecutor(adapter, new FileTransactionService(adapter));
     vi.mocked(vscode.workspace.fs.stat).mockResolvedValue({ type: 1 } as never);
 
     const invocation: ToolInvocation = {
