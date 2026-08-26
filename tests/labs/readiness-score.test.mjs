@@ -1,5 +1,7 @@
 import assert from 'node:assert/strict';
+import { readFile } from 'node:fs/promises';
 import test from 'node:test';
+import { URL } from 'node:url';
 
 import {
   READINESS_CATEGORIES,
@@ -77,4 +79,16 @@ test('uses the most restrictive cap and records every applicable cap', () => {
     result.appliedCaps.map(({ cap }) => cap),
     [69, 84, 84],
   );
+});
+
+test('enforces the checked-in production readiness claim', async () => {
+  const input = JSON.parse(
+    await readFile(new URL('../../docs/labs/READINESS_INPUT.json', import.meta.url), 'utf8'),
+  );
+  const result = calculateReadinessScore(input);
+  assert.equal(result.rawScore, 92.35);
+  assert.equal(result.cappedScore, 92.35);
+  assert.equal(result.eligible, true);
+  assert.deepEqual(result.failedMinimums, []);
+  assert.deepEqual(result.appliedCaps, []);
 });

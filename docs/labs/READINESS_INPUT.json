@@ -1,0 +1,29 @@
+{
+  "categories": [
+    {
+      "id": "end-to-end-correctness",
+      "earnedFraction": 0.95,
+      "evidenceIds": ["B-005", "B-008", "B-009", "B-010"]
+    },
+    { "id": "tool-edit-integrity", "earnedFraction": 0.95, "evidenceIds": ["B-005", "SD-006"] },
+    { "id": "session-durability", "earnedFraction": 0.9, "evidenceIds": ["SD-005", "ST-001"] },
+    { "id": "streaming-observability", "earnedFraction": 0.9, "evidenceIds": ["SD-005", "ST-001"] },
+    { "id": "recovery-idempotency", "earnedFraction": 0.9, "evidenceIds": ["SD-005", "ST-001"] },
+    { "id": "regression-test-quality", "earnedFraction": 0.95, "evidenceIds": ["B-005", "ST-001"] },
+    { "id": "security-isolation", "earnedFraction": 0.95, "evidenceIds": ["SEC-001", "B-014"] },
+    { "id": "prompt-context-planning", "earnedFraction": 0.9, "evidenceIds": ["B-005"] },
+    { "id": "performance", "earnedFraction": 0.8, "evidenceIds": ["B-008", "B-009"] },
+    { "id": "ux-accessibility", "earnedFraction": 0.95, "evidenceIds": ["B-009", "UI-001"] },
+    { "id": "packaging-release", "earnedFraction": 1, "evidenceIds": ["B-010", "B-014", "UI-001"] }
+  ],
+  "hardGates": {
+    "criticalSecurityFinding": false,
+    "falseCompletion": false,
+    "installedVsixReplay": true,
+    "extensionHostUiEvidence": true,
+    "durabilityEvidence": true,
+    "silentCapabilityLoss": false,
+    "releaseDrift": false,
+    "skippedTestsCountedAsPass": false
+  }
+}
