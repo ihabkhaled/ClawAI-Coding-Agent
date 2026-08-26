@@ -82,6 +82,15 @@ export class RunJournalService {
     await this.storage.delete(runId);
   }
 
+  async list(): Promise<readonly DurableRunJournal[]> {
+    const journals: DurableRunJournal[] = [];
+    for (const runId of await this.storage.list()) {
+      const journal = await this.load(runId);
+      if (journal !== undefined) journals.push(journal);
+    }
+    return journals.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
+  }
+
   async search(
     query: string,
   ): Promise<

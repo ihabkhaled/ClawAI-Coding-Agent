@@ -15,6 +15,7 @@ import {
 import {
   consumeRuntimeBudget,
   createRuntimeBudgetState,
+  restoreRuntimeBudgetState,
   type RuntimeBudgetState,
 } from '../core/runtime/runtime-run-budget';
 import {
@@ -78,6 +79,7 @@ export interface RuntimeToolDispatcherInput {
   readonly executor: RuntimeToolExecutorPort;
   readonly now: () => number;
   readonly receiptId: () => string;
+  readonly restoredBudgetState?: RuntimeBudgetState;
 }
 
 export interface RuntimeToolDispatcherSnapshot {
@@ -122,7 +124,10 @@ export class RuntimeToolDispatcher {
         definitions: input.definitions,
         turnId: input.turnId,
       }),
-      budget: createRuntimeBudgetState(input.budget, input.startedAtMs),
+      budget:
+        input.restoredBudgetState === undefined
+          ? createRuntimeBudgetState(input.budget, input.startedAtMs)
+          : restoreRuntimeBudgetState(input.restoredBudgetState),
       results: {},
       terminalInvocationId: undefined,
       lifecycle: 'active',

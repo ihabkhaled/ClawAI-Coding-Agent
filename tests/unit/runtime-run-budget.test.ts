@@ -3,6 +3,7 @@ import { describe, expect, it } from 'vitest';
 import {
   consumeRuntimeBudget,
   createRuntimeBudgetState,
+  restoreRuntimeBudgetState,
 } from '../../src/core/runtime/runtime-run-budget';
 
 const budget = {
@@ -80,5 +81,40 @@ describe('runtime run budget', () => {
       outputBytes: 4_096,
       toolResultBytes: 2_048,
     });
+  });
+
+  it('restores consumed allowances without resetting them', () => {
+    const restored = restoreRuntimeBudgetState({
+      budget,
+      startedAtMs: 1_000,
+      usage: {
+        modelTurns: 1,
+        toolCalls: 3,
+        toolRounds: 2,
+        repairAttempts: 0,
+        outputBytes: 2_048,
+        toolResultBytes: 1_024,
+      },
+    });
+
+    expect(restored.usage.toolCalls).toBe(3);
+    expect(() => consumeRuntimeBudget(restored, { toolCalls: 1 }, 2_000)).toThrow(/tool call/i);
+  });
+
+  it('rejects a recovery budget that already exceeds a limit', () => {
+    expect(() =>
+      restoreRuntimeBudgetState({
+        budget,
+        startedAtMs: 1_000,
+        usage: {
+          modelTurns: 0,
+          toolCalls: 4,
+          toolRounds: 0,
+          repairAttempts: 0,
+          outputBytes: 0,
+          toolResultBytes: 0,
+        },
+      }),
+    ).toThrow(/tool call/i);
   });
 });

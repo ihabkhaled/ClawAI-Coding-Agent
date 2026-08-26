@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { runBudgetSchema, toolDefinitionSchema } from './runtime/runtime-tool-contracts';
+
 const fingerprintSchema = z
   .object({
     account: z.string().min(1).max(500),
@@ -18,6 +20,50 @@ const invocationJournalSchema = z
     repeatability: z.enum(['idempotent', 'non-repeatable']),
     effectState: z.enum(['prepared', 'executing', 'committed', 'failed', 'cancelled']),
     receiptId: z.string().min(8).max(200).optional(),
+  })
+  .strict();
+
+const budgetUsageSchema = z
+  .object({
+    modelTurns: z.number().int().nonnegative(),
+    toolCalls: z.number().int().nonnegative(),
+    toolRounds: z.number().int().nonnegative(),
+    repairAttempts: z.number().int().nonnegative(),
+    outputBytes: z.number().int().nonnegative(),
+    toolResultBytes: z.number().int().nonnegative(),
+  })
+  .strict();
+
+const recoveryCapsuleSchema = z
+  .object({
+    version: z.literal(1),
+    start: z
+      .object({
+        turnId: z.string().min(8).max(200),
+        clientRequestId: z.string().min(8).max(200),
+        idempotencyKey: z.string().min(8).max(200),
+        manifestHash: z.string().regex(/^sha256:[a-f0-9]{64}$/u),
+        toolCatalogHash: z.string().regex(/^sha256:[a-f0-9]{64}$/u),
+        provider: z.string().min(1).max(200),
+        model: z.string().min(1).max(500),
+        epochs: z
+          .object({
+            account: z.number().int().nonnegative(),
+            workspace: z.number().int().nonnegative(),
+            target: z.number().int().nonnegative(),
+            policy: z.number().int().nonnegative(),
+          })
+          .strict(),
+        definitions: z.array(toolDefinitionSchema).max(500),
+      })
+      .strict(),
+    budgetState: z
+      .object({
+        budget: runBudgetSchema,
+        startedAtMs: z.number().int().nonnegative(),
+        usage: budgetUsageSchema,
+      })
+      .strict(),
   })
   .strict();
 
@@ -60,6 +106,7 @@ export const durableRunJournalSchema = z
     labels: z.array(z.string().min(1).max(100)).max(100),
     pinned: z.boolean(),
     lastEventSequence: z.number().int().min(-1),
+    recovery: recoveryCapsuleSchema.optional(),
     createdAt: z.iso.datetime({ offset: true }),
     updatedAt: z.iso.datetime({ offset: true }),
   })

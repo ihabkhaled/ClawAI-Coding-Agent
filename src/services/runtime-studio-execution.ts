@@ -16,13 +16,15 @@ import type { RuntimePolicyV2Adapter } from './runtime-policy-v2-adapter';
 import type { RuntimeStudioInput } from './runtime-studio.types';
 import type { RuntimeToolRouter } from './runtime-tool-router';
 import type { TargetAwareToolRouter } from './target-aware-tool-router';
+import type { RuntimeCommandBinding } from '../backend/backend-client.types';
+import type { DurableRunJournal } from '../core/durable-run-journal';
 import type { ExtensionState } from '../core/extension-state';
 import type { CapabilityManifest } from '../core/runtime/capability-manifest';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
-interface RuntimeStudioExecutionDependencies {
+export interface RuntimeStudioExecutionDependencies {
   readonly input: RuntimeStudioInput;
   readonly manifest: CapabilityManifest;
   readonly epochs: ToolInvocation['epochs'];
@@ -136,7 +138,7 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
   });
   dependencies.setActive(runtime);
   try {
-    const receipt = await runtime.start({
+    const runStart = {
       runId: `runtime:${randomUUID()}`,
       turnId: `turn:${randomUUID()}`,
       threadId: input.threadId,
@@ -150,7 +152,8 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
       epochs,
       definitions,
       budget: runtimeBudget,
-    });
+    };
+    const receipt = await runtime.start(runStart);
     dependencies.setActive(runtime, receipt.runId);
     const journal = new RuntimeJournalTracker(dependencies.journals);
     await journal.start({
@@ -166,6 +169,32 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
       fingerprints: await dependencies.fingerprint(input.signal),
       budget: runtimeBudget,
       createdAt: startedAt,
+      recovery: {
+        version: 1,
+        start: {
+          turnId: runStart.turnId,
+          clientRequestId: runStart.clientRequestId,
+          idempotencyKey: runStart.idempotencyKey,
+          manifestHash: runStart.manifestHash,
+          toolCatalogHash: runStart.toolCatalogHash,
+          provider: runStart.provider,
+          model: runStart.model,
+          epochs: runStart.epochs,
+          definitions: [...runStart.definitions],
+        },
+        budgetState: {
+          budget: runtimeBudget,
+          startedAtMs: Date.parse(startedAt),
+          usage: {
+            modelTurns: 0,
+            toolCalls: 0,
+            toolRounds: 0,
+            repairAttempts: 0,
+            outputBytes: 0,
+            toolResultBytes: 0,
+          },
+        },
+      },
     });
     await dependencies.stream.follow(
       receipt.runId,
@@ -195,6 +224,71 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
     // Whatever this run was still asking the user, it can no longer hear the
     // answer. An abandoned prompt is modal: it swallows every click aimed at
     // the composer, so the next message cannot be typed at all.
+    dependencies.releaseApprovals();
+    dependencies.setActive(undefined);
+  }
+}
+
+export async function recoverRuntimeStudio(
+  dependencies: RuntimeStudioExecutionDependencies,
+  journal: DurableRunJournal,
+  binding: RuntimeCommandBinding,
+): Promise<void> {
+  const capsule = journal.recovery;
+  if (capsule === undefined) throw new Error('Runtime recovery capsule is unavailable');
+  const outcome = { ended: false };
+  const deliver = (event: RuntimeEvent): void => {
+    if (isRuntimeRunEnded(event.type)) outcome.ended = true;
+    dependencies.state.applyRuntimeEvent(event);
+    dependencies.input.onEvent(event);
+  };
+  const runtime = new RuntimeRunService({
+    clock: { now: Date.now },
+    currentEpochs: () => binding.epochs,
+    eventSink: forwardLocalTerminals(dependencies.input.onEvent, () => {
+      outcome.ended = true;
+    }),
+    executor: dependencies.targetRouter(dependencies.manifest),
+    policy: dependencies.policy,
+    receiptId: () => `receipt:${randomUUID()}`,
+    transport: dependencies.transport,
+  });
+  const tracker = new RuntimeJournalTracker(dependencies.journals);
+  tracker.resume(journal);
+  runtime.recover(
+    {
+      runId: journal.runId,
+      threadId: journal.threadId,
+      budget: capsule.budgetState.budget,
+      definitions: capsule.start.definitions,
+      epochs: capsule.start.epochs,
+      turnId: capsule.start.turnId,
+      clientRequestId: capsule.start.clientRequestId,
+      idempotencyKey: capsule.start.idempotencyKey,
+      prompt: journal.goal,
+      manifestHash: capsule.start.manifestHash,
+      toolCatalogHash: capsule.start.toolCatalogHash,
+      provider: capsule.start.provider,
+      model: capsule.start.model,
+    },
+    { budget: capsule.budgetState, lastEventSequence: journal.lastEventSequence },
+  );
+  dependencies.setActive(runtime, journal.runId);
+  try {
+    await dependencies.stream.follow(
+      journal.runId,
+      runtime,
+      {
+        onEvent: async (event) => {
+          await tracker.record(event);
+          deliver(event);
+        },
+      },
+      dependencies.input.signal,
+      journal.lastEventSequence,
+    );
+  } finally {
+    if (!outcome.ended) await runtime.cancel().catch(() => undefined);
     dependencies.releaseApprovals();
     dependencies.setActive(undefined);
   }

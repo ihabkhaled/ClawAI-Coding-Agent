@@ -155,6 +155,23 @@ describe('BackendRuntimeTransport durable bindings', () => {
     await expect(store.load('runtime:000')).resolves.toBeUndefined();
     await expect(store.load('runtime:100')).resolves.toMatchObject({ runId: 'runtime:100' });
   });
+
+  it('enumerates validated durable bindings for startup recovery', async () => {
+    const persisted = [
+      {
+        threadId: 'thread:recovery-0001',
+        runId: 'runtime:recovery-0001',
+        generation: 'generation:recovery-0001',
+        epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
+      },
+    ];
+    const store = new VscodeRuntimeBindingStore({
+      get: () => persisted,
+      update: async () => undefined,
+    });
+
+    await expect(store.list()).resolves.toEqual(persisted);
+  });
 });
 
 function runtimeStart() {

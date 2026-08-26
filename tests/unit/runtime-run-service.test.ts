@@ -109,6 +109,29 @@ describe('RuntimeRunService', () => {
     );
   });
 
+  it('adopts a validated run without starting it twice and preserves consumed budget', () => {
+    const { events, service } = harness();
+    service.recover(start, {
+      budget: {
+        budget: start.budget,
+        startedAtMs: 1_000,
+        usage: {
+          modelTurns: 2,
+          toolCalls: 2,
+          toolRounds: 2,
+          repairAttempts: 0,
+          outputBytes: 0,
+          toolResultBytes: 0,
+        },
+      },
+      lastEventSequence: 8,
+    });
+
+    expect(service.hasActiveRun()).toBe(true);
+    expect(events).toEqual([]);
+    expect(() => service.beginModelTurn(false, start.turnId)).toThrow(/model turn/i);
+  });
+
   it('treats cancelling nothing as success, so the remote stop still runs', async () => {
     // The coordinator awaits this before telling the backend to stop. While it
     // threw here, that throw skipped the cancel POST — and the run left running

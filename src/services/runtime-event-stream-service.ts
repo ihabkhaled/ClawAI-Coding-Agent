@@ -39,12 +39,16 @@ export class RuntimeEventStreamService {
     runtime: RuntimeStreamRuntimePort,
     observer: RuntimeStreamObserver,
     signal: AbortSignal,
+    initialCursor = -1,
   ): Promise<void> {
     // A mutable holder, because the cursor has to survive a stream that throws
     // partway through. Returning it only on success meant a broken connection
     // discarded every event already consumed, so a resumed stream would replay
     // work the run had done.
-    const progress = { cursor: -1 };
+    if (!Number.isInteger(initialCursor) || initialCursor < -1) {
+      throw new Error('Runtime stream cursor is invalid');
+    }
+    const progress = { cursor: initialCursor };
     const dispatchState: RuntimeDispatchState = {
       failureController: new AbortController(),
       pendingDispatches: new Set<Promise<void>>(),
