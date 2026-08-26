@@ -40,8 +40,20 @@ Playwright assertion.
 
 ## Remaining release evidence
 
-Installed-VSIX replay, source/artifact identity, isolated-profile parity,
-durability, chaos, fuzz, mutation, scale, self-hosting, and live-provider lanes
-remain open until their experiment records exist. Public push, tag, GitHub
-release, Marketplace publication, and production deployment remain approval
-gates.
+The VSIX contains 126 files with no `.clawai-lab` or `.superpowers` content.
+Operator and verifier profiles both install `clawai.clawai-coding-agent@0.64.3`;
+each exact installed directory activates in VS Code 1.135.0 and passes the host
+command/config assertions. Release parity has no local failures and its wrong-
+installed-version negative control detects the mismatch.
+
+| Artifact   | SHA-256                                                            |
+| ---------- | ------------------------------------------------------------------ |
+| VSIX       | `e821cc1f6f4860d7b2cfad0e3a58e4eefc3bde4770b7b24f3b03d58a53d303c5` |
+| CycloneDX  | `f851975d6c095ed70963274d8224e56290a8b587d10657e19188dc496ccec400` |
+| SPDX       | `31cc110cc1610b0328fe8b8e33ad738bd3099fee88274a649488b9cc7768618c` |
+| Provenance | `2d361355af41bd7a6753b5fdbf36d759c070a4657d93a7356f5ed05d78facbd4` |
+
+Installed extension-host visual workbench replay, durability, chaos, fuzz,
+mutation, scale, self-hosting, and live-provider lanes remain open. Public push,
+tag, GitHub release, Marketplace publication, and production deployment remain
+approval gates.
