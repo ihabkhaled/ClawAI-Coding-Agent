@@ -1,5 +1,15 @@
+import path from 'node:path';
+
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
+
+// Containment is decided with node:path, whose separator is platform-native.
+// A hard-coded 'C:\workspace' passes on Windows and fails on a Linux runner,
+// where a backslash is an ordinary filename character rather than a separator:
+// path.relative() then yields '../C:\workspace\...' and the guard correctly
+// reports an escape. Building the root and its joins from path.sep keeps the
+// test exercising the read behaviour it is about on both platforms.
+const WORKSPACE_ROOT = path.resolve(path.sep, 'workspace');
 
 vi.mock('node:fs/promises', () => ({
   realpath: vi.fn(async (value: string) => value),
@@ -32,7 +42,8 @@ vi.mock('vscode', () => {
         uri([base.fsPath, ...parts].join('\\')),
     },
     workspace: {
-      asRelativePath: (value: { path: string }) => value.path.replace('C:/workspace/', ''),
+      asRelativePath: (value: { path: string }) =>
+        value.path.replace(`${WORKSPACE_ROOT.replaceAll('\\', '/')}/`, ''),
       findFiles: vi.fn(async () => []),
       fs: {
         readDirectory: vi.fn(async () => []),
