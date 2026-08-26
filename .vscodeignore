@@ -1,4 +1,6 @@
 .github/**
+.clawai-lab/**
+.superpowers/**
 .gitattributes
 .gitignore
 .prettierignore
