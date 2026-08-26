@@ -27,9 +27,9 @@ identity are recorded after the source commit is frozen.
 
 | Candidate identity   | Value                                                                  |
 | -------------------- | ---------------------------------------------------------------------- |
-| Clean source commit  | `a0c42728d5ed698884625156583e7508a4f4c930`                             |
+| Clean source commit  | `82e531047abf0e846472fa1b704c156586aec983`                             |
 | VSIX                 | `clawai-coding-agent-0.64.3.vsix`                                      |
-| VSIX SHA-256         | `e821cc1f6f4860d7b2cfad0e3a58e4eefc3bde4770b7b24f3b03d58a53d303c5`     |
+| VSIX SHA-256         | `da65ab0c75ddc90fbb4aaa758ef77dc3e18865a1166becb65fc9b691a6a6b900`     |
 | Installed profiles   | PASS: operator and verifier report `clawai.clawai-coding-agent@0.64.3` |
 | Installed activation | PASS: both isolated profiles activate in VS Code 1.135.0 and exit 0    |
 | Local release parity | PASS: no failures; tag and remote release are `BLOCKED_EXTERNAL`       |
