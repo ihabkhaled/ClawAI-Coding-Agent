@@ -314,6 +314,7 @@ for (const locale of locales) {
 
 const ignore = readFileSync(join(root, '.vscodeignore'), 'utf8');
 for (const path of [
+  '.clawai-lab/**',
   'src/**',
   'tests/**',
   'coverage/**',
@@ -324,6 +325,7 @@ for (const path of [
   'playwright-report/**',
   'playwright.config.ts',
   'skills/**',
+  '.superpowers/**',
   'test-results/**',
 ]) {
   assert.equal(ignore.includes(path), true, `${path} must be excluded`);
