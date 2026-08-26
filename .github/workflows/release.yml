@@ -134,6 +134,14 @@ jobs:
             if (provenance.subject?.[0]?.digest?.sha256 !== actual) {
               throw new Error(`Provenance digest mismatch for ${process.argv[index]}`);
             }
+            if (process.argv[index] === process.argv.at(-2)) {
+              const sourceDependency = provenance.predicate?.buildDefinition?.resolvedDependencies?.find(
+                (dependency) => typeof dependency.digest?.gitCommit === 'string',
+              );
+              if (sourceDependency?.digest?.gitCommit !== process.env.GITHUB_SHA) {
+                throw new Error('Fresh provenance does not identify GITHUB_SHA.');
+              }
+            }
           }
           NODE
 

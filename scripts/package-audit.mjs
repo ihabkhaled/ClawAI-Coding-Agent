@@ -7,6 +7,8 @@ const root = cwd();
 const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const lockfile = JSON.parse(readFileSync(join(root, 'package-lock.json'), 'utf8'));
 const changelog = readFileSync(join(root, 'CHANGELOG.md'), 'utf8');
+const readme = readFileSync(join(root, 'README.md'), 'utf8');
+const apiContracts = readFileSync(join(root, 'docs', 'API_CONTRACTS.md'), 'utf8');
 const gitAttributes = readFileSync(join(root, '.gitattributes'), 'utf8');
 const configurationSource = readFileSync(
   join(root, 'src', 'services', 'configuration-service.ts'),
@@ -45,6 +47,25 @@ assert.match(
   new RegExp(`^## ${manifest.version.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}$`, 'mu'),
   'CHANGELOG must contain a heading for the package version',
 );
+assert.match(
+  readme,
+  new RegExp(`Version ${manifest.version.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')} delivers`, 'u'),
+  'README runtime foundation must name the current package version',
+);
+assert.doesNotMatch(readme, /Version 0\.(?:11|40)\.0/u, 'README must not advertise stale versions');
+for (const runtimeContract of [
+  'toolExecution: true',
+  '/chat-messages/runtime/runs',
+  '/chat-messages/runtime/runs/:runId/results',
+  '/chat-messages/runtime/runs/:runId/steering',
+  '/chat-messages/runtime/runs/:runId/cancel',
+]) {
+  assert.match(
+    apiContracts,
+    new RegExp(runtimeContract.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&'), 'u'),
+    `API contracts must document ${runtimeContract}`,
+  );
+}
 assert.match(gitAttributes, /^\*\.vsix binary$/mu, 'tracked VSIX archives must be marked binary');
 assert.deepEqual(rootVsix, [], 'VSIX artifacts must live under builds/, never the repository root');
 assert.equal(uniqueCommands.size, commands.length, 'command IDs must be unique');
@@ -139,6 +160,25 @@ assert.equal(
 assert.doesNotMatch(clawIcon, /<(?:image|text)\b/iu, 'Activity icon must be a pure vector mark');
 assert.equal(existsSync(ciWorkflowPath), true, 'CI workflow is missing');
 const ciWorkflow = readFileSync(ciWorkflowPath, 'utf8');
+assert.match(ciWorkflow, /npm run l10n:build/u, 'CI must regenerate localization');
+assert.match(
+  ciWorkflow,
+  /git diff --exit-code -- package\.nls\.json package\.nls\.\*\.json l10n/u,
+  'CI must reject stale generated localization',
+);
+assert.match(ciWorkflow, /npm run check/u, 'CI must run the complete source check lane');
+assert.match(
+  manifest.scripts.check,
+  /npm run scan:paths[\s\S]+npm run coverage:scope[\s\S]+npm test/u,
+  'source checks must include path scan, critical coverage scope, and tests',
+);
+assert.match(ciWorkflow, /npm run test:playwright/u, 'CI must run Playwright');
+assert.match(
+  ciWorkflow,
+  /npm audit --omit=dev --audit-level=high/u,
+  'CI must audit production dependencies',
+);
+assert.match(ciWorkflow, /npm run supply-chain/u, 'CI must generate supply-chain evidence');
 assert.match(
   ciWorkflow,
   /path:\s*['"]?builds\/\*\.vsix['"]?/u,
@@ -191,8 +231,23 @@ assert.match(supplyChainSource, /CycloneDX/u, 'release must generate a CycloneDX
 assert.match(supplyChainSource, /SPDX-2\.3/u, 'release must generate an SPDX SBOM');
 assert.match(
   supplyChainSource,
+  /readReleaseIdentity/u,
+  'release provenance must read the source Git identity',
+);
+assert.match(
+  supplyChainSource,
+  /gitCommit/u,
+  'release provenance must contain the source Git commit digest',
+);
+assert.match(
+  supplyChainSource,
   /https:\/\/in-toto\.io\/Statement\/v1/u,
   'release must generate in-toto provenance',
+);
+assert.match(
+  releaseWorkflow,
+  /sourceDependency[\s\S]+GITHUB_SHA/u,
+  'release workflow must bind fresh provenance to GITHUB_SHA',
 );
 assert.equal(
   manifest.scripts.package,

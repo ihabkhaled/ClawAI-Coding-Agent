@@ -5,8 +5,14 @@ import { fileURLToPath } from 'node:url';
 
 import { format } from 'prettier';
 
+import { readReleaseIdentity } from './labs/release-identity.mjs';
+
 const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const packageJson = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
+const releaseIdentity = await readReleaseIdentity({ root });
+if (releaseIdentity.dirty) {
+  throw new Error('Supply-chain evidence requires a clean source tree.');
+}
 const lock = JSON.parse(await readFile(join(root, 'package-lock.json'), 'utf8'));
 const components = Object.entries(lock.packages ?? {})
   .filter(([path]) => path.startsWith('node_modules/'))
@@ -75,8 +81,12 @@ const provenance = {
     buildDefinition: {
       buildType: 'https://github.com/ihabkhaled/ClawAI-Coding-Agent/.github/workflows/release.yml',
       externalParameters: { version: packageJson.version },
-      internalParameters: {},
+      internalParameters: { sourceDirty: releaseIdentity.dirty },
       resolvedDependencies: [
+        {
+          uri: `${releaseIdentity.repositoryUri}@${releaseIdentity.commitSha}`,
+          digest: { gitCommit: releaseIdentity.commitSha },
+        },
         { uri: `pkg:npm/${packageJson.name}@${packageJson.version}` },
         { uri: `file:${cdxPath.split(/[\\/]/u).at(-1)}` },
         { uri: `file:${spdxPath.split(/[\\/]/u).at(-1)}` },
