@@ -48,10 +48,10 @@ installed-version negative control detects the mismatch.
 
 | Artifact   | SHA-256                                                            |
 | ---------- | ------------------------------------------------------------------ |
-| VSIX       | `e821cc1f6f4860d7b2cfad0e3a58e4eefc3bde4770b7b24f3b03d58a53d303c5` |
+| VSIX       | `da65ab0c75ddc90fbb4aaa758ef77dc3e18865a1166becb65fc9b691a6a6b900` |
 | CycloneDX  | `f851975d6c095ed70963274d8224e56290a8b587d10657e19188dc496ccec400` |
 | SPDX       | `31cc110cc1610b0328fe8b8e33ad738bd3099fee88274a649488b9cc7768618c` |
-| Provenance | `2d361355af41bd7a6753b5fdbf36d759c070a4657d93a7356f5ed05d78facbd4` |
+| Provenance | `0fa255e49eed87151ae731ef1815134a27d6958ebaac6910709f47a9fe4c860c` |
 
 Installed extension-host visual workbench replay, durability, chaos, fuzz,
 mutation, scale, self-hosting, and live-provider lanes remain open. Public push,
