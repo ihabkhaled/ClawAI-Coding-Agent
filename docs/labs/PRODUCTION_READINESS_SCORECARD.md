@@ -1,16 +1,21 @@
 # Production Readiness Scorecard
 
-## Baseline verdict
+## Wave 0 verdict
 
-**Not eligible for an 85+ claim.** The score is intentionally not awarded before
-the experiment records are normalized through the Wave 0 scorer.
+**Not eligible for an 85+ claim.** The evidence-weighted raw score is 85.8, but
+the enforced score is 74.
 
-Hard caps currently active:
+Failed category minima:
 
-- no installed-VSIX replay for the candidate: maximum 69;
-- no complete extension-host UI evidence: maximum 74;
-- no crash/reconnect/resume/soak evidence: maximum 79;
-- release documentation/provenance drift: maximum 84.
+- session durability: 0.50 earned versus 0.90 required;
+- recovery/idempotency: 0.80 earned versus 0.90 required.
 
-The most restrictive cap is 69. Active-run restart recovery is an open P0, so a
-release candidate is ineligible regardless of its raw weighted score.
+Active hard caps:
+
+- installed artifact activation is proven, but installed extension-host visual
+  workbench replay is absent: maximum 74;
+- crash/reconnect/resume/soak evidence is absent: maximum 79.
+
+The most restrictive cap is 74. Active-run restart recovery is an open P0, so
+the candidate remains ineligible regardless of its raw weighted score. No
+future-wave, skipped, blocked, or unavailable experiment earns points.

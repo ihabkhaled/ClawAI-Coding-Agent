@@ -24,3 +24,12 @@ scan, the 39-file critical coverage scope, 167 test files with 1,147 tests,
 build, package audit, VS Code 1.135.0 extension-host activation, 45 Playwright
 tests, and the production dependency audit. Artifact and installed-profile
 identity are recorded after the source commit is frozen.
+
+| Candidate identity   | Value                                                                  |
+| -------------------- | ---------------------------------------------------------------------- |
+| Clean source commit  | `a0c42728d5ed698884625156583e7508a4f4c930`                             |
+| VSIX                 | `clawai-coding-agent-0.64.3.vsix`                                      |
+| VSIX SHA-256         | `e821cc1f6f4860d7b2cfad0e3a58e4eefc3bde4770b7b24f3b03d58a53d303c5`     |
+| Installed profiles   | PASS: operator and verifier report `clawai.clawai-coding-agent@0.64.3` |
+| Installed activation | PASS: both isolated profiles activate in VS Code 1.135.0 and exit 0    |
+| Local release parity | PASS: no failures; tag and remote release are `BLOCKED_EXTERNAL`       |

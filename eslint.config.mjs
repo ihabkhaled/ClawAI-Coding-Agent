@@ -5,7 +5,7 @@ import tseslint from 'typescript-eslint';
 
 export default tseslint.config(
   {
-    ignores: ['coverage/**', 'dist/**', 'node_modules/**', '.vscode-test/**'],
+    ignores: ['coverage/**', 'dist/**', 'node_modules/**', '.vscode-test/**', '.clawai-lab/**'],
   },
   eslint.configs.recommended,
   ...tseslint.configs.strictTypeChecked.map((config) => ({
