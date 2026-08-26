@@ -3,13 +3,13 @@ import path from 'node:path';
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 
-// Containment is decided with node:path, whose separator is platform-native.
+// Containment is decided with node:path, whose separator is platform-native, so
+// the registered root, the joins below and this constant must all agree with it.
 // A hard-coded 'C:\workspace' passes on Windows and fails on a Linux runner,
 // where a backslash is an ordinary filename character rather than a separator:
-// path.relative() then yields '../C:\workspace\...' and the guard correctly
-// reports an escape. Building the root and its joins from path.sep keeps the
-// test exercising the read behaviour it is about on both platforms.
-const WORKSPACE_ROOT = path.resolve(path.sep, 'workspace');
+// the joined target is then a sibling of the root, path.relative() returns
+// '../C:\workspace\src\...' and the adapter correctly reports an escape.
+const WORKSPACE_ROOT = path.sep === '\\' ? 'C:\\workspace' : '/workspace';
 
 vi.mock('node:fs/promises', () => ({
   realpath: vi.fn(async (value: string) => value),
@@ -39,7 +39,7 @@ vi.mock('vscode', () => {
     Uri: {
       file: uri,
       joinPath: (base: { fsPath: string }, ...parts: string[]) =>
-        uri([base.fsPath, ...parts].join('\\')),
+        uri([base.fsPath, ...parts].join(path.sep)),
     },
     workspace: {
       asRelativePath: (value: { path: string }) =>
@@ -100,7 +100,7 @@ describe('reading a file larger than the Runtime V2 string cap', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     const adapter = new VscodeFileTransactionAdapter();
-    adapter.registerRuntimeRoot('workspace-1', 'C:\\workspace');
+    adapter.registerRuntimeRoot('workspace-1', WORKSPACE_ROOT);
     executor = new VscodeFilesystemToolExecutor(adapter, new FileTransactionService(adapter));
     vi.mocked(vscode.workspace.fs.stat).mockResolvedValue({ type: 1 } as never);
   });
@@ -176,7 +176,7 @@ describe('filesystem tool error messages a model can act on', () => {
   beforeEach(() => {
     vi.clearAllMocks();
     const adapter = new VscodeFileTransactionAdapter();
-    adapter.registerRuntimeRoot('workspace-1', 'C:\\workspace');
+    adapter.registerRuntimeRoot('workspace-1', WORKSPACE_ROOT);
     executor = new VscodeFilesystemToolExecutor(adapter, new FileTransactionService(adapter));
   });
 
