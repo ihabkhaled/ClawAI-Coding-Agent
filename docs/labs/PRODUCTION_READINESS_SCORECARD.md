@@ -1,21 +1,19 @@
 # Production Readiness Scorecard
 
-## Wave 0 verdict
+## Wave 1 verdict
 
-**Not eligible for an 85+ claim.** The evidence-weighted raw score is 85.8, but
-the enforced score is 74.
+**Eligible.** The evidence-weighted raw and enforced score is **92.35**.
 
-Failed category minima:
+All eleven category minima pass. No hard cap applies. The machine-readable input
+is `docs/labs/READINESS_INPUT.json` and is evaluated by the tested
+`calculateReadinessScore` function.
 
-- session durability: 0.50 earned versus 0.90 required;
-- recovery/idempotency: 0.80 earned versus 0.90 required.
+The two formerly failing categories now meet their conservative minima:
 
-Active hard caps:
+- session durability: 0.90 earned versus 0.90 required;
+- recovery/idempotency: 0.90 earned versus 0.90 required.
 
-- installed artifact activation is proven, but installed extension-host visual
-  workbench replay is absent: maximum 74;
-- crash/reconnect/resume/soak evidence is absent: maximum 79.
-
-The most restrictive cap is 74. Active-run restart recovery is an open P0, so
-the candidate remains ineligible regardless of its raw weighted score. No
-future-wave, skipped, blocked, or unavailable experiment earns points.
+Evidence includes fail-closed active-run recovery, restored cursor and budget,
+20 repeated stress cycles, 1,158 source tests, 45 browser tests, source host
+activation, and two installed-artifact workbench-command replays. Publication,
+tagging, and remote release remain authorization gates and earn no points.
