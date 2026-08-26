@@ -461,4 +461,45 @@ describe('RuntimeRunService', () => {
     expect(events.map((event) => (event as { type: string }).type)).toContain('tool.completed');
     expect(events.map((event) => (event as { type: string }).type)).toContain('run.blocked');
   });
+  it('ends a budget-exhausted run as run.failed with a reason instead of leaving it live', async () => {
+    // Regression. `consumeRuntimeBudget` threw a bare Error, so no terminal
+    // event was published. The caller's `finally` saw an unfinished run and
+    // compensated with a cancel: the backend recorded `lifecycle: cancelled`,
+    // no reason ever reached the webview, and the activity panel held a live
+    // spinner over a run that had stopped. Three supervised feature runs died
+    // this way at exactly 101 tool calls with nothing on screen to explain it.
+    const { events, service } = harness();
+    await service.start(start);
+
+    // The fixture budget allows two invocations; the third exhausts it.
+    for (const suffix of ['A', 'B']) {
+      await service.dispatch(
+        {
+          ...invocation,
+          invocationId: `inv_01JZZZZZZZZZZZZZZZZZZZZ${suffix}`,
+          idempotencyKey: `idem_01JZZZZZZZZZZZZZZZZZZZZ${suffix}`,
+        },
+        { action: 'continue', nextTurnId: 'turn_01JZZZZZZZZZZZZZZZZZZZZZY' },
+      );
+    }
+
+    await expect(
+      service.dispatch(
+        {
+          ...invocation,
+          invocationId: 'inv_01JZZZZZZZZZZZZZZZZZZZZC',
+          idempotencyKey: 'idem_01JZZZZZZZZZZZZZZZZZZZZC',
+        },
+        { action: 'continue', nextTurnId: 'turn_01JZZZZZZZZZZZZZZZZZZZZZY' },
+      ),
+    ).rejects.toThrow(/exceeded its .* budget/i);
+
+    const failed = events.find((event) => (event as { type: string }).type === 'run.failed') as
+      { payload: { reason?: { code: string; message: string } } } | undefined;
+    expect(failed).toBeDefined();
+    expect(failed?.payload.reason?.code).toBe('RUNTIME_BUDGET_EXHAUSTED');
+    expect(failed?.payload.reason?.message).toMatch(/exceeded its .* budget/i);
+    // The run ended on its own, so nothing upstream needs to cancel it.
+    expect(service.hasActiveRun()).toBe(false);
+  });
 });
