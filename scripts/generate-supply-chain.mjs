@@ -11,7 +11,12 @@ const root = dirname(dirname(fileURLToPath(import.meta.url)));
 const packageJson = JSON.parse(await readFile(join(root, 'package.json'), 'utf8'));
 const releaseIdentity = await readReleaseIdentity({ root });
 if (releaseIdentity.dirty) {
-  throw new Error('Supply-chain evidence requires a clean source tree.');
+  // Naming the paths matters: `builds/` output is deliberately excluded from
+  // this check, so anything that reaches here is a real uncommitted source
+  // change and the operator needs to know which one.
+  throw new Error(
+    `Supply-chain evidence requires a clean source tree. Uncommitted: ${releaseIdentity.dirtyPaths.join(', ')}`,
+  );
 }
 const lock = JSON.parse(await readFile(join(root, 'package-lock.json'), 'utf8'));
 const components = Object.entries(lock.packages ?? {})
