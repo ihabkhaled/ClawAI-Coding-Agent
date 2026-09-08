@@ -74,17 +74,18 @@ function registerCommands(
       () =>
         coordinator.runReadOnlyWorkflow('audit', contextModeForCommand('clawAI.auditWorkspace')),
     ],
-    ['clawAI.initializeWorkspace', () => coordinator.initializeWorkspace()],
+    ['clawAI.initializeWorkspace', () => coordinator.commands.initializeWorkspace()],
     ['clawAI.openGlobalRules', () => globalContext.open('rules')],
     ['clawAI.openGlobalSkills', () => globalContext.open('skills')],
-    ['clawAI.refreshModels', () => coordinator.refreshModels()],
+    ['clawAI.refreshModels', () => coordinator.commands.refreshModels()],
     [
       'clawAI.selectModel',
       (modelKey?: unknown) =>
-        coordinator.selectModel(typeof modelKey === 'string' ? modelKey : undefined),
+        coordinator.commands.selectModel(typeof modelKey === 'string' ? modelKey : undefined),
     ],
     ['clawAI.cancel', () => coordinator.cancel()],
-    ['clawAI.undoLastEdit', () => coordinator.undoLastEdit()],
+    ['clawAI.undoLastEdit', () => coordinator.commands.undoLastEdit()],
+    ['clawAI.exportTranscript', () => coordinator.commands.exportTranscript()],
     [
       'clawAI.showLogs',
       () => {
@@ -206,7 +207,7 @@ export function activate(context: vscode.ExtensionContext): void {
     openFolder: async () => {
       await vscode.commands.executeCommand('workbench.action.files.openFolder');
     },
-    refreshModels: () => coordinator.refreshModels(),
+    refreshModels: () => coordinator.commands.refreshModels(),
     reviewChanges: async (previewId) => {
       const available = await diffPreview.show(previewId);
       if (!available) {
@@ -228,11 +229,11 @@ export function activate(context: vscode.ExtensionContext): void {
     runtimeResume: () => coordinator.runtimeControl('resume'),
     runtimeSteer: (message) => coordinator.runtimeSteer(message),
     runtimeStop: () => coordinator.cancel(),
-    undo: () => coordinator.undoLastEdit(),
+    undo: () => coordinator.commands.undoLastEdit(),
     selectAgentMode: (mode) => coordinator.sessionControls.selectAgentMode(mode),
     selectEffortMode: (mode) => coordinator.sessionControls.selectEffortMode(mode),
     selectSpeedMode: (mode) => coordinator.sessionControls.selectSpeedMode(mode),
-    selectModel: (modelKey) => coordinator.selectModel(modelKey),
+    selectModel: (modelKey) => coordinator.commands.selectModel(modelKey),
     selectPermissionMode: (mode) => coordinator.sessionControls.selectPermissionMode(mode),
     selectWorkspaceFolder: (folderKey) => coordinator.selectWorkspaceFolder(folderKey),
     send: (input) => coordinator.send(input),

@@ -18,11 +18,11 @@ import { type ChatViewProvider } from '../webview/chat-view-provider';
 import { AgentConnectionService } from './agent-connection-service';
 import { collectAgentContext } from './agent-context-service';
 import { AgentCoordinatorBoundaries } from './agent-coordinator-boundaries';
+import { coordinatorCommands } from './agent-coordinator-commands';
 import { coordinatorInterruptions } from './agent-coordinator-interruptions';
-import { pickCompareInput, pickModelKey } from './agent-coordinator-prompts';
+import { pickCompareInput } from './agent-coordinator-prompts';
 import {
   agentConcurrencyKey,
-  applyModelSelection,
   cancelCoordinator,
   createBackendClient,
   prepareGeneration,
@@ -485,21 +485,15 @@ export class AgentCoordinator implements vscode.Disposable {
     await this.workflowActions.runEdit(kind, contextMode);
   }
 
-  async selectModel(modelKey?: string): Promise<void> {
-    await applyModelSelection(modelKey, this.state, this.configuration, () =>
-      pickModelKey(this.state.snapshot.models),
-    );
-  }
-
-  refreshModels = (): Promise<void> => this.connection.refresh();
-
-  initializeWorkspace = (): Promise<void> => this.initializer.promptAndInitialize();
-
-  async undoLastEdit(): Promise<void> {
-    if (await this.safeEdits.undoLast()) {
-      await this.view?.postNotice(vscode.l10n.t('ClawAI changes were undone.'));
-    }
-  }
+  readonly commands = coordinatorCommands({
+    connection: () => this.connection,
+    initializer: () => this.initializer,
+    conversations: () => this.conversations,
+    state: () => this.state,
+    safeEdits: () => this.safeEdits,
+    view: () => this.view,
+    configuration: () => this.configuration,
+  });
 
   async cancel(requestId?: string): Promise<void> {
     await cancelCoordinator({
