@@ -83,6 +83,7 @@ describe('the filesystem catalog documents every kind it advertises', () => {
   it('documents the search matching arguments', () => {
     expect(description).toMatch(/regex:true/i);
     expect(description).toMatch(/ignoreCase:true/i);
+    expect(description).toMatch(/contextLines/i);
   });
 
   // A search now reports how much of the workspace it actually opened. Without

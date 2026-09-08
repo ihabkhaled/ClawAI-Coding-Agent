@@ -343,4 +343,59 @@ describe('VS Code filesystem tool result bounds', () => {
       ),
     ).rejects.toThrow(/operation "patch" must match transaction.operations\[0\].kind "create"/);
   });
+
+  // Surrounding lines are what turn "this file mentions the symbol" into "this
+  // is the definition", and reading them here saves a separate file read per
+  // hit worth judging.
+  it('returns the lines either side of a match when asked', async () => {
+    vi.mocked(vscode.workspace.findFiles).mockResolvedValue([
+      vscode.Uri.file('C:\\workspace\\a.ts'),
+    ]);
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(
+      new TextEncoder().encode(['one', 'two', 'needle', 'four', 'five'].join('\n')),
+    );
+
+    const output = await executor.execute(
+      invocation('search', { rootKey: 'workspace-1', query: 'needle', contextLines: 2 }),
+    );
+
+    expect(output.structured?.results).toEqual([
+      {
+        path: 'a.ts',
+        line: 3,
+        preview: 'needle',
+        context: { before: ['one', 'two'], after: ['four', 'five'] },
+      },
+    ]);
+  });
+
+  it('clamps context at the start and end of a file', async () => {
+    vi.mocked(vscode.workspace.findFiles).mockResolvedValue([
+      vscode.Uri.file('C:\\workspace\\a.ts'),
+    ]);
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(new TextEncoder().encode('needle'));
+
+    const output = await executor.execute(
+      invocation('search', { rootKey: 'workspace-1', query: 'needle', contextLines: 5 }),
+    );
+
+    expect(output.structured?.results).toEqual([
+      { path: 'a.ts', line: 1, preview: 'needle', context: { before: [], after: [] } },
+    ]);
+  });
+
+  it('omits context entirely by default, so the result stays small', async () => {
+    vi.mocked(vscode.workspace.findFiles).mockResolvedValue([
+      vscode.Uri.file('C:\\workspace\\a.ts'),
+    ]);
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(
+      new TextEncoder().encode(['one', 'needle', 'three'].join('\n')),
+    );
+
+    const output = await executor.execute(
+      invocation('search', { rootKey: 'workspace-1', query: 'needle' }),
+    );
+
+    expect(output.structured?.results).toEqual([{ path: 'a.ts', line: 2, preview: 'needle' }]);
+  });
 });
