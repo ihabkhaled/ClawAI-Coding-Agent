@@ -56,8 +56,6 @@ import {
   VscodeRunJournalStorage,
 } from '../infrastructure/vscode-run-journal-adapter';
 import { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-binding-store';
-import { VscodeSubAgentDiagnosticsSink } from '../infrastructure/vscode-sub-agent-diagnostics-sink';
-import { VscodeSubAgentWorktreeAdapter } from '../infrastructure/vscode-sub-agent-worktree-adapter';
 import { VscodeWorkspaceDiagnostics } from '../infrastructure/vscode-workspace-diagnostics';
 import { VscodeWorkspaceSymbols } from '../infrastructure/vscode-workspace-symbols';
 
@@ -73,7 +71,6 @@ import { DevelopmentServiceManager } from './development-service-manager';
 import { ElevationBrokerService } from './elevation-broker-service';
 import { EvidenceBundleService } from './evidence-bundle-service';
 import { ExecutionTargetRegistry } from './execution-target-registry';
-import { FileLeaseManager } from './file-lease-manager';
 import { FileTransactionService } from './file-transaction-service';
 import { FindingsService } from './findings-service';
 import { FlagshipDeliveryService } from './flagship-delivery-service';
@@ -103,11 +100,9 @@ import {
   advancedToolRegistrations,
   analysisToolRegistrations,
 } from './runtime-studio-registrations';
-import { RuntimeSubAgentExecutor } from './runtime-sub-agent-executor';
+import { assembleSubAgents } from './runtime-studio-sub-agents';
 import { RuntimeToolRouter } from './runtime-tool-router';
 import { ServerReadinessService } from './server-readiness-service';
-import { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
-import { SubAgentWorktreeService } from './sub-agent-worktree-service';
 import { vscodeRuntimeExecutionDependencies } from './vscode-runtime-execution';
 import { recoverVscodeRuntime } from './vscode-runtime-recovery';
 import { WorkspaceIntelligenceService } from './workspace-intelligence-service';
@@ -295,28 +290,26 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       new SocketPortInspector(),
       new VscodeServiceCheckpointStore(context.workspaceState),
     );
-    const runtimeSubAgent = new RuntimeSubAgentExecutor({
-      backend,
-      currentEpochs: () => this.epochs,
-      definitions: () => this.router.definitions(),
-      executor: { execute: (invocation, signal) => this.router.execute(invocation, signal) },
-      policy: this.policy,
-      stream: this.stream,
-      transport: this.transport,
+    const subAgentLane = assembleSubAgents({
+      runtime: {
+        backend,
+        currentEpochs: () => this.epochs,
+        definitions: () => this.router.definitions(),
+        executor: { execute: (invocation, signal) => this.router.execute(invocation, signal) },
+        policy: this.policy,
+        stream: this.stream,
+        transport: this.transport,
+      },
+      files: this.files,
+      globalStorageUri: context.globalStorageUri,
+      selectedFolderKey: () =>
+        this.workspaceScope.snapshot().selectedFolderKey ?? 'workspace:missing',
+      epochs: () => this.epochs,
+      findings: this.findings,
+      logger,
     });
-    const subAgentWorktreeAdapter = new VscodeSubAgentWorktreeAdapter(
-      this.files,
-      vscode.Uri.joinPath(context.globalStorageUri, 'agent-worktrees').fsPath,
-      () => this.workspaceScope.snapshot().selectedFolderKey ?? 'workspace:missing',
-    );
-    const subAgentWorktrees = new SubAgentWorktreeService(subAgentWorktreeAdapter);
-    const subAgents = new SubAgentCoordinatorService(
-      runtimeSubAgent,
-      new FileLeaseManager(),
-      () => this.epochs,
-      new VscodeSubAgentDiagnosticsSink(logger, context.globalStorageUri),
-      subAgentWorktrees,
-    );
+    const subAgentWorktreeAdapter = subAgentLane.worktreeAdapter;
+    const subAgents = subAgentLane.coordinator;
     const quality = new QualityToolExecutor(this.files, this.findings);
     const integration = new IntegrationCoordinatorService(
       new RuntimeIntegrationGitAdapter(this.git, subAgentWorktreeAdapter),

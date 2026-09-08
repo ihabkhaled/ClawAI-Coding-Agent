@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
 
+import type { Finding } from './findings';
+
 /**
  * Accepts an empty `{}` wherever an empty array is valid, then hands the
  * schema a real `[]`.
@@ -150,6 +152,8 @@ export interface SubAgentOutcome {
   readonly toolCalls: number;
   readonly modelTurns?: number;
   readonly artifacts: readonly string[];
+  /** What a reviewer reported, structured rather than written into prose. */
+  readonly findings: readonly Finding[];
   readonly blocker?: string;
   readonly graph?: SubAgentGraph;
   /** How many attempts the coordinator spent before this terminal outcome. */

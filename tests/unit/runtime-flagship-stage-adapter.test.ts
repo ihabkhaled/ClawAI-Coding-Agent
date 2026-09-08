@@ -26,6 +26,7 @@ describe('RuntimeFlagshipStageAdapter', () => {
       toolCalls: 1,
       modelTurns: 1,
       artifacts: ['evidence:plan'],
+      findings: [],
       graph: implementationGraph,
     }));
     const executeGraph = vi.fn(async () =>
@@ -37,6 +38,7 @@ describe('RuntimeFlagshipStageAdapter', () => {
         toolCalls: 1,
         modelTurns: 1,
         artifacts: [`evidence:${task.taskId}`],
+        findings: [],
       })),
     );
     const adapter = new RuntimeFlagshipStageAdapter({ execute, executeGraph }, () => ({
@@ -75,6 +77,7 @@ describe('RuntimeFlagshipStageAdapter', () => {
         tokens: 1,
         toolCalls: 1,
         artifacts: [],
+        findings: [],
       },
     ]);
     const port = new CoordinatedFlagshipSubAgentPort({ run });
@@ -117,6 +120,7 @@ describe('RuntimeFlagshipStageAdapter', () => {
       tokens: 100,
       toolCalls: 3,
       artifacts: [...steering(), 'evidence:tests'],
+      findings: [],
     }));
     const adapter = new RuntimeFlagshipStageAdapter({ execute, executeGraph: vi.fn() }, () => ({
       account: 1,

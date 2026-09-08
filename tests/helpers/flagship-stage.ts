@@ -137,5 +137,6 @@ export function successfulGraphOutcome(taskId: string) {
     toolCalls: 1,
     modelTurns: 1,
     artifacts: [],
+    findings: [],
   };
 }

@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import { fileTransactionSchema } from '../core/file-transaction';
+import { findingsSchema, type Finding } from '../core/findings';
 import { subAgentGraphSchema } from '../core/multi-agent-dag';
 
 import { RuntimeRunService } from './runtime-run-service';
@@ -19,7 +20,7 @@ import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
-interface RuntimeSubAgentDependencies {
+export interface RuntimeSubAgentDependencies {
   readonly backend: () => BackendClient;
   readonly currentEpochs: () => ToolInvocation['epochs'];
   readonly definitions: () => readonly ToolDefinition[];
@@ -32,6 +33,7 @@ interface RuntimeSubAgentDependencies {
 interface SubAgentTelemetry {
   changedPaths: Set<string>;
   artifacts: Set<string>;
+  findings: Finding[];
   tokens: number;
   toolCalls: number;
   modelTurns: number;
@@ -147,6 +149,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       toolCalls: telemetry.toolCalls,
       modelTurns: telemetry.modelTurns,
       artifacts: [...telemetry.artifacts],
+      findings: telemetry.findings,
       ...(telemetry.blocker === undefined ? {} : { blocker: telemetry.blocker }),
       ...(telemetry.graph === undefined ? {} : { graph: telemetry.graph }),
     };
@@ -217,6 +220,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
     return {
       changedPaths: new Set(),
       artifacts: new Set(),
+      findings: [],
       tokens: 0,
       toolCalls: 0,
       modelTurns: 0,
@@ -232,6 +236,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       tokens: 0,
       toolCalls: 0,
       artifacts: [],
+      findings: [],
       blocker,
     };
   }
@@ -281,6 +286,7 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
     }
     this.assertRoot(invocation);
     this.captureWrites(invocation);
+    this.captureFindings(invocation);
     this.captureArtifact(invocation);
     const output = await this.delegate.execute(invocation, signal);
     this.capturePlanGraph(invocation, output);
@@ -307,6 +313,26 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
       }
       this.assertBoundRoots(child);
     }
+  }
+
+  /**
+   * Collects what a reviewer sub-agent reported, from the call it made.
+   *
+   * Reviewer roles were enum labels with nothing behind them: a reviewer wrote
+   * its conclusions into prose, so the parent could not count them, merge them
+   * with another reviewer's, or decide whether they blocked. The findings are
+   * in the invocation arguments, exactly as writes are, so they are captured
+   * the same way and reach the parent on the outcome.
+   *
+   * A malformed report is dropped rather than failing the task. A reviewer that
+   * found something real and described one finding badly should still deliver
+   * the rest, and the tool call itself will report the validation error.
+   */
+  private captureFindings(invocation: ToolInvocation): void {
+    if (invocation.toolName !== 'workspace.quality' || invocation.operation !== 'report') return;
+    const parsed = findingsSchema.safeParse(invocation.arguments.findings);
+    if (!parsed.success) return;
+    for (const finding of parsed.data) this.telemetry.findings.push(finding);
   }
 
   private captureWrites(invocation: ToolInvocation): void {

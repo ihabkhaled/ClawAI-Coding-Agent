@@ -33,6 +33,7 @@ const outcome: SubAgentOutcome = {
   tokens: 10,
   toolCalls: 1,
   artifacts: [],
+  findings: [],
 };
 
 describe('SubAgentWorktreeService', () => {

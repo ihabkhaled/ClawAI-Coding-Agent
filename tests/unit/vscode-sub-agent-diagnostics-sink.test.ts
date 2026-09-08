@@ -49,6 +49,7 @@ describe('VscodeSubAgentDiagnosticsSink', () => {
       tokens: 0,
       toolCalls: 0,
       artifacts: [],
+      findings: [],
       blocker: longBlocker,
     };
 

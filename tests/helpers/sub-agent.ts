@@ -10,7 +10,7 @@ export function subAgentTask(
   taskId: string,
   dependencies: readonly string[],
   writeSet: readonly string[],
-  role: 'explorer' | 'implementer',
+  role: SubAgentTask['role'],
 ): SubAgentTask {
   return {
     taskId,
@@ -43,6 +43,7 @@ export function successfulOutcome(taskId: string): SubAgentOutcome {
     tokens: 1,
     toolCalls: 1,
     artifacts: [],
+    findings: [],
   };
 }
 
@@ -54,6 +55,7 @@ export function failedOutcome(taskId: string, blocker: string): SubAgentOutcome 
     tokens: 1,
     toolCalls: 1,
     artifacts: [],
+    findings: [],
     blocker,
   };
 }

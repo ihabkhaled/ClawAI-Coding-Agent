@@ -14,6 +14,7 @@ import {
   successfulOutcome,
 } from '../helpers/sub-agent';
 
+import type { Finding } from '../../src/core/findings';
 import type { SubAgentGraph, SubAgentOutcome, SubAgentTask } from '../../src/core/multi-agent-dag';
 
 describe('SubAgentCoordinatorService', () => {
@@ -142,6 +143,7 @@ describe('SubAgentCoordinatorService', () => {
           tokens: 10,
           toolCalls: 1,
           artifacts: [...steering()],
+          findings: [],
         };
       }),
     };
@@ -172,11 +174,77 @@ describe('SubAgentCoordinatorService', () => {
     expect(observer.outcome).toHaveBeenCalledTimes(2);
   });
 
+  // Reviewer roles were enum labels with nothing behind them: a reviewer wrote
+  // its conclusions into prose and the parent could not count or merge them.
+  it('captures what a reviewer reports so it reaches the outcome', async () => {
+    const delegate = { execute: vi.fn(async () => ({ structured: { ok: true } })) };
+    const telemetry = {
+      changedPaths: new Set<string>(),
+      artifacts: new Set<string>(),
+      findings: [] as Finding[],
+      tokens: 0,
+      toolCalls: 0,
+      modelTurns: 0,
+      status: 'failed' as const,
+    };
+    const executor = new ScopedSubAgentExecutor(
+      { ...task('review-auth', [], [], 'reviewer'), tools: ['workspace.quality'] },
+      delegate,
+      telemetry,
+    );
+
+    await executor.execute(
+      invocation('workspace.quality', 'report', {
+        findings: [
+          {
+            title: 'Unvalidated redirect',
+            severity: 'high',
+            confidence: 'high',
+            path: 'src/auth/login.ts',
+            detail: 'The target comes from the query string.',
+            remediation: 'Allow only same-origin targets.',
+          },
+        ],
+      }),
+    );
+
+    expect(telemetry.findings).toHaveLength(1);
+    expect(telemetry.findings[0]?.title).toBe('Unvalidated redirect');
+  });
+
+  // A reviewer that described one finding badly should still deliver the rest,
+  // and the tool call itself reports the validation error.
+  it('drops a malformed report rather than failing the reviewer', async () => {
+    const delegate = { execute: vi.fn(async () => ({ structured: { ok: true } })) };
+    const telemetry = {
+      changedPaths: new Set<string>(),
+      artifacts: new Set<string>(),
+      findings: [] as Finding[],
+      tokens: 0,
+      toolCalls: 0,
+      modelTurns: 0,
+      status: 'failed' as const,
+    };
+    const executor = new ScopedSubAgentExecutor(
+      { ...task('review-auth', [], [], 'reviewer'), tools: ['workspace.quality'] },
+      delegate,
+      telemetry,
+    );
+
+    await expect(
+      executor.execute(
+        invocation('workspace.quality', 'report', { findings: [{ title: 'No fix given' }] }),
+      ),
+    ).resolves.toBeDefined();
+    expect(telemetry.findings).toHaveLength(0);
+  });
+
   it('denies undeclared writes, worktree escapes, and direct Git mutation', async () => {
     const delegate = { execute: vi.fn(async () => ({ structured: { ok: true } })) };
     const telemetry = {
       changedPaths: new Set<string>(),
       artifacts: new Set<string>(),
+      findings: [],
       tokens: 0,
       toolCalls: 0,
       modelTurns: 0,
@@ -248,10 +316,12 @@ describe('SubAgentCoordinatorService', () => {
       toolCalls: number;
       modelTurns: number;
       status: 'failed';
+      findings: Finding[];
       graph?: SubAgentGraph;
     } = {
       changedPaths: new Set<string>(),
       artifacts: new Set<string>(),
+      findings: [],
       tokens: 0,
       toolCalls: 0,
       modelTurns: 0,
@@ -275,6 +345,7 @@ describe('SubAgentCoordinatorService', () => {
     const telemetry = {
       changedPaths: new Set<string>(),
       artifacts: new Set<string>(),
+      findings: [],
       tokens: 0,
       toolCalls: 0,
       modelTurns: 0,
@@ -342,6 +413,7 @@ describe('SubAgentCoordinatorService', () => {
         tokens: 4,
         toolCalls: 1,
         artifacts: [],
+        findings: [],
       })),
     };
     const coordinator = new SubAgentCoordinatorService(
@@ -391,6 +463,7 @@ describe('SubAgentCoordinatorService', () => {
         tokens: 0,
         toolCalls: 0,
         artifacts: [],
+        findings: [],
         blocker: 'Nested runtime failed',
       })),
     };
