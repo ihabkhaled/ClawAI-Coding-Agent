@@ -24,15 +24,7 @@ import {
   RuntimeIntegrationGitAdapter,
   RuntimeIntegrationQualityAdapter,
 } from '../infrastructure/integration-tool-executor';
-import {
-  IntelligenceToolExecutor,
-  intelligenceToolDefinition,
-} from '../infrastructure/intelligence-tool-executor';
 import { PackagedNativeElevationAdapter } from '../infrastructure/native-elevation-adapter';
-import {
-  PlanningToolExecutor,
-  planningToolDefinition,
-} from '../infrastructure/planning-tool-executor';
 import { PlaywrightBrowserDriver } from '../infrastructure/playwright-browser-driver';
 import {
   ProcessSupervisorToolExecutor,
@@ -42,10 +34,6 @@ import {
   QualityToolExecutor,
   qualityToolDefinition,
 } from '../infrastructure/quality-tool-executor';
-import {
-  RunJournalToolExecutor,
-  runJournalToolDefinition,
-} from '../infrastructure/run-journal-tool-executor';
 import {
   StructuredCommandToolExecutor,
   structuredCommandToolDefinition,
@@ -70,6 +58,7 @@ import {
 import { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-binding-store';
 import { VscodeSubAgentDiagnosticsSink } from '../infrastructure/vscode-sub-agent-diagnostics-sink';
 import { VscodeSubAgentWorktreeAdapter } from '../infrastructure/vscode-sub-agent-worktree-adapter';
+import { VscodeWorkspaceDiagnostics } from '../infrastructure/vscode-workspace-diagnostics';
 
 import { BrowserControllerService } from './browser-controller-service';
 import { ContainerEngineService } from './container-engine-service';
@@ -108,7 +97,10 @@ import {
   runtimeFlagshipHostIdentityHash,
   steerRuntime,
 } from './runtime-studio-helpers';
-import { advancedToolRegistrations } from './runtime-studio-registrations';
+import {
+  advancedToolRegistrations,
+  analysisToolRegistrations,
+} from './runtime-studio-registrations';
 import { RuntimeSubAgentExecutor } from './runtime-sub-agent-executor';
 import { RuntimeToolRouter } from './runtime-tool-router';
 import { ServerReadinessService } from './server-readiness-service';
@@ -277,7 +269,10 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       this.files,
       () => this.workspaceScope.snapshot().selectedFolderKey ?? 'workspace:missing',
     );
-    const intelligence = new WorkspaceIntelligenceService(this.intelligenceIndex);
+    const intelligence = new WorkspaceIntelligenceService(
+      this.intelligenceIndex,
+      new VscodeWorkspaceDiagnostics(),
+    );
     this.journals = new RunJournalService(
       new VscodeRunJournalStorage(context.globalStorageUri),
       new VscodeRunJournalKeyStore(context.secrets),
@@ -393,12 +388,11 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       },
       { definition: qualityToolDefinition, executor: quality },
       { definition: browserToolDefinition, executor: new BrowserToolExecutor(browser, readiness) },
-      {
-        definition: intelligenceToolDefinition,
-        executor: new IntelligenceToolExecutor(intelligence),
-      },
-      { definition: planningToolDefinition, executor: new PlanningToolExecutor(this.transactions) },
-      { definition: runJournalToolDefinition, executor: new RunJournalToolExecutor(this.journals) },
+      ...analysisToolRegistrations({
+        intelligence,
+        transactions: this.transactions,
+        journals: this.journals,
+      }),
       ...advancedToolRegistrations({
         evidence,
         files: this.files,
