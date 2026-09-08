@@ -274,6 +274,8 @@ export const runtimeToolInputSchemas = {
     pattern: text,
     maxResults: filesystemResultLimit,
     query: text,
+    regex: flag,
+    ignoreCase: flag,
     transaction: opaque,
   }),
   git: strict({

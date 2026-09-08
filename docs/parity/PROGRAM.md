@@ -98,7 +98,19 @@ Each batch links its evidence here as it lands.
 
 ## Batch log
 
-| Batch | Version | Status                                                                | Evidence                                                                                                                                                                                                                                            |
-| ----- | ------- | --------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | 0.64.4  | Complete                                                              | Audit of all 108, [`BASELINE_EVIDENCE.md`](BASELINE_EVIDENCE.md), four audit documents, `skills/setup-a-fresh-worktree`                                                                                                                             |
-| 1     | 0.65.0  | Code and deterministic gates complete; installed-VSIX UAT not yet run | Attachment secret screening in `src/core/chat-attachment.ts` and `media/chat.js`, 16 corpus tests in `tests/unit/chat-attachment.test.ts`, label test in `tests/unit/chat-markup.test.ts`, `package:audit` anti-drift assertion, `docs/SECURITY.md` |
+| Batch | Version | Status                                                                | Evidence                                                                                                                                                                                                                                                                              |
+| ----- | ------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | 0.64.4  | Complete                                                              | Audit of all 108, [`BASELINE_EVIDENCE.md`](BASELINE_EVIDENCE.md), four audit documents, `skills/setup-a-fresh-worktree`                                                                                                                                                               |
+| 1     | 0.65.0  | Code and deterministic gates complete; installed-VSIX UAT not yet run | Attachment secret screening in `src/core/chat-attachment.ts` and `media/chat.js`, 16 corpus tests in `tests/unit/chat-attachment.test.ts`, label test in `tests/unit/chat-markup.test.ts`, `package:audit` anti-drift assertion, `docs/SECURITY.md`                                   |
+| 2     | 0.66.0  | Code and deterministic gates complete; installed-VSIX UAT not yet run | F003 search and glob correctness in `src/infrastructure/vscode-filesystem-tool-executor.ts` and `src/infrastructure/workspace-scan.constants.ts`, tests in `tests/unit/vscode-filesystem-tool-executor-bounds.test.ts` and `tests/unit/filesystem-tool-shape-discoverability.test.ts` |
+
+### Why batch 2 is not the enterprise policy the order above planned
+
+F052 needs a signed policy to load and a trust key to verify it against.
+Neither exists. The monorepo has no organization-policy endpoint and no key
+distribution, and its only Ed25519 code is the marketplace signature utility.
+Wiring `enterprise-policy.ts` therefore means designing a backend module first,
+which is a program rather than a batch, so F052 is BLOCKED on that contract.
+The order moved to the largest unblocked correctness gap instead. The dead-code
+claim F052 was meant to retire is recorded above and is now guarded by the
+`AGENTS.md` blocker, so it cannot quietly grow.

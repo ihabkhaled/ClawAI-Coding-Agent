@@ -2,6 +2,35 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.66.0
+
+Minor: workspace search now searches the workspace.
+
+- `workspace.files search` opened at most 100 files. One `maxResults` argument
+  was passed to `findFiles` and then reused to slice the matches, so the result
+  cap was also the candidate cap: a search of an 8,059-file repository read
+  about one percent of it and reported nothing found. To a model that is
+  indistinguishable from proof of absence, and nothing in the output said only a
+  hundred files had been opened. The two limits are now two numbers — up to
+  5,000 candidate files or 32 MiB, whichever comes first — and the result
+  carries `scannedFiles`.
+- `truncated` now means what it says. It is set when the candidate set
+  saturated, when the byte budget ran out, or when results hit the cap, so an
+  empty result is only evidence of absence while it is false. The tool
+  description says so.
+- `glob` and `search` skip dependency and build output. `findFiles` does not
+  read `.gitignore`, and both operations passed no exclude at all, so a bare
+  `**/*.ts` returned whatever the walker reached first — on this repository,
+  files under `.worktrees/`, which holds a full checkout per in-flight branch.
+  The exclusion that fixed the intelligence index in an earlier release had
+  never reached the tool the model actually calls.
+- `search` takes `regex: true` for a JavaScript pattern and `ignoreCase: true`
+  to fold case. The default stays literal, and a literal query is escaped, so
+  searching for `config.get(` still means those characters. An unusable pattern
+  is reported as a tool error instead of quietly matching nothing, and a
+  caller-supplied regex runs against a bounded line prefix so a nested
+  quantifier cannot hang the run.
+
 ## 0.65.0
 
 Minor: composer attachments are screened against the credential-name policy that

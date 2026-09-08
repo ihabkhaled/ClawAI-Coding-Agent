@@ -14,6 +14,12 @@ import {
   normalizeWorkspaceDirectoryPath,
 } from '../core/workspace-path-policy';
 
+import {
+  WORKSPACE_SCAN_EXCLUDE_GLOB,
+  WORKSPACE_SEARCH_MAX_CANDIDATE_FILES,
+  WORKSPACE_SEARCH_MAX_SCANNED_BYTES,
+} from './workspace-scan.constants';
+
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { FileTransaction } from '../core/file-transaction';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -101,7 +107,30 @@ const globSchema = z
 const searchSchema = globSchema.extend({
   query: z.string().min(1).max(10_000),
   pattern: z.string().min(1).max(1_000).default('**/*'),
+  regex: z.boolean().default(false),
+  ignoreCase: z.boolean().default(false),
 });
+
+const MAX_SEARCH_LINE_CHARS = 2_000;
+
+/**
+ * Compiles the query once, refusing a pattern the engine cannot run.
+ *
+ * A literal query is escaped rather than passed through, so a search for
+ * `config.get(` keeps meaning those characters. `u` is deliberately omitted:
+ * it would reject escapes a caller may reasonably write, and the alternative
+ * to a usable regex here is the substring test this replaced.
+ */
+function compileSearchMatcher(query: string, isRegex: boolean, ignoreCase: boolean): RegExp {
+  const source = isRegex ? query : query.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
+  try {
+    return new RegExp(source, ignoreCase ? 'i' : '');
+  } catch {
+    throw new Error(
+      'search regex is not valid; escape the pattern or pass regex: false for a literal query',
+    );
+  }
+}
 
 export const workspaceFilesystemToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',
@@ -119,6 +148,9 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'for the first opened folder, then "workspace-2"; most use only "workspace-1". Paths are ' +
     'relative. List the root with path "". List/glob/search return at most 100 results; narrow ' +
     'truncated results. After one targeted search and read, act; do not rediscover unchanged files. ' +
+    'SEARCH matches a literal query by default; pass regex:true for a JavaScript pattern and ' +
+    'ignoreCase:true to fold case. It reports scannedFiles and skips dependency and build output. ' +
+    'Only treat an empty result as absence when truncated is false. ' +
     // Writing was undiscoverable: every mutation goes through a nested
     // transaction whose shape the catalog reports as an empty object, so a
     // model had to guess it and no model ever did. Spelling it out here is the
@@ -327,9 +359,14 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
   private async glob(candidate: unknown): Promise<RuntimeToolExecutionOutput> {
     const input = globSchema.parse(candidate);
     const root = this.adapter.rootUri(input.rootKey);
+    // Build and dependency output used to fill the answer. `findFiles` does not
+    // read `.gitignore`, so a bare `**/*.ts` returned the first hundred paths
+    // the walker happened to reach — on this repository, files under
+    // `.worktrees/`, which holds a checkout per in-flight branch. The exclusion
+    // that fixed the intelligence index never reached the tool the model calls.
     const matches = await vscode.workspace.findFiles(
       new vscode.RelativePattern(root, input.pattern),
-      undefined,
+      WORKSPACE_SCAN_EXCLUDE_GLOB,
       input.maxResults,
     );
     const boundedMatches = matches.slice(0, input.maxResults);
@@ -347,26 +384,40 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
   ): Promise<RuntimeToolExecutionOutput> {
     const input = searchSchema.parse(candidate);
     const root = this.adapter.rootUri(input.rootKey);
+    const matcher = compileSearchMatcher(input.query, input.regex, input.ignoreCase);
     const files = await vscode.workspace.findFiles(
       new vscode.RelativePattern(root, input.pattern),
-      undefined,
-      input.maxResults,
+      WORKSPACE_SCAN_EXCLUDE_GLOB,
+      WORKSPACE_SEARCH_MAX_CANDIDATE_FILES,
     );
-    const candidateSetTruncated = files.length >= input.maxResults;
+    const candidateSetTruncated = files.length >= WORKSPACE_SEARCH_MAX_CANDIDATE_FILES;
     const results: { path: string; line: number; preview: string }[] = [];
-    for (const uri of files.slice(0, input.maxResults)) {
+    let scannedFiles = 0;
+    let scannedBytes = 0;
+    let budgetExhausted = false;
+    for (const uri of files) {
       signal?.throwIfAborted();
       if (results.length >= input.maxResults) break;
+      if (scannedBytes >= WORKSPACE_SEARCH_MAX_SCANNED_BYTES) {
+        budgetExhausted = true;
+        break;
+      }
       let text: string;
       try {
-        text = new TextDecoder('utf-8', { fatal: true }).decode(
-          await vscode.workspace.fs.readFile(uri),
-        );
+        const bytes = await vscode.workspace.fs.readFile(uri);
+        scannedBytes += bytes.byteLength;
+        text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
       } catch {
+        // Binary or unreadable. It was still opened, so it still counts as work
+        // done, but it is not a file the query could have matched.
         continue;
       }
+      scannedFiles += 1;
       for (const [index, line] of text.split(/\r?\n/u).entries()) {
-        if (line.includes(input.query))
+        // A caller-supplied regex runs against a bounded prefix. An unbounded
+        // line is the input that turns a nested quantifier into a hang, and no
+        // useful match is lost: the preview never showed more than this either.
+        if (matcher.test(line.slice(0, MAX_SEARCH_LINE_CHARS)))
           results.push({
             path: vscode.workspace.asRelativePath(uri, false),
             line: index + 1,
@@ -378,7 +429,11 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     return {
       structured: {
         results,
-        truncated: candidateSetTruncated || results.length >= input.maxResults,
+        scannedFiles,
+        // Three different things end a search early, and the model has to be
+        // able to tell "no matches here" from "stopped looking". Absence is
+        // only evidence when this is false.
+        truncated: candidateSetTruncated || budgetExhausted || results.length >= input.maxResults,
       },
     };
   }

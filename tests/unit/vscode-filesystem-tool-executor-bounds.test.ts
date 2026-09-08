@@ -40,6 +40,10 @@ vi.mock('vscode', () => {
 
 import { VscodeFileTransactionAdapter } from '../../src/infrastructure/vscode-file-transaction-adapter';
 import { VscodeFilesystemToolExecutor } from '../../src/infrastructure/vscode-filesystem-tool-executor';
+import {
+  WORKSPACE_SCAN_EXCLUDE_GLOB,
+  WORKSPACE_SEARCH_MAX_CANDIDATE_FILES,
+} from '../../src/infrastructure/workspace-scan.constants';
 import { FileTransactionService } from '../../src/services/file-transaction-service';
 
 import type { RuntimeJsonObject } from '../../src/core/runtime/runtime-tool-contracts';
@@ -103,7 +107,11 @@ describe('VS Code filesystem tool result bounds', () => {
     const output = await executor.execute(invocation(operation, arguments_));
     const results = operation === 'glob' ? output.structured?.paths : output.structured?.results;
 
-    expect(vscode.workspace.findFiles).toHaveBeenCalledWith(expect.anything(), undefined, 100);
+    expect(vscode.workspace.findFiles).toHaveBeenCalledWith(
+      expect.anything(),
+      WORKSPACE_SCAN_EXCLUDE_GLOB,
+      operation === 'glob' ? 100 : WORKSPACE_SEARCH_MAX_CANDIDATE_FILES,
+    );
     expect(Array.isArray(results)).toBe(true);
     expect(results).toHaveLength(100);
     expect(output.structured).toMatchObject({ truncated: true });
@@ -127,8 +135,8 @@ describe('VS Code filesystem tool result bounds', () => {
 
     expect(vscode.workspace.findFiles).toHaveBeenCalledWith(
       expect.objectContaining({ pattern: '**/*' }),
-      undefined,
-      100,
+      WORKSPACE_SCAN_EXCLUDE_GLOB,
+      WORKSPACE_SEARCH_MAX_CANDIDATE_FILES,
     );
     expect(output.structured?.results).toEqual([
       { path: 'a.ts', line: 1, preview: 'const needle = 1;' },
@@ -144,8 +152,8 @@ describe('VS Code filesystem tool result bounds', () => {
 
     expect(vscode.workspace.findFiles).toHaveBeenCalledWith(
       expect.objectContaining({ pattern: 'src/**/*.ts' }),
-      undefined,
-      100,
+      WORKSPACE_SCAN_EXCLUDE_GLOB,
+      WORKSPACE_SEARCH_MAX_CANDIDATE_FILES,
     );
   });
 
@@ -159,7 +167,7 @@ describe('VS Code filesystem tool result bounds', () => {
 
   it('reports a saturated search candidate set even when fewer lines match', async () => {
     vi.mocked(vscode.workspace.findFiles).mockResolvedValue(
-      Array.from({ length: 100 }, (_entry, index) =>
+      Array.from({ length: WORKSPACE_SEARCH_MAX_CANDIDATE_FILES }, (_entry, index) =>
         vscode.Uri.file(`C:\\workspace\\file-${String(index)}.ts`),
       ),
     );
@@ -176,6 +184,96 @@ describe('VS Code filesystem tool result bounds', () => {
     );
 
     expect(output.structured).toMatchObject({ results: [], truncated: true });
+  });
+
+  // The candidate cap and the result cap used to be one number, so a hundred
+  // files was both "all a search may open" and "all a model may be shown". A
+  // search of a repository with thousands of files read about one percent of
+  // it and reported nothing found, which reads exactly like proof of absence.
+  it('scans far past the result cap and says how many files it opened', async () => {
+    vi.mocked(vscode.workspace.findFiles).mockResolvedValue(
+      Array.from({ length: 400 }, (_entry, index) =>
+        vscode.Uri.file(`C:\\workspace\\file-${String(index)}.ts`),
+      ),
+    );
+    vi.mocked(vscode.workspace.fs.readFile).mockImplementation(async (uri: { path: string }) =>
+      new TextEncoder().encode(uri.path.endsWith('file-399.ts') ? 'the needle' : 'nothing here'),
+    );
+
+    const output = await executor.execute(
+      invocation('search', { rootKey: 'workspace-1', pattern: '**/*.ts', query: 'needle' }),
+    );
+
+    expect(output.structured).toMatchObject({ scannedFiles: 400, truncated: false });
+    expect(output.structured?.results).toEqual([
+      { path: 'file-399.ts', line: 1, preview: 'the needle' },
+    ]);
+  });
+
+  // Dependency and build output used to fill the answer, because findFiles does
+  // not read .gitignore and the tool passed no exclude at all.
+  it('excludes dependency and build output from discovery', async () => {
+    vi.mocked(vscode.workspace.findFiles).mockResolvedValue([]);
+
+    await executor.execute(invocation('glob', { rootKey: 'workspace-1', pattern: '**/*.ts' }));
+
+    expect(vscode.workspace.findFiles).toHaveBeenCalledWith(
+      expect.anything(),
+      WORKSPACE_SCAN_EXCLUDE_GLOB,
+      100,
+    );
+  });
+
+  it('treats the query as a literal unless regex is requested', async () => {
+    vi.mocked(vscode.workspace.findFiles).mockResolvedValue([
+      vscode.Uri.file('C:\\workspace\\a.ts'),
+    ]);
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(
+      new TextEncoder().encode('config.get(key)'),
+    );
+
+    const literal = await executor.execute(
+      invocation('search', { rootKey: 'workspace-1', query: 'config.get(' }),
+    );
+    expect(literal.structured?.results).toHaveLength(1);
+
+    const asRegex = await executor.execute(
+      invocation('search', {
+        rootKey: 'workspace-1',
+        query: String.raw`config\.get\(\w+`,
+        regex: true,
+      }),
+    );
+    expect(asRegex.structured?.results).toHaveLength(1);
+  });
+
+  it('folds case only when asked', async () => {
+    vi.mocked(vscode.workspace.findFiles).mockResolvedValue([
+      vscode.Uri.file('C:\\workspace\\a.ts'),
+    ]);
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(
+      new TextEncoder().encode('const Needle = 1;'),
+    );
+
+    const sensitive = await executor.execute(
+      invocation('search', { rootKey: 'workspace-1', query: 'needle' }),
+    );
+    expect(sensitive.structured?.results).toEqual([]);
+
+    const folded = await executor.execute(
+      invocation('search', { rootKey: 'workspace-1', query: 'needle', ignoreCase: true }),
+    );
+    expect(folded.structured?.results).toHaveLength(1);
+  });
+
+  it('reports an unusable regex instead of silently finding nothing', async () => {
+    vi.mocked(vscode.workspace.findFiles).mockResolvedValue([]);
+
+    await expect(
+      executor.execute(
+        invocation('search', { rootKey: 'workspace-1', query: '(unclosed', regex: true }),
+      ),
+    ).rejects.toThrow(/regex is not valid/);
   });
 
   it.each([
