@@ -1,10 +1,20 @@
-# Installed-artifact evidence — 0.69.0
+# Installed-artifact evidence
 
 Every batch in [`PROGRAM.md`](PROGRAM.md) shipped its code and deterministic
 gates but recorded "installed-VSIX UAT not yet run". This closes that for the
 five batches together, against the artifact that carries all of them.
 
-## Artifact
+## Artifacts
+
+Each row was packaged, installed into its own disposable profile, and passed
+`npm run test:host:installed`.
+
+| Version | SHA-256                                                            | Batches carried |
+| ------- | ------------------------------------------------------------------ | --------------- |
+| 0.69.0  | `27dcda754bff89f28f63bb6bc4dbc92d19ac52ac7cef6d538f666aff24760a2a` | 1–5             |
+| 0.70.0  | `6fdc065c83ff777a37da7756a4c54cf6c4c6a7d921ae742100189eeb41110f99` | 1–6             |
+
+## The 0.69.0 run in full
 
 | Fact    | Value                                                              |
 | ------- | ------------------------------------------------------------------ |

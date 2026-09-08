@@ -59,6 +59,7 @@ import { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-bind
 import { VscodeSubAgentDiagnosticsSink } from '../infrastructure/vscode-sub-agent-diagnostics-sink';
 import { VscodeSubAgentWorktreeAdapter } from '../infrastructure/vscode-sub-agent-worktree-adapter';
 import { VscodeWorkspaceDiagnostics } from '../infrastructure/vscode-workspace-diagnostics';
+import { VscodeWorkspaceSymbols } from '../infrastructure/vscode-workspace-symbols';
 
 import { BrowserControllerService } from './browser-controller-service';
 import { ContainerEngineService } from './container-engine-service';
@@ -272,6 +273,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     const intelligence = new WorkspaceIntelligenceService(
       this.intelligenceIndex,
       new VscodeWorkspaceDiagnostics(),
+      new VscodeWorkspaceSymbols(this.files),
     );
     this.journals = new RunJournalService(
       new VscodeRunJournalStorage(context.globalStorageUri),
