@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { z } from 'zod';
 
+import { findingsBlockRelease, findingsSchema } from '../core/findings';
 import {
   parseQualityDiagnostics,
   inspectQualityEvidence,
@@ -15,6 +16,7 @@ import { runCommandSpec } from './bounded-command-runner';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { FindingsService } from '../services/findings-service';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
@@ -24,12 +26,19 @@ export const qualityToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',
   name: 'workspace.quality',
   version: '2.0.0',
-  description: 'Discover, plan, and execute bounded repository quality gates.',
-  operations: ['discover', 'plan', 'run'],
+  description:
+    'Discover, plan, and execute bounded repository quality gates. report records structured ' +
+    'review findings so a person sees them: pass findings as an array of {title, severity ' +
+    '(critical|high|medium|low|info), confidence (high|medium|low), path, line, detail, ' +
+    'remediation}. Duplicates from different reviewers collapse, and the result says whether ' +
+    'the findings block a release. list returns what has been reported so far.',
+  operations: ['discover', 'plan', 'run', 'report', 'list-findings'],
   riskClasses: ['process'],
   targetIds: ['target:workspace'],
   inputSchema: runtimeToolInputSchemas.quality,
 };
+
+const reportSchema = z.object({ findings: findingsSchema }).strip();
 
 const inputSchema = z
   .object({
@@ -54,13 +63,31 @@ const ecosystems = [
 ] as const;
 
 export class QualityToolExecutor implements RuntimeToolExecutorPort {
-  constructor(private readonly files: VscodeFileTransactionAdapter) {}
+  constructor(
+    private readonly files: VscodeFileTransactionAdapter,
+    private readonly findings: FindingsService,
+  ) {}
 
   async execute(
     invocation: ToolInvocation,
     signal?: AbortSignal,
   ): Promise<RuntimeToolExecutionOutput> {
     if (invocation.toolName !== qualityToolDefinition.name) throw new Error('Unknown quality tool');
+    // Reporting and listing findings run no gate and read no project, so they
+    // are handled before the schema that requires a rootKey and a scope.
+    if (invocation.operation === 'report') {
+      const { findings } = reportSchema.parse(invocation.arguments);
+      const selection = this.findings.record(findings);
+      return {
+        structured: { ...selection, blocksRelease: findingsBlockRelease(selection.findings) },
+      };
+    }
+    if (invocation.operation === 'list-findings') {
+      const selection = this.findings.current();
+      return {
+        structured: { ...selection, blocksRelease: findingsBlockRelease(selection.findings) },
+      };
+    }
     const input = inputSchema.parse(invocation.arguments);
     if (invocation.operation === 'discover') {
       return { structured: { projects: await this.discoverProjects(input.rootKey, signal) } };

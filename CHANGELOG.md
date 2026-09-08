@@ -2,6 +2,38 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.73.0
+
+Minor: a review can report structured findings, and a person can read them.
+
+- `workspace.quality` gains `report` and `list-findings`. Review output was
+  free text: `SubAgentOutcome` had no findings field and the reviewer roles were
+  inert enum labels, so nothing could be counted, deduplicated, ordered or
+  compared between runs.
+- A finding requires a remediation and a confidence. A finding without a fix is
+  an observation, and a review that produces observations makes the reader
+  decide what to do with each one. A reviewer that cannot be wrong reports
+  everything at the same weight, and a list where nothing is uncertain is a list
+  nobody triages.
+- Findings from different reviewers merge on location and title rather than on
+  the whole record, so the same claim collapses even when two reviewers phrased
+  their detail differently — which is the normal case, because independent
+  reviewers converge on the obvious bug. When duplicates disagree on severity
+  the highest wins: over-reporting costs a minute of reading, under-reporting
+  costs the bug shipping.
+- Order is severity, then confidence, then location, and is stable across runs,
+  so two reviews of the same code can be compared.
+- `blocksRelease` is true only for a critical or high finding that is not
+  low-confidence. A low-confidence critical is a question, not a verdict, and
+  blocking on one trains the reader to override the gate.
+- A finding must name a workspace-relative, non-credential-shaped path, through
+  the same rule every tool schema applies.
+- Adds a **Findings** view to the ClawAI sidebar showing what has been reported,
+  ordered for triage, with the detail and the remediation on the hover. Findings
+  clear on an account or workspace boundary, because a finding names a path in a
+  workspace that is no longer open. Reporting into a store nobody reads would
+  have been the sixth dead subsystem this parity audit has found.
+
 ## 0.72.0
 
 Minor: truncated command output keeps the end, where the error is.

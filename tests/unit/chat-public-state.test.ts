@@ -32,6 +32,7 @@ const snapshot: ExtensionSnapshot = {
   speedMode: '1X',
   approvalRequest: undefined,
   questionRequest: undefined,
+  findings: [],
   backendStatus: 'connected',
   backendUrl: 'https://claw.local',
   busy: false,

@@ -13,6 +13,7 @@ import type { ConnectionEnvironment } from './configuration';
 import type { ContextReceipt } from './context-collector';
 import type { WorkspaceReadiness } from './context-mode';
 import type { EffortMode } from './effort-mode';
+import type { Finding } from './findings';
 import type { GenerationQueueSnapshot } from './generation-queue';
 import type { ModelCatalogEntry } from './model-catalog';
 import type { PermissionMode } from './permission-policy.types';
@@ -33,6 +34,7 @@ export interface ExtensionSnapshot {
   speedMode: SpeedMode;
   approvalRequest: ApprovalRequest | undefined;
   questionRequest: UserQuestion | undefined;
+  findings: readonly Finding[];
   backendUrl: string;
   backendCustomUrl?: string | undefined;
   backendEnvironment?: ConnectionEnvironment | undefined;

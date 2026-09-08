@@ -42,6 +42,7 @@ export function resetAccountScopedState(state: ExtensionState): void {
     agentRuns: {},
     approvalRequest: undefined,
     questionRequest: undefined,
+    findings: [],
     backendStatus: 'disconnected',
     busy: false,
     connected: false,
