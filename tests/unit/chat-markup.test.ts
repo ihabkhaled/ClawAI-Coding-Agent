@@ -163,3 +163,24 @@ describe('renderChatMarkup', () => {
     expect(html).not.toMatch(/<[^>]+\son[a-z]+=/iu);
   });
 });
+
+describe('attachment refusal strings', () => {
+  const html = renderChatMarkup({
+    cspSource: 'vscode-webview://test',
+    language: 'en',
+    logoUri: 'vscode-webview://test/icon.png',
+    nonce: 'test-nonce',
+    scriptUri: 'vscode-webview://test/chat.js',
+    styleUri: 'vscode-webview://test/chat.css',
+    translate: (message) => message,
+  });
+
+  // The webview reads its reasons from this dataset. Without the string the
+  // secret refusal falls back to the generic invalid-request error, which names
+  // neither the file nor the cause.
+  it('carries a localized reason for a secret-bearing attachment', () => {
+    expect(html).toContain(
+      'data-attachment-secret-blocked="This file looks like it holds a secret and cannot be attached."',
+    );
+  });
+});

@@ -9,6 +9,10 @@ Read `CLAUDE.md`, the affected source, its tests, and the relevant document in
 `docs/`. Never infer a backend contract from UI needs; verify it against
 `docs/API_CONTRACTS.md` and the ClawAI backend.
 
+In a worktree or clone that has no `node_modules`, apply
+`skills/setup-a-fresh-worktree/SKILL.md` first: plain `npm ci` fails on Windows
+and the obvious repair breaks `npm run build`.
+
 Read and apply `skills/version-every-change/SKILL.md` for every publishable
 change. Every push to `main` must carry a new SemVer version, matching changelog
 entry, rebuilt VSIX in `builds/`, and GitHub release asset.
@@ -37,5 +41,9 @@ npm audit --omit=dev --audit-level=high
 - Never accept backend or webview data without runtime validation.
 - Never add user-facing strings outside VS Code localization.
 - Never add code without tests or bypass a gate.
+- Never describe a capability in the changelog, README or docs before a call
+  site reaches it. A module with no importers is scaffolding, and a claim about
+  it is false. Four subsystems were found in this state at 0.64.4; they are
+  listed in `docs/parity/PROGRAM.md`.
 - Keep this repository independently buildable; do not import parent-monorepo
   source or dependencies.

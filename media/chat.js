@@ -130,6 +130,60 @@ const MAX_RETRY_ATTACHMENT_CHARS = 32 * 1024 * 1024;
 const MAX_ATTACHMENTS = 10;
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const MAX_TOTAL_ATTACHMENT_BYTES = 50 * 1024 * 1024;
+// Mirrors the secret screening in src/core/chat-attachment.ts, which mirrors
+// src/core/workspace-path-policy.ts. The host is the boundary and blocks these
+// regardless; refusing here is what turns a bare "invalid request" into a
+// message naming the file. Keep the three in step — tests/unit/chat-attachment
+// holds the shared corpus, and package:audit fails if this check disappears.
+const SENSITIVE_ATTACHMENT_EXACT_NAMES = new Set([
+  '.git',
+  '.ssh',
+  '.npmrc',
+  '.pypirc',
+  '.netrc',
+  'id_rsa',
+  'id_dsa',
+  'id_ecdsa',
+  'id_ed25519',
+]);
+const SENSITIVE_ATTACHMENT_NAME_PATTERN =
+  /(?:secret|credential|api[-_]?key|private[-_]?key|(?:access|refresh|auth)[-_]?token)/iu;
+const ATTACHMENT_CREDENTIAL_WORD_PATTERN =
+  /(?:^|[^a-z0-9])(?:passwords?|passwd|tokens?)(?:[^a-z0-9]|$)/u;
+const ATTACHMENT_CREDENTIAL_WORD_ONLY = /^(?:passwords?|passwd|tokens?)$/u;
+const ATTACHMENT_CODE_EXTENSION_PATTERN =
+  /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs|py|rb|go|rs|java|kt|cs|php|swift|scala|vue|svelte|astro|sql|prisma|graphql|gql|proto|css|scss|less)$/u;
+const ATTACHMENT_DOCUMENT_EXTENSION_PATTERN = /\.(?:md|mdx|html|adoc|rst|tex)$/u;
+
+function isCredentialShapedAttachmentName(segment) {
+  if (!ATTACHMENT_CREDENTIAL_WORD_PATTERN.test(segment)) return false;
+  const extension = /\.[a-z0-9]+$/u.exec(segment);
+  const stem = extension === null ? segment : segment.slice(0, extension.index);
+  const words = stem.split(/[^a-z0-9]+/u).filter((word) => word.length > 0);
+  if (words.every((word) => ATTACHMENT_CREDENTIAL_WORD_ONLY.test(word))) {
+    return extension === null || !ATTACHMENT_CODE_EXTENSION_PATTERN.test(segment);
+  }
+  if (extension === null) return false;
+  return (
+    !ATTACHMENT_CODE_EXTENSION_PATTERN.test(segment) &&
+    !ATTACHMENT_DOCUMENT_EXTENSION_PATTERN.test(segment)
+  );
+}
+
+function isSecretBearingAttachmentName(filename) {
+  const normalized = filename
+    .trim()
+    .replace(/[. ]+$/gu, '')
+    .toLowerCase();
+  return (
+    SENSITIVE_ATTACHMENT_EXACT_NAMES.has(normalized) ||
+    normalized === '.env' ||
+    normalized.startsWith('.env.') ||
+    SENSITIVE_ATTACHMENT_NAME_PATTERN.test(normalized) ||
+    isCredentialShapedAttachmentName(normalized)
+  );
+}
+
 const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
   'application/graphql',
   'application/javascript',
@@ -1874,6 +1928,9 @@ function validateAttachmentFiles(files) {
   }
   if (files.some((file) => !ALLOWED_ATTACHMENT_MIME_TYPES.has(normalizedMimeType(file.type)))) {
     return labels.attachmentTypeUnsupported;
+  }
+  if (files.some((file) => isSecretBearingAttachmentName(file.name))) {
+    return labels.attachmentSecretBlocked;
   }
   const currentBytes = composerAttachments.reduce(
     (total, attachment) => total + attachment.sizeBytes,

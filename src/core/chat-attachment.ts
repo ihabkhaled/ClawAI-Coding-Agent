@@ -2,6 +2,8 @@ import { Buffer } from 'node:buffer';
 
 import { z } from 'zod';
 
+import { isSensitiveWorkspacePath } from './workspace-path-policy';
+
 export const MAX_ATTACHMENTS = 10;
 export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 export const MAX_ATTACHMENT_TOTAL_BYTES = 50 * 1024 * 1024;
@@ -101,6 +103,27 @@ function decodedByteLength(content: string): number | null {
   return decoded.toString('base64') === content ? decoded.byteLength : null;
 }
 
+/**
+ * Attachments were the one way into the product that never asked path policy.
+ *
+ * Context collection screens through `isSensitiveWorkspacePath`, and so does
+ * every tool schema by way of `isSafeRelativeWorkspacePath`. The file picker did
+ * not: this module imported `node:buffer` and `zod` and nothing else, so a
+ * multi-select or a folder drop that happened to include `.env` uploaded it
+ * without a word. CLAUDE.md states the boundary without an exception — deny
+ * secrets "even if a user removes an ignore rule" — and a user who picks twelve
+ * files has not decided anything about the thirteenth.
+ *
+ * A filename here is a single segment: `isSafeFilename` has already rejected
+ * every separator, so the same predicate that guards workspace paths reads it
+ * correctly. Its careful distinction between a credential store and code that
+ * merely implements one carries over intact, which is why
+ * `password-reset.controller.ts` still attaches and `passwords.csv` does not.
+ */
+function isSecretBearingFilename(value: string): boolean {
+  return isSensitiveWorkspacePath(value);
+}
+
 function isSafeFilename(value: string): boolean {
   if (value.includes('/') || value.includes('\\')) {
     return false;
@@ -121,7 +144,15 @@ export const chatAttachmentSchema = z
       .string()
       .min(1)
       .max(Math.ceil((MAX_ATTACHMENT_BYTES * 4) / 3) + 4),
-    filename: z.string().trim().min(1).max(255).refine(isSafeFilename),
+    filename: z
+      .string()
+      .trim()
+      .min(1)
+      .max(255)
+      .refine(isSafeFilename)
+      .refine((value) => !isSecretBearingFilename(value), {
+        message: 'This file looks like it holds a secret and cannot be attached.',
+      }),
     mimeType: z
       .string()
       .trim()

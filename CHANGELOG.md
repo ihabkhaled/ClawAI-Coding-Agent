@@ -2,6 +2,37 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.65.0
+
+Minor: composer attachments are screened against the credential-name policy that
+already guards every other path into the product, and the Claude-parity program
+is audited and registered.
+
+- A file whose name looks like it stores credentials can no longer be attached.
+  `src/core/chat-attachment.ts` previously imported `node:buffer` and `zod` and
+  nothing else, so a multi-select or a folder drop that swept in `.env`,
+  `id_rsa` or `service-account-credentials.json` uploaded it silently, while
+  context collection and every tool refused the same file. Attachments now use
+  the same `isSensitiveWorkspacePath` predicate, so the boundary is one rule
+  rather than two. Code that merely implements a secret, such as
+  `password-reset.controller.ts`, still attaches.
+- The refusal is enforced in the extension host and repeated in the webview.
+  The host decides; the webview repeats the check only so the user sees which
+  file was refused and why, instead of the generic invalid-request error. A
+  package audit assertion keeps the webview copy from being deleted as
+  duplication.
+- The screen is on the filename, not the bytes. It stops an accidental sweep and
+  is not a defence against a user determined to paste a secret.
+- Adds `docs/parity/`: a classification of all 108 requested parity features
+  against the code with file-and-line evidence, a recorded green baseline, and
+  the batch order the audit implies. Six features are shipped, 50 partial, 50
+  missing and 2 in conflict.
+- Adds `skills/setup-a-fresh-worktree`: `npm ci` fails on Windows in a fresh
+  worktree, and the obvious repair makes `npm run build` fail instead.
+- Adds a blocker to `AGENTS.md`: no capability may be described in the changelog
+  or docs before a call site reaches it. Four subsystems were found claimed and
+  uncalled at 0.64.4 and are named in `docs/parity/PROGRAM.md`.
+
 ## 0.64.4
 
 Patch: active Runtime V2 runs can recover safely after an extension-host restart.

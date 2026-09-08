@@ -282,6 +282,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-attachment-empty="${translated('Empty files cannot be attached.')}"
     data-attachment-limit-summary="${translated('{0}/10 attachments · {1}/50 MiB')}"
     data-attachment-read-failed="${translated('This file could not be attached.')}"
+    data-attachment-secret-blocked="${translated('This file looks like it holds a secret and cannot be attached.')}"
     data-attachment-too-large="${translated('Each attachment must be 25 MiB or smaller.')}"
     data-attachment-total-too-large="${translated('Attachments must total 50 MiB or less.')}"
     data-attachment-too-many="${translated('You can attach up to 10 files.')}"

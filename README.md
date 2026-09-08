@@ -11,7 +11,7 @@ in the ClawAI platform.
 
 ## Runtime foundation
 
-Version 0.64.4 delivers the model-neutral Runtime Protocol V2 studio. Bounded
+Version 0.65.0 delivers the model-neutral Runtime Protocol V2 studio. Bounded
 workspace, command, process, Git, container, database, quality, browser,
 planning, service, journal, and evidence capabilities share one ordered,
 policy-controlled execution loop. An unavailable or incompatible additive
@@ -28,7 +28,9 @@ endpoint keeps the supported V1 chat and reviewed edit workflow active.
 - Chat from a workspace even when no editor tab is open.
 - Paste, drop, or pick screenshots, images, videos, documents, and source files
   into the composer. Attachments stay visibly bound to the request that owns
-  them and upload only when that queued request starts.
+  them and upload only when that queued request starts. A file whose name looks
+  like it stores credentials — `.env`, `id_rsa`, `passwords.csv` — is refused by
+  name, the same way context collection and every tool refuse it.
 - Recall submitted prompts with Arrow Up and move forward again with Arrow Down.
 - Switch between Auto execution and read-only Plan mode.
 - Choose manual approvals, persistent per-workspace routine consent, or Full
@@ -181,7 +183,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.64.4` is current and implements the extension surface from the ClawAI
+Version `0.65.0` is current and implements the extension surface from the ClawAI
 VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 
