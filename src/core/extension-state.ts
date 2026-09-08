@@ -19,6 +19,7 @@ import type { PermissionMode } from './permission-policy.types';
 import type { CapabilityManifest } from './runtime/capability-manifest';
 import type { RuntimeProtocolSelection } from './runtime/runtime-negotiation';
 import type { SpeedMode } from './speed-mode';
+import type { UserQuestion } from './user-question';
 import type { WorkspaceScopeSnapshot } from './workspace-scope.types';
 import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contracts';
 
@@ -31,6 +32,7 @@ export interface ExtensionSnapshot {
   effortMode: EffortMode;
   speedMode: SpeedMode;
   approvalRequest: ApprovalRequest | undefined;
+  questionRequest: UserQuestion | undefined;
   backendUrl: string;
   backendCustomUrl?: string | undefined;
   backendEnvironment?: ConnectionEnvironment | undefined;

@@ -60,6 +60,14 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
     requestId: z.uuid(),
     approved: z.boolean(),
   }),
+  // The selection is deliberately loose here and validated against the question
+  // that was actually asked, in `resolveQuestionAnswer`. A shape check alone
+  // would happily pass a label from a previous question.
+  z.object({
+    type: z.literal('answerQuestion'),
+    requestId: z.uuid(),
+    selection: z.unknown(),
+  }),
   z.object({
     type: z.literal('agent'),
     attachments: chatAttachmentsSchema.default([]),

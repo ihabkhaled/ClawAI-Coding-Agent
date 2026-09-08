@@ -11,6 +11,7 @@ const initialSnapshot: ExtensionSnapshot = {
   effortMode: 'ULTRA',
   speedMode: '1X',
   approvalRequest: undefined,
+  questionRequest: undefined,
   backendUrl: 'https://claw.example',
   backendStatus: 'disconnected',
   busy: false,

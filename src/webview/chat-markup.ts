@@ -256,7 +256,24 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       </div>
     </div>
   </section>
+  <section id="questionPanel" class="approval-panel" role="dialog" aria-modal="true" aria-labelledby="questionTitle" hidden>
+    <div class="approval-card">
+      <header>
+        <span id="questionHeader" class="badge accent-badge"></span>
+        <strong id="questionTitle">${translated('ClawAI needs a decision')}</strong>
+      </header>
+      <p id="questionMessage"></p>
+      <div id="questionOptions" class="question-options" role="group" aria-labelledby="questionTitle"></div>
+      <label id="questionOtherLabel" class="question-other" for="questionOther">${translated('Something else')}</label>
+      <input id="questionOther" type="text" maxlength="2000" autocomplete="off" />
+      <div class="approval-actions">
+        <button id="questionDismiss" class="quiet-button" type="button">${translated('Dismiss')}</button>
+        <button id="questionSubmit" class="send-button" type="button">${translated('Answer')}</button>
+      </div>
+    </div>
+  </section>
   <div id="i18n" hidden
+    data-question-dismissed="${translated('Question dismissed without an answer.')}"
     data-auto="${translated('Auto')}"
     data-agent-behavior-coding="${translated('Coding automatically')}"
     data-agent-behavior-planning="${translated('Planning only')}"

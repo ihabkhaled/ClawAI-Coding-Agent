@@ -190,6 +190,20 @@ const elevationRecipe = strict(
 
 export const runtimeToolInputSchemas = {
   agents: strict({ graph: subAgentGraph }, ['graph']),
+  ask: strict(
+    {
+      header: shortText,
+      question: text,
+      options: {
+        type: 'array',
+        items: strict({ label: shortText, description: shortText }, ['label']),
+        minItems: 2,
+        maxItems: 4,
+      },
+      allowOther: flag,
+    },
+    ['header', 'question', 'options'],
+  ),
   browser: strict({
     sessionId: text,
     contextId: text,

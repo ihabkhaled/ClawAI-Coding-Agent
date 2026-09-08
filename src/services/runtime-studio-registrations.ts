@@ -1,3 +1,7 @@
+import {
+  AskUserToolExecutor,
+  askUserToolDefinition,
+} from '../infrastructure/ask-user-tool-executor';
 import { DevelopmentServiceDiscovery } from '../infrastructure/development-service-discovery';
 import {
   DevelopmentServiceToolExecutor,
@@ -52,6 +56,7 @@ export function analysisToolRegistrations(
   parts: RuntimeStudioAnalysisTools,
 ): RuntimeToolRegistration[] {
   return [
+    { definition: askUserToolDefinition, executor: new AskUserToolExecutor(parts.questions) },
     {
       definition: intelligenceToolDefinition,
       executor: new IntelligenceToolExecutor(parts.intelligence),

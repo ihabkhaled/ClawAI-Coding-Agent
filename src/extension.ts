@@ -127,6 +127,7 @@ export function activate(context: vscode.ExtensionContext): void {
     agentRuns: {},
     agentMode: configuration.agentMode,
     approvalRequest: undefined,
+    questionRequest: undefined,
     backendCustomUrl: configuration.backendCustomUrl,
     backendEnvironment: configuration.backendEnvironment,
     backendUrl: configuration.backendUrl,
@@ -217,8 +218,11 @@ export function activate(context: vscode.ExtensionContext): void {
       return Promise.resolve();
     },
     resolveApproval: (requestId, approved) => {
-      coordinator.resolveApproval(requestId, approved);
+      coordinator.interruptions.resolveApproval(requestId, approved);
       return Promise.resolve();
+    },
+    answerQuestion: (requestId, selection) => {
+      coordinator.interruptions.answerQuestion(requestId, selection);
     },
     runtimePause: () => coordinator.runtimeControl('pause'),
     runtimeResume: () => coordinator.runtimeControl('resume'),

@@ -389,6 +389,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       { definition: qualityToolDefinition, executor: quality },
       { definition: browserToolDefinition, executor: new BrowserToolExecutor(browser, readiness) },
       ...analysisToolRegistrations({
+        questions: this.approvals,
         intelligence,
         transactions: this.transactions,
         journals: this.journals,

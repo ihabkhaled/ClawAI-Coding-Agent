@@ -136,3 +136,19 @@ grow and the F028 constraint stays unspent.
 in data rather than in a module: the catalog populated it from four backend
 shapes and no reader existed. Grep for the field, not only for the module, when
 auditing whether something is wired.
+
+### Batch 5
+
+| Batch | Version | Status                                                                                                  | Evidence                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----- | ------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 5     | 0.69.0  | Code and deterministic gates complete, including the real webview suite; installed-VSIX UAT not yet run | F016 AskUserQuestion: `src/core/user-question.ts`, `src/core/approval-broker.ts`, `src/infrastructure/ask-user-tool-executor.ts`, `src/services/agent-coordinator-interruptions.ts`; tests in `tests/unit/user-question.test.ts`, `tests/unit/approval-broker.test.ts`, `tests/unit/ask-user-tool-executor.test.ts`, `tests/playwright/question.e2e.ts`. Also corrects the F031 audit row. |
+
+Two design decisions worth keeping. Questions ride the approval queue rather
+than a second interrupt channel, so there is one modal slot, one withdrawal
+path and one set of epochs; and a dismissal reuses `resolveApproval` rather
+than adding a message type, because a dismissal is a rejected interruption.
+
+Both `vscode-runtime-studio.ts` and `agent-coordinator.ts` sat exactly on the
+500-line ceiling, so this batch extracted from each into the sibling-module
+pattern the repository already uses. Expect the next feature to hit the same
+wall somewhere else; that ceiling is doing its job.

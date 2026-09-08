@@ -8,6 +8,7 @@ import type { RunJournalService } from './run-journal-service';
 import type { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
 import type { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
+import type { UserQuestionPort } from '../infrastructure/ask-user-tool-executor';
 import type { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
 
 export interface RuntimeStudioAdvancedTools {
@@ -22,6 +23,7 @@ export interface RuntimeStudioAdvancedTools {
 }
 
 export interface RuntimeStudioAnalysisTools {
+  readonly questions: UserQuestionPort;
   readonly intelligence: WorkspaceIntelligenceService;
   readonly transactions: FileTransactionService;
   readonly journals: RunJournalService;

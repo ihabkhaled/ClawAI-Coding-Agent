@@ -2538,6 +2538,63 @@ pre {
   gap: var(--sp-2);
 }
 
+/* Options stack rather than sit in a row: the sidebar can be 320px wide, and a
+   label plus its description has to stay readable at 200% zoom. Logical
+   properties keep the layout correct under RTL without a mirrored rule. */
+.question-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-3);
+}
+
+.question-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-2) var(--sp-3);
+  text-align: start;
+  cursor: pointer;
+  border: 1px solid var(--vscode-widget-border, transparent);
+  border-radius: var(--radius-2, 6px);
+  background: var(--vscode-editorWidget-background);
+  color: var(--vscode-editorWidget-foreground);
+}
+
+.question-option:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.question-option[aria-pressed='true'] {
+  border-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+/* Forced colours flatten the selection background, so the pressed state needs a
+   border the high-contrast theme is guaranteed to keep. */
+@media (forced-colors: active) {
+  .question-option[aria-pressed='true'] {
+    border-color: Highlight;
+    border-width: 2px;
+  }
+}
+
+.question-other {
+  display: block;
+  margin-block-start: var(--sp-3);
+}
+
+#questionOther {
+  width: 100%;
+  margin-block-start: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: var(--radius-2, 6px);
+}
+
 .toast-stack {
   position: fixed;
   z-index: 30;

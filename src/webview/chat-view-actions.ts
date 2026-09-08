@@ -42,6 +42,7 @@ export interface ChatViewActions {
   reviewChanges(previewId?: string): Promise<void>;
   removeQueued(requestId: string): Promise<void>;
   resolveApproval(requestId: string, approved: boolean): Promise<void>;
+  answerQuestion(requestId: string, selection: unknown): void;
   runtimePause(): Promise<void>;
   runtimeResume(): Promise<void>;
   runtimeSteer(message: string): Promise<void>;
