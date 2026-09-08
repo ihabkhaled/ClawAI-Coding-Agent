@@ -125,3 +125,14 @@ F021 was ordered ahead of F020 and F026 because the audit found it the smallest
 of the three and the source both of the others need. It rides
 `workspace.intelligence` rather than a new tool, so the offered catalog does not
 grow and the F028 constraint stays unspent.
+
+### Batch 4
+
+| Batch | Version | Status                                                                                                  | Evidence                                                                                                                                                                                            |
+| ----- | ------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 4     | 0.68.0  | Code and deterministic gates complete, including the real webview suite; installed-VSIX UAT not yet run | F040 context capacity: `media/chat.js`, `src/webview/chat-markup.ts`; tests in `tests/playwright/signal-desk.e2e.ts`. Also the webview proof batch 1 lacked, in `tests/playwright/composer.e2e.ts`. |
+
+`contextTokens` was a fourth instance of the pattern this program keeps finding,
+in data rather than in a module: the catalog populated it from four backend
+shapes and no reader existed. Grep for the field, not only for the module, when
+auditing whether something is wired.

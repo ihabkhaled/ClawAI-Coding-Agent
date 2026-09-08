@@ -293,6 +293,7 @@
   "This origin is outside the current browser scope.": "This origin is outside the current browser scope.",
   "Timed out": "Timed out",
   "tokens": "tokens",
+  "Tool calls used": "Tool calls used",
   "Tools": "Tools",
   "truncated": "ตัดทอนแล้ว",
   "Trust this workspace before collecting project context.": "Trust this workspace before collecting project context.",
