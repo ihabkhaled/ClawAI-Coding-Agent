@@ -271,3 +271,13 @@ itself but not of the product: tools became extendable through the 0.75.0
 policy rules, context collection already honoured `.clawai/ignore`, and
 attachments gained the 0.65.0 name screen. A fourth mechanism would have been
 the fork the audit warned about two rows earlier.
+
+### Batch 13
+
+| Batch | Version | Status                                | Evidence                                                                                                                                                                  |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 13    | 0.77.0  | Code and deterministic gates complete | F057 multi-step undo: `src/services/file-transaction-service.ts`, `src/services/agent-coordinator-commands.ts`; tests in `tests/unit/file-transaction-undo-stack.test.ts` |
+
+Scoped to the code half deliberately. Named checkpoints and conversation fork
+need a durable checkpoint store, which F059 rewind and F074 recaps also want;
+building one for undo alone would be the third of them to grow its own.

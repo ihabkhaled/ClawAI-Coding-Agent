@@ -502,8 +502,18 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     void this.cancel();
   }
 
+  /** How many applied transactions the workspace can still take back. */
+  get undoDepth(): number {
+    return this.transactions.undoDepth;
+  }
+
   invalidateWorkspace(): void {
     this.epochs = { ...this.epochs, workspace: this.epochs.workspace + 1 };
+    // An undo entry restores bytes into the workspace it was captured from.
+    // Replaying one after a folder change would write a stale file into a tree
+    // that never had it.
+    this.transactions.forgetUndoHistory();
+    this.findings.clear();
     void this.cancel();
   }
 

@@ -26,6 +26,7 @@ interface CommandCollaborators {
   readonly conversations: () => ConversationSessionService;
   readonly state: () => ExtensionState;
   readonly safeEdits: () => SafeEditService;
+  readonly undoDepth: () => number;
   readonly view: () => ChatViewProvider | null;
   readonly configuration: () => ConfigurationService;
 }
@@ -45,10 +46,22 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
     initializeWorkspace: () => parts.initializer().promptAndInitialize(),
     exportTranscript: () =>
       exportTranscript({ conversations: parts.conversations(), state: parts.state() }),
+    // Undo can now be run repeatedly, so the notice says whether there is
+    // anything left to take back. Without that, a user cannot tell a stack with
+    // more history from one that has reached the end.
     undoLastEdit: async () => {
-      if (await parts.safeEdits().undoLast()) {
-        await parts.view()?.postNotice(vscode.l10n.t('ClawAI changes were undone.'));
-      }
+      if (!(await parts.safeEdits().undoLast())) return;
+      const remaining = parts.undoDepth();
+      await parts
+        .view()
+        ?.postNotice(
+          remaining === 0
+            ? vscode.l10n.t('ClawAI changes were undone. There is nothing earlier to undo.')
+            : vscode.l10n.t(
+                'ClawAI changes were undone. {0} earlier changes can still be undone.',
+                String(remaining),
+              ),
+        );
     },
     selectModel: (modelKey) =>
       applyModelSelection(modelKey, parts.state(), parts.configuration(), () =>

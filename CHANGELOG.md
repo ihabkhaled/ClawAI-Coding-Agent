@@ -2,6 +2,26 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.77.0
+
+Minor: undo takes back more than the last change.
+
+- **ClawAI: Undo Last Edit** can be run repeatedly, up to twenty applied
+  transactions deep. It remembered exactly one, so a run that made three edits
+  could take back the third and no more — and the third is rarely the one a
+  reader objects to.
+- The notice says how many earlier changes remain, because a user otherwise
+  cannot tell a stack with history left from one that has reached the end.
+- The stack is bounded, and the oldest entry is dropped rather than the newest.
+  Each entry holds the before-state bytes it would restore, so an unbounded
+  history is an unbounded amount of the workspace held for a session that may
+  never undo anything.
+- A failed rollback leaves its entry in place so the same undo can be retried.
+  Popping it would discard the only record of how to restore the file.
+- The history is cleared when the workspace folder changes, along with the
+  reported findings: an entry restores bytes into the workspace it was captured
+  from, and replaying one into a different tree would write a stale file.
+
 ## 0.76.0
 
 Minor: search can return the lines either side of a match.

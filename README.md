@@ -11,7 +11,7 @@ in the ClawAI platform.
 
 ## Runtime foundation
 
-Version 0.76.0 delivers the model-neutral Runtime Protocol V2 studio. Bounded
+Version 0.77.0 delivers the model-neutral Runtime Protocol V2 studio. Bounded
 workspace, command, process, Git, container, database, quality, browser,
 planning, service, journal, and evidence capabilities share one ordered,
 policy-controlled execution loop. An unavailable or incompatible additive
@@ -46,7 +46,8 @@ endpoint keeps the supported V1 chat and reviewed edit workflow active.
   only when **Review changes** is selected.
 - Run bounded development commands in visible VS Code task terminals after
   approved edits.
-- Undo the most recent ClawAI edit made during the current extension session.
+- Undo ClawAI edits step by step, up to twenty applied changes deep, until the
+  workspace folder changes.
 - Keep project rules in `.clawai/` and profile-wide rules in extension storage.
 - Use the interface in 13 locales, including RTL Arabic and Persian.
 
@@ -183,7 +184,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.76.0` is current and implements the extension surface from the ClawAI
+Version `0.77.0` is current and implements the extension surface from the ClawAI
 VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 
