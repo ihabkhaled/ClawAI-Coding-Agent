@@ -173,9 +173,9 @@ both diagnostics and locations already return.
 
 ### Batch 7
 
-| Batch | Version | Status                                                                                                     | Evidence                                                                                                                                                                                                                                        |
-| ----- | ------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 7     | 0.71.0  | Code and deterministic gates complete, including a real VS Code host run proving the new command registers | F075 transcript export: `src/core/transcript-export.ts`, `src/services/transcript-export-command.ts`, `src/services/conversation-session-service.ts`; tests in `tests/unit/transcript-export.test.ts`. Also corrects F072 and F073 to CONFLICT. |
+| Batch | Version | Status                                             | Evidence                                                                                                                                                                                                                                        |
+| ----- | ------- | -------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7     | 0.71.0  | Complete; carried by the 0.74.0 installed artifact | F075 transcript export: `src/core/transcript-export.ts`, `src/services/transcript-export-command.ts`, `src/services/conversation-session-service.ts`; tests in `tests/unit/transcript-export.test.ts`. Also corrects F072 and F073 to CONFLICT. |
 
 ### A fifth dead declaration, and a corrected classification
 
@@ -195,9 +195,9 @@ code rather than trusting the audit, after F031.
 
 ### Batch 8
 
-| Batch | Version | Status                                                                  | Evidence                                                                                                                                                                                                 |
-| ----- | ------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 8     | 0.72.0  | Code and deterministic gates complete, including real spawned processes | F001 output truncation: `src/core/bounded-output.ts`, `src/infrastructure/bounded-command-runner.ts`; tests in `tests/unit/bounded-output.test.ts` and `tests/unit/bounded-command-runner.spawn.test.ts` |
+| Batch | Version | Status                                             | Evidence                                                                                                                                                                                                 |
+| ----- | ------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 8     | 0.72.0  | Complete; carried by the 0.74.0 installed artifact | F001 output truncation: `src/core/bounded-output.ts`, `src/infrastructure/bounded-command-runner.ts`; tests in `tests/unit/bounded-output.test.ts` and `tests/unit/bounded-command-runner.spawn.test.ts` |
 
 This one is not in the audit. It was found while checking whether the F001
 streaming gap mattered in practice: the runner handles timeout and cancellation
@@ -209,9 +209,9 @@ files.
 
 ### Batch 9
 
-| Batch | Version | Status                                                                   | Evidence                                                                                                                                                                                                                                                                                   |
-| ----- | ------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 9     | 0.73.0  | Code and deterministic gates complete, including a real VS Code host run | F026 structured findings and the aggregation half of F104: `src/core/findings.ts`, `src/services/findings-service.ts`, `src/infrastructure/quality-tool-executor.ts`, `src/views/state-tree-provider.ts`; tests in `tests/unit/findings.test.ts` and `tests/unit/findings-service.test.ts` |
+| Batch | Version | Status                                             | Evidence                                                                                                                                                                                                                                                                                   |
+| ----- | ------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 9     | 0.73.0  | Complete; carried by the 0.74.0 installed artifact | F026 structured findings and the aggregation half of F104: `src/core/findings.ts`, `src/services/findings-service.ts`, `src/infrastructure/quality-tool-executor.ts`, `src/views/state-tree-provider.ts`; tests in `tests/unit/findings.test.ts` and `tests/unit/findings-service.test.ts` |
 
 This completes the F021 → F020 → F026 chain the audit identified. Findings are
 deliberately surfaced in a view rather than only returned to the model: a store
@@ -225,9 +225,9 @@ references.
 
 ### Batch 10
 
-| Batch | Version | Status                                | Evidence                                                                                                                                                                                                                                                          |
-| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 10    | 0.74.0  | Code and deterministic gates complete | F104 extension half: `src/core/multi-agent-dag.ts`, `src/services/runtime-sub-agent-executor.ts`, `src/services/sub-agent-findings-observer.ts`; tests in `tests/unit/sub-agent-findings-observer.test.ts` and `tests/unit/sub-agent-coordinator-service.test.ts` |
+| Batch | Version | Status                                                                            | Evidence                                                                                                                                                                                                                                                          |
+| ----- | ------- | --------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 10    | 0.74.0  | Complete; installed-VSIX activation UAT in [`INSTALLED_UAT.md`](INSTALLED_UAT.md) | F104 extension half: `src/core/multi-agent-dag.ts`, `src/services/runtime-sub-agent-executor.ts`, `src/services/sub-agent-findings-observer.ts`; tests in `tests/unit/sub-agent-findings-observer.test.ts` and `tests/unit/sub-agent-coordinator-service.test.ts` |
 
 Batch 9 shipped findings that only a person or a top-level tool call could
 produce, which left the reviewer roles as the labels the audit called them.

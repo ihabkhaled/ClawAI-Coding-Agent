@@ -13,6 +13,7 @@ Each row was packaged, installed into its own disposable profile, and passed
 | ------- | ------------------------------------------------------------------ | --------------- |
 | 0.69.0  | `27dcda754bff89f28f63bb6bc4dbc92d19ac52ac7cef6d538f666aff24760a2a` | 1–5             |
 | 0.70.0  | `6fdc065c83ff777a37da7756a4c54cf6c4c6a7d921ae742100189eeb41110f99` | 1–6             |
+| 0.74.0  | `303f08d7bb96f8f40dec34633083a11b0874466653b79aa4150fc93d14ef4a2c` | 1–10            |
 
 ## The 0.69.0 run in full
 
