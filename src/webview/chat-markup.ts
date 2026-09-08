@@ -361,6 +361,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-retry="${translated('Retry')}"
     data-running="${translated('Running')}"
     data-running-count="${translated('{0} running')}"
+    data-runtime-tool-budget="${translated('Tool calls used')}"
     data-runtime-turns="${translated('{0} turns · {1} retries')}"
     data-truncated="${translated('truncated')}"
     data-redacted="${translated('redacted')}"

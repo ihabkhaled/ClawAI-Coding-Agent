@@ -2,6 +2,27 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.68.0
+
+Minor: the conversation token meter has a denominator, and the run budget meter
+stops calling itself something it is not.
+
+- The meter now reads `used / capacity` against the selected model context
+  window. `contextTokens` has been in the model catalog all along, populated
+  from four different backend shapes, and nothing read it — so the meter showed
+  a running total against nothing, a number that cannot say whether the window
+  is comfortable or nearly spent. It also sets a percentage the stylesheet can
+  fill.
+- AUTO routing and a model that reports no window both keep the old
+  denominator-free form. There is no single capacity to measure against, and
+  inventing one would be worse than omitting it.
+- The run budget meter counted tool calls while announcing itself to screen
+  readers as "tokens" — the one thing on screen it does not measure. It is now
+  labelled "Tool calls used".
+- Adds the webview proof that 0.65.0 shipped without: `.env` is refused in the
+  composer with the message that names the reason, and
+  `password-reset.controller.ts` still attaches.
+
 ## 0.67.0
 
 Minor: the agent can read the editor's Problems collection.

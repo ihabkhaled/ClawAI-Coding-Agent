@@ -373,6 +373,24 @@ function tokenChip(receipt, className = '') {
   return chip;
 }
 
+/**
+ * The context window of the model this conversation will actually use.
+ *
+ * The catalog has carried `contextTokens` from four different backend shapes
+ * all along and nothing ever read it, so the meter showed a running total with
+ * nothing to measure it against — a number that cannot say whether it is
+ * comfortable or nearly spent. AUTO has no single answer, and a model may
+ * report no window at all, so both return null and the meter keeps its old
+ * denominator-free form rather than inventing one.
+ */
+function activeContextCapacity() {
+  const modelKey = activeModelValue();
+  if (modelKey === 'AUTO' || modelKey === '') return null;
+  const entry = (currentState.models ?? []).find((model) => model.key === modelKey);
+  const capacity = entry?.contextTokens ?? null;
+  return typeof capacity === 'number' && capacity > 0 ? capacity : null;
+}
+
 function renderConversationTokenCount() {
   const receipts = [...requestTokens.values()];
   const activeTotal = receipts.reduce((total, receipt) => total + receipt.total, 0);
@@ -382,9 +400,20 @@ function renderConversationTokenCount() {
     (historyTokenTotal === 0 || historyTokensReported) &&
     receipts.every((receipt) => receipt.source === 'reported');
   const source = allReported ? 'reported' : 'estimated';
-  const summary = `${total} ${labels.tokens} · ${labels[source]}`;
+  const capacity = activeContextCapacity();
+  const summary =
+    capacity === null
+      ? `${total} ${labels.tokens} · ${labels[source]}`
+      : `${total} / ${capacity} ${labels.tokens} · ${labels[source]}`;
   elements.tokenCount.textContent = summary;
   elements.conversationTokenMeter.dataset.source = source;
+  if (capacity === null) {
+    delete elements.conversationTokenMeter.dataset.fill;
+  } else {
+    elements.conversationTokenMeter.dataset.fill = String(
+      Math.min(100, Math.round((total / capacity) * 100)),
+    );
+  }
   describeText(elements.conversationTokenMeter, summary);
 }
 
@@ -1680,7 +1709,9 @@ function runtimeBudget(budget) {
   const percent = Math.min(100, Math.round((used / maximum) * 100));
   const region = document.createElement('section');
   region.className = 'runtime-budget';
-  region.setAttribute('aria-label', labels.tokens);
+  // This meter counts tool calls against the run budget. It was announced as
+  // "tokens", which is the one thing on screen it does not measure.
+  region.setAttribute('aria-label', labels.runtimeToolBudget);
   const copy = textElement('span', 'runtime-budget-copy', '');
   copy.append(
     textElement('strong', '', `${String(used)} / ${String(maximum)}`),

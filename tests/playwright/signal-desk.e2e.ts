@@ -324,3 +324,22 @@ test('respects reduced motion and forced-color borders', async ({ page }) => {
   await expect(page.locator('.run-lane')).toHaveCSS('border-style', 'solid');
   await expect(page.locator('.run-state-marker')).toHaveCSS('animation-iteration-count', '1');
 });
+
+// The catalog carried contextTokens from four backend shapes and nothing read
+// it, so the meter showed a running total against nothing. A number with no
+// denominator cannot say whether the window is comfortable or nearly spent.
+test('measures conversation tokens against the selected model context window', async ({ page }) => {
+  await sendState(page, {
+    models: [localModel, cloudModel],
+    routingMode: 'MANUAL_MODEL',
+    selectedModel: cloudModel.key,
+  });
+
+  await expect(page.locator('#tokenCount')).toContainText('/ 128000');
+
+  // AUTO has no single window to measure against, so the meter keeps its
+  // denominator-free form rather than inventing one.
+  await sendState(page, { models: [localModel, cloudModel], routingMode: 'AUTO' });
+
+  await expect(page.locator('#tokenCount')).not.toContainText('/');
+});
