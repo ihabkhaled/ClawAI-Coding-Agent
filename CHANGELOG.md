@@ -2,6 +2,32 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.67.0
+
+Minor: the agent can read the editor's Problems collection.
+
+- `workspace.intelligence diagnostics` returns what the language servers have
+  already computed. Until now the only way to learn that a file had a type error
+  was to run a full `workspace.quality` gate and parse its stdout, which costs a
+  build and only covers the gates a project happens to define. The editor has
+  the answer per keystroke, for every installed analyzer.
+- Errors sort first, then path, line and column. A truncated list that opened
+  with formatter hints and never reached the errors would read as if the errors
+  were not there. `total` and `counts` describe every match even when the shown
+  list is capped, and `minimumSeverity` defaults to `warning`.
+- Two filters are boundaries rather than conveniences. The editor reports
+  problems for every open document, including files opened from outside the
+  workspace, so anything that does not resolve to a workspace-relative path is
+  dropped — a diagnostic message quotes the source line, and an absolute path
+  from elsewhere is content this tool was never granted. Credential-shaped
+  paths are dropped for the same reason: a parse error in `.env` would put a
+  line of it in the message.
+- A host that exposes no diagnostics returns an error, not an empty list. "No
+  problems" and "cannot tell" are different answers, and a model that cannot
+  distinguish them reports a clean workspace.
+- The operation classifies as an unprompted read, proven by test, so the
+  cheapest read in the runtime never reaches the approval broker.
+
 ## 0.66.0
 
 Minor: workspace search now searches the workspace.

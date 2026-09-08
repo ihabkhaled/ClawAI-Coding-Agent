@@ -114,3 +114,14 @@ which is a program rather than a batch, so F052 is BLOCKED on that contract.
 The order moved to the largest unblocked correctness gap instead. The dead-code
 claim F052 was meant to retire is recorded above and is now guarded by the
 `AGENTS.md` blocker, so it cannot quietly grow.
+
+### Batch 3
+
+| Batch | Version | Status                                                                | Evidence                                                                                                                                                                                                                                                                                                                                                                  |
+| ----- | ------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3     | 0.67.0  | Code and deterministic gates complete; installed-VSIX UAT not yet run | F021 IDE diagnostics: `src/core/workspace-diagnostics.ts`, `src/infrastructure/vscode-workspace-diagnostics.ts`, `src/infrastructure/intelligence-tool-executor.ts`, `src/services/workspace-intelligence-service.ts`; tests in `tests/unit/workspace-diagnostics.test.ts`, `tests/unit/intelligence-diagnostics.test.ts`, `tests/unit/runtime-policy-v2-adapter.test.ts` |
+
+F021 was ordered ahead of F020 and F026 because the audit found it the smallest
+of the three and the source both of the others need. It rides
+`workspace.intelligence` rather than a new tool, so the offered catalog does not
+grow and the F028 constraint stays unspent.

@@ -1,9 +1,12 @@
 import type { DevelopmentServiceManager } from './development-service-manager';
 import type { ElevationBrokerService } from './elevation-broker-service';
 import type { EvidenceBundleService } from './evidence-bundle-service';
+import type { FileTransactionService } from './file-transaction-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
 import type { IntegrationCoordinatorService } from './integration-coordinator-service';
+import type { RunJournalService } from './run-journal-service';
 import type { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
+import type { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
 
@@ -16,6 +19,12 @@ export interface RuntimeStudioAdvancedTools {
   readonly flagship: FlagshipDeliveryService;
   readonly elevation: ElevationBrokerService;
   readonly activeRunId: () => string;
+}
+
+export interface RuntimeStudioAnalysisTools {
+  readonly intelligence: WorkspaceIntelligenceService;
+  readonly transactions: FileTransactionService;
+  readonly journals: RunJournalService;
 }
 
 export type RuntimeApprovalPhase = 'waiting' | 'approved' | 'rejected';
