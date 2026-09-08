@@ -2,6 +2,26 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.74.0
+
+Minor: reviewer sub-agents report findings instead of prose.
+
+- `SubAgentOutcome` carries a `findings` array. The reviewer and
+  security-reviewer roles were enum labels with nothing behind them: a reviewer
+  wrote its conclusions into its response, so the parent could not count them,
+  merge them with a second reviewer's, or decide whether they blocked.
+- Findings are captured from the reviewer's own `workspace.quality report`
+  call, the same way writes are already captured from a transaction, so a
+  reviewer reports through the tool a person can also read rather than through
+  a channel of its own.
+- Each finished task files what it found, so several reviewers over one diff
+  merge into a single triage-ordered list in the Findings view. A cancelled or
+  blocked reviewer keeps the findings it reported before it stopped: what it
+  found is not conditional on how its task ended.
+- A malformed report is dropped rather than failing the task. A reviewer that
+  found something real and described one finding badly should still deliver the
+  rest, and the tool call itself reports the validation error.
+
 ## 0.73.0
 
 Minor: a review can report structured findings, and a person can read them.

@@ -222,3 +222,18 @@ Two halves of F104 remain and are named rather than implied: reviewer
 sub-agents still report in prose because `SubAgentOutcome` has no findings
 field, and the backend `CodeReviewHandler` still throws `SCAFFOLD-R3` with no
 references.
+
+### Batch 10
+
+| Batch | Version | Status                                | Evidence                                                                                                                                                                                                                                                          |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 10    | 0.74.0  | Code and deterministic gates complete | F104 extension half: `src/core/multi-agent-dag.ts`, `src/services/runtime-sub-agent-executor.ts`, `src/services/sub-agent-findings-observer.ts`; tests in `tests/unit/sub-agent-findings-observer.test.ts` and `tests/unit/sub-agent-coordinator-service.test.ts` |
+
+Batch 9 shipped findings that only a person or a top-level tool call could
+produce, which left the reviewer roles as the labels the audit called them.
+This closes that: a reviewer's own `report` call is captured from its
+invocation, exactly as its writes already are, and reaches the shared list when
+its task ends.
+
+What remains of F104 is backend-side and unchanged: `CodeReviewHandler` throws
+`SCAFFOLD-R3` and has no references.

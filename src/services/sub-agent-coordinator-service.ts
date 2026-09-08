@@ -171,6 +171,7 @@ export class SubAgentCoordinatorService {
         tokens: 0,
         toolCalls: 0,
         artifacts: [],
+        findings: [],
       });
     }
   }
@@ -240,6 +241,7 @@ export class SubAgentCoordinatorService {
           tokens: 0,
           toolCalls: 0,
           artifacts: [],
+          findings: [],
           blocker: error instanceof Error ? error.message : 'Sub-agent failed',
         },
         true,
@@ -381,6 +383,7 @@ export class SubAgentCoordinatorService {
       tokens: 0,
       toolCalls: 0,
       artifacts: [],
+      findings: [],
       blocker,
     };
   }
