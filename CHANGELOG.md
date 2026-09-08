@@ -2,6 +2,37 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.70.0
+
+Minor: the agent can ask the language servers, instead of searching for a name.
+
+- `workspace.intelligence` gains `definition`, `references`, `implementations`
+  and `hover`, each taking a one-based position. Until now the only way to find
+  where something was defined was to search for its name and read the hits,
+  which finds every mention of the word and cannot distinguish a definition
+  from a comment about one.
+- Results are deduplicated. Providers answer once per overload and once per
+  re-export, so the same position arrived repeatedly and spent the result cap on
+  duplicates. They are ordered by path and position rather than by whichever
+  provider answered first.
+- `LocationLink` is read as well as `Location`. TypeScript returns the former,
+  so reading only `uri` and `range` would have returned nothing for the language
+  this extension is mostly used on — which looks exactly like "no definition
+  found".
+- Locations outside the workspace and on credential-shaped files are dropped,
+  through the same path rule every tool schema applies. `preview` quotes a line
+  of source, so emitting one is a read in every sense that matters. A definition
+  inside `node_modules` is still a legitimate answer and is kept.
+- A preview is only taken from the document already open for the query.
+  Opening every target to quote a line would turn one navigation into an
+  unbounded read of files the caller never named.
+- A host with no language servers returns an error rather than an empty list,
+  for the same reason 0.67.0 does with diagnostics: "no definition here" and
+  "cannot tell" are different answers.
+- The diagnostics filter added in 0.67.0 now uses `isSafeRelativeWorkspacePath`
+  rather than its own near-copy of the rule, so there is one path rule and not
+  two that can drift.
+
 ## 0.69.0
 
 Minor: the agent can ask the user a structured question instead of guessing.

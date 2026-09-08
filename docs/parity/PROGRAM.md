@@ -159,3 +159,14 @@ Both `vscode-runtime-studio.ts` and `agent-coordinator.ts` sat exactly on the
 500-line ceiling, so this batch extracted from each into the sibling-module
 pattern the repository already uses. Expect the next feature to hit the same
 wall somewhere else; that ceiling is doing its job.
+
+### Batch 6
+
+| Batch | Version | Status                                                                            | Evidence                                                                                                                                                                                                                                         |
+| ----- | ------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 6     | 0.70.0  | Complete; installed-VSIX activation UAT in [`INSTALLED_UAT.md`](INSTALLED_UAT.md) | F020 LSP: `src/core/workspace-symbols.ts`, `src/infrastructure/vscode-workspace-symbols.ts`, `src/services/workspace-intelligence-service.ts`; tests in `tests/unit/workspace-symbols.test.ts` and `tests/unit/intelligence-diagnostics.test.ts` |
+
+This completes the F021 → F020 half of the chain the audit found. F026 and
+F104, structured findings, are the remaining third and now have their evidence
+source: a finding is a position plus a severity plus a message, which is what
+both diagnostics and locations already return.

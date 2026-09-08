@@ -1,4 +1,4 @@
-import { isSensitiveWorkspacePath, normalizeWorkspacePath } from './workspace-path-policy';
+import { isSafeRelativeWorkspacePath, normalizeWorkspacePath } from './workspace-path-policy';
 
 export const DIAGNOSTIC_SEVERITIES = ['error', 'warning', 'information', 'hint'] as const;
 
@@ -65,8 +65,9 @@ export function selectDiagnostics(
   const matching = all
     .filter((diagnostic) => {
       const path = normalizeWorkspacePath(diagnostic.path);
-      if (path.length === 0 || path.startsWith('/') || path.split('/').includes('..')) return false;
-      if (isSensitiveWorkspacePath(path)) return false;
+      // The same rule every tool schema applies, rather than a second one that
+      // would drift: relative, contained, and not credential-shaped.
+      if (!isSafeRelativeWorkspacePath(path)) return false;
       if (rank(diagnostic.severity) > ceiling) return false;
       if (prefix === undefined || prefix.length === 0) return true;
       return path === prefix || path.startsWith(`${prefix}/`);

@@ -14,6 +14,7 @@ import type { WorkspaceDiagnostic } from '../../src/core/workspace-diagnostics';
 import type {
   IntelligenceIndexPort,
   WorkspaceDiagnosticsPort,
+  WorkspaceSymbolsPort,
 } from '../../src/services/workspace-intelligence-service';
 
 const index: IntelligenceIndexPort = {
@@ -126,5 +127,74 @@ describe('workspace.intelligence diagnostics', () => {
 
     expect(output.structured).toMatchObject({ total: 0, truncated: false });
     expect(output.structured?.diagnostics).toEqual([]);
+  });
+});
+
+describe('workspace.intelligence language queries', () => {
+  const symbols: WorkspaceSymbolsPort = {
+    locations: async () => [
+      { path: 'src/b.ts', line: 4, column: 2, preview: 'export function used() {}' },
+      { path: 'src/b.ts', line: 4, column: 2 },
+      { path: 'C:/elsewhere/private.ts', line: 1, column: 1 },
+    ],
+    hover: async () => '```ts\nfunction used(): void\n```',
+  };
+
+  function executorWith(port?: WorkspaceSymbolsPort) {
+    return new IntelligenceToolExecutor(
+      new WorkspaceIntelligenceService(index, diagnosticsPort([]), port),
+    );
+  }
+
+  it.each(['definition', 'references', 'implementations'])(
+    'offers %s and answers with deduplicated, contained locations',
+    async (operation) => {
+      expect(intelligenceToolDefinition.operations).toContain(operation);
+
+      const output = await executorWith(symbols).execute({
+        ...invocation({ path: 'src/a.ts', line: 12, column: 3 }),
+        operation,
+      });
+
+      expect(output.structured?.locations).toEqual([
+        { path: 'src/b.ts', line: 4, column: 2, preview: 'export function used() {}' },
+      ]);
+      expect(output.structured).toMatchObject({ total: 1, truncated: false });
+    },
+  );
+
+  it('returns hover text and says when there is none', async () => {
+    const found = await executorWith(symbols).execute({
+      ...invocation({ path: 'src/a.ts', line: 12 }),
+      operation: 'hover',
+    });
+    expect(found.structured).toMatchObject({ found: true });
+
+    const empty = await executorWith({
+      ...symbols,
+      hover: async () => undefined,
+    }).execute({ ...invocation({ path: 'src/a.ts', line: 12 }), operation: 'hover' });
+    expect(empty.structured).toMatchObject({ found: false, hover: null });
+  });
+
+  // "No definition here" and "this host has no language servers" are different
+  // answers, and a model that cannot tell them apart concludes the symbol is
+  // undefined.
+  it('refuses rather than answering empty when the host has no language servers', async () => {
+    await expect(
+      executorWith().execute({
+        ...invocation({ path: 'src/a.ts', line: 1 }),
+        operation: 'definition',
+      }),
+    ).rejects.toThrow(/does not expose language servers/);
+  });
+
+  it('requires a position', async () => {
+    await expect(
+      executorWith(symbols).execute({
+        ...invocation({ path: 'src/a.ts' }),
+        operation: 'definition',
+      }),
+    ).rejects.toThrow();
   });
 });
