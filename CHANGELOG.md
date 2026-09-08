@@ -2,6 +2,35 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.75.0
+
+Minor: a project can write permission rules, not just effect classes.
+
+- `.clawai/policies/policy.json` gains `rules`. Scoping was by effect kind and
+  risk class only, so a project could say "deny every network write" but never
+  "deny pushing to this remote" or "always ask before touching `infra/`".
+- A rule matches on any of `tool`, `operation`, `pathGlob` and `commandGlob`,
+  and must name at least one: a rule that matches nothing in particular matches
+  everything, which is never what the author meant. `pathGlob` is tested against
+  the paths a call actually names, collected from the argument shapes the tools
+  use rather than by walking the whole object, so a rule matches what the call
+  will touch.
+- **A rule may tighten and may never loosen: `outcome` is `ask` or `deny`, and
+  there is no `allow`.** The policy file lives inside the workspace, and
+  workspace content is untrusted — a repository that could write `allow` would
+  grant itself permissions by being cloned. Rules are evaluated after the
+  immutable rails, so none can reach past a workspace-trust denial or the
+  elevation, production and destructive rails. Both are proven by test.
+- Order does not matter: when rules disagree, `deny` wins over `ask`, so a
+  hand-written file can be read without simulating the list.
+- Patterns are `*` globs compiled from escaped literals, not regular
+  expressions. An expression from an untrusted file is a denial-of-service
+  waiting for the right input; a glob with no nested quantifier has nothing to
+  exploit.
+- `docs/CLAWAI_FOLDER_SPEC.md` documents `policies/policy.json`, which it had
+  never mentioned despite the file being read since the policy service was
+  added.
+
 ## 0.74.0
 
 Minor: reviewer sub-agents report findings instead of prose.

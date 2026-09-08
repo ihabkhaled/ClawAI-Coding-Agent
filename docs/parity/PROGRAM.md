@@ -237,3 +237,24 @@ its task ends.
 
 What remains of F104 is backend-side and unchanged: `CodeReviewHandler` throws
 `SCAFFOLD-R3` and has no references.
+
+### Batch 11
+
+| Batch | Version | Status                                | Evidence                                                                                                                                                                          |
+| ----- | ------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 11    | 0.75.0  | Code and deterministic gates complete | F049 granular permission rules: `src/core/policy-v2.ts`, `src/services/runtime-policy-v2-adapter.ts`, `docs/CLAWAI_FOLDER_SPEC.md`; tests in `tests/unit/policy-v2-rules.test.ts` |
+
+The audit called F049 the keystone of the policy cluster — "one policy model or
+three forks of it" — and it is unblocked in a way F052 is not, because the
+project policy file already exists and is already loaded.
+
+The design decision worth keeping: **a rule may tighten and may never loosen.**
+`outcome` has no `allow` because the file lives inside the workspace, and
+workspace content is untrusted; a repository that could write `allow` would
+grant itself permissions by being cloned. Rules are evaluated after the
+immutable rails so none can reach past them, and both properties are proven by
+test rather than asserted in a comment.
+
+F050's remaining half — a configurable secret deny list — should extend these
+rules rather than grow a list of its own, and inherits the same constraint: a
+project may add denials, never remove the built-in ones.

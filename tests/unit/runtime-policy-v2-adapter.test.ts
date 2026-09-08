@@ -85,7 +85,9 @@ function service(approve: (request: unknown, signal?: AbortSignal) => Promise<bo
       userPresent: () => true,
       approve,
     },
-    { load: async () => ({ deniedEffects: [], maximumRisk: 'R4', requireApproval: [] }) },
+    {
+      load: async () => ({ deniedEffects: [], maximumRisk: 'R4', requireApproval: [], rules: [] }),
+    },
   );
 }
 
