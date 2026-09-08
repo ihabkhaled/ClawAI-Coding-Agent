@@ -1,0 +1,113 @@
+# Parity audit — F032–F055 (context and input, permissions and safety)
+
+Audited against extension 0.64.4 at commit `454b34d`. "Present is not wired": a
+module with no callers is scaffolding, not SHIPPED.
+
+| ID   | Feature                                             | Class    | Evidence                                                                                                              | Gap                                                                                                                                                                                                                                                                                                                |
+| ---- | --------------------------------------------------- | -------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| F032 | @-mentions with fuzzy matching                      | MISSING  | `src/webview/chat-composer-markup.ts:19`, `src/webview/chat-inbound-message.ts:27`                                    | Bare textarea, no mention token, no fuzzy index, no folder expansion.                                                                                                                                                                                                                                              |
+| F033 | Line-range references                               | PARTIAL  | `src/infrastructure/vscode-filesystem-tool-executor.ts:59`, `:253`, `src/services/workspace-context-service.ts:104`   | The agent tool has ranges; the user-facing `file:L-L` syntax, coordinate preservation in context and stale-range UI are absent.                                                                                                                                                                                    |
+| F034 | Selection visibility toggle                         | SHIPPED  | `src/webview/chat-composer-markup.ts:77`, `media/chat.js:942`, `src/services/workspace-context-service.ts:104`        | Modes are exclusive: selection cannot be included alongside file or workspace.                                                                                                                                                                                                                                     |
+| F035 | Terminal references                                 | PARTIAL  | `src/services/process-supervisor-service.ts:253`, `:78`, `:43`                                                        | Only agent-spawned processes; no reference to an existing user terminal from the composer.                                                                                                                                                                                                                         |
+| F036 | Browser references and integration                  | PARTIAL  | `src/infrastructure/playwright-browser-driver.ts:118`, `src/core/browser-operation.ts:113`                            | `allowedOrigins` is hardcoded to the backend and frontend URLs at `src/services/runtime-studio-helpers.ts:61`; no composer attach of browser state.                                                                                                                                                                |
+| F037 | Shift-drag attachments                              | PARTIAL  | `media/chat.js:2158`, `:2148`, `src/services/attachment-request-service.ts:98`                                        | No modifier semantics, no reorder, no drop target for editor or explorer URIs.                                                                                                                                                                                                                                     |
+| F038 | PDF page-range reading                              | MISSING  | `src/core/chat-attachment.ts:15`, `src/infrastructure/playwright-browser-driver.ts:299`                               | PDFs upload raw; no page range, no page-aware citation, no text extraction.                                                                                                                                                                                                                                        |
+| F039 | Image understanding                                 | PARTIAL  | `src/core/chat-attachment.ts:36`, `:6`, `src/services/attachment-request-service.ts:69`                               | No resizing, no EXIF stripping, no token budgeting, no model-capability gate.                                                                                                                                                                                                                                      |
+| F040 | Context window indicator                            | PARTIAL  | `src/core/token-telemetry.ts:20`, `media/chat.js:323`, `:1621`                                                        | `contextTokens` from `src/core/model-catalog.ts:67` never reaches the webview; the meter measures `maxToolCalls`, not tokens. No capacity denominator.                                                                                                                                                             |
+| F041 | Automatic compaction and manual compact             | MISSING  | `src/core/durable-run-journal.ts:95`, `src/services/run-journal-service.ts:136`                                       | `compactedContext` is a schema slot with zero producers. No trigger, summariser, command or threshold.                                                                                                                                                                                                             |
+| F042 | Side questions / BTW                                | MISSING  | `src/webview/chat-inbound-message.ts:72`                                                                              | `send` is the only prompt path; no non-polluting transcript branch.                                                                                                                                                                                                                                                |
+| F043 | Extended thinking controls                          | PARTIAL  | `src/webview/chat-composer-markup.ts:42`, `media/chat.js:2477`, `:383`                                                | Six effort levels exist; the reasoning row is a flat list item, not collapsible, and options are static rather than capability-gated.                                                                                                                                                                              |
+| F044 | Voice dictation                                     | MISSING  | `src/webview/chat-composer-markup.ts:24`                                                                              | Nothing exists.                                                                                                                                                                                                                                                                                                    |
+| F045 | Auto permission classifier                          | SHIPPED  | `src/services/runtime-policy-v2-adapter.ts:33`, `src/core/policy-v2.ts:100`, `src/services/runtime-tool-router.ts:23` | Rules are regex on operation name; no learned or configured override.                                                                                                                                                                                                                                              |
+| F046 | Multiple permission modes                           | CONFLICT | `package.json:275`, `src/webview/chat-composer-markup.ts:74`, `src/services/configuration-service.ts:187`             | `ENTERPRISE_LOCKED` is offered as a free user choice and can be left at will. It is genuinely stricter than ASK — `src/core/policy-v2.ts:73` hard-denies elevation, production and destructive effects in that mode — but nothing binds a user to it, so it advertises an organizational lock that does not exist. |
+| F047 | Editable Plan mode document                         | PARTIAL  | `src/infrastructure/planning-tool-executor.ts:60`, `:69`, `src/core/agent-mode.ts:7`                                  | A plan can be written to a file, but nothing reads user edits back and no revision hash binds subsequent execution.                                                                                                                                                                                                |
+| F048 | Restore Plan mode on resume                         | PARTIAL  | `src/services/configuration-service.ts:169`, `src/services/session-control-service.ts:139`                            | Mode is workspace-global, not per session or thread; `ChatSessionDescriptor` carries no mode and no approved plan revision.                                                                                                                                                                                        |
+| F049 | Granular permission rules                           | PARTIAL  | `src/services/project-policy-service.ts:12`, `src/core/policy-v2.ts:50`                                               | Scoping is by effect kind and risk class only; no rule dimension for tool name, command pattern, path glob, domain, agent or organization.                                                                                                                                                                         |
+| F050 | Read deny rules                                     | PARTIAL  | `src/core/workspace-path-policy.ts:64`, `src/core/context-collector.ts:70`, `src/core/chat-attachment.ts:1`           | The deny set is hardcoded and unconfigurable, and `clawAI.exclude` is context-only. Attachments never consult path policy — `chat-attachment.ts` imports only `node:buffer` and `zod`.                                                                                                                             |
+| F051 | Sandboxed shell                                     | PARTIAL  | `src/infrastructure/bounded-command-runner.ts:33`, `:87`, `src/core/command-spec.ts:34`                               | Bounded, not sandboxed: no OS sandbox profile, no network isolation, no filesystem jail, no capability probe.                                                                                                                                                                                                      |
+| F052 | Managed organization settings                       | CONFLICT | `src/core/enterprise-policy.ts:39`, `CHANGELOG.md:942`                                                                | The module implements Ed25519 verification, tool/target/model allowlists and a retention ceiling, and has zero importers in `src/` and zero tests. The changelog claims signed enterprise policy contracts shipped.                                                                                                |
+| F053 | Hard deny rules and trusted repositories or domains | PARTIAL  | `src/core/policy-v2.ts:71`, `src/core/enterprise-policy.ts:66`, `src/services/runtime-studio-helpers.ts:61`           | The immutable elevation, production and destructive rail is wired; the enterprise safety rails are not. No trust list for domains, repositories or commands.                                                                                                                                                       |
+| F054 | Managed MCP allowlists and denylists                | MISSING  | zero `mcp` matches in `src/`, `tests/`, `docs/`, `package.json`                                                       | MCP does not exist in the extension, so there is no policy surface to gate.                                                                                                                                                                                                                                        |
+| F055 | Zero data retention mode                            | MISSING  | `src/core/enterprise-policy.ts:14`, `src/services/attachment-request-service.ts:69`                                   | No retention flag, no backend capability negotiation, no local-only transcript path, no posture receipt.                                                                                                                                                                                                           |
+
+Tally: 2 SHIPPED, 12 PARTIAL, 8 MISSING, 2 CONFLICT.
+
+## Reuse map — the seam each gap must extend
+
+- **F032** → the composer textarea plus a new inbound message in
+  `chat-inbound-message.ts`; resolve candidates through
+  `workspace-intelligence-service.ts` and feed them into `context-collector.ts`
+  as context candidates.
+- **F033** → `src/core/context-collector.ts:3` `ContextCandidate`, adding start and
+  end lines; mirror the already-correct staleness contract at
+  `vscode-filesystem-tool-executor.ts:279`, which hashes the whole file on a
+  ranged read.
+- **F035** → `process-supervisor-service.ts:52`, whose snapshot log is already
+  redacted and capped; expose a read-only reference producer to the composer.
+- **F036** → `src/core/browser-operation.ts:92` `browserScopeSchema`, sourcing
+  `allowedOrigins` from policy instead of `runtime-studio-helpers.ts:61`.
+- **F037** → the drop handler at `media/chat.js:2158` and `renderAttachments`.
+- **F038/F039** → `chatAttachmentSchema.superRefine` in
+  `src/core/chat-attachment.ts:117` is the single chokepoint where page range,
+  resize and EXIF stripping must land, before `attachment-upload-service.ts`.
+- **F040** → `src/core/model-catalog.ts:67` `contextTokens` through
+  `src/core/extension-state.ts:32` to `chat-public-state.ts:168`, rendered beside
+  the token chip at `media/chat.js:305`.
+- **F041** → `durable-run-journal.ts:95`, whose slot already models summary,
+  decisions, open questions and active task ids; the producer belongs in
+  `run-journal-service.ts` and `conversation-session-service.ts:60`.
+- **F042** → a variant of `send` at `chat-inbound-message.ts:72` that skips
+  `ConversationSessionService.recordThread`.
+- **F043** → `src/core/effort-mode.ts` and the activity renderer at
+  `media/chat.js:383`, gated on the model catalog entry.
+- **F044** → the composer control rail, webview-side only, with no host storage.
+- **F046/F052** → `src/core/enterprise-policy.ts` is already complete and needs a
+  loader plus call sites: verify on connect in
+  `agent-connection-service.ts:105`, clamp in `configuration-service.ts:187`, and
+  enforce beside `evaluatePolicyV2` in `runtime-policy-v2-adapter.ts:134`.
+- **F047/F048** → `planning-tool-executor.ts:69` and
+  `src/core/implementation-plan.ts:141`; persist the approved revision hash on
+  `ChatSessionDescriptor` and check it in `session-control-service.ts:96`.
+- **F049** → `src/core/policy-v2.ts:50` `projectPolicySchema`, adding rule arrays;
+  `project-policy-service.ts:12` already loads and validates that file.
+- **F050** → `src/core/workspace-path-policy.ts:64`, made composable with
+  configuration and organization rules, and called from
+  `src/core/chat-attachment.ts` to close the attachment gap.
+- **F051** → `bounded-command-runner.ts:150` `runCommandSpec`, wrapping the spawn
+  in a platform sandbox chosen from the declared effect in `command-spec.ts:16`.
+- **F053** → `src/core/policy-v2.ts:71`, extended with trust lists loaded from the
+  enterprise policy, wiring the currently dead safety rails.
+- **F054** → no seam exists. The nearest analogue to copy is tool registration at
+  `vscode-runtime-studio.ts:359` with capability gating at
+  `vscode-runtime-target-adapter.ts:306`.
+- **F055** → `enterprise-policy.ts:14` retention ceiling,
+  `attachment-request-service.ts:101` whose rollback already deletes remote files,
+  and `run-journal-service.ts` persistence.
+
+## Ordering constraints found in the code
+
+1. **F052 is the keystone for F046, F053, F054 and F055.** All four need a loaded,
+   verified enterprise policy. `enterprise-policy.ts` is written and unreferenced;
+   wiring it unblocks the whole permissions tail. Otherwise four features each
+   grow their own organization-settings path.
+2. **F046 must be resolved before F052 lands**, or the user-selectable
+   `ENTERPRISE_LOCKED` option contradicts the server lock. Removing it from
+   `package.json:275` and the composer is a breaking settings change and needs an
+   ADR.
+3. **F049 before F050 and F053.** All three want rule-shaped policy, and
+   `projectPolicySchema` is where it belongs. Building a configurable deny list
+   independently forks the policy model.
+4. **F033 before F032.** Mentions produce range-bearing references; adding line
+   coordinates to `ContextCandidate` first means mentions emit the final shape.
+5. **F038 and F039 share one chokepoint** and must ship as one batch, or the
+   second rewrites the first.
+6. **F040 before F041.** Compaction needs the capacity denominator F040 plumbs
+   through to know when to trigger.
+7. **F047 before F048.** There is no plan revision to restore until F047 creates
+   one.
+8. **F054 is greenfield.** No MCP client exists; it is a whole subsystem plus its
+   policy, not a policy bolted onto an existing surface. Sequence it after F052.
+9. **F051 is platform-forked** and independent of everything else.
+10. **The F050 attachment gap is a present-day defect, not a parity gap.** It is
+    the smallest closable item in this range and is described in
+    `docs/parity/PROGRAM.md` as Batch 1.

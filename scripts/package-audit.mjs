@@ -284,10 +284,16 @@ assert.doesNotMatch(
 );
 assert.match(webviewMarkup, /default-src 'none'/u, 'webview CSP must deny by default');
 assert.match(webviewSource, /randomBytes/u, 'webview scripts must use a fresh nonce');
-assert.doesNotMatch(
-  readFileSync(join(root, 'media', 'chat.js'), 'utf8'),
-  /\.innerHTML\s*=/u,
-  'webview must not assign untrusted HTML',
+const webviewScript = readFileSync(join(root, 'media', 'chat.js'), 'utf8');
+assert.doesNotMatch(webviewScript, /\.innerHTML\s*=/u, 'webview must not assign untrusted HTML');
+// The host blocks secret-bearing attachments either way, so losing this check
+// costs no safety and every explanation: the user would see only the generic
+// "invalid request". It is asserted here because it is the kind of duplicated
+// mirror that gets deleted as dead weight.
+assert.match(
+  webviewScript,
+  /isSecretBearingAttachmentName/u,
+  'webview must screen secret-bearing attachment names',
 );
 
 const locales = ['ar', 'de', 'es', 'fa', 'fr', 'hi', 'it', 'ja', 'pt', 'ru', 'th', 'zh'];

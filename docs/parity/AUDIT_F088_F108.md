@@ -1,0 +1,110 @@
+# Parity audit — F088–F108 (models, cloud, git and review, observability)
+
+Audited against extension 0.64.4 at commit `454b34d` and the ClawAI monorepo at
+`0c67a5668`. `EXT` is this repository; `BE` is the monorepo. "Present is not
+wired": a module with no callers is scaffolding, not SHIPPED.
+
+| ID   | Feature                                                | Class   | Side    | Evidence                                                                                                                                                            | Gap                                                                                                                                                                                                                                 |
+| ---- | ------------------------------------------------------ | ------- | ------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F088 | Mid-session model switching and effort                 | PARTIAL | ext     | `EXT/src/services/agent-coordinator-runtime.ts:75`, `EXT/src/core/configuration.ts:20`, `EXT/src/core/model-catalog.ts:190`                                         | Switching, the effort ladder and manual-to-auto fallback ship and are tested, but routing exposes 2 of the backend 7 modes, and connector models skip the execution-capability check applied to router models at `:170`.            |
+| F089 | Fast mode                                              | PARTIAL | ext     | `BE/claw-routing-service/.../routing.manager.ts:370`, `EXT/package.json:230`, `EXT/src/core/speed-mode.ts:22`                                                       | The backend low-latency profile is unreachable from the extension. The extension speed mode is workspace-lookup concurrency, explicitly not a model or latency tradeoff.                                                            |
+| F090 | Advisor model                                          | PARTIAL | ext     | `EXT/src/core/runtime/runtime-tool-input-schemas.ts:36`, `EXT/src/services/runtime-sub-agent-executor.ts:167`                                                       | A second model is reachable only as a delegated sub-agent task; no advisor role, no consult point in the main loop, no advice merge with provenance.                                                                                |
+| F091 | Third-party providers                                  | SHIPPED | —       | `BE/claw-connector-service/.../adapter-factory.ts:12`, `EXT/src/backend/backend-client.ts:240`, `EXT/src/services/model-service.ts:35`                              | Eight providers registered, entitlement and allowed-provider filtering applied. Only leak is the F088 capability check.                                                                                                             |
+| F092 | LLM gateway support                                    | PARTIAL | both    | `BE/.../create-connector.dto.ts:9`, `BE/claw-chat-service/.../chat-execution.manager.ts:832`                                                                        | A gateway can only be pointed at as an OpenAI-compatible base URL. No gateway entity, SSO, group model policy, spend limit, gateway observability or failover, and no extension surface.                                            |
+| F093 | Automatic prompt caching                               | PARTIAL | both    | `packages/shared-utilities/.../extract-anthropic-usage.utility.ts:29`, `BE/claw-auth-service/.../credit-reservation.manager.ts:143`                                 | Caching is accounted for and billed but never requested: zero `cache_control` occurrences in either repository. No breakpoints, no cache key or privacy boundary, and no cached-token concept in `EXT/src/core/token-telemetry.ts`. |
+| F094 | Shared history with CLI                                | PARTIAL | both    | `EXT/src/backend/backend-client.ts:273`, `EXT/src/services/conversation-session-service.ts:48`, `BE/agent-cli/src/commands/start.command.js:29`                     | The CLI is a device and capability daemon, not a thread participant; no shared conversation identity between surfaces.                                                                                                              |
+| F095 | Resume cloud sessions                                  | PARTIAL | both    | `EXT/src/views/state-tree-provider.ts:85`, `EXT/src/backend/backend-client.ts:260`, `BE/.../agent-session.controller.ts:66`                                         | Only chat-thread resume exists. `GET agent/sessions` has zero extension callers, `createThread` carries no workspace or repository field, and nothing reconciles capability on resume.                                              |
+| F096 | Remote control                                         | PARTIAL | both    | `BE/.../agent-command.controller.ts:72`, `BE/claw-chat-service/.../runtime-v2-command.controller.ts:33`, `EXT/src/services/browser-authorization-service.ts:5`      | The browser can approve and revoke CLI device commands only. It cannot continue or steer a local VS Code session; the steering endpoint has no remote surface and the extension never registers as a device.                        |
+| F097 | Mobile app integration                                 | MISSING | both    | `BE/.../agent/dto/pair-init.dto.ts`, `BE/agent-cli/src-tauri/tauri.conf.json`                                                                                       | Generic pairing only; no mobile client and no mobile-scoped capability boundary.                                                                                                                                                    |
+| F098 | Cloud coding sessions                                  | MISSING | both    | `BE/.../agent-repo.controller.ts:12`, `BE/.../marketplace/utilities/sandbox-runner.utility.ts:1`                                                                    | Repository rows persist local repositories only; the sandbox runner is a worker-thread dry run, not a coding environment. No provisioning, no repository-backed cloud session, no handoff.                                          |
+| F099 | Routines                                               | PARTIAL | both    | `BE/.../agent-scheduled-command.controller.ts:26`, `BE/.../services/scheduled-command.service.ts:30`, `BE/.../recipes/managers/recipe-event-consumer.manager.ts:30` | Interval-scheduled commands and API-triggered recipes exist with approvals and evidence, but there is no cron, no repository-event trigger, no secrets isolation and no extension surface.                                          |
+| F100 | Self-hosted cloud runners                              | MISSING | backend | `BE/.../fleet/controllers/fleet.controller.ts:20`, `BE/.../fleet/types/device-matrix.types.ts:5`                                                                    | No runner registration, attestation, placement, isolation, update channel or policy; cloud runs execute in process.                                                                                                                 |
+| F101 | Desktop, JetBrains, Slack, GitHub, GitLab integrations | MISSING | both    | `EXT/src/services/integration-coordinator-service.ts:59`, `BE/claw-frontend/.../integration-facts.constants.ts`                                                     | The existing integration coordinator is git-worktree commit integration, not product integrations. The only other client speaks the device-capability contract, not the runtime-v2 run contract.                                    |
+| F102 | Agent view                                             | PARTIAL | both    | `EXT/package.json:364`, `EXT/src/views/state-tree-provider.ts:74`, `BE/.../capability.controller.ts:69`                                                             | `clawAI.history` is the only list view and carries title and message count. No status, ownership, filtering, attention queue or bulk actions; cloud and device sessions are not represented.                                        |
+| F103 | Native commit and PR creation                          | PARTIAL | both    | `EXT/src/infrastructure/git-tool-executor.ts:15`, `EXT/src/services/git-agent-service.ts:30`, `BE/claw-workspace-service/.../github-write-actions.helper.ts:45`     | Twenty-five git operations ship with secret scan and staged-diff approval, none of them PR. PR creation, remote and base-branch checks, and PR-to-session resumption exist nowhere.                                                 |
+| F104 | Code review and multi-agent review                     | PARTIAL | both    | `EXT/src/services/workflow-service.ts:46`, `EXT/src/core/multi-agent-dag.ts:143`, `BE/claw-routing-service/.../handlers/code-review.handler.ts:11`                  | Review is a one-line prompt on a generic freeform workflow. `SubAgentOutcome` has no findings field, the reviewer roles are inert enum labels, and the backend handler throws a scaffold error and is unreachable.                  |
+| F105 | Cloud PR auto-fix and monitoring                       | PARTIAL | both    | `BE/.../workspace-event-mapper.service.ts:130`, `BE/.../auto-suggest-scheduler.manager.ts:259`, `BE/.../workspace-action.service.ts:40`                             | Monitoring and the human merge boundary exist; the fix loop does not. `CI_FAILED` has no consumer that plans work, and no agent is invoked from a PR or CI event.                                                                   |
+| F106 | Security guidance and vulnerability scanning           | MISSING | both    | `EXT/src/core/staged-secret-scan.constants.ts:8`, `EXT/src/core/quality-graph.ts:6`, `EXT/src/extension.ts:73`                                                      | Zero CWE, CVE, SARIF or scanner references in either repository. The secret regexes are leak prevention, not vulnerability analysis, and `auditWorkspace` is a generic prompt.                                                      |
+| F107 | Usage dialog and attribution                           | PARTIAL | both    | `EXT/src/views/status-bar-controller.ts:5`, `EXT/src/backend/contracts.ts:282`, `BE/claw-audit-service/.../usage-ledger.repository.ts:66`                           | No usage dialog in the extension and no per-skill, subagent, plugin or workflow dimension on either side. The portal usage page does ship.                                                                                          |
+| F108 | OpenTelemetry and team analytics                       | MISSING | both    | `EXT/src/services/vscode-runtime-studio.ts:171`, `EXT/src/services/observability-service.ts:27`                                                                     | No OTLP exporter, tracer or meter provider anywhere. `LocalObservabilityService.setRemoteExport` has no production caller; spans terminate in the VS Code output channel.                                                           |
+
+Tally: 1 SHIPPED, 14 PARTIAL, 6 MISSING, 0 CONFLICT.
+
+The dominant pattern in this range is not missing backend capability. It is
+**extension-side surfacing of backend capability that already exists** — F089,
+F095, F096 and F102 are all backend-ready and client-blind.
+
+## Reuse map — the seam each gap must extend
+
+- **F088/F089** → widen `EXT/src/core/configuration.ts:20` `routingModeSchema` and
+  the `package.json:232` enum from 2 modes to the backend 7 at
+  `BE/routing.manager.ts:161`. Capability gating belongs in the connector loop at
+  `EXT/src/core/model-catalog.ts:190`; the badges already exist at
+  `state-tree-provider.ts:33` and can be reused in the composer model select. Do
+  not overload `speed-mode.ts` — it is a different axis.
+- **F090** → the `modelPolicy` input and `runtime-sub-agent-executor.ts:167`, with
+  provenance through `src/core/evidence-bundle.ts`.
+- **F092** → `create-connector.dto.ts:9` and `adapter-factory.ts:12`; a gateway
+  needs its own entity beside the connector provider, with policy and spend hooks
+  on the entitlements service.
+- **F093** → the provider request body at `chat-execution.manager.ts:826` is the
+  one insertion point. Accounting is already correct and starts reporting real
+  numbers the moment breakpoints are sent.
+- **F094** → `conversation-session-service.ts` and `backend-client.ts`
+  `listThreads`; give the CLI client the same thread contract.
+- **F095** → `BE/.../agent-session.controller.ts` as the registry,
+  `src/core/extension-state.ts` for listing, and
+  `capability-manifest.ts` plus `BackendRuntimeClient.getProtocol` for
+  reconciliation.
+- **F096** → `BE/.../runtime-v2-command.service.ts`, already generation- and
+  epoch-guarded, as the control plane, with
+  `EXT/src/backend/backend-runtime-client.ts` as the client half.
+- **F102** → the `TreeKind` union in `state-tree-provider.ts` plus
+  `chat-session-registry.ts`, fed by `GET agent/sessions` and
+  `GET agent/capabilities`.
+- **F103** → the discriminated union in `EXT/src/core/git-operation.ts:17`, then
+  `git-agent-service.ts:19` dispatch, then `git-tool-executor.ts:15`, then studio
+  registration, then the capability gate at
+  `vscode-runtime-target-adapter.ts:318`. **All five hops, or it is unreachable.**
+  Reuse `reviewStagedDiff` as the PR-body approval gate.
+- **F104** → a findings array on `SubAgentOutcome` at `multi-agent-dag.ts:143` and
+  a finding entry kind in `evidence-bundle.ts:21`, aggregated in
+  `sub-agent-coordinator-service.ts`.
+- **F105** → consume `CI_FAILED` from the webhook consumer, isolate fixes in
+  `sub-agent-worktree-service.ts`, and keep the human boundary at
+  `workspace-action.service.ts:40`.
+- **F106** → a `security` kind on `qualityGateKindSchema` at `quality-graph.ts:6`
+  with parsing beside `parseQualityDiagnostics` at `:152`, reusing the
+  `staged-secret-scan.ts` allow logic for false-positive suppression.
+- **F107** → dimension keys on `token-telemetry.ts`, the contract at
+  `backend/contracts.ts:275`, and backend aggregation following the existing
+  provider and model aggregation. Note that
+  `BE/.../weighted-usage.repository.ts:26` already persists a `workflow` column
+  that is never aggregated.
+- **F108** → implement the observability sink port as an OTLP sink and pass it as
+  the second constructor argument at `vscode-runtime-studio.ts:171`. That single
+  line is what makes `setRemoteExport` reachable.
+
+## Ordering constraints found in the code
+
+1. **F095 session identity is the keystone of the cloud cluster.** The extension
+   calls no `agent/*` endpoint except `GET agent/runtime/protocol`. Until it
+   attaches to `agent/sessions`, F096 has nothing to target, F102 has nothing to
+   list, and F094 has no thread-to-session map.
+2. **F096 before F097.** Mobile is a second client of the same remote-control
+   contract; pairing and scopes exist, the control surface does not.
+3. **F098 before F100.** Runner placement is meaningless before cloud sessions
+   exist. The F099 cron and repository triggers ride the same run lifecycle.
+4. **The git chain is strictly five hops.** Skipping any hop yields scaffolding.
+5. **F103 before F105** and before PR-linked session resume.
+6. **F104 structured findings before F106.** Security findings are evidence-scored
+   findings; there is one finding type, not two.
+7. **F107 dimension keys land before the rest of the observability cluster** —
+   the telemetry and ledger metadata are read by the usage UI, the span
+   attributes and team analytics alike.
+8. **F088 and F089 share one edit.** Widening the routing schema from 2 modes to 7
+   unblocks both and is the highest-leverage change in the models cluster.
+9. **F093 request half is one insertion point**; the billing half is already
+   correct.
+10. **F102 is cheapest last on the extension side** — the tree kind union is
+    already generic.

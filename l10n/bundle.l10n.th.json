@@ -288,6 +288,7 @@
   "The workspace policy file is too large.": "The workspace policy file is too large.",
   "Theme": "ธีม",
   "This file could not be attached.": "ไม่สามารถแนบไฟล์นี้ได้",
+  "This file looks like it holds a secret and cannot be attached.": "This file looks like it holds a secret and cannot be attached.",
   "This file type is not supported.": "This file type is not supported.",
   "This origin is outside the current browser scope.": "This origin is outside the current browser scope.",
   "Timed out": "Timed out",
