@@ -48,6 +48,7 @@
   "view.model": "Modelo e rota",
   "view.context": "Contexto",
   "view.history": "Histórico",
+  "view.findings": "Findings",
   "welcome.model": "Choose AUTO routing or a model exposed by your ClawAI backend.",
   "welcome.context": "Context receipts appear here after you ask about code.",
   "welcome.history": "Your recent ClawAI threads appear here after you connect."

@@ -12,6 +12,7 @@ const initialSnapshot: ExtensionSnapshot = {
   speedMode: '1X',
   approvalRequest: undefined,
   questionRequest: undefined,
+  findings: [],
   backendUrl: 'https://claw.example',
   backendStatus: 'disconnected',
   busy: false,

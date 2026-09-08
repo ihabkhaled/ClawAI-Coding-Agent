@@ -206,3 +206,19 @@ from the wrong end. Both runners had it. The lesson generalises — when a limit
 discards data, ask which end the reader needs, because a byte budget applied
 from the front is the same defect as batch 2's search reading the first 100
 files.
+
+### Batch 9
+
+| Batch | Version | Status                                                                   | Evidence                                                                                                                                                                                                                                                                                   |
+| ----- | ------- | ------------------------------------------------------------------------ | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 9     | 0.73.0  | Code and deterministic gates complete, including a real VS Code host run | F026 structured findings and the aggregation half of F104: `src/core/findings.ts`, `src/services/findings-service.ts`, `src/infrastructure/quality-tool-executor.ts`, `src/views/state-tree-provider.ts`; tests in `tests/unit/findings.test.ts` and `tests/unit/findings-service.test.ts` |
+
+This completes the F021 → F020 → F026 chain the audit identified. Findings are
+deliberately surfaced in a view rather than only returned to the model: a store
+nobody reads would have been the sixth dead subsystem in this program, which is
+the exact failure the audit exists to stop.
+
+Two halves of F104 remain and are named rather than implied: reviewer
+sub-agents still report in prose because `SubAgentOutcome` has no findings
+field, and the backend `CodeReviewHandler` still throws `SCAFFOLD-R3` with no
+references.

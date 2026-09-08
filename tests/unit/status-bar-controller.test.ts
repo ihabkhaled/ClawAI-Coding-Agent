@@ -20,6 +20,7 @@ function snapshot(patch: Partial<ExtensionSnapshot> = {}): ExtensionSnapshot {
     agentRuns: {},
     approvalRequest: undefined,
     questionRequest: undefined,
+    findings: [],
     backendStatus: 'disconnected',
     backendUrl: 'https://claw.local',
     busy: false,

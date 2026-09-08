@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 
 import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
+import type { FindingSeverity } from '../core/findings';
 
-export type TreeKind = 'context' | 'history' | 'model';
+export type TreeKind = 'context' | 'findings' | 'history' | 'model';
 
 function modelItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
   const auto = new vscode.TreeItem(
@@ -91,6 +92,40 @@ function historyItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
   });
 }
 
+const severityIcons: Readonly<Record<FindingSeverity, string>> = {
+  critical: 'error',
+  high: 'error',
+  medium: 'warning',
+  low: 'info',
+  info: 'info',
+};
+
+/**
+ * Reported findings, in the order a reader should triage them.
+ *
+ * A review that reported into a void would be the defect this program keeps
+ * finding, so the tool that records a finding puts it here, where a person sees
+ * it and can open the line it names.
+ */
+function findingItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
+  if (snapshot.findings.length === 0) {
+    return [new vscode.TreeItem(vscode.l10n.t('No findings reported'))];
+  }
+  return snapshot.findings.map((finding) => {
+    const item = new vscode.TreeItem(finding.title);
+    item.description = `${finding.severity} · ${finding.path}${
+      finding.line === undefined ? '' : `:${String(finding.line)}`
+    }`;
+    // The detail and the fix are the point of a finding, and a tree row has no
+    // space for either, so the hover carries both.
+    item.tooltip = `${finding.detail}
+
+${finding.remediation}`;
+    item.iconPath = new vscode.ThemeIcon(severityIcons[finding.severity]);
+    return item;
+  });
+}
+
 export class StateTreeProvider
   implements vscode.TreeDataProvider<vscode.TreeItem>, vscode.Disposable
 {
@@ -117,6 +152,9 @@ export class StateTreeProvider
     }
     if (this.kind === 'context') {
       return contextItems(this.state.snapshot);
+    }
+    if (this.kind === 'findings') {
+      return findingItems(this.state.snapshot);
     }
     return historyItems(this.state.snapshot);
   }

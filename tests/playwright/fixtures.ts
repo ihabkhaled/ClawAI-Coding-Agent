@@ -47,6 +47,7 @@ export function baseState() {
     agentMode: 'AUTO',
     approvalRequest: undefined,
     questionRequest: undefined,
+    findings: [],
     backendCustomUrl: '',
     backendEnvironment: 'LOCAL',
     backendStatus: 'connected',

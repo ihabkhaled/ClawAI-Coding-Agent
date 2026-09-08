@@ -45,6 +45,7 @@ function state() {
     agentRuns: {},
     approvalRequest: undefined,
     questionRequest: undefined,
+    findings: [],
     backendStatus: 'disconnected',
     backendUrl: configuration.backendUrl,
     busy: false,

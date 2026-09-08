@@ -75,6 +75,7 @@ import { EvidenceBundleService } from './evidence-bundle-service';
 import { ExecutionTargetRegistry } from './execution-target-registry';
 import { FileLeaseManager } from './file-lease-manager';
 import { FileTransactionService } from './file-transaction-service';
+import { FindingsService } from './findings-service';
 import { FlagshipDeliveryService } from './flagship-delivery-service';
 import { GitAgentService } from './git-agent-service';
 import { IntegrationCoordinatorService } from './integration-coordinator-service';
@@ -140,6 +141,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   readonly flagship: FlagshipDeliveryService;
   private readonly git: GitAgentService;
   readonly journals: RunJournalService;
+  readonly findings: FindingsService;
   private active: RuntimeRunService | undefined;
   private activeRunId: string | undefined;
   private activeInput: RuntimeStudioInput | undefined;
@@ -275,6 +277,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       new VscodeWorkspaceDiagnostics(),
       new VscodeWorkspaceSymbols(this.files),
     );
+    this.findings = new FindingsService(this.state);
     this.journals = new RunJournalService(
       new VscodeRunJournalStorage(context.globalStorageUri),
       new VscodeRunJournalKeyStore(context.secrets),
@@ -314,7 +317,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       new VscodeSubAgentDiagnosticsSink(logger, context.globalStorageUri),
       subAgentWorktrees,
     );
-    const quality = new QualityToolExecutor(this.files);
+    const quality = new QualityToolExecutor(this.files, this.findings);
     const integration = new IntegrationCoordinatorService(
       new RuntimeIntegrationGitAdapter(this.git, subAgentWorktreeAdapter),
       new RuntimeIntegrationQualityAdapter(quality),
