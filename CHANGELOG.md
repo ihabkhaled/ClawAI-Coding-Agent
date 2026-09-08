@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.76.0
+
+Minor: search can return the lines either side of a match.
+
+- `workspace.files search` takes `contextLines`. A match arrived as one line,
+  so deciding whether a hit was the definition or a passing mention meant a
+  separate read of the file — once per hit worth judging.
+- Context is off by default and capped at ten lines either side. The result cap
+  is shared across matches, so generous context spends the answer on fewer of
+  them, and three lines is usually enough to judge one.
+- Context clamps at the start and end of a file rather than padding, and each
+  line is bounded to the same 500 characters as the preview.
+
+Also records two audit corrections in `docs/parity`. F050 is closed without a
+fourth deny mechanism: tools are extendable through the 0.75.0 policy rules,
+context collection through `.clawai/ignore`, and attachments through the 0.65.0
+name screen, with built-ins add-only at all three.
+
 ## 0.75.0
 
 Minor: a project can write permission rules, not just effect classes.

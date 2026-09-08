@@ -290,6 +290,7 @@ export const runtimeToolInputSchemas = {
     query: text,
     regex: flag,
     ignoreCase: flag,
+    contextLines: integer,
     transaction: opaque,
   }),
   git: strict({

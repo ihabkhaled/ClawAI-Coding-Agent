@@ -109,9 +109,32 @@ const searchSchema = globSchema.extend({
   pattern: z.string().min(1).max(1_000).default('**/*'),
   regex: z.boolean().default(false),
   ignoreCase: z.boolean().default(false),
+  // Capped low deliberately: three lines either side is usually enough to
+  // judge a match, and the result cap is shared, so generous context spends
+  // the answer on fewer matches.
+  contextLines: z.number().int().min(0).max(10).default(0),
 });
 
 const MAX_SEARCH_LINE_CHARS = 2_000;
+
+/**
+ * The lines either side of a match.
+ *
+ * Surrounding lines are what turn "this file mentions the symbol" into "this
+ * is the definition", and reading them here saves the separate file read the
+ * model otherwise makes for every hit worth judging.
+ */
+function contextAround(
+  lines: readonly string[],
+  index: number,
+  radius: number,
+): { before: string[]; after: string[] } {
+  const bounded = (line: string): string => line.slice(0, 500);
+  return {
+    before: lines.slice(Math.max(0, index - radius), index).map(bounded),
+    after: lines.slice(index + 1, index + 1 + radius).map(bounded),
+  };
+}
 
 /**
  * Compiles the query once, refusing a pattern the engine cannot run.
@@ -149,7 +172,8 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'relative. List the root with path "". List/glob/search return at most 100 results; narrow ' +
     'truncated results. After one targeted search and read, act; do not rediscover unchanged files. ' +
     'SEARCH matches a literal query by default; pass regex:true for a JavaScript pattern and ' +
-    'ignoreCase:true to fold case. It reports scannedFiles and skips dependency and build output. ' +
+    'ignoreCase:true to fold case, and contextLines:N for N lines either side. It reports ' +
+    'scannedFiles and skips dependency and build output. ' +
     'Only treat an empty result as absence when truncated is false. ' +
     // Writing was undiscoverable: every mutation goes through a nested
     // transaction whose shape the catalog reports as an empty object, so a
@@ -391,7 +415,12 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
       WORKSPACE_SEARCH_MAX_CANDIDATE_FILES,
     );
     const candidateSetTruncated = files.length >= WORKSPACE_SEARCH_MAX_CANDIDATE_FILES;
-    const results: { path: string; line: number; preview: string }[] = [];
+    const results: {
+      path: string;
+      line: number;
+      preview: string;
+      context?: { before: string[]; after: string[] };
+    }[] = [];
     let scannedFiles = 0;
     let scannedBytes = 0;
     let budgetExhausted = false;
@@ -413,16 +442,21 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
         continue;
       }
       scannedFiles += 1;
-      for (const [index, line] of text.split(/\r?\n/u).entries()) {
+      const lines = text.split(/\r?\n/u);
+      for (const [index, line] of lines.entries()) {
         // A caller-supplied regex runs against a bounded prefix. An unbounded
         // line is the input that turns a nested quantifier into a hang, and no
         // useful match is lost: the preview never showed more than this either.
-        if (matcher.test(line.slice(0, MAX_SEARCH_LINE_CHARS)))
+        if (matcher.test(line.slice(0, MAX_SEARCH_LINE_CHARS))) {
           results.push({
             path: vscode.workspace.asRelativePath(uri, false),
             line: index + 1,
             preview: line.slice(0, 500),
+            ...(input.contextLines === 0
+              ? {}
+              : { context: contextAround(lines, index, input.contextLines) }),
           });
+        }
         if (results.length >= input.maxResults) break;
       }
     }

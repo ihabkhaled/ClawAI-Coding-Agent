@@ -258,3 +258,16 @@ test rather than asserted in a comment.
 F050's remaining half — a configurable secret deny list — should extend these
 rules rather than grow a list of its own, and inherits the same constraint: a
 project may add denials, never remove the built-in ones.
+
+### Batch 12
+
+| Batch | Version | Status                                | Evidence                                                                                                                                                                              |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 12    | 0.76.0  | Code and deterministic gates complete | F003 context lines: `src/infrastructure/vscode-filesystem-tool-executor.ts`; tests in `tests/unit/vscode-filesystem-tool-executor-bounds.test.ts`. Also closes F050 without new code. |
+
+F050 was closed by reading rather than building. The audit called the deny set
+"hardcoded and unconfigurable", which is true of `workspace-path-policy.ts`
+itself but not of the product: tools became extendable through the 0.75.0
+policy rules, context collection already honoured `.clawai/ignore`, and
+attachments gained the 0.65.0 name screen. A fourth mechanism would have been
+the fork the audit warned about two rows earlier.
