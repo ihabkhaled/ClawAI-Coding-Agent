@@ -294,6 +294,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.actions.removeQueued(request.requestId);
     } else if (request.type === 'resolveApproval') {
       await this.actions.resolveApproval(request.requestId, request.approved);
+    } else if (request.type === 'answerQuestion') {
+      this.actions.answerQuestion(request.requestId, request.selection);
     } else {
       await this.handleSelectionControl(request);
     }

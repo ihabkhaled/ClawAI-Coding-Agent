@@ -10,6 +10,7 @@ import {
 } from '../core/runtime/capability-manifest';
 import { advertisedWorkspaceRootKey } from '../core/workspace-scope';
 
+import { askUserToolDefinition } from './ask-user-tool-executor';
 import { browserToolDefinition } from './browser-tool-executor';
 import { containerToolDefinition } from './container-tool-executor';
 import { databaseToolDefinition } from './database-tool-executor';
@@ -302,6 +303,11 @@ export function buildRuntimeCapabilityManifest(
 function localToolDefinitions(probe: RuntimeHostProbe) {
   const definitions = [
     workspaceFilesystemToolDefinition,
+    // Asking the user needs no host prerequisite and no workspace trust: it
+    // reads nothing and writes nothing. It has to be advertised unconditionally
+    // or `executableToolDefinitions` filters it out of the offered catalog and
+    // the model is never told the question channel exists.
+    askUserToolDefinition,
     intelligenceToolDefinition,
     planningToolDefinition,
     runJournalToolDefinition,

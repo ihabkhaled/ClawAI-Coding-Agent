@@ -18,6 +18,7 @@ import { type ChatViewProvider } from '../webview/chat-view-provider';
 import { AgentConnectionService } from './agent-connection-service';
 import { collectAgentContext } from './agent-context-service';
 import { AgentCoordinatorBoundaries } from './agent-coordinator-boundaries';
+import { coordinatorInterruptions } from './agent-coordinator-interruptions';
 import { pickCompareInput, pickModelKey } from './agent-coordinator-prompts';
 import {
   agentConcurrencyKey,
@@ -521,8 +522,7 @@ export class AgentCoordinator implements vscode.Disposable {
 
   removeQueued = (requestId: string): void => void this.generations.remove(requestId);
 
-  resolveApproval = (requestId: string, approved: boolean): void =>
-    void this.approvals.resolve(requestId, approved);
+  readonly interruptions = coordinatorInterruptions(() => this.approvals);
 
   captureAdmission(threadId?: string): RequestAdmission {
     if (!this.state.snapshot.connected) {

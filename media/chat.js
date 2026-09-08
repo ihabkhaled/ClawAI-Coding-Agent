@@ -9,6 +9,15 @@ const elements = {
   agentBehavior: byId('agentBehavior'),
   announcer: byId('announcer'),
   approvalApprove: byId('approvalApprove'),
+  questionPanel: byId('questionPanel'),
+  questionHeader: byId('questionHeader'),
+  questionTitle: byId('questionTitle'),
+  questionMessage: byId('questionMessage'),
+  questionOptions: byId('questionOptions'),
+  questionOther: byId('questionOther'),
+  questionOtherLabel: byId('questionOtherLabel'),
+  questionDismiss: byId('questionDismiss'),
+  questionSubmit: byId('questionSubmit'),
   approvalDetails: byId('approvalDetails'),
   approvalKind: byId('approvalKind'),
   approvalMessage: byId('approvalMessage'),
@@ -1624,6 +1633,7 @@ function renderState(state) {
   renderRunDeck(state.generationQueue, state.agentRuns);
   renderRuntimeTimeline(state.runtime);
   renderApproval(state.approvalRequest);
+  renderQuestion(state.questionRequest);
   renderContextHint();
   syncControlTitles();
   autoGrowPrompt();
@@ -2360,6 +2370,112 @@ function resolveApproval(approved) {
   }
   vscode.postMessage({ type: 'resolveApproval', requestId, approved });
 }
+
+let questionReturnFocus = null;
+let selectedQuestionLabel = null;
+
+// The panel is the same modal slot approvals use, so only one of the two is
+// ever on screen. Options are buttons rather than a listbox: each is a single
+// tab stop with a visible pressed state, which stays operable at 200% zoom and
+// reads correctly in RTL without any bidi handling of its own.
+function renderQuestion(question) {
+  const wasHidden = elements.questionPanel.hidden;
+  elements.questionPanel.hidden = question === undefined;
+  if (question === undefined) {
+    elements.questionPanel.dataset.requestId = '';
+    selectedQuestionLabel = null;
+    elements.questionOther.value = '';
+    if (!wasHidden && questionReturnFocus?.focus) {
+      questionReturnFocus.focus();
+    }
+    questionReturnFocus = null;
+    return;
+  }
+  if (wasHidden) {
+    questionReturnFocus = document.activeElement;
+  }
+  elements.questionPanel.dataset.requestId = question.id;
+  elements.questionHeader.textContent = question.header;
+  elements.questionMessage.textContent = question.question;
+  selectedQuestionLabel = null;
+  elements.questionOptions.replaceChildren();
+  for (const option of question.options ?? []) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'question-option';
+    button.dataset.label = option.label;
+    button.setAttribute('aria-pressed', 'false');
+    button.append(textElement('strong', '', option.label));
+    if (option.description) {
+      button.append(textElement('small', '', option.description));
+    }
+    button.addEventListener('click', () => {
+      selectQuestionOption(option.label);
+    });
+    elements.questionOptions.append(button);
+  }
+  const allowOther = question.allowOther !== false;
+  elements.questionOther.hidden = !allowOther;
+  elements.questionOtherLabel.hidden = !allowOther;
+  if (wasHidden) {
+    elements.questionOptions.querySelector('button')?.focus();
+  }
+}
+
+// Clearing the typed text belongs to choosing an option, not to the shared
+// pressed-state update. Doing both here emptied the field on every keystroke,
+// because typing also has to release the pressed option.
+function markSelectedOption(label) {
+  selectedQuestionLabel = label;
+  for (const button of elements.questionOptions.querySelectorAll('button')) {
+    button.setAttribute('aria-pressed', button.dataset.label === label ? 'true' : 'false');
+  }
+}
+
+function selectQuestionOption(label) {
+  elements.questionOther.value = '';
+  markSelectedOption(label);
+}
+
+function answerQuestion() {
+  const requestId = elements.questionPanel.dataset.requestId;
+  if (!requestId) {
+    return;
+  }
+  const other = elements.questionOther.hidden ? '' : elements.questionOther.value.trim();
+  // Typed text wins when it is present: a user who selected an option and then
+  // typed has changed their mind, and the host validates either way.
+  const selection = other.length > 0 ? { other } : { label: selectedQuestionLabel };
+  if (selection.label === null && other.length === 0) {
+    return;
+  }
+  vscode.postMessage({ type: 'answerQuestion', requestId, selection });
+}
+
+// A dismissal is a rejected interruption, so it takes the path approvals
+// already take. The broker settles a withdrawn question as dismissed, which
+// keeps one cancellation story instead of two.
+function dismissQuestion() {
+  const requestId = elements.questionPanel.dataset.requestId;
+  if (!requestId) {
+    return;
+  }
+  vscode.postMessage({ type: 'resolveApproval', requestId, approved: false });
+}
+
+elements.questionSubmit.addEventListener('click', answerQuestion);
+elements.questionDismiss.addEventListener('click', dismissQuestion);
+elements.questionOther.addEventListener('input', () => {
+  if (elements.questionOther.value.trim().length > 0) {
+    markSelectedOption(null);
+  }
+});
+elements.questionPanel.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    dismissQuestion();
+  }
+});
 
 elements.approvalApprove.addEventListener('click', () => resolveApproval(true));
 elements.approvalReject.addEventListener('click', () => resolveApproval(false));

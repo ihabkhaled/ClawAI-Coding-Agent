@@ -2,6 +2,35 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.69.0
+
+Minor: the agent can ask the user a structured question instead of guessing.
+
+- Adds `runtime.ask`, a tool that puts one multiple-choice question to the user
+  and waits for the answer. Until now the only interruption available was a
+  yes/no approval attached to a side effect, so a model facing a genuine fork
+  either guessed or wrote the question into its prose and carried on without an
+  answer.
+- A question takes two to four options, each with an optional description, and
+  by default allows free text so the user can give an answer the options miss.
+  One option is a statement rather than a question, and more than four stops
+  being readable in a 320px sidebar or navigable from the keyboard.
+- It rides the approval broker rather than a channel of its own. One queue, one
+  modal slot, one cancellation: a run that ends withdraws its question through
+  the same `cancelKind` it already uses for approvals, and the same account and
+  workspace epochs invalidate both.
+- A dismissed question is reported to the model as dismissed and never as a
+  choice. The agent asked because it could not decide; answering on the user's
+  behalf would put words in their mouth and hide that the question went
+  unanswered.
+- The selection is validated against the question that was actually asked, not
+  merely shape-checked, so a stale or forged selection — one naming an option
+  from an earlier question — resolves nothing and leaves the question standing.
+- Options are buttons with a pressed state rather than a listbox: one tab stop
+  each, legible at 200% zoom, correct under RTL through logical properties, and
+  given a Highlight border under forced colours where the selection background
+  is flattened.
+
 ## 0.68.0
 
 Minor: the conversation token meter has a denominator, and the run budget meter
