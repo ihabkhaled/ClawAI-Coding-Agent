@@ -2,6 +2,37 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.71.0
+
+Minor: a conversation can be exported to a file.
+
+- Adds **ClawAI: Export Transcript**, which writes one conversation as Markdown
+  or JSON. The run journal and the evidence bundle already exported, but both
+  describe a run rather than a conversation and both were reachable only as
+  agent tools, so there was no way for a person to keep what was said — which
+  is what a support request or a review actually wants.
+- Every exported string passes through `redactText`, including the title. An
+  export leaves the extension the moment it is written, and a transcript is the
+  likeliest place for a token to be sitting because a user pastes one in to ask
+  why a request failed. Redacting at the boundary means a future field cannot
+  leak by omission.
+- The suggested filename is derived from the conversation title reduced to word
+  characters, so a title cannot carry a separator, a traversal or a Windows
+  reserved character into a path. The save dialog is the whole permission
+  model: nothing is written until the user names the destination.
+- The conversation is picked rather than inferred from focus. There is no
+  active-session concept to infer from, and the transcript worth exporting is
+  often an earlier one.
+- The transcript is read from the backend thread, not from the webview or from
+  `TranscriptEntry` in `chat-session.ts`. That type is declared with no
+  producers and no consumers — the fifth instance of the pattern the parity
+  audit keeps finding — so exporting from it would have meant inventing the
+  data it describes.
+- The palette delegates on `AgentCoordinator` move into
+  `agent-coordinator-commands.ts`. Two consecutive batches pushed that file two
+  or three lines past its 500-line ceiling, which is the ceiling working: the
+  fix is to move a group out, not to shorten a line.
+
 ## 0.70.0
 
 Minor: the agent can ask the language servers, instead of searching for a name.

@@ -87,19 +87,19 @@ requires that matrix.
 Ordering follows the constraints the audits found in the code, not the feature
 numbering.
 
-| Batch | Scope                                                                                                                       | Why here                                                                                       |
-| ----- | --------------------------------------------------------------------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- |
-| 1     | Attachment secret screening (F050, partial)                                                                                 | A live disclosure path, the smallest closable defect, no dependencies.                         |
-| 2     | Wire `enterprise-policy.ts` (F052) and resolve the `ENTERPRISE_LOCKED` conflict (F046), with an ADR                         | Keystone for F053, F054, F055; ends the largest dead-code claim.                               |
-| 3     | Rule-shaped policy in `projectPolicySchema` (F049), then the configurable deny list (F050 remainder) and trust lists (F053) | One policy model or three forks of it.                                                         |
-| 4     | `ToolSearch` catalog narrowing (F028)                                                                                       | Gates every later tool. The description budget already fails run-start above 2,000 characters. |
-| 5     | Grep and glob correctness (F003), command streaming and background (F001, F022)                                             | Highest-traffic tools; F001 must precede any second command path.                              |
-| 6     | Diagnostics (F021), LSP (F020), structured findings (F026, F104)                                                            | Strict chain: diagnostics is the smallest and feeds both.                                      |
-| 7     | `ChatSessionDescriptor` widening once, then F061–F066                                                                       | Five features share one five-field type. Widen it once or take five conflicting edits.         |
-| 8     | Context capacity (F040), then compaction (F041)                                                                             | Compaction needs the denominator to know when to fire.                                         |
-| 9     | Routing modes 2 to 7 (F088, F089), connector capability gate                                                                | One edit unblocks both; the capability gate is a correctness fix.                              |
-| 10    | URI handler (F072), then deep links (F073)                                                                                  | No handler is registered at all today.                                                         |
-| 11+   | Remaining waves per the audit ordering notes                                                                                | —                                                                                              |
+| Batch | Scope                                                                                                                       | Why here                                                                                        |
+| ----- | --------------------------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 1     | Attachment secret screening (F050, partial)                                                                                 | A live disclosure path, the smallest closable defect, no dependencies.                          |
+| 2     | Wire `enterprise-policy.ts` (F052) and resolve the `ENTERPRISE_LOCKED` conflict (F046), with an ADR                         | Keystone for F053, F054, F055; ends the largest dead-code claim.                                |
+| 3     | Rule-shaped policy in `projectPolicySchema` (F049), then the configurable deny list (F050 remainder) and trust lists (F053) | One policy model or three forks of it.                                                          |
+| 4     | `ToolSearch` catalog narrowing (F028)                                                                                       | Gates every later tool. The description budget already fails run-start above 2,000 characters.  |
+| 5     | Grep and glob correctness (F003), command streaming and background (F001, F022)                                             | Highest-traffic tools; F001 must precede any second command path.                               |
+| 6     | Diagnostics (F021), LSP (F020), structured findings (F026, F104)                                                            | Strict chain: diagnostics is the smallest and feeds both.                                       |
+| 7     | `ChatSessionDescriptor` widening once, then F061–F066                                                                       | Five features share one five-field type. Widen it once or take five conflicting edits.          |
+| 8     | Context capacity (F040), then compaction (F041)                                                                             | Compaction needs the denominator to know when to fire.                                          |
+| 9     | Routing modes 2 to 7 (F088, F089), connector capability gate                                                                | One edit unblocks both; the capability gate is a correctness fix.                               |
+| 10    | ADR on whether ClawAI wants a `vscode://` surface at all, then F072/F073                                                    | The absence is deliberate: the URI callback was removed for loopback auth and a test guards it. |
+| 11+   | Remaining waves per the audit ordering notes                                                                                | —                                                                                               |
 
 Each batch links its evidence here as it lands.
 
@@ -170,3 +170,25 @@ This completes the F021 → F020 half of the chain the audit found. F026 and
 F104, structured findings, are the remaining third and now have their evidence
 source: a finding is a position plus a severity plus a message, which is what
 both diagnostics and locations already return.
+
+### Batch 7
+
+| Batch | Version | Status                                                                                                     | Evidence                                                                                                                                                                                                                                        |
+| ----- | ------- | ---------------------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 7     | 0.71.0  | Code and deterministic gates complete, including a real VS Code host run proving the new command registers | F075 transcript export: `src/core/transcript-export.ts`, `src/services/transcript-export-command.ts`, `src/services/conversation-session-service.ts`; tests in `tests/unit/transcript-export.test.ts`. Also corrects F072 and F073 to CONFLICT. |
+
+### A fifth dead declaration, and a corrected classification
+
+`TranscriptEntry` in `chat-session.ts` is declared with no producers and no
+consumers. It joins `enterprise-policy.ts`, `compactedContext`,
+`setRemoteExport` and `contextTokens` on the list this program keeps extending.
+The export reads the backend thread instead, which is where the conversation
+actually lives.
+
+F072 and F073 were classified MISSING and are actually CONFLICT. The URI
+callback was not overlooked: `CHANGELOG.md:1470` records replacing it with a
+state-validated one-shot loopback callback, and `tests/extension-host/index.cjs`
+asserts no `onUri` activation event survives. Any `vscode://` surface reverses
+a security decision — a `vscode://` link is triggerable by any web page — so it
+needs an ADR before code. This is the second audit row corrected by reading the
+code rather than trusting the audit, after F031.

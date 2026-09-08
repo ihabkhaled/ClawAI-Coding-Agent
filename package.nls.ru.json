@@ -24,6 +24,7 @@
   "command.selectModel": "Выбрать модель",
   "command.cancel": "Отменить активный запрос",
   "command.undoLastEdit": "Отменить последнее изменение ClawAI",
+  "command.exportTranscript": "Export Transcript",
   "command.showLogs": "Показать журналы",
   "config.backendUrl": "ClawAI backend origin. Tokens and credentials must not be included in this URL.",
   "config.backendEnvironment": "Бэкенд",
