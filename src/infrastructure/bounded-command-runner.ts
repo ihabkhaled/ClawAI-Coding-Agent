@@ -4,6 +4,7 @@ import path from 'node:path';
 
 import spawn from 'cross-spawn';
 
+import { BoundedOutputBuffer } from '../core/bounded-output';
 import { commandSpecSchema, type CommandResult, type CommandSpec } from '../core/command-spec';
 import { redactText } from '../core/redaction';
 
@@ -32,22 +33,20 @@ export function runBoundedCommand(
   return new Promise((resolve, reject) => {
     const child = spawn(executable, arguments_, { cwd, shell: false, windowsHide: true });
     assertPipedStdio(child);
-    let stdout = '';
-    let stderr = '';
-    let truncated = false;
-    const append = (target: 'stdout' | 'stderr', chunk: Buffer): void => {
-      const remaining = Math.max(0, outputLimit - stdout.length - stderr.length);
-      const value = chunk.toString('utf8');
-      const bounded = value.slice(0, remaining);
-      truncated ||= bounded.length < value.length;
-      if (target === 'stdout') stdout += bounded;
-      else stderr += bounded;
+    // Same head-and-tail rule as the structured runner: a development command
+    // that overruns is almost always one that failed, and the reason is at the
+    // end. Decoding once at the end also stops a multi-byte character being
+    // split across two chunk boundaries.
+    const half = Math.max(1, Math.floor(outputLimit / 2));
+    const buffers = {
+      stdout: new BoundedOutputBuffer(outputLimit - half),
+      stderr: new BoundedOutputBuffer(half),
     };
     child.stdout.on('data', (chunk: Buffer) => {
-      append('stdout', chunk);
+      buffers.stdout.append(chunk);
     });
     child.stderr.on('data', (chunk: Buffer) => {
-      append('stderr', chunk);
+      buffers.stderr.append(chunk);
     });
     const timeout = setTimeout(() => child.kill(), 5 * 60_000);
     const cleanup = (): void => {
@@ -65,12 +64,14 @@ export function runBoundedCommand(
     });
     child.once('close', (exitCode) => {
       cleanup();
+      const stdout = buffers.stdout.result();
+      const stderr = buffers.stderr.result();
       resolve({
         exitCode: exitCode ?? undefined,
-        stdout: redactText(stdout),
-        stderr: redactText(stderr),
+        stdout: redactText(stdout.text),
+        stderr: redactText(stderr.text),
         durationMs: Date.now() - startedAt,
-        truncated,
+        truncated: stdout.truncated || stderr.truncated,
       });
     });
     signal.addEventListener('abort', aborted, { once: true });
@@ -171,22 +172,20 @@ export async function runCommandSpec(
       windowsHide: true,
     });
     assertPipedStdio(child);
-    const chunks = { stdout: [] as Buffer[], stderr: [] as Buffer[], bytes: 0 };
-    let truncated = false;
+    // One budget, split between the streams, so a chatty stdout cannot starve
+    // the stderr that usually carries the reason a command failed.
+    const half = Math.max(1, Math.floor(specification.outputLimitBytes / 2));
+    const buffers = {
+      stdout: new BoundedOutputBuffer(specification.outputLimitBytes - half),
+      stderr: new BoundedOutputBuffer(half),
+    };
     let timedOut = false;
     let cancelled = false;
-    const append = (channel: 'stdout' | 'stderr', chunk: Buffer): void => {
-      const remaining = Math.max(0, specification.outputLimitBytes - chunks.bytes);
-      const bounded = chunk.subarray(0, remaining);
-      chunks[channel].push(bounded);
-      chunks.bytes += bounded.byteLength;
-      truncated ||= bounded.byteLength !== chunk.byteLength;
-    };
     child.stdout.on('data', (chunk: Buffer) => {
-      append('stdout', chunk);
+      buffers.stdout.append(chunk);
     });
     child.stderr.on('data', (chunk: Buffer) => {
-      append('stderr', chunk);
+      buffers.stderr.append(chunk);
     });
     if (specification.stdin !== undefined) child.stdin.end(specification.stdin);
     else child.stdin.end();
@@ -212,18 +211,20 @@ export async function runCommandSpec(
     });
     child.once('close', (exitCode, closeSignal) => {
       cleanup();
+      const stdout = buffers.stdout.result();
+      const stderr = buffers.stderr.result();
       resolve({
         executablePath,
         executableHash,
-        stdout: redactText(Buffer.concat(chunks.stdout).toString('utf8')),
-        stderr: redactText(Buffer.concat(chunks.stderr).toString('utf8')),
+        stdout: redactText(stdout.text),
+        stderr: redactText(stderr.text),
         exitCode,
         signal: closeSignal,
         startedAt,
         durationMs: Date.now() - startedAtMs,
         timedOut,
         cancelled,
-        truncated,
+        truncated: stdout.truncated || stderr.truncated,
       });
     });
     signal?.addEventListener('abort', aborted, { once: true });

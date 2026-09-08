@@ -2,6 +2,31 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.72.0
+
+Minor: truncated command output keeps the end, where the error is.
+
+- Both command runners kept the first bytes up to the output limit and dropped
+  everything after. Compilers, test runners and package managers all put the
+  answer last — the failing assertion, the type error, the exit summary — while
+  the start is banners and dependency resolution. A build that overran its
+  budget therefore returned the banner and dropped the reason it failed, which
+  reads as though the command produced nothing useful.
+- Output now keeps the first quarter of the budget and the last three quarters,
+  with an explicit `… N bytes omitted …` marker between them. The marker states
+  the byte count, so an elided log is distinguishable from a complete one rather
+  than inferred from a suspiciously abrupt line.
+- The budget is split between the streams, so a chatty stdout can no longer
+  consume all of it and leave nothing for the stderr that usually carries the
+  reason. Proven by spawning a real process that writes 200 kB to stdout and one
+  line to stderr.
+- Memory stays bounded however much a command writes: the head stops growing
+  once its share is full and the tail is trimmed on every chunk.
+- The development-command runner also decoded each chunk separately, which split
+  any multi-byte character that straddled a chunk boundary. Decoding happens
+  once, at the end, and a sequence cut by the byte budget itself yields a
+  replacement character rather than throwing.
+
 ## 0.71.0
 
 Minor: a conversation can be exported to a file.

@@ -192,3 +192,17 @@ asserts no `onUri` activation event survives. Any `vscode://` surface reverses
 a security decision — a `vscode://` link is triggerable by any web page — so it
 needs an ADR before code. This is the second audit row corrected by reading the
 code rather than trusting the audit, after F031.
+
+### Batch 8
+
+| Batch | Version | Status                                                                  | Evidence                                                                                                                                                                                                 |
+| ----- | ------- | ----------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 8     | 0.72.0  | Code and deterministic gates complete, including real spawned processes | F001 output truncation: `src/core/bounded-output.ts`, `src/infrastructure/bounded-command-runner.ts`; tests in `tests/unit/bounded-output.test.ts` and `tests/unit/bounded-command-runner.spawn.test.ts` |
+
+This one is not in the audit. It was found while checking whether the F001
+streaming gap mattered in practice: the runner handles timeout and cancellation
+correctly and returns partial output with honest flags, but it kept the output
+from the wrong end. Both runners had it. The lesson generalises — when a limit
+discards data, ask which end the reader needs, because a byte budget applied
+from the front is the same defect as batch 2's search reading the first 100
+files.
