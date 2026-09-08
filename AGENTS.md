@@ -28,6 +28,15 @@ npm run package
 npm audit --omit=dev --audit-level=high
 ```
 
+Packaging is not the same evidence as activating. After `npm run package`,
+install the exact VSIX into a disposable profile and run the host assertions
+against that copy rather than the working tree:
+
+```bash
+code --user-data-dir <tmp>/user-data --extensions-dir <tmp>/extensions --install-extension builds/clawai-coding-agent-<version>.vsix --force
+npm run test:host:installed <tmp>/extensions
+```
+
 ## Blockers
 
 - Never store or log passwords, tokens, cookies, credentials, prompts, or

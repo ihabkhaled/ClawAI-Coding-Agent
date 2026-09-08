@@ -461,6 +461,7 @@
     "test:integration": "vitest run tests/integration",
     "test:labs": "node --test tests/labs/*.test.mjs",
     "test:host": "npm run build && node scripts/run-extension-tests.mjs",
+    "test:host:installed": "node scripts/run-installed-extension-tests.mjs",
     "test:playwright": "playwright test",
     "lab:bootstrap": "node scripts/labs/bootstrap-lab.mjs",
     "lab:release-parity": "node scripts/labs/verify-release-parity.mjs",

@@ -72,8 +72,15 @@ That total is not deliverable in one sitting, and reporting otherwise would be
 the same defect this audit just found. So the program runs as dependency-ordered
 batches. Each batch is complete on its own terms — code, tests, docs,
 localization, knowledge delta, version bump — and each is reported with the
-evidence it actually has. A batch that has not had its installed-VSIX UAT run
-says so, and is PARTIAL until it does.
+evidence it actually has.
+
+What "complete" means here is bounded, and the bound is written down.
+[`INSTALLED_UAT.md`](INSTALLED_UAT.md) records that the packaged 0.69.0 VSIX
+installs into a clean profile and passes the extension-host assertions as the
+installed artifact, which is what `npm run test:host:installed` now automates.
+It does not record a live-backend run against entitled models, because none was
+performed. No batch is claimed as DONE against the pack's full definition, which
+requires that matrix.
 
 ## Batch order
 
@@ -98,11 +105,11 @@ Each batch links its evidence here as it lands.
 
 ## Batch log
 
-| Batch | Version | Status                                                                | Evidence                                                                                                                                                                                                                                                                              |
-| ----- | ------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 0     | 0.64.4  | Complete                                                              | Audit of all 108, [`BASELINE_EVIDENCE.md`](BASELINE_EVIDENCE.md), four audit documents, `skills/setup-a-fresh-worktree`                                                                                                                                                               |
-| 1     | 0.65.0  | Code and deterministic gates complete; installed-VSIX UAT not yet run | Attachment secret screening in `src/core/chat-attachment.ts` and `media/chat.js`, 16 corpus tests in `tests/unit/chat-attachment.test.ts`, label test in `tests/unit/chat-markup.test.ts`, `package:audit` anti-drift assertion, `docs/SECURITY.md`                                   |
-| 2     | 0.66.0  | Code and deterministic gates complete; installed-VSIX UAT not yet run | F003 search and glob correctness in `src/infrastructure/vscode-filesystem-tool-executor.ts` and `src/infrastructure/workspace-scan.constants.ts`, tests in `tests/unit/vscode-filesystem-tool-executor-bounds.test.ts` and `tests/unit/filesystem-tool-shape-discoverability.test.ts` |
+| Batch | Version | Status                                                                            | Evidence                                                                                                                                                                                                                                                                              |
+| ----- | ------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 0     | 0.64.4  | Complete                                                                          | Audit of all 108, [`BASELINE_EVIDENCE.md`](BASELINE_EVIDENCE.md), four audit documents, `skills/setup-a-fresh-worktree`                                                                                                                                                               |
+| 1     | 0.65.0  | Complete; installed-VSIX activation UAT in [`INSTALLED_UAT.md`](INSTALLED_UAT.md) | Attachment secret screening in `src/core/chat-attachment.ts` and `media/chat.js`, 16 corpus tests in `tests/unit/chat-attachment.test.ts`, label test in `tests/unit/chat-markup.test.ts`, `package:audit` anti-drift assertion, `docs/SECURITY.md`                                   |
+| 2     | 0.66.0  | Complete; installed-VSIX activation UAT in [`INSTALLED_UAT.md`](INSTALLED_UAT.md) | F003 search and glob correctness in `src/infrastructure/vscode-filesystem-tool-executor.ts` and `src/infrastructure/workspace-scan.constants.ts`, tests in `tests/unit/vscode-filesystem-tool-executor-bounds.test.ts` and `tests/unit/filesystem-tool-shape-discoverability.test.ts` |
 
 ### Why batch 2 is not the enterprise policy the order above planned
 
@@ -117,9 +124,9 @@ claim F052 was meant to retire is recorded above and is now guarded by the
 
 ### Batch 3
 
-| Batch | Version | Status                                                                | Evidence                                                                                                                                                                                                                                                                                                                                                                  |
-| ----- | ------- | --------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 3     | 0.67.0  | Code and deterministic gates complete; installed-VSIX UAT not yet run | F021 IDE diagnostics: `src/core/workspace-diagnostics.ts`, `src/infrastructure/vscode-workspace-diagnostics.ts`, `src/infrastructure/intelligence-tool-executor.ts`, `src/services/workspace-intelligence-service.ts`; tests in `tests/unit/workspace-diagnostics.test.ts`, `tests/unit/intelligence-diagnostics.test.ts`, `tests/unit/runtime-policy-v2-adapter.test.ts` |
+| Batch | Version | Status                                                                            | Evidence                                                                                                                                                                                                                                                                                                                                                                  |
+| ----- | ------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 3     | 0.67.0  | Complete; installed-VSIX activation UAT in [`INSTALLED_UAT.md`](INSTALLED_UAT.md) | F021 IDE diagnostics: `src/core/workspace-diagnostics.ts`, `src/infrastructure/vscode-workspace-diagnostics.ts`, `src/infrastructure/intelligence-tool-executor.ts`, `src/services/workspace-intelligence-service.ts`; tests in `tests/unit/workspace-diagnostics.test.ts`, `tests/unit/intelligence-diagnostics.test.ts`, `tests/unit/runtime-policy-v2-adapter.test.ts` |
 
 F021 was ordered ahead of F020 and F026 because the audit found it the smallest
 of the three and the source both of the others need. It rides
@@ -128,9 +135,9 @@ grow and the F028 constraint stays unspent.
 
 ### Batch 4
 
-| Batch | Version | Status                                                                                                  | Evidence                                                                                                                                                                                            |
-| ----- | ------- | ------------------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 4     | 0.68.0  | Code and deterministic gates complete, including the real webview suite; installed-VSIX UAT not yet run | F040 context capacity: `media/chat.js`, `src/webview/chat-markup.ts`; tests in `tests/playwright/signal-desk.e2e.ts`. Also the webview proof batch 1 lacked, in `tests/playwright/composer.e2e.ts`. |
+| Batch | Version | Status                                                                            | Evidence                                                                                                                                                                                            |
+| ----- | ------- | --------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 4     | 0.68.0  | Complete; installed-VSIX activation UAT in [`INSTALLED_UAT.md`](INSTALLED_UAT.md) | F040 context capacity: `media/chat.js`, `src/webview/chat-markup.ts`; tests in `tests/playwright/signal-desk.e2e.ts`. Also the webview proof batch 1 lacked, in `tests/playwright/composer.e2e.ts`. |
 
 `contextTokens` was a fourth instance of the pattern this program keeps finding,
 in data rather than in a module: the catalog populated it from four backend
@@ -139,9 +146,9 @@ auditing whether something is wired.
 
 ### Batch 5
 
-| Batch | Version | Status                                                                                                  | Evidence                                                                                                                                                                                                                                                                                                                                                                                   |
-| ----- | ------- | ------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| 5     | 0.69.0  | Code and deterministic gates complete, including the real webview suite; installed-VSIX UAT not yet run | F016 AskUserQuestion: `src/core/user-question.ts`, `src/core/approval-broker.ts`, `src/infrastructure/ask-user-tool-executor.ts`, `src/services/agent-coordinator-interruptions.ts`; tests in `tests/unit/user-question.test.ts`, `tests/unit/approval-broker.test.ts`, `tests/unit/ask-user-tool-executor.test.ts`, `tests/playwright/question.e2e.ts`. Also corrects the F031 audit row. |
+| Batch | Version | Status                                                                            | Evidence                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----- | ------- | --------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 5     | 0.69.0  | Complete; installed-VSIX activation UAT in [`INSTALLED_UAT.md`](INSTALLED_UAT.md) | F016 AskUserQuestion: `src/core/user-question.ts`, `src/core/approval-broker.ts`, `src/infrastructure/ask-user-tool-executor.ts`, `src/services/agent-coordinator-interruptions.ts`; tests in `tests/unit/user-question.test.ts`, `tests/unit/approval-broker.test.ts`, `tests/unit/ask-user-tool-executor.test.ts`, `tests/playwright/question.e2e.ts`. Also corrects the F031 audit row. |
 
 Two design decisions worth keeping. Questions ride the approval queue rather
 than a second interrupt channel, so there is one modal slot, one withdrawal
