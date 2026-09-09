@@ -240,9 +240,9 @@ What remains of F104 is backend-side and unchanged: `CodeReviewHandler` throws
 
 ### Batch 11
 
-| Batch | Version | Status                                | Evidence                                                                                                                                                                          |
-| ----- | ------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 11    | 0.75.0  | Code and deterministic gates complete | F049 granular permission rules: `src/core/policy-v2.ts`, `src/services/runtime-policy-v2-adapter.ts`, `docs/CLAWAI_FOLDER_SPEC.md`; tests in `tests/unit/policy-v2-rules.test.ts` |
+| Batch | Version | Status                                             | Evidence                                                                                                                                                                          |
+| ----- | ------- | -------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 11    | 0.75.0  | Complete; carried by the 0.79.0 installed artifact | F049 granular permission rules: `src/core/policy-v2.ts`, `src/services/runtime-policy-v2-adapter.ts`, `docs/CLAWAI_FOLDER_SPEC.md`; tests in `tests/unit/policy-v2-rules.test.ts` |
 
 The audit called F049 the keystone of the policy cluster — "one policy model or
 three forks of it" — and it is unblocked in a way F052 is not, because the
@@ -261,9 +261,9 @@ project may add denials, never remove the built-in ones.
 
 ### Batch 12
 
-| Batch | Version | Status                                | Evidence                                                                                                                                                                              |
-| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 12    | 0.76.0  | Code and deterministic gates complete | F003 context lines: `src/infrastructure/vscode-filesystem-tool-executor.ts`; tests in `tests/unit/vscode-filesystem-tool-executor-bounds.test.ts`. Also closes F050 without new code. |
+| Batch | Version | Status                                             | Evidence                                                                                                                                                                              |
+| ----- | ------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 12    | 0.76.0  | Complete; carried by the 0.79.0 installed artifact | F003 context lines: `src/infrastructure/vscode-filesystem-tool-executor.ts`; tests in `tests/unit/vscode-filesystem-tool-executor-bounds.test.ts`. Also closes F050 without new code. |
 
 F050 was closed by reading rather than building. The audit called the deny set
 "hardcoded and unconfigurable", which is true of `workspace-path-policy.ts`
@@ -274,9 +274,9 @@ the fork the audit warned about two rows earlier.
 
 ### Batch 13
 
-| Batch | Version | Status                                | Evidence                                                                                                                                                                  |
-| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 13    | 0.77.0  | Code and deterministic gates complete | F057 multi-step undo: `src/services/file-transaction-service.ts`, `src/services/agent-coordinator-commands.ts`; tests in `tests/unit/file-transaction-undo-stack.test.ts` |
+| Batch | Version | Status                                             | Evidence                                                                                                                                                                  |
+| ----- | ------- | -------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 13    | 0.77.0  | Complete; carried by the 0.79.0 installed artifact | F057 multi-step undo: `src/services/file-transaction-service.ts`, `src/services/agent-coordinator-commands.ts`; tests in `tests/unit/file-transaction-undo-stack.test.ts` |
 
 Scoped to the code half deliberately. Named checkpoints and conversation fork
 need a durable checkpoint store, which F059 rewind and F074 recaps also want;
@@ -284,9 +284,9 @@ building one for undo alone would be the third of them to grow its own.
 
 ### Batch 14
 
-| Batch | Version | Status                                                                   | Evidence                                                                                                                               |
-| ----- | ------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
-| 14    | 0.78.0  | Code and deterministic gates complete, including a real VS Code host run | F074 session recaps: `src/core/session-recap.ts`, `src/services/session-recap-command.ts`; tests in `tests/unit/session-recap.test.ts` |
+| Batch | Version | Status                                             | Evidence                                                                                                                               |
+| ----- | ------- | -------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 14    | 0.78.0  | Complete; carried by the 0.79.0 installed artifact | F074 session recaps: `src/core/session-recap.ts`, `src/services/session-recap-command.ts`; tests in `tests/unit/session-recap.test.ts` |
 
 This batch began as the durable checkpoint store that F057, F059 and F074 were
 all said to need. Checking the backend first showed there was no consumer for
@@ -302,9 +302,9 @@ one of them.
 
 ### Batch 15
 
-| Batch | Version | Status                                                                   | Evidence                                                                                                                                                                                                       |
-| ----- | ------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 15    | 0.79.0  | Code and deterministic gates complete, including a real VS Code host run | F015 task tracking: `src/core/agent-tasks.ts`, `src/services/agent-task-service.ts`, `src/views/state-tree-provider.ts`; tests in `tests/unit/agent-tasks.test.ts` and `tests/unit/agent-task-service.test.ts` |
+| Batch | Version | Status                                                                            | Evidence                                                                                                                                                                                                       |
+| ----- | ------- | --------------------------------------------------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 15    | 0.79.0  | Complete; installed-VSIX activation UAT in [`INSTALLED_UAT.md`](INSTALLED_UAT.md) | F015 task tracking: `src/core/agent-tasks.ts`, `src/services/agent-task-service.ts`, `src/views/state-tree-provider.ts`; tests in `tests/unit/agent-tasks.test.ts` and `tests/unit/agent-task-service.test.ts` |
 
 The audit's reuse map pointed F015 at `implementation-plan.ts`, and that would
 have been wrong. The plan models epics, capabilities and stories, and requires
