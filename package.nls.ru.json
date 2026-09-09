@@ -49,6 +49,7 @@
   "view.model": "Модель и маршрут",
   "view.context": "Контекст",
   "view.history": "История",
+  "view.artifacts": "Delivered Files",
   "view.findings": "Findings",
   "view.tasks": "Tasks",
   "welcome.model": "Choose AUTO routing or a model exposed by your ClawAI backend.",

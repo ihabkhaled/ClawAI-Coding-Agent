@@ -36,18 +36,31 @@ import {
   planningToolDefinition,
 } from '../infrastructure/planning-tool-executor';
 import {
+  ProcessSupervisorToolExecutor,
+  processSupervisorToolDefinition,
+} from '../infrastructure/process-supervisor-tool-executor';
+import {
   RunJournalToolExecutor,
   runJournalToolDefinition,
 } from '../infrastructure/run-journal-tool-executor';
 import {
+  StructuredCommandToolExecutor,
+  structuredCommandToolDefinition,
+} from '../infrastructure/structured-command-tool-executor';
+import {
   SubAgentToolExecutor,
   subAgentToolDefinition,
 } from '../infrastructure/sub-agent-tool-executor';
+import {
+  VscodeFilesystemToolExecutor,
+  workspaceFilesystemToolDefinition,
+} from '../infrastructure/vscode-filesystem-tool-executor';
 import { VscodeUserNotifier } from '../infrastructure/vscode-user-notifier';
 
 import type {
   RuntimeStudioAdvancedTools,
   RuntimeStudioAnalysisTools,
+  RuntimeStudioWorkspaceTools,
 } from './runtime-studio.types';
 import type { RuntimeToolRegistration } from './runtime-tool-router';
 
@@ -110,6 +123,31 @@ export function advancedToolRegistrations(
     {
       definition: elevationToolDefinition,
       executor: new ElevationToolExecutor(parts.elevation, parts.files, parts.activeRunId),
+    },
+  ];
+}
+
+/**
+ * The three tools every run reaches for first: the filesystem, a bounded
+ * command, and the process supervisor. Grouped out of the studio for the same
+ * reason as the other two sets — it is a composition root on a 500-line
+ * ceiling, and these three carry the most constructor arguments of any of them.
+ */
+export function workspaceToolRegistrations(
+  parts: RuntimeStudioWorkspaceTools,
+): RuntimeToolRegistration[] {
+  return [
+    {
+      definition: workspaceFilesystemToolDefinition,
+      executor: new VscodeFilesystemToolExecutor(parts.files, parts.transactions, parts.artifacts),
+    },
+    {
+      definition: structuredCommandToolDefinition,
+      executor: new StructuredCommandToolExecutor(parts.files),
+    },
+    {
+      definition: processSupervisorToolDefinition,
+      executor: new ProcessSupervisorToolExecutor(parts.processes, parts.accountId, parts.files),
     },
   ];
 }

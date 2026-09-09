@@ -27,17 +27,9 @@ import {
 import { PackagedNativeElevationAdapter } from '../infrastructure/native-elevation-adapter';
 import { PlaywrightBrowserDriver } from '../infrastructure/playwright-browser-driver';
 import {
-  ProcessSupervisorToolExecutor,
-  processSupervisorToolDefinition,
-} from '../infrastructure/process-supervisor-tool-executor';
-import {
   QualityToolExecutor,
   qualityToolDefinition,
 } from '../infrastructure/quality-tool-executor';
-import {
-  StructuredCommandToolExecutor,
-  structuredCommandToolDefinition,
-} from '../infrastructure/structured-command-tool-executor';
 import {
   SocketPortInspector,
   VscodeDevelopmentServiceAdapter,
@@ -45,10 +37,6 @@ import {
   VscodeServiceCheckpointStore,
 } from '../infrastructure/vscode-development-service-adapter';
 import { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
-import {
-  VscodeFilesystemToolExecutor,
-  workspaceFilesystemToolDefinition,
-} from '../infrastructure/vscode-filesystem-tool-executor';
 import { VscodeIntelligenceIndex } from '../infrastructure/vscode-intelligence-index';
 import { VscodeObservabilitySink } from '../infrastructure/vscode-observability-sink';
 import {
@@ -98,6 +86,7 @@ import {
 import {
   advancedToolRegistrations,
   analysisToolRegistrations,
+  workspaceToolRegistrations,
 } from './runtime-studio-registrations';
 import { createRunScopedStores, type RunScopedStores } from './runtime-studio-stores';
 import { assembleSubAgents } from './runtime-studio-sub-agents';
@@ -364,22 +353,13 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       new VscodeElevationVerificationAdapter(),
     );
     const registrations = [
-      {
-        definition: workspaceFilesystemToolDefinition,
-        executor: new VscodeFilesystemToolExecutor(this.files, this.transactions),
-      },
-      {
-        definition: structuredCommandToolDefinition,
-        executor: new StructuredCommandToolExecutor(this.files),
-      },
-      {
-        definition: processSupervisorToolDefinition,
-        executor: new ProcessSupervisorToolExecutor(
-          this.processes,
-          () => this.state.snapshot.user?.id ?? 'account:anonymous',
-          this.files,
-        ),
-      },
+      ...workspaceToolRegistrations({
+        files: this.files,
+        transactions: this.transactions,
+        artifacts: this.stores.artifacts,
+        processes: this.processes,
+        accountId: () => this.state.snapshot.user?.id ?? 'account:anonymous',
+      }),
       { definition: gitToolDefinition, executor: new GitToolExecutor(this.git) },
       { definition: containerToolDefinition, executor: new ContainerToolExecutor(containers) },
       {

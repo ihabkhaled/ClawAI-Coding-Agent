@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { z } from 'zod';
 
+import { deliveredArtifactsFromReceipt } from '../core/delivered-artifact';
 import { fileTransactionSchema } from '../core/file-transaction';
 import { normalizeTransactionEncoding } from '../core/file-transaction-encoding';
 import {
@@ -21,6 +22,7 @@ import {
 } from './workspace-scan.constants';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
+import type { DeliveredArtifact } from '../core/delivered-artifact';
 import type { FileTransaction } from '../core/file-transaction';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { FileTransactionService } from '../services/file-transaction-service';
@@ -250,10 +252,16 @@ function assertSingleMatchingOperation(transaction: FileTransaction, operation: 
     );
 }
 
+/** Where delivered artifacts are recorded so something can offer to open them. */
+export interface DeliveredArtifactSink {
+  record(delivered: readonly DeliveredArtifact[]): unknown;
+}
+
 export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
   constructor(
     private readonly adapter: VscodeFileTransactionAdapter,
     private readonly transactions: FileTransactionService,
+    private readonly artifacts: DeliveredArtifactSink,
   ) {}
 
   async execute(
@@ -281,7 +289,30 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     assertSingleMatchingOperation(transaction, invocation.operation);
     const preview = await this.transactions.preview(transaction, signal);
     const receipt = await this.transactions.apply(preview, signal);
+    // An artifact is written for the user, not for the tree. Recording it here
+    // is what turns a file nobody was told about into one the Artifacts view
+    // can open.
+    this.artifacts.record(
+      deliveredArtifactsFromReceipt(receipt, (rootKey, path) =>
+        this.resolveArtifactPath(rootKey, path),
+      ),
+    );
     return { structured: { receipt } };
+  }
+
+  /**
+   * Resolves an artifact to an absolute path, or to nothing.
+   *
+   * A root that no longer resolves is not an error here: the artifact was
+   * written, the transaction succeeded, and the only thing lost is the ability
+   * to offer a link to it.
+   */
+  private resolveArtifactPath(rootKey: string, path: string): string | undefined {
+    try {
+      return vscode.Uri.joinPath(this.adapter.workspaceRootUri(rootKey), path).fsPath;
+    } catch {
+      return undefined;
+    }
   }
 
   private async read(candidate: unknown): Promise<RuntimeToolExecutionOutput> {

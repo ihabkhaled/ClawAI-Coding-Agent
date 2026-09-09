@@ -4,7 +4,7 @@ import type { AgentTaskStatus } from '../core/agent-tasks';
 import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
 import type { FindingSeverity } from '../core/findings';
 
-export type TreeKind = 'context' | 'findings' | 'history' | 'model' | 'tasks';
+export type TreeKind = 'artifacts' | 'context' | 'findings' | 'history' | 'model' | 'tasks';
 
 function modelItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
   const auto = new vscode.TreeItem(
@@ -75,6 +75,31 @@ function contextItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
       return item;
     }),
   ];
+}
+
+/**
+ * The files the agent produced for the user, newest first.
+ *
+ * Every row opens: an artifact nobody can open is the state this view exists
+ * to end. `vscode.open` is used directly rather than through a ClawAI command
+ * because the only thing to decide is which file, and the row already knows.
+ */
+function artifactItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
+  if (snapshot.artifacts.length === 0) {
+    return [new vscode.TreeItem(vscode.l10n.t('No files delivered yet'))];
+  }
+  return snapshot.artifacts.map((artifact) => {
+    const item = new vscode.TreeItem(artifact.path, vscode.TreeItemCollapsibleState.None);
+    item.iconPath = new vscode.ThemeIcon('file');
+    item.resourceUri = vscode.Uri.file(artifact.fsPath);
+    item.tooltip = artifact.fsPath;
+    item.command = {
+      command: 'vscode.open',
+      title: vscode.l10n.t('Open delivered file'),
+      arguments: [vscode.Uri.file(artifact.fsPath)],
+    };
+    return item;
+  });
 }
 
 function historyItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
@@ -190,6 +215,9 @@ export class StateTreeProvider
     }
     if (this.kind === 'tasks') {
       return taskItems(this.state.snapshot);
+    }
+    if (this.kind === 'artifacts') {
+      return artifactItems(this.state.snapshot);
     }
     return historyItems(this.state.snapshot);
   }
