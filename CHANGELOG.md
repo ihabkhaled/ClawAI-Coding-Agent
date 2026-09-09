@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.99.0
+
+Minor: chat tabs that say what they are doing, and an undo for closing one
+(F063, F064, F066).
+
+- **A tab shows its session's state.** A marker for running, waiting on you, or
+  failed, and a dot for a finished run nobody has looked at yet. An idle,
+  read session is prefixed with nothing — the ordinary case has to stay quiet
+  or the markers stop meaning anything.
+- **Unread is cleared by looking,** not by the next event, and a session you
+  are looking at is never marked.
+- **ClawAI: Reopen Closed Chat** brings back the session you closed most
+  recently, subject and thread intact, up to ten deep. An empty chat is not
+  remembered: it holds nothing to come back to, and remembering it would push
+  a real conversation off the end.
+- Tab titles now have one owner, so the subject, the activity marker and the
+  unread dot cannot disagree about the same string.
+
 ## 0.98.0
 
 Minor: `@` mentions with fuzzy matching (F032).

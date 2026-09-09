@@ -7,6 +7,7 @@ import {
   DEFAULT_CHAT_SUBJECT,
   deriveConversationSubject,
 } from '../core/chat-session';
+import { rememberClosedSession, takeClosedSession } from '../core/closed-session-stack';
 
 import { publicHistoryMessage } from './chat-history-message';
 import {
@@ -19,10 +20,12 @@ import {
 import { renderChatMarkup } from './chat-markup';
 import { toPublicChatState } from './chat-public-state';
 import { ChatSessionRegistry } from './chat-session-registry';
+import { markSessionRead, syncSessions } from './chat-session-sync';
 import { runPromptAdmissionFlow } from './prompt-admission-flow';
 
 import type { ChatViewActions } from './chat-view-actions';
 import type { ChatMessage } from '../backend/contracts';
+import type { ClosedSession } from '../core/closed-session-stack.types';
 import type { ExtensionState } from '../core/extension-state';
 
 const SIDEBAR_SESSION_ID = 'sidebar';
@@ -35,6 +38,8 @@ function isPromptMessage(request: InboundMessage): request is PromptMessage {
 
 export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   private readonly sessions = new ChatSessionRegistry<vscode.WebviewPanel>();
+  /** Sessions the user closed, most recent first, so one can be brought back. */
+  private closedSessions: ClosedSession[] = [];
   private view: vscode.WebviewView | null = null;
   private readonly unsubscribe: () => void;
 
@@ -44,7 +49,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     private readonly actions: ChatViewActions,
   ) {
     this.unsubscribe = state.subscribe((snapshot) => {
-      this.syncSessionTitles(snapshot.history);
+      syncSessions(this.sessions, snapshot);
       void this.broadcast({
         type: 'state',
         state: toPublicChatState(snapshot),
@@ -175,6 +180,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     this.view = null;
   }
 
+  /**
+   * Brings back the session closed most recently, or reports that there is
+   * none. Closing is the one destructive action a tab bar makes trivial, so
+   * it is the one that most needs an undo.
+   */
+  async reopenClosedSession(): Promise<string | undefined> {
+    const taken = takeClosedSession(this.closedSessions);
+    if (taken === undefined) return undefined;
+    this.closedSessions = taken.remaining;
+    return this.createEditorSession(taken.entry.subject, taken.entry.threadId);
+  }
+
   private async createEditorSession(
     title = DEFAULT_CHAT_SUBJECT,
     threadId?: string,
@@ -201,7 +218,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     };
     this.sessions.add(descriptor, panel);
     this.configureWebview(panel.webview, sessionId);
+    panel.onDidChangeViewState(() => {
+      if (panel.active) markSessionRead(this.sessions, sessionId);
+    });
     panel.onDidDispose(() => {
+      const closed = this.sessions.get(sessionId)?.descriptor;
+      if (closed !== undefined) {
+        this.closedSessions = rememberClosedSession(this.closedSessions, {
+          subject: closed.subject,
+          threadId: closed.threadId,
+          closedAt: Date.now(),
+        });
+      }
       this.sessions.remove(sessionId);
     });
     await this.postStateTo(panel.webview);
@@ -391,27 +419,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       threadId,
     });
     await this.actions.openThread({ sessionId: sourceSessionId, threadId });
-  }
-
-  private syncSessionTitles(history: ExtensionState['snapshot']['history']): void {
-    for (const session of this.sessions.list()) {
-      const thread = history.find((entry) => entry.id === session.descriptor.threadId);
-      const title = thread?.title?.trim();
-      if (title === undefined || title.length === 0 || title === session.descriptor.subject) {
-        continue;
-      }
-      const updated = this.sessions.update(session.descriptor.sessionId, {
-        subject: title,
-        updatedAt: Date.now(),
-      });
-      if (updated !== undefined) {
-        updated.target.title = title;
-        void updated.target.webview.postMessage({
-          type: 'session',
-          session: updated.descriptor,
-        });
-      }
-    }
   }
 
   private async broadcast(message: unknown): Promise<void> {

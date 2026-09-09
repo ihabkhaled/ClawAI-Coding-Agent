@@ -1970,8 +1970,69 @@ const mentionTranslations = {
   },
 };
 
+const sessionTabTranslations = {
+  ar: {
+    'No recently closed ClawAI chat to reopen.': 'لا توجد محادثة ClawAI مغلقة مؤخراً لإعادة فتحها.',
+    'Reopen Closed Chat': 'إعادة فتح المحادثة المغلقة',
+  },
+  de: {
+    'No recently closed ClawAI chat to reopen.':
+      'Kein kürzlich geschlossener ClawAI-Chat zum erneuten Öffnen.',
+    'Reopen Closed Chat': 'Geschlossenen Chat erneut öffnen',
+  },
+  es: {
+    'No recently closed ClawAI chat to reopen.':
+      'No hay ningún chat de ClawAI cerrado recientemente para reabrir.',
+    'Reopen Closed Chat': 'Reabrir chat cerrado',
+  },
+  fa: {
+    'No recently closed ClawAI chat to reopen.':
+      'هیچ گفتگوی ClawAI که اخیراً بسته شده باشد برای بازکردن وجود ندارد.',
+    'Reopen Closed Chat': 'بازکردن دوباره گفتگوی بسته‌شده',
+  },
+  fr: {
+    'No recently closed ClawAI chat to reopen.':
+      'Aucune conversation ClawAI récemment fermée à rouvrir.',
+    'Reopen Closed Chat': 'Rouvrir la conversation fermée',
+  },
+  hi: {
+    'No recently closed ClawAI chat to reopen.':
+      'फिर से खोलने के लिए हाल में बंद की गई कोई ClawAI चैट नहीं है।',
+    'Reopen Closed Chat': 'बंद चैट फिर से खोलें',
+  },
+  it: {
+    'No recently closed ClawAI chat to reopen.':
+      'Nessuna chat ClawAI chiusa di recente da riaprire.',
+    'Reopen Closed Chat': 'Riapri la chat chiusa',
+  },
+  ja: {
+    'No recently closed ClawAI chat to reopen.':
+      '再度開ける、最近閉じた ClawAI チャットはありません。',
+    'Reopen Closed Chat': '閉じたチャットを再度開く',
+  },
+  pt: {
+    'No recently closed ClawAI chat to reopen.':
+      'Nenhuma conversa do ClawAI fechada recentemente para reabrir.',
+    'Reopen Closed Chat': 'Reabrir conversa fechada',
+  },
+  ru: {
+    'No recently closed ClawAI chat to reopen.':
+      'Нет недавно закрытых чатов ClawAI для повторного открытия.',
+    'Reopen Closed Chat': 'Открыть закрытый чат заново',
+  },
+  th: {
+    'No recently closed ClawAI chat to reopen.': 'ไม่มีแชท ClawAI ที่เพิ่งปิดให้เปิดอีกครั้ง',
+    'Reopen Closed Chat': 'เปิดแชทที่ปิดไปอีกครั้ง',
+  },
+  zh: {
+    'No recently closed ClawAI chat to reopen.': '没有最近关闭的 ClawAI 对话可以重新打开。',
+    'Reopen Closed Chat': '重新打开已关闭的对话',
+  },
+};
+
 function translate(locale, message) {
   return (
+    sessionTabTranslations[locale][message] ??
     mentionTranslations[locale][message] ??
     composerTranslations[locale][message] ??
     administratorTranslations[locale][message] ??

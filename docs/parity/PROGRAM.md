@@ -1054,3 +1054,37 @@ downstream with `sensitive` recorded in the receipt, which is the pre-existing
 behaviour and the one that tells the user why their message did nothing.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 38 — F063, F064, F066 session tabs and an undo for closing one
+
+| Batch | Version | Status                                | Evidence                                                                                            |
+| ----- | ------- | ------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 38    | 0.99.0  | Code and deterministic gates complete | `chat-session-status.ts`, `closed-session-stack.ts`, `chat-session-sync.ts`. Tests: 19 + 9 + 5 new. |
+
+Three rows, one batch, because all three end up in the same string. The
+subject, the activity marker and the unread dot are one tab title; two places
+computing it would each be right about their own half and wrong about the
+whole. Title ownership moved out of the provider into `chat-session-sync.ts`,
+which is also what kept the provider under its line ceiling.
+
+**Activity outranks unread.** A running session is telling the user something
+more specific than "something happened here"; unread is what is left to say
+once the run is over and nobody looked. An idle, read session is prefixed with
+nothing at all — if the ordinary case carries a marker, the markers stop
+meaning anything.
+
+**Unread is cleared by looking, not by the next event.** The alternative — any
+new activity clears it — loses the news it was there to carry. A visible panel
+is never unread, because looking at it is reading it.
+
+**Closing is the one destructive action a tab bar makes trivial**, so it gets
+an undo: a bounded stack, most recent first, restoring subject and thread. An
+empty chat is not remembered, since it holds nothing to come back to and would
+push a real conversation off the end. A thread closed twice moves to the front
+rather than taking two slots — the stack answers "what did I just close", and
+one thread is one answer.
+
+VS Code panels take a title, not a badge, so the marker is a leading symbol
+rather than an icon. That is a platform limit, not a preference.
+
+**Still true:** live-model Definition of Done cannot be executed here.
