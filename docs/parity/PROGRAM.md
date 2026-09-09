@@ -942,3 +942,43 @@ The walk is bounded at eight levels and refuses a path containing `..` or a
 leading `/`, falling back to the root alone rather than resolving anywhere
 outside the workspace. Ordering is pure and tested without a filesystem;
 which of the emitted candidates exist stays a filesystem question.
+
+### Batch 35 — F047 editable plan documents and plan revisions
+
+| Batch | Version | Status                                | Evidence                                                                                                       |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 35    | 0.96.0  | Code and deterministic gates complete | `src/core/plan-revision.ts`, `planning-tool-executor.ts` `adopt`, `docs/PLAN_REVISIONS.md`. Tests: 15 + 5 new. |
+
+A plan the user cannot edit is a report. `export` wrote one and nothing ever
+read it back, so every edit a user made to their own plan was discarded by the
+next operation that took a plan as an argument.
+
+The Markdown export now carries the plan itself in a trailing
+`clawai-plan-revision` comment. Prose is lossy — the renderer prints headings,
+evidence and acceptance criteria, not every field the schema requires — so a
+plan re-derived from headings would silently drop what was never printed. The
+block is the plan of record; the prose is the part meant to be read. Editing
+prose is therefore deliberately **not** an edit to the plan: there is no way to
+tell prose that restates a plan from prose written about it.
+
+The revision is sha256 over the plan with keys sorted, computed from the plan
+and never from the document carrying it, so reformatting cannot invent a
+revision the user never made. Any planning operation may name the revision it
+read: naming none is allowed, naming the bound one proceeds, and naming a
+superseded one is refused as stale rather than executed against a plan the user
+has already replaced.
+
+**Deviation from the audit's reuse note.** The note suggested persisting the
+approved revision on `ChatSessionDescriptor` and checking it in
+`session-control-service.ts:96`. That was not taken. `ChatSessionDescriptor`
+is a webview registry record and `SessionControlService` is the VS Code
+permission surface; neither is where a plan document lives, and routing a plan
+hash through them would have coupled the plan round trip to the chat UI. The
+binding lives with the tool that owns plans. F048 still needs a per-session
+home for the mode and the approved revision, and that is where the descriptor
+work belongs.
+
+**Still true:** the pack's Definition of Done — 14 live-model scenarios per
+feature across providers — cannot be executed here. There is no authenticated
+backend and no entitled model credentials in this environment. Everything
+claimed above is proven by deterministic gates only.

@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.96.0
+
+Minor: plan documents you can edit, and revisions that bind what follows (F047).
+
+- **An exported Markdown plan carries the plan itself** in a trailing
+  `clawai-plan-revision` comment block, so the file can be read back. Prose
+  alone is lossy: a plan re-derived from headings would drop every field the
+  renderer never printed.
+- **`workspace.planning adopt` reads a document back.** It parses either export
+  format, validates it against the plan schema, and reports whether the plan
+  moved (`revised`), stayed put (`unchanged`), or is the first one bound
+  (`new`). Editing the prose around the block is not an edit to the plan.
+- **A revision hash binds later work.** Any planning operation may name the
+  revision it read; naming a superseded one is refused as stale rather than
+  acted on. Naming none stays allowed, and adopting a plan still grants no
+  execution permission.
+- See [docs/PLAN_REVISIONS.md](docs/PLAN_REVISIONS.md).
+
 ## 0.95.0
 
 Minor: nested `.clawai` memory files, with precedence (F076).

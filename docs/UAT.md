@@ -84,6 +84,8 @@
 ## Edits
 
 - [ ] Plan mode returns a read-only implementation plan and never applies files.
+- [ ] An exported Markdown plan can be edited and adopted back, and naming a
+      superseded revision is refused as stale.
 - [ ] In Ask for Approval, choose **Always allow in this workspace** once;
       confirm later prompts, panel changes, a VS Code reload, and restart do not
       show it again.
