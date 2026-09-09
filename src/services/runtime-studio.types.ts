@@ -11,6 +11,7 @@ import type { SubAgentCoordinatorService } from './sub-agent-coordinator-service
 import type { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { UserQuestionPort } from '../infrastructure/ask-user-tool-executor';
+import type { ConversationEndPort } from '../infrastructure/end-conversation-tool-executor';
 import type { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
 import type { DeliveredArtifactSink } from '../infrastructure/vscode-filesystem-tool-executor';
 
@@ -35,6 +36,7 @@ export interface RuntimeStudioWorkspaceTools {
 
 export interface RuntimeStudioAnalysisTools {
   readonly questions: UserQuestionPort;
+  readonly conversationEnd: ConversationEndPort;
   readonly intelligence: WorkspaceIntelligenceService;
   readonly transactions: FileTransactionService;
   readonly tasks: AgentTaskService;

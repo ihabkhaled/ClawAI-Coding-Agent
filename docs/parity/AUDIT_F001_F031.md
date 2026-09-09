@@ -35,9 +35,9 @@ module with no callers is scaffolding, not SHIPPED.
 | F028 | ToolSearch                   | BLOCKED, audit corrected               | `src/infrastructure/backend-runtime-transport.ts` (`start()` only), monorepo `runtime-v2.store.ts:91-114` (`toolCatalogHash` `superRefine`), `runtime-v2-loop.manager.ts:255,554,647,678` | Not a client narrowing gap: `runtime.start()` is the only RPC that carries `toolDefinitions`; `steer()` carries only a `SteeringMessage`. The backend stores the catalog once per run binding and validates every later read against a `toolCatalogHash`, with no append path. Deferred schema loading needs a new RPC on both sides.                                                                                                                                                                                                                     |
 | F029 | RemoteTrigger                | MISSING                                | backend route literals in `src/backend/*.ts` are auth, chat and runtime only                                                                                                              | No remote job creation, trigger, idempotency key or status.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                               |
 | F030 | Computer use                 | PARTIAL                                | `src/infrastructure/browser-tool-executor.ts:16`, `src/services/browser-controller-service.ts:67`                                                                                         | Screen understanding and input are Playwright-page-scoped: no OS-level capture, desktop input or app launching.                                                                                                                                                                                                                                                                                                                                                                                                                                           |
-| F031 | EndConversation safeguard    | PARTIAL, audit corrected               | `src/core/approval-broker.ts:139`, `src/services/runtime-studio-execution.ts:227`, `:292`                                                                                                 | The audit claimed nothing blocks ending while approvals are pending. That is wrong: `cancelKind` withdraws the ending run pending approvals, and both terminal paths call it from a `finally`, so no abandoned modal prompt survives a run. What is genuinely absent is an agent-callable terminal action and an evidence flush on end.                                                                                                                                                                                                                   |
+| F031 | EndConversation safeguard    | SHIPPED in 0.90.0, audit corrected     | `src/core/conversation-end.ts`, `src/infrastructure/end-conversation-tool-executor.ts`, `src/services/conversation-end-service.ts`                                                        | The audit claimed nothing blocks ending while approvals are pending. That was wrong — `cancelKind` already withdrew them from a `finally`. The two real gaps are now closed: `runtime.end` is agent-callable, refused by name while an approval or question is open, and it writes a terminal lifecycle plus reason into the run journal. It records terminality rather than killing the loop, because cancelling from inside the call would abort the invocation writing the record.                                                                     |
 
-Tally: 12 SHIPPED, 8 PARTIAL, 10 MISSING, 1 BLOCKED, 0 CONFLICT. (Recounted
+Tally: 13 SHIPPED, 7 PARTIAL, 10 MISSING, 1 BLOCKED, 0 CONFLICT. (Recounted
 row-by-row in batch 23 — the running tally had been incremented by delta
 since an earlier stale base rather than recomputed from the table, and
 undercounted SHIPPED by 5: F002, F006, F022 were already SHIPPED before this
@@ -120,9 +120,10 @@ program started and had never been folded into the count.)
 - **F030** → the `browser-controller-service.ts` scope model and
   `runtime-explicit-scope.ts`, keeping OS-level behind an
   `elevation-broker-service.ts`-style approval.
-- **F031** → the dispatcher terminal-invocation lifecycle in
-  `runtime-tool-dispatcher.ts` with the `approval-broker.ts` pending queue as the
-  pre-end guard.
+- **F031** → SHIPPED. The guard reads the published snapshot rather than the
+  broker queue: the broker publishes a placeholder approval beside every
+  question, and checking the snapshot question-first is what stops a question
+  being reported to the model as an approval.
 
 ## Ordering constraints found in the code
 
@@ -154,8 +155,9 @@ program started and had never been folded into the count.)
    both agent-to-agent and remote trigger. Generalize it once.
 7. **F015 → F009 and F014.** Shared task state is both the team board and the
    goal-mode ledger. Do not persist tasks twice.
-8. **F016 → F031.** The end-safeguard must see structured pending questions, not
-   only binary approvals, or it passes the guard while a question is outstanding.
+8. **F016 → F031.** Both shipped. The guard does see structured questions, and
+   reports them as questions rather than as the placeholder approval the
+   broker files beside them.
 9. **F017 → F009.** F017 narrowed in 0.86.0: the main session can create and
    address its own worktree now, not only subagents. F009 remains open —
    agent-to-agent messaging and a shared task board are still missing, and

@@ -2,6 +2,20 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.90.0
+
+Minor: the agent can declare a run finished, and cannot do it behind your
+back (F031).
+
+- **`runtime.end`** writes a terminal lifecycle and the reason into the run
+  journal, so a finished run leaves a record of how it ended.
+- **Refused while you still owe an answer.** If an approval or a question is
+  on screen, ending is refused and the refusal names which one. There is no
+  override: a run that could end past a prompt would leave you answering for
+  work that had already stopped.
+- It records terminality rather than killing the loop, so the record it is
+  writing cannot be the thing the cancellation destroys.
+
 ## 0.89.0
 
 Minor: send feedback with a diagnostic report you read first (F027).

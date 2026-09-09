@@ -768,3 +768,39 @@ A failed submission is reported as failed. Every other backend read in this
 client that can fail open does — an organization policy that will not load
 means "nothing extra imposed" — but a support report the user believes arrived
 and did not is the one dishonest outcome available here.
+
+### Batch 29 — F031 end-conversation safeguard
+
+| Batch | Version | Status                                | Evidence                                                                                                                                           |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 29    | 0.90.0  | Code and deterministic gates complete | `src/core/conversation-end.ts`, `src/infrastructure/end-conversation-tool-executor.ts`, `src/services/conversation-end-service.ts`. Tests: 11 new. |
+
+The audit's original claim — nothing blocks ending while approvals are
+pending — was corrected early in this program: `cancelKind` already withdrew
+them from a `finally`. What it named as genuinely absent was an agent-callable
+terminal action and a flush on end. Both close here.
+
+`runtime.end` takes a reason and a terminal lifecycle, and refuses by name
+while an approval or a question is open. Three decisions:
+
+- **No force flag.** An approval and a question are both on screen waiting for
+  a person; a run that could end past either leaves someone answering a prompt
+  for work that already stopped, which is the exact state the safeguard is
+  named for. A model that wants to end anyway can withdraw its own request.
+- **A refusal is a result, not an error.** "There is still an approval open" is
+  something to read and act on, not a failure to retry blindly.
+- **It records terminality; it does not kill the loop.** Cancelling the run
+  from inside one of its own tool calls would abort the invocation writing the
+  record — the one durable statement about how the run ended would be the thing
+  lost. The run still ends the way it always has, and now leaves a record.
+
+The guard reads the published snapshot rather than the broker's queue, because
+the broker files a placeholder approval beside every question; checking the
+snapshot question-first is what stops a question being reported to the model as
+an approval. F016 shipped that structured question, which is why the guard can
+tell them apart at all.
+
+A run with no journal records nothing and says so, rather than inventing one:
+fabricating the policy and capability hashes is what would make the record
+untrustworthy. `terminalReason` is an optional addition to the journal schema,
+so records written before this batch still parse.

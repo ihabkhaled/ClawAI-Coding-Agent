@@ -12,6 +12,10 @@ import {
   elevationToolDefinition,
 } from '../infrastructure/elevation-tool-executor';
 import {
+  EndConversationToolExecutor,
+  endConversationToolDefinition,
+} from '../infrastructure/end-conversation-tool-executor';
+import {
   EvidenceToolExecutor,
   evidenceToolDefinition,
 } from '../infrastructure/evidence-tool-executor';
@@ -75,6 +79,10 @@ export function analysisToolRegistrations(
 ): RuntimeToolRegistration[] {
   return [
     { definition: askUserToolDefinition, executor: new AskUserToolExecutor(parts.questions) },
+    {
+      definition: endConversationToolDefinition,
+      executor: new EndConversationToolExecutor(parts.conversationEnd),
+    },
     {
       definition: intelligenceToolDefinition,
       executor: new IntelligenceToolExecutor(parts.intelligence),
