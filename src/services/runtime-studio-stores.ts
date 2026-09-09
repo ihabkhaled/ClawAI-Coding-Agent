@@ -1,16 +1,24 @@
 import { AgentTaskService } from './agent-task-service';
+import { ArtifactDeliveryService } from './artifact-delivery-service';
 import { FindingsService } from './findings-service';
 
 import type { AgentTask } from '../core/agent-tasks';
+import type { DeliveredArtifact } from '../core/delivered-artifact';
 import type { Finding } from '../core/findings';
 
 interface RunScopedStatePort {
-  update(patch: { findings: readonly Finding[] } | { tasks: readonly AgentTask[] }): void;
+  update(
+    patch:
+      | { findings: readonly Finding[] }
+      | { tasks: readonly AgentTask[] }
+      | { artifacts: readonly DeliveredArtifact[] },
+  ): void;
 }
 
 export interface RunScopedStores {
   readonly findings: FindingsService;
   readonly tasks: AgentTaskService;
+  readonly artifacts: ArtifactDeliveryService;
   /** Everything a workspace change invalidates at once. */
   clear(): void;
 }
@@ -26,12 +34,15 @@ export interface RunScopedStores {
 export function createRunScopedStores(state: RunScopedStatePort): RunScopedStores {
   const findings = new FindingsService(state);
   const tasks = new AgentTaskService(state);
+  const artifacts = new ArtifactDeliveryService(state);
   return {
     findings,
     tasks,
+    artifacts,
     clear: () => {
       findings.clear();
       tasks.clear();
+      artifacts.clear();
     },
   };
 }

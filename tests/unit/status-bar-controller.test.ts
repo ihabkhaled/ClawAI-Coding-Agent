@@ -22,6 +22,7 @@ function snapshot(patch: Partial<ExtensionSnapshot> = {}): ExtensionSnapshot {
     questionRequest: undefined,
     findings: [],
     tasks: [],
+    artifacts: [],
     organizationPolicy: undefined,
     backendStatus: 'disconnected',
     backendUrl: 'https://claw.local',

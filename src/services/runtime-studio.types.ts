@@ -5,12 +5,14 @@ import type { EvidenceBundleService } from './evidence-bundle-service';
 import type { FileTransactionService } from './file-transaction-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
 import type { IntegrationCoordinatorService } from './integration-coordinator-service';
+import type { ProcessSupervisorService } from './process-supervisor-service';
 import type { RunJournalService } from './run-journal-service';
 import type { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
 import type { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { UserQuestionPort } from '../infrastructure/ask-user-tool-executor';
 import type { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
+import type { DeliveredArtifactSink } from '../infrastructure/vscode-filesystem-tool-executor';
 
 export interface RuntimeStudioAdvancedTools {
   readonly evidence: EvidenceBundleService;
@@ -21,6 +23,14 @@ export interface RuntimeStudioAdvancedTools {
   readonly flagship: FlagshipDeliveryService;
   readonly elevation: ElevationBrokerService;
   readonly activeRunId: () => string;
+}
+
+export interface RuntimeStudioWorkspaceTools {
+  readonly files: VscodeFileTransactionAdapter;
+  readonly transactions: FileTransactionService;
+  readonly artifacts: DeliveredArtifactSink;
+  readonly processes: ProcessSupervisorService;
+  readonly accountId: () => string;
 }
 
 export interface RuntimeStudioAnalysisTools {

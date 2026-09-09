@@ -13,6 +13,7 @@ import type { RoutingMode } from './configuration';
 import type { ConnectionEnvironment } from './configuration';
 import type { ContextReceipt } from './context-collector';
 import type { WorkspaceReadiness } from './context-mode';
+import type { DeliveredArtifact } from './delivered-artifact';
 import type { EffortMode } from './effort-mode';
 import type { Finding } from './findings';
 import type { GenerationQueueSnapshot } from './generation-queue';
@@ -38,6 +39,7 @@ export interface ExtensionSnapshot {
   questionRequest: UserQuestion | undefined;
   findings: readonly Finding[];
   tasks: readonly AgentTask[];
+  artifacts: readonly DeliveredArtifact[];
   organizationPolicy: OrganizationPolicy | undefined;
   backendUrl: string;
   backendCustomUrl?: string | undefined;

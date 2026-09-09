@@ -699,3 +699,37 @@ prohibition here, not a style preference. The honest shape was the one the code
 already had: a synchronous method under a promise-returning signature, with the
 tests asserting a thrown error rather than a rejected promise, and a comment
 recording that the dispatcher catches both identically.
+
+### Batch 27 — F024 delivered files
+
+| Batch | Version | Status                                | Evidence                                                                                                                                                                                                   |
+| ----- | ------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 27    | 0.88.0  | Code and deterministic gates complete | `src/core/delivered-artifact.ts`, `src/services/artifact-delivery-service.ts`, `artifactItems` in `src/views/state-tree-provider.ts`, recording in `vscode-filesystem-tool-executor.ts`. Tests: 9 + 4 new. |
+
+The `artifact` file-transaction kind has carried a MIME type, a size, a
+content hash and a provenance string since the transaction model was built,
+and every artifact written with it landed somewhere the user was never told
+about. That is this program's own "present is not wired" defect, in the one
+place where being unwired means the user never receives the file they asked
+for.
+
+A Delivered Files view now lists them newest first, and every row opens.
+
+Two decisions:
+
+- **The affordance is a view, not chat markup.** The audit pointed at
+  `chat-markup.ts`; that file renders the webview _shell_, and per-message
+  content is drawn client-side in `media/chat.js` from public state. A chat
+  affordance is therefore webview work, while a tree row already has an open
+  action, already re-renders from the same state subscription every other view
+  uses, and outlives the message that produced it — which matters, because the
+  point of delivering a file is that the user can come back to it. Stated here
+  as a deliberate deviation rather than a silent one.
+- **`vscode.open` directly, no new ClawAI command.** A row already knows which
+  file it is; a command would only carry that same argument through one more
+  hop.
+
+`fsPath` is stored alongside the workspace-relative path because the view that
+opens the file has no root to resolve a relative path against, and a root that
+stops resolving later is not an error — the file was still written, and the
+only thing lost is the link.

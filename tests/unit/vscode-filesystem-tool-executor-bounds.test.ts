@@ -75,7 +75,9 @@ describe('VS Code filesystem tool result bounds', () => {
     vi.clearAllMocks();
     const adapter = new VscodeFileTransactionAdapter();
     adapter.registerRuntimeRoot('workspace-1', 'C:\\workspace');
-    executor = new VscodeFilesystemToolExecutor(adapter, new FileTransactionService(adapter));
+    executor = new VscodeFilesystemToolExecutor(adapter, new FileTransactionService(adapter), {
+      record: () => undefined,
+    });
   });
 
   it('paginates a default directory listing at the Runtime V2 collection limit', async () => {

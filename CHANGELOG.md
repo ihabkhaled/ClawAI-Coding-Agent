@@ -2,6 +2,17 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.88.0
+
+Minor: the files the agent makes for you are now delivered, not just written (F024).
+
+- **A Delivered Files view lists every artifact this session produced**,
+  newest first, and every row opens the file. The artifact write already
+  carried provenance, a hash and a size; none of it reached you.
+- Re-delivering the same path replaces its row rather than adding a second
+  one pointing at the same file, and a rolled-back or failed transaction
+  delivers nothing.
+
 ## 0.87.0
 
 Minor: notifications when a run needs you or finishes without you (F023).

@@ -135,6 +135,7 @@ export function activate(context: vscode.ExtensionContext): void {
     questionRequest: undefined,
     findings: [],
     tasks: [],
+    artifacts: [],
     organizationPolicy: undefined,
     backendCustomUrl: configuration.backendCustomUrl,
     backendEnvironment: configuration.backendEnvironment,
@@ -252,6 +253,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const historyTree = new StateTreeProvider('history', state);
   const findingsTree = new StateTreeProvider('findings', state);
   const tasksTree = new StateTreeProvider('tasks', state);
+  const artifactsTree = new StateTreeProvider('artifacts', state);
   const statusBar = new StatusBarController(state);
   const notifications = new NotificationController(state, new VscodeUserNotifier());
 
@@ -280,6 +282,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerTreeDataProvider('clawAI.tasks', tasksTree),
     tasksTree,
     vscode.window.registerTreeDataProvider('clawAI.findings', findingsTree),
+    artifactsTree,
+    vscode.window.registerTreeDataProvider('clawAI.artifacts', artifactsTree),
     findingsTree,
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('clawAI')) {
