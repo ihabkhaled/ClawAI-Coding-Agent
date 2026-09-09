@@ -13,6 +13,7 @@ const initialSnapshot: ExtensionSnapshot = {
   approvalRequest: undefined,
   questionRequest: undefined,
   findings: [],
+  tasks: [],
   backendUrl: 'https://claw.example',
   backendStatus: 'disconnected',
   busy: false,

@@ -1,3 +1,4 @@
+import type { AgentTaskService } from './agent-task-service';
 import type { DevelopmentServiceManager } from './development-service-manager';
 import type { ElevationBrokerService } from './elevation-broker-service';
 import type { EvidenceBundleService } from './evidence-bundle-service';
@@ -26,6 +27,7 @@ export interface RuntimeStudioAnalysisTools {
   readonly questions: UserQuestionPort;
   readonly intelligence: WorkspaceIntelligenceService;
   readonly transactions: FileTransactionService;
+  readonly tasks: AgentTaskService;
   readonly journals: RunJournalService;
 }
 

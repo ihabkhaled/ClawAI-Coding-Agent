@@ -2,6 +2,33 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.79.0
+
+Minor: the agent keeps a task list, and the sidebar shows it.
+
+- `workspace.planning` gains `set-tasks` and `list-tasks`. The tool was
+  stateless — validate, render, export — so there was no record of what the
+  agent was working through, and a user watching a long run could not tell
+  which step it was on.
+- Tasks are run state, deliberately separate from the implementation plan.
+  `implementation-plan.ts` models epics, capabilities and stories where every
+  task needs an acceptance criterion and a verification step. That is right for
+  a plan someone reviews and wrong for "what am I doing right now", where the
+  cost of writing it down has to be near zero or it does not get written.
+- At most one task may be in progress. A list where three things are in
+  progress is a list of intentions rather than a record of work, and holding
+  the invariant means a reader can always answer "what is happening now" with
+  one line.
+- The list is replaced wholesale rather than patched. An agent restates what it
+  is doing far more reliably than it emits a correct diff against a list it
+  cannot see, and a replace cannot leave the store disagreeing with the model.
+- Order is preserved rather than grouped by status: the order the agent wrote
+  is the order it intends to work, and sorting by state would move a task the
+  moment it started — which is when a reader is looking at it.
+- Adds a **Tasks** view beside Findings. Tasks and findings are cleared
+  together when the workspace folder changes, because both describe a tree that
+  is no longer open.
+
 ## 0.78.0
 
 Minor: a run can be recapped instead of re-read.

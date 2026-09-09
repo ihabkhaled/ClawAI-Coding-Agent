@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { z } from 'zod';
 
+import { agentTaskListSchema } from '../core/agent-tasks';
 import {
   implementationPlanSchema,
   issuePayloads,
@@ -11,6 +12,7 @@ import { subAgentGraphSchema } from '../core/multi-agent-dag';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { AgentTaskService } from '../services/agent-task-service';
 import type { FileTransactionService } from '../services/file-transaction-service';
 import type {
   RuntimeToolExecutionOutput,
@@ -22,12 +24,26 @@ export const planningToolDefinition: ToolDefinition = {
   name: 'workspace.planning',
   version: '2.0.0',
   description:
-    'Validate and export evidence-backed implementation plans without granting execution.',
-  operations: ['validate', 'render-markdown', 'render-json', 'export', 'issue-payloads'],
+    'Validate and export evidence-backed implementation plans without granting execution. ' +
+    'set-tasks records the short task list you are working through and shows it to the user: ' +
+    'pass tasks as an array of {id, title, status (pending|in-progress|blocked|done), note}. ' +
+    'Send the whole list every time, keep at most one in-progress, and update it as you go. ' +
+    'list-tasks returns the current list. This is run state, not the implementation plan.',
+  operations: [
+    'validate',
+    'render-markdown',
+    'render-json',
+    'export',
+    'issue-payloads',
+    'set-tasks',
+    'list-tasks',
+  ],
   riskClasses: ['inspect', 'workspace-write'],
   targetIds: ['target:workspace'],
   inputSchema: runtimeToolInputSchemas.planning,
 };
+
+const setTasksSchema = z.object({ tasks: agentTaskListSchema }).strip();
 
 const exportSchema = z
   .object({
@@ -43,7 +59,19 @@ const exportSchema = z
   .strict();
 
 export class PlanningToolExecutor implements RuntimeToolExecutorPort {
-  constructor(private readonly files: FileTransactionService) {}
+  constructor(
+    private readonly files: FileTransactionService,
+    private readonly tasks: AgentTaskService,
+  ) {}
+
+  private taskOperation(invocation: ToolInvocation): RuntimeToolExecutionOutput | undefined {
+    if (invocation.operation === 'set-tasks') {
+      const { tasks } = setTasksSchema.parse(invocation.arguments);
+      return { structured: { ...this.tasks.replace(tasks) } };
+    }
+    if (invocation.operation === 'list-tasks') return { structured: { ...this.tasks.current() } };
+    return undefined;
+  }
 
   async execute(
     invocation: ToolInvocation,
@@ -51,6 +79,10 @@ export class PlanningToolExecutor implements RuntimeToolExecutorPort {
   ): Promise<RuntimeToolExecutionOutput> {
     if (invocation.toolName !== planningToolDefinition.name)
       throw new Error('Unknown planning tool');
+    // Task operations carry no plan, so they are answered before the schema
+    // that requires one.
+    const taskOutput = this.taskOperation(invocation);
+    if (taskOutput !== undefined) return taskOutput;
     if (invocation.operation === 'validate') {
       const graph = subAgentGraphSchema.safeParse(invocation.arguments.plan);
       if (graph.success) return { structured: { graph: graph.data, valid: true } };

@@ -46,6 +46,7 @@ function state() {
     approvalRequest: undefined,
     questionRequest: undefined,
     findings: [],
+    tasks: [],
     backendStatus: 'disconnected',
     backendUrl: configuration.backendUrl,
     busy: false,

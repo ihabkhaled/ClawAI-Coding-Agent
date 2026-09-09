@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { PlanningToolExecutor } from '../../src/infrastructure/planning-tool-executor';
+import { AgentTaskService } from '../../src/services/agent-task-service';
 import { FileTransactionService } from '../../src/services/file-transaction-service';
 
 import type { SubAgentGraph } from '../../src/core/multi-agent-dag';
@@ -53,7 +54,9 @@ describe('PlanningToolExecutor', () => {
     });
 
     await expect(
-      new PlanningToolExecutor(transactions).execute(invocation(graph)),
+      new PlanningToolExecutor(transactions, new AgentTaskService({ update: vi.fn() })).execute(
+        invocation(graph),
+      ),
     ).resolves.toEqual({ structured: { graph, valid: true } });
   });
 });

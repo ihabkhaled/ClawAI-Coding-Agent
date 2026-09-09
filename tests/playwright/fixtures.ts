@@ -48,6 +48,7 @@ export function baseState() {
     approvalRequest: undefined,
     questionRequest: undefined,
     findings: [],
+    tasks: [],
     backendCustomUrl: '',
     backendEnvironment: 'LOCAL',
     backendStatus: 'connected',
