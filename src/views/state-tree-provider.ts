@@ -1,10 +1,14 @@
 import * as vscode from 'vscode';
 
+import { nextOnboardingStep, onboardingChecklist } from '../core/onboarding-checklist';
+
 import type { AgentTaskStatus } from '../core/agent-tasks';
 import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
 import type { FindingSeverity } from '../core/findings';
+import type { OnboardingStepId } from '../core/onboarding-checklist.types';
 
-export type TreeKind = 'artifacts' | 'context' | 'findings' | 'history' | 'model' | 'tasks';
+export type TreeKind =
+  'artifacts' | 'context' | 'findings' | 'history' | 'model' | 'setup' | 'tasks';
 
 function modelItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
   const auto = new vscode.TreeItem(
@@ -98,6 +102,35 @@ function artifactItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
       title: vscode.l10n.t('Open delivered file'),
       arguments: [vscode.Uri.file(artifact.fsPath)],
     };
+    return item;
+  });
+}
+
+/** Titles live here rather than in core: the checklist is state, not wording. */
+const SETUP_TITLES: Readonly<Record<OnboardingStepId, () => string>> = {
+  connect: () => vscode.l10n.t('Sign in to ClawAI'),
+  folder: () => vscode.l10n.t('Open a project folder'),
+  trust: () => vscode.l10n.t('Trust this workspace'),
+  model: () => vscode.l10n.t('Load the model catalog'),
+};
+
+/**
+ * What is left before the extension can be used, derived from the snapshot.
+ *
+ * Every row stays visible once done rather than disappearing, because a list
+ * that shrinks as you work it gives no sense of how much is left. The view
+ * itself hides once everything is done.
+ */
+function setupItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
+  const steps = onboardingChecklist(snapshot);
+  const next = nextOnboardingStep(steps);
+  return steps.map((step) => {
+    const title = SETUP_TITLES[step.id]();
+    const item = new vscode.TreeItem(title);
+    item.iconPath = new vscode.ThemeIcon(step.done ? 'pass-filled' : 'circle-large-outline');
+    if (step.done) return item;
+    if (step.id === next?.id) item.description = vscode.l10n.t('Do this next');
+    item.command = { command: step.command, title };
     return item;
   });
 }
@@ -215,6 +248,9 @@ export class StateTreeProvider
     }
     if (this.kind === 'tasks') {
       return taskItems(this.state.snapshot);
+    }
+    if (this.kind === 'setup') {
+      return setupItems(this.state.snapshot);
     }
     if (this.kind === 'artifacts') {
       return artifactItems(this.state.snapshot);

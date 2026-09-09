@@ -56,6 +56,7 @@
   "view.container": "ClawAI",
   "view.chat": "แชต",
   "view.chatTitle": "ClawAI Coding Agent",
+  "view.setup": "เริ่มต้นใช้งาน",
   "view.model": "โมเดลและเส้นทาง",
   "view.context": "บริบท",
   "view.history": "ประวัติ",
