@@ -349,7 +349,7 @@ export const runtimeToolInputSchemas = {
   notify: strict({ message: shortText, kind: { type: 'string', enum: ['info', 'warning'] } }, [
     'message',
   ]),
-  planning: strict({ plan: opaque, output: opaque }),
+  planning: strict({ plan: opaque, output: opaque, document: text, revision: text }),
   process: strict({
     executablePath: text,
     arguments: texts,
