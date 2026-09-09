@@ -178,3 +178,82 @@ describe('evaluatePolicyV2 with project rules', () => {
     expect(decision.outcome).toBe('allow');
   });
 });
+
+describe('evaluatePolicyV2 with an organization policy', () => {
+  const organization = {
+    allowedTools: [],
+    maximumRisk: 'R4' as const,
+    deniedEffects: [] as string[],
+    requireApproval: [] as string[],
+  };
+
+  it('changes nothing when no organization constrains the user', () => {
+    expect(evaluatePolicyV2(request(), undefined, undefined).outcome).toBe('allow');
+  });
+
+  it('denies a tool outside a non-empty allowlist', () => {
+    expect(
+      evaluatePolicyV2(request(), undefined, {
+        ...organization,
+        allowedTools: ['workspace.git'],
+      }),
+    ).toMatchObject({ outcome: 'deny', code: 'ORGANIZATION_TOOL_DENIED' });
+  });
+
+  // An empty allowlist means everything, the same convention the backend
+  // intersection uses. Reading it as "nothing allowed" would deny every call
+  // for every organization that has not set the field.
+  it('treats an empty allowlist as every tool permitted', () => {
+    expect(evaluatePolicyV2(request(), undefined, organization).outcome).toBe('allow');
+  });
+
+  it('denies an effect the organization refuses, and one above its risk ceiling', () => {
+    expect(
+      evaluatePolicyV2(request(), undefined, {
+        ...organization,
+        deniedEffects: ['workspace-write'],
+      }),
+    ).toMatchObject({ outcome: 'deny', code: 'ORGANIZATION_POLICY_NARROWED' });
+
+    expect(
+      evaluatePolicyV2(request({ risk: 'R3' }), undefined, { ...organization, maximumRisk: 'R1' }),
+    ).toMatchObject({ outcome: 'deny' });
+  });
+
+  it('asks when the organization requires approval for an effect', () => {
+    expect(
+      evaluatePolicyV2(request(), undefined, {
+        ...organization,
+        requireApproval: ['workspace-write'],
+      }),
+    ).toMatchObject({ outcome: 'ask', code: 'ORGANIZATION_APPROVAL_REQUIRED' });
+  });
+
+  // An organization may tighten what a project allows and must never loosen a
+  // safety rail, so it is consulted after the immutable rail.
+  it('cannot loosen an immutable denial or an untrusted workspace', () => {
+    const permissive = { ...organization, allowedTools: [], maximumRisk: 'R4' as const };
+
+    expect(
+      evaluatePolicyV2(
+        request({ effect: 'elevation', risk: 'R4', userPresent: false }),
+        undefined,
+        permissive,
+      ),
+    ).toMatchObject({ outcome: 'deny', immutable: true });
+
+    expect(
+      evaluatePolicyV2(request({ workspaceTrusted: false }), undefined, permissive),
+    ).toMatchObject({ code: 'WORKSPACE_UNTRUSTED' });
+  });
+
+  it('still applies the project policy when the organization permits', () => {
+    expect(
+      evaluatePolicyV2(
+        request(),
+        projectPolicySchema.parse({ deniedEffects: ['workspace-write'] }),
+        organization,
+      ),
+    ).toMatchObject({ outcome: 'deny', code: 'PROJECT_POLICY_NARROWED' });
+  });
+});

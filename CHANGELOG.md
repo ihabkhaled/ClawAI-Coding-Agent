@@ -2,6 +2,40 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.81.0
+
+Minor: an organization can constrain what this client may do.
+
+- The extension fetches `GET agent/organizations/policy/effective` with the rest
+  of the account data and enforces it in the same evaluator every tool call
+  already passes through. `enterprise-policy.ts` has carried a complete policy
+  implementation with zero importers since it was written, because nothing
+  served it a policy; the endpoint added alongside this release does.
+- The backend returns the intersection of every organization the user belongs
+  to, so belonging to a permissive organization cannot loosen a stricter one,
+  and it never names which organization imposed a constraint.
+- An organization may tighten and may never loosen. It is consulted after the
+  immutable rails, so it cannot reach past a workspace-trust denial or the
+  elevation, production and destructive rails, and before the project policy, so
+  a project cannot widen what an organization refuses. Both are proven by test.
+- An empty tool allowlist means every tool is permitted, matching the backend
+  intersection. Reading it as "nothing allowed" would deny every call for every
+  organization that has not set the field.
+- A backend with no such endpoint yields no policy rather than an error, so a
+  client pointed at an older deployment keeps working. Failing open is correct
+  here and only here: the endpoint exists to tighten, so its absence can only
+  mean nothing extra is imposed.
+- The policy is unsigned on purpose. Every field narrows, so a forged one could
+  only refuse work, and entitlements — which gate money — already arrive over
+  the same authenticated channel. `verifyEnterprisePolicy` is retained for a
+  distribution that must also survive a compromised backend.
+- Still enforced elsewhere, not here: `allowedModels` needs the model picker,
+  and `minimumPermissionMode` needs the configuration clamp. An invocation
+  carries neither, so enforcing them in the tool evaluator would be the wrong
+  place. Both are named in `docs/parity/PROGRAM.md`.
+- The four model-catalog endpoints move into `model-catalog-client.ts`;
+  `backend-client.ts` was on its 500-line ceiling.
+
 ## 0.80.0
 
 Minor: `vscode://` links can open the view or a conversation, and nothing else.

@@ -83,6 +83,7 @@ function service(approve: (request: unknown, signal?: AbortSignal) => Promise<bo
       mode: () => 'AUTONOMOUS_SCOPED',
       workspaceTrusted: () => true,
       userPresent: () => true,
+      organizationPolicy: () => undefined,
       approve,
     },
     {

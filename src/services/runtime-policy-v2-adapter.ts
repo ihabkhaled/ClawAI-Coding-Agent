@@ -22,6 +22,8 @@ interface RuntimePolicyContext {
   readonly mode: () => PermissionMode;
   readonly workspaceTrusted: () => boolean;
   readonly userPresent: () => boolean;
+  /** Undefined when no organization constrains this user, or the backend is older. */
+  readonly organizationPolicy: () => unknown;
   readonly approve: (request: PolicyRequest, signal?: AbortSignal) => Promise<boolean>;
 }
 
@@ -230,7 +232,11 @@ export class RuntimePolicyV2Adapter implements RuntimeToolPolicyPort {
       userPresent: this.context.userPresent(),
       subject: policySubject(invocation),
     };
-    const decision = evaluatePolicyV2(request, await this.projectPolicy.load());
+    const decision = evaluatePolicyV2(
+      request,
+      await this.projectPolicy.load(),
+      this.context.organizationPolicy(),
+    );
     if (decision.outcome === 'deny') {
       return {
         decision: 'deny',

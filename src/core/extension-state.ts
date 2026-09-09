@@ -23,6 +23,7 @@ import type { RuntimeProtocolSelection } from './runtime/runtime-negotiation';
 import type { SpeedMode } from './speed-mode';
 import type { UserQuestion } from './user-question';
 import type { WorkspaceScopeSnapshot } from './workspace-scope.types';
+import type { OrganizationPolicy } from '../backend/contracts';
 import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contracts';
 
 export type BackendStatus = 'connected' | 'disconnected' | 'error' | 'loading';
@@ -37,6 +38,7 @@ export interface ExtensionSnapshot {
   questionRequest: UserQuestion | undefined;
   findings: readonly Finding[];
   tasks: readonly AgentTask[];
+  organizationPolicy: OrganizationPolicy | undefined;
   backendUrl: string;
   backendCustomUrl?: string | undefined;
   backendEnvironment?: ConnectionEnvironment | undefined;

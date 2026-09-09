@@ -16,15 +16,11 @@ import {
 } from './backend-errors';
 import { BackendRuntimeClient } from './backend-runtime-client';
 import {
-  connectorModelSchema,
   entitlementsSchema,
-  localFrontierListSchema,
-  localOllamaModelSchema,
   messageSchema,
   paginatedSchema,
   parallelResponseSchema,
   refreshResultSchema,
-  routerModelSchema,
   threadSchema,
   usageSchema,
   userProfileSchema,
@@ -36,11 +32,14 @@ import {
   type Entitlements,
   type LocalFrontierModel,
   type LocalOllamaModel,
+  type OrganizationPolicy,
   type ParallelResponse,
   type RouterModel,
   type Usage,
   type UploadedFile,
 } from './contracts';
+import { modelCatalogClient, type Requester } from './model-catalog-client';
+import { fetchOrganizationPolicy } from './organization-policy-client';
 import {
   discardResponseBody,
   readBoundedResponseText,
@@ -229,29 +228,22 @@ export class BackendClient {
     return this.runtime.openStream(binding, after, signal);
   }
 
+  private readonly catalogRequest: Requester = (path, schema) => this.request(path, schema);
+
   async getRouterModels(): Promise<RouterModel[]> {
-    const result = await this.request(
-      '/routing/models?limit=200&isExecutionCapable=true',
-      paginatedSchema(routerModelSchema),
-    );
-    return result.data;
+    return modelCatalogClient.routerModels(this.catalogRequest);
   }
 
   async getConnectorModels(): Promise<ConnectorModel[]> {
-    return this.request('/connectors/available-models', z.array(connectorModelSchema));
+    return modelCatalogClient.connectorModels(this.catalogRequest);
   }
 
   async getLocalOllamaModels(): Promise<LocalOllamaModel[]> {
-    const result = await this.request(
-      '/ollama/models?limit=100&runtime=OLLAMA&isInstalled=true',
-      paginatedSchema(localOllamaModelSchema),
-    );
-    return result.data;
+    return modelCatalogClient.localOllamaModels(this.catalogRequest);
   }
 
   async getLocalFrontierModels(): Promise<LocalFrontierModel[]> {
-    const result = await this.request('/llamacpp/catalog?limit=100', localFrontierListSchema);
-    return result.data;
+    return modelCatalogClient.localFrontierModels(this.catalogRequest);
   }
 
   authorizationUrl(path: string): string {
@@ -276,6 +268,11 @@ export class BackendClient {
       paginatedSchema(threadSchema),
     );
     return result.data;
+  }
+
+  /** See `fetchOrganizationPolicy` for why a missing endpoint fails open. */
+  async getOrganizationPolicy(): Promise<OrganizationPolicy | undefined> {
+    return fetchOrganizationPolicy(this.catalogRequest);
   }
 
   async listMessages(threadId: string, limit = 100): Promise<ChatMessage[]> {

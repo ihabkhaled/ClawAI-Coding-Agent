@@ -25,6 +25,7 @@ describe('refreshAgentData', () => {
       questionRequest: undefined,
       findings: [],
       tasks: [],
+      organizationPolicy: undefined,
       backendStatus: 'connected',
       backendUrl: 'https://claw.local',
       busy: false,
@@ -58,6 +59,7 @@ describe('refreshAgentData', () => {
     await refreshAgentData(
       {
         getUsage: vi.fn(async () => ({ day: { used: 1 } })),
+        getOrganizationPolicy: vi.fn(async () => undefined),
         listThreads: vi.fn(async () => []),
       } as never,
       configuration as never,
@@ -92,6 +94,7 @@ describe('refreshAgentData', () => {
       questionRequest: undefined,
       findings: [],
       tasks: [],
+      organizationPolicy: undefined,
       backendStatus: 'connected',
       backendUrl: 'https://claw.local',
       busy: false,
@@ -120,6 +123,7 @@ describe('refreshAgentData', () => {
     const refreshing = refreshAgentData(
       {
         getUsage: vi.fn(async () => ({ day: { used: 99 } })),
+        getOrganizationPolicy: vi.fn(async () => undefined),
         listThreads: vi.fn(async () => [{ id: 'old-thread', title: 'Old account' }]),
       } as never,
       configuration as never,
@@ -155,6 +159,7 @@ describe('refreshAgentData', () => {
       questionRequest: undefined,
       findings: [],
       tasks: [],
+      organizationPolicy: undefined,
       backendStatus: 'connected',
       backendUrl: 'https://claw.local',
       busy: false,
@@ -179,6 +184,7 @@ describe('refreshAgentData', () => {
     const refreshing = refreshConversationData(
       {
         getUsage: vi.fn(async () => ({ day: { used: 99 } })),
+        getOrganizationPolicy: vi.fn(async () => undefined),
         listThreads: vi.fn(() => history.promise),
       } as never,
       50,
@@ -224,6 +230,7 @@ describe('refreshAgentData', () => {
       questionRequest: undefined,
       findings: [],
       tasks: [],
+      organizationPolicy: undefined,
       backendStatus: 'connected',
       backendUrl: 'https://claw.local',
       busy: false,

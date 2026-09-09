@@ -30,12 +30,12 @@ Four separate audits, run independently, each surfaced the same class of defect:
 **a subsystem that exists, is well written, and is never called — while a
 document claims it shipped.**
 
-| Where                                                   | What is dead                                                                                                                         | What claims it works                                     |
-| ------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------- |
-| `src/core/enterprise-policy.ts`                         | Ed25519 verification, tool/target/model allowlists, retention ceiling, immutable safety rails. Zero importers in `src/`, zero tests. | `CHANGELOG.md:942`, "signed enterprise policy contracts" |
-| `src/core/durable-run-journal.ts:95`                    | `compactedContext`, modelling summary, decisions, open questions and active task ids. Zero producers.                                | `CHANGELOG.md:940`, "context-compaction references"      |
-| `src/services/observability-service.ts:27`              | `setRemoteExport`. No production caller; spans end in the VS Code output channel.                                                    | F108 read as partially built                             |
-| `BE/claw-routing-service/.../code-review.handler.ts:11` | Throws `SCAFFOLD-R3`. Zero references.                                                                                               | F104 read as partially built                             |
+| Where                                                      | What is dead                                                                                                                                                                    | What claims it works                                     |
+| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `src/core/enterprise-policy.ts`                            | Ed25519 verification, tool/target/model allowlists, retention ceiling, immutable safety rails. Zero importers in `src/`, zero tests.                                            | `CHANGELOG.md:942`, "signed enterprise policy contracts" |
+| `src/core/durable-run-journal.ts:95`                       | `compactedContext`, modelling summary, decisions, open questions and active task ids. Zero producers.                                                                           | `CHANGELOG.md:940`, "context-compaction references"      |
+| `src/services/observability-service.ts:27`                 | `setRemoteExport`. No production caller; spans end in the VS Code output channel.                                                                                               | F108 read as partially built                             |
+| `BE/claw-routing-service/.../workflows/managers/handlers/` | **Thirteen** handlers, all throwing `SCAFFOLD-R3`, added together on 2026-05-24. None registered, none tested, and `IWorkflowHandler` has no implementor outside the directory. | F104 read as partially built                             |
 
 This is exactly what the pack's "present is not wired" rule exists to catch, and
 it is why the audit ran before any code. The remedy is not more features. It is
@@ -335,3 +335,28 @@ the opposite of what the plan assumed. No `onUri` activation event was needed,
 so the extension-host assertion that guarded the boundary did not have to be
 weakened at all; and refusing prompt text outright turned out to be simpler
 than the confirmation dialog the alternative would have required.
+
+### Batch 17 — the second unblock
+
+| Batch | Version                       | Status                                                     | Evidence                                                                                                                                                                                                                                                         |
+| ----- | ----------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 17    | 0.81.0 + monorepo `cc47c0318` | Code and deterministic gates complete in both repositories | F052: `apps/claw-agent-service/src/modules/fleet/` in the monorepo; `src/core/policy-v2.ts`, `src/backend/organization-policy-client.ts`, `src/services/agent-data-service.ts` here. Tests: 18 in the agent service, 18 in `tests/unit/policy-v2-rules.test.ts`. |
+
+F052 was BLOCKED because no backend served a policy. It is unblocked by
+building that contract rather than by narrowing the feature: an
+`OrganizationPolicy` model, an endpoint returning the intersection across every
+organization a user belongs to, and client enforcement in the evaluator every
+tool call already passes through.
+
+The design decision worth keeping is the one that made an unsigned policy
+acceptable. Every field narrows and none widens, so a forged policy could only
+refuse work — the same argument that lets the project policy file exist at all,
+and the same channel entitlements already use to gate money. Signing would buy
+survival of a compromised backend, which is a different threat and is left with
+`verifyEnterprisePolicy` in place for the day it is in scope.
+
+Two fields are deliberately enforced elsewhere and are not yet done:
+`allowedModels` belongs in the model picker and `minimumPermissionMode` in the
+configuration clamp, because an invocation carries neither a model nor a mode.
+Enforcing them in the tool evaluator would have put them where they cannot be
+checked.
