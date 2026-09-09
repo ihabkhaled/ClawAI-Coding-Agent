@@ -525,3 +525,14 @@ nothing had recomputed the summary line at the top of the file. Corrected to
 5 SHIPPED, 9 PARTIAL, 16 MISSING, 1 BLOCKED alongside this batch's own F085
 row, since leaving a known-stale count next to a batch that would make it
 one row staler was not defensible.
+
+One process gap surfaced after this batch pushed: `npm run check`, the
+command this program has run at the end of every batch, does not include
+localization freshness. CI's separate "Verify generated localization" step
+runs `npm run l10n:build` and diffs the result, and batch 21's new
+`l10n.t()` string in `sub-agent-definitions-service.ts` had never been run
+through it, so the PR correctly failed. Fixed with a follow-up commit
+regenerating all 13 bundles rather than an amend, since the batch had
+already pushed. Any batch adding a new `l10n.t()` call needs
+`npm run l10n:build` run explicitly — `npm run check` will not catch its
+absence.
