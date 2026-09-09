@@ -14,6 +14,7 @@ import {
 } from '../core/context-mode';
 import { EMPTY_CONTEXT } from '../core/empty-context';
 import { findFileRangeReferences } from '../core/file-range-reference';
+import { memoryFileCandidates } from '../core/memory-file-discovery';
 import { forEachPrefetched, readConcurrency } from '../core/speed-mode';
 import {
   isRealPathInsideWorkspace,
@@ -227,18 +228,23 @@ export class WorkspaceContextService {
     ]);
   }
 
+  /**
+   * Standing guidance, weakest first: profile, then workspace root, then every
+   * directory down to the file being worked on.
+   *
+   * Nested discovery is the point. A repository-wide rule and a rule for one
+   * package are both true, and when they disagree the package is the one that
+   * meant it — so the nearer file is read last and therefore speaks last. A
+   * fixed three files at the root could not express that at all.
+   */
   async projectRules(): Promise<string> {
     const folder = this.scope.selectedFolder();
     const canonicalWorkspacePath = await this.canonicalWorkspacePath(folder.uri);
-    const ruleUris = [
-      vscode.Uri.joinPath(folder.uri, '.clawai', 'rules.md'),
-      vscode.Uri.joinPath(folder.uri, '.clawai', 'architecture.md'),
-      vscode.Uri.joinPath(folder.uri, '.clawai', 'memory.md'),
-    ];
     const globalContext = await this.globalContext?.readAll();
     const contents: string[] =
       globalContext === undefined || globalContext.length === 0 ? [] : [globalContext];
-    for (const uri of ruleUris) {
+    for (const candidate of memoryFileCandidates(this.activeRelativePath())) {
+      const uri = vscode.Uri.joinPath(folder.uri, ...candidate.split('/'));
       await this.assertRealPathInsideWorkspace(canonicalWorkspacePath, uri);
       const content = await this.readOptionalText(uri);
       if (content !== null) {
@@ -246,6 +252,18 @@ export class WorkspaceContextService {
       }
     }
     return contents.join('\n\n');
+  }
+
+  /**
+   * The open file's path relative to the selected folder, when it belongs to it.
+   *
+   * A file from another folder resolves to nothing rather than to a path that
+   * would be joined onto the wrong root.
+   */
+  private activeRelativePath(): string | undefined {
+    const editor = vscode.window.activeTextEditor;
+    if (editor === undefined || !this.scope.owns(editor.document.uri)) return undefined;
+    return this.scope.relativePath(editor.document.uri);
   }
 
   private finish(

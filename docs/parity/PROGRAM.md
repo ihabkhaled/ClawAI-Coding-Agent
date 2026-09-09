@@ -922,3 +922,23 @@ Two rendering decisions:
 It renders the last refresh rather than fetching on open, because this is the
 same usage every other surface reads and a dialog that quietly disagreed with
 the status bar would be worse than one that is a refresh behind.
+
+### Batch 34 — F076 nested memory files
+
+| Batch | Version | Status                                | Evidence                                                                                       |
+| ----- | ------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 34    | 0.95.0  | Code and deterministic gates complete | `src/core/memory-file-discovery.ts`, `WorkspaceContextService.projectRules`. Tests: 9 + 2 new. |
+
+Three fixed files at the workspace root could not express the thing memory
+files are for. A repository-wide rule and a rule for one package are both true,
+and when they disagree the package is the one that meant it — with a flat list
+there was no way to say that.
+
+Discovery now walks the root down to the directory of the open file. The order
+is the precedence: root first because it is the most general, nearest last
+because it is the most specific and therefore speaks last.
+
+The walk is bounded at eight levels and refuses a path containing `..` or a
+leading `/`, falling back to the root alone rather than resolving anywhere
+outside the workspace. Ordering is pure and tested without a filesystem;
+which of the emitted candidates exist stays a filesystem question.
