@@ -2,6 +2,30 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.82.0
+
+Minor: finishes F052 enforcement — an organization's model allowlist and
+permission floor are now applied, not only carried.
+
+- **Model allowlist reaches local models.** `applyOrganizationModelAccess`
+  filters the whole catalog, including local Ollama and llama.cpp models. The
+  existing entitlement filter deliberately exempts local models — a local model
+  costs nothing, so a billing entitlement has no opinion on it — but an
+  organization allowlist answers a different question, what a member is
+  _permitted_ to use, and an unvetted local model is exactly what an
+  organization would forbid. An empty allowlist still means every model,
+  matching the backend intersection and the 0.81.0 tool allowlist.
+- **`minimumPermissionMode` now clamps mode selection.** Requesting a mode more
+  permissive than the organization's floor silently selects the floor instead;
+  a mode at or under the floor, or outside the ranked scale
+  (`ENTERPRISE_LOCKED`), passes through unchanged. The clamp runs before the
+  Autonomous Scoped confirmation dialog, so a request the organization has
+  already ruled out never reaches a dialog asking the user to confirm it.
+- Both were the two fields 0.81.0 named as stored and served but not yet
+  enforced, because an invocation carries neither a model nor a mode — the tool
+  evaluator was the wrong place for either. They are enforced at the two points
+  that do carry that information: the model picker and the mode selector.
+
 ## 0.81.0
 
 Minor: an organization can constrain what this client may do.

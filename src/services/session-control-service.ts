@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { applyAgentModeToPrompt } from '../core/agent-mode';
+import { clampToOrganizationFloor } from '../core/organization-permission-floor';
 import { decidePermission } from '../core/permission-policy';
 
 import type {
@@ -164,8 +165,15 @@ export class SessionControlService {
     });
   }
 
-  selectPermissionMode(mode: PermissionMode): Promise<boolean> {
+  selectPermissionMode(requested: PermissionMode): Promise<boolean> {
     return this.enqueueMutation(async () => {
+      // Clamped before anything else, including the Autonomous Scoped
+      // confirmation: a request the organization has already ruled out should
+      // never reach a dialog asking the user to confirm it.
+      const mode = clampToOrganizationFloor(
+        requested,
+        this.state.snapshot.organizationPolicy?.minimumPermissionMode,
+      );
       const autonomousRequested = mode === 'AUTONOMOUS_SCOPED' || mode === 'BYPASS_PERMISSIONS';
       const autonomousActive = ['AUTONOMOUS_SCOPED', 'BYPASS_PERMISSIONS'].includes(
         this.configuration.read().permissionMode,
