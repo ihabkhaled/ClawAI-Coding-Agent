@@ -1021,3 +1021,36 @@ journal is the record that survives, and it is where both fields went.
 
 **Still true:** live-model Definition of Done cannot be executed here. No
 authenticated backend, no entitled model credentials. Deterministic gates only.
+
+### Batch 37 — F032 @-mentions with fuzzy matching
+
+| Batch | Version | Status                                | Evidence                                                                                                            |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 37    | 0.98.0  | Code and deterministic gates complete | `mention-match.ts`, `mention-suggestion-service.ts`, `vscode-mention-index.ts`, `media/chat.js`. Tests: 21 + 5 e2e. |
+
+F033 landed the `path:L-L` syntax in 0.85.0 and its own doc comment said the
+discoverable affordance would come later and emit through the same parser. It
+does now.
+
+**The extension owns the matching.** The webview posts what is typed and the
+caret, and gets back the ranked paths plus the span the choice replaces. The
+alternative — parsing the mention in the browser — is a second implementation
+of the parser, and the two disagree the first time either changes. The webview
+splices a string; it decides nothing.
+
+Ranking encodes one claim: a person typing three letters is naming a file, not
+a folder they forgot. Characters landing in the file name score highest, then
+consecutive runs, then position, and among equals the shorter path wins.
+Folders are in the index as their own entries so narrowing by directory works
+for a file whose name is not remembered.
+
+`@path` reaches context as a whole file and `@path:L-L` as a range; both go
+through one guarded read, which is new — the two spellings used to be one
+inline block that only the ranged form used.
+
+Secrets are kept out of the index entirely, because offering a name and then
+refusing it teaches nothing. A mention typed by hand is still dropped
+downstream with `sensitive` recorded in the receipt, which is the pre-existing
+behaviour and the one that tells the user why their message did nothing.
+
+**Still true:** live-model Definition of Done cannot be executed here.

@@ -152,6 +152,47 @@ describe('WorkspaceContextService line-range candidates', () => {
       expect(context.files).toEqual([]);
     });
 
+    it('pulls a whole file in for an @ mention', async () => {
+      vi.mocked(vscode.workspace.fs.readFile).mockResolvedValueOnce(
+        new TextEncoder().encode('one\ntwo'),
+      );
+      const service = new WorkspaceContextService();
+
+      const context = await service.referencedRanges('look at @src/app.ts please', configuration);
+
+      expect(context.files).toEqual([{ path: 'src/app.ts', content: 'one\ntwo' }]);
+    });
+
+    it('reads the range, not the whole file, when the mention carries one', async () => {
+      vi.mocked(vscode.workspace.fs.readFile).mockResolvedValueOnce(
+        new TextEncoder().encode('one\ntwo\nthree'),
+      );
+      const service = new WorkspaceContextService();
+
+      const context = await service.referencedRanges('see @src/app.ts:2-2', configuration);
+
+      expect(context.files).toEqual([
+        { path: 'src/app.ts', content: 'two', startLine: 2, endLine: 2 },
+      ]);
+    });
+
+    it('refuses to hand over a secret because someone mentioned it, and says so', async () => {
+      const service = new WorkspaceContextService();
+
+      const context = await service.referencedRanges('read @.env for the key', configuration);
+
+      expect(context.files).toEqual([]);
+      expect(context.receipt.excluded).toEqual([{ path: '.env', reason: 'sensitive' }]);
+    });
+
+    it('ignores an email address that is not a file', async () => {
+      const service = new WorkspaceContextService();
+
+      const context = await service.referencedRanges('mail ihab@example.com', configuration);
+
+      expect(context.files).toEqual([]);
+    });
+
     it('resolves a referenced range from the workspace', async () => {
       vi.mocked(vscode.workspace.fs.readFile).mockResolvedValueOnce(
         new TextEncoder().encode('one\ntwo\nthree\nfour\nfive'),

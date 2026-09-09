@@ -38,6 +38,11 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('runtimeStop') }),
   z.object({ type: z.literal('runtimeSteer'), message: z.string().trim().min(1).max(20_000) }),
   z.object({ type: z.literal('undo') }),
+  z.object({
+    type: z.literal('mentionQuery'),
+    text: z.string().max(20_000),
+    caretIndex: z.number().int().min(0).max(20_000),
+  }),
   z.object({ type: z.literal('newChat') }),
   z.object({ type: z.literal('openFolder') }),
   z.object({ type: z.literal('refreshModels') }),

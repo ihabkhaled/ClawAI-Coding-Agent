@@ -16,10 +16,20 @@ export interface FileRangeReference {
 }
 
 const MAX_REFERENCES_PER_PROMPT = 20;
+
+/**
+ * A reference may be written with a leading `@`, which is what the mention
+ * affordance inserts. The two spellings mean the same thing: `@src/a.ts:1-9`
+ * and `src/a.ts:1-9` are one reference, and a user who types either should not
+ * have to learn that only one of them works.
+ */
+function withoutMentionMarker(token: string): string {
+  return token.startsWith('@') ? token.slice(1) : token;
+}
 const REFERENCE_PATTERN = /^(.+):(\d+)(?:-(\d+))?$/u;
 
 export function parseFileRangeReference(token: string): FileRangeReference | undefined {
-  const match = REFERENCE_PATTERN.exec(token);
+  const match = REFERENCE_PATTERN.exec(withoutMentionMarker(token));
   if (match === null) return undefined;
   const [, path, startText, endText] = match;
   if (path === undefined || startText === undefined) return undefined;
@@ -45,4 +55,32 @@ export function findFileRangeReferences(promptText: string): FileRangeReference[
     references.push(reference);
   }
   return references;
+}
+
+/**
+ * Whole-file `@path` mentions, which name a file without naming a range.
+ *
+ * Separate from the ranged form because they answer a different question —
+ * "read this file" rather than "read these lines" — and because only the
+ * `@` spelling means it. A bare `src/a.ts` in a sentence is prose; a user
+ * writes the `@` when they mean to hand a file over.
+ *
+ * Trailing sentence punctuation is dropped so `@src/a.ts.` works, and a token
+ * that carries a range is left to `findFileRangeReferences` rather than being
+ * claimed twice.
+ */
+export function findMentionedPaths(promptText: string): string[] {
+  const seen = new Set<string>();
+  const paths: string[] = [];
+  for (const token of promptText.split(/\s+/u)) {
+    if (paths.length >= MAX_REFERENCES_PER_PROMPT) break;
+    if (!token.startsWith('@')) continue;
+    const path = token.slice(1).replace(/[.,;:!?)\]]+$/u, '');
+    if (path.length === 0 || path.includes('://')) continue;
+    if (parseFileRangeReference(token) !== undefined) continue;
+    if (seen.has(path)) continue;
+    seen.add(path);
+    paths.push(path);
+  }
+  return paths;
 }

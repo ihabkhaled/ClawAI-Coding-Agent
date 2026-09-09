@@ -73,6 +73,9 @@ const elements = {
   effortMode: byId('effortMode'),
   speedMode: byId('speedMode'),
   permissionMode: byId('permissionMode'),
+  mentionList: byId('mentionList'),
+  mentionPanel: byId('mentionPanel'),
+  mentionStatus: byId('mentionStatus'),
   prompt: byId('prompt'),
   refreshModelsButton: byId('refreshModelsButton'),
   researchMode: byId('researchMode'),
@@ -2546,6 +2549,87 @@ elements.permissionMode.addEventListener('change', () => {
 
 elements.contextMode.addEventListener('change', renderContextHint);
 
+// The extension owns mention matching so there is one implementation of it.
+// The webview only draws the list and splices in the chosen path, using the
+// span the extension already worked out.
+let mentionState = { start: -1, end: -1, paths: [], active: 0 };
+
+function mentionOpen() {
+  return mentionState.paths.length > 0 && mentionState.start >= 0;
+}
+
+function closeMentions() {
+  mentionState = { start: -1, end: -1, paths: [], active: 0 };
+  elements.mentionPanel.hidden = true;
+  elements.mentionList.replaceChildren();
+  elements.prompt.removeAttribute('aria-activedescendant');
+}
+
+function renderMentions() {
+  if (!mentionOpen()) {
+    closeMentions();
+    return;
+  }
+  const options = mentionState.paths.map((path, index) => {
+    const option = document.createElement('li');
+    option.className = 'mention-option';
+    option.id = `mention-option-${index}`;
+    option.role = 'option';
+    option.textContent = path;
+    option.setAttribute('aria-selected', String(index === mentionState.active));
+    option.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      acceptMention(index);
+    });
+    return option;
+  });
+  elements.mentionList.replaceChildren(...options);
+  elements.mentionPanel.hidden = false;
+  elements.prompt.setAttribute('aria-activedescendant', `mention-option-${mentionState.active}`);
+  elements.mentionStatus.textContent = labels.mentionCount.replace(
+    '{count}',
+    String(mentionState.paths.length),
+  );
+}
+
+function acceptMention(index) {
+  const path = mentionState.paths[index];
+  if (typeof path !== 'string') {
+    return;
+  }
+  const text = elements.prompt.value;
+  const following = text.slice(mentionState.end);
+  const separator = path.endsWith('/') || /^[\s"'`]/u.test(following) ? '' : ' ';
+  const inserted = `@${path}${separator}`;
+  elements.prompt.value = `${text.slice(0, mentionState.start)}${inserted}${following}`;
+  const caret = mentionState.start + inserted.length;
+  elements.prompt.setSelectionRange(caret, caret);
+  closeMentions();
+  autoGrowPrompt();
+  syncSendAvailability();
+  // A folder keeps the mention open, so ask again from the new caret.
+  if (path.endsWith('/')) {
+    requestMentions();
+  }
+}
+
+function moveMention(delta) {
+  const count = mentionState.paths.length;
+  mentionState.active = (mentionState.active + delta + count) % count;
+  renderMentions();
+}
+
+function requestMentions() {
+  vscode.postMessage({
+    type: 'mentionQuery',
+    text: elements.prompt.value,
+    caretIndex: elements.prompt.selectionStart ?? elements.prompt.value.length,
+  });
+}
+
+elements.prompt.addEventListener('blur', closeMentions);
+elements.prompt.addEventListener('click', requestMentions);
+
 elements.prompt.addEventListener('input', () => {
   if (promptHistoryIndex < promptHistory.length) {
     promptHistoryIndex = promptHistory.length;
@@ -2553,9 +2637,27 @@ elements.prompt.addEventListener('input', () => {
   }
   autoGrowPrompt();
   syncSendAvailability();
+  requestMentions();
 });
 
 elements.prompt.addEventListener('keydown', (event) => {
+  if (mentionOpen() && !event.isComposing) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      moveMention(event.key === 'ArrowDown' ? 1 : -1);
+      return;
+    }
+    if (event.key === 'Enter' || event.key === 'Tab') {
+      event.preventDefault();
+      acceptMention(mentionState.active);
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeMentions();
+      return;
+    }
+  }
   if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
     return;
   }
@@ -2725,6 +2827,14 @@ window.addEventListener('message', (event) => {
     currentSession = message.session;
     elements.conversationTitle.textContent = message.session.subject;
     elements.historySelect.value = message.session.threadId ?? '';
+  } else if (message?.type === 'mentionSuggestions') {
+    mentionState = {
+      start: message.start,
+      end: message.end,
+      paths: Array.isArray(message.paths) ? message.paths : [],
+      active: 0,
+    };
+    renderMentions();
   } else if (message?.type === 'historyLoaded') {
     renderHistoryMessages(message.messages ?? []);
   } else if (message?.type === 'accountReset') {

@@ -2,6 +2,7 @@ import { describe, expect, it } from 'vitest';
 
 import {
   findFileRangeReferences,
+  findMentionedPaths,
   parseFileRangeReference,
 } from '../../src/core/file-range-reference';
 
@@ -84,5 +85,47 @@ describe('findFileRangeReferences', () => {
   it('caps the number of references it returns', () => {
     const many = Array.from({ length: 30 }, (_, index) => `src/f${String(index)}.ts:1`).join(' ');
     expect(findFileRangeReferences(many).length).toBeLessThanOrEqual(20);
+  });
+});
+
+describe('findMentionedPaths', () => {
+  it('finds a whole-file mention', () => {
+    expect(findMentionedPaths('please read @src/app.ts')).toEqual(['src/app.ts']);
+  });
+
+  it('drops trailing sentence punctuation', () => {
+    expect(findMentionedPaths('look at @src/app.ts.')).toEqual(['src/app.ts']);
+  });
+
+  it('leaves a ranged mention to the range parser rather than claiming it twice', () => {
+    expect(findMentionedPaths('see @src/app.ts:2-3')).toEqual([]);
+  });
+
+  it('is not fooled by an email address', () => {
+    expect(findMentionedPaths('mail ihab@example.com')).toEqual([]);
+  });
+
+  it('ignores a URL that carries an @', () => {
+    expect(findMentionedPaths('@https://example.com/a')).toEqual([]);
+  });
+
+  it('mentions the same file once however often it is named', () => {
+    expect(findMentionedPaths('@a.ts and @a.ts again')).toEqual(['a.ts']);
+  });
+
+  it('caps how many files one prompt can hand over', () => {
+    const many = Array.from({ length: 40 }, (_, index) => `@f${String(index)}.ts`).join(' ');
+
+    expect(findMentionedPaths(many)).toHaveLength(20);
+  });
+});
+
+describe('mention-marked references', () => {
+  it('accepts a range written with the mention marker the composer inserts', () => {
+    expect(parseFileRangeReference('@src/foo.ts:10-12')).toEqual({
+      path: 'src/foo.ts',
+      startLine: 10,
+      endLine: 12,
+    });
   });
 });
