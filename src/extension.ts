@@ -318,6 +318,16 @@ export function activate(context: vscode.ExtensionContext): void {
       coordinator.refreshWorkspaceReadiness();
     }),
   );
+  context.subscriptions.push(
+    vscode.commands.registerCommand('clawAI.reopenClosedChat', async () => {
+      const sessionId = await chatView.reopenClosedSession();
+      if (sessionId === undefined) {
+        await vscode.window.showInformationMessage(
+          vscode.l10n.t('No recently closed ClawAI chat to reopen.'),
+        );
+      }
+    }),
+  );
   registerCommands(context, coordinator, logger, globalContext);
   registerChatParticipant(context, coordinator);
   void coordinator.initialize();

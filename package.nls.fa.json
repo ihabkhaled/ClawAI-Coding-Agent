@@ -26,6 +26,7 @@
   "command.undoLastEdit": "واگردانی آخرین ویرایش",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.reopenClosedChat": "بازکردن دوباره گفتگوی بسته‌شده",
   "command.showUsage": "Show Usage",
   "command.searchRunHistory": "Search Run History",
   "command.sendFeedback": "Send Feedback",

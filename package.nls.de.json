@@ -26,6 +26,7 @@
   "command.undoLastEdit": "Letzte ClawAI-Änderung rückgängig",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.reopenClosedChat": "Geschlossenen Chat erneut öffnen",
   "command.showUsage": "Show Usage",
   "command.searchRunHistory": "Search Run History",
   "command.sendFeedback": "Send Feedback",

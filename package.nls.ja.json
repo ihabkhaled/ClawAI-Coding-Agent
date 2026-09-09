@@ -26,6 +26,7 @@
   "command.undoLastEdit": "最後の ClawAI 編集を元に戻す",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.reopenClosedChat": "閉じたチャットを再度開く",
   "command.showUsage": "Show Usage",
   "command.searchRunHistory": "Search Run History",
   "command.sendFeedback": "Send Feedback",

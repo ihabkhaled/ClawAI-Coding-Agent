@@ -26,6 +26,7 @@
   "command.undoLastEdit": "เลิกทำการแก้ไขล่าสุด",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.reopenClosedChat": "เปิดแชทที่ปิดไปอีกครั้ง",
   "command.showUsage": "Show Usage",
   "command.searchRunHistory": "Search Run History",
   "command.sendFeedback": "Send Feedback",

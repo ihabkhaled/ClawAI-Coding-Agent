@@ -14,7 +14,9 @@ describe('chat sessions', () => {
 
   it('creates an isolated editor session descriptor', () => {
     expect(createChatSession('session-1', 42)).toEqual({
+      activity: 'idle',
       createdAt: 42,
+      unread: false,
       sessionId: 'session-1',
       subject: 'New ClawAI chat',
       threadId: undefined,
