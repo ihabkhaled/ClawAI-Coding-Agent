@@ -5,6 +5,7 @@ import { applyModelSelection } from './agent-coordinator-runtime';
 import { searchRunHistory } from './search-run-history-command';
 import { sendFeedback } from './send-feedback-command';
 import { showSessionRecap } from './session-recap-command';
+import { showUsage } from './show-usage-command';
 import { exportTranscript } from './transcript-export-command';
 
 import type { AgentConnectionService } from './agent-connection-service';
@@ -24,6 +25,7 @@ export interface CoordinatorCommands {
   exportTranscript(): Promise<void>;
   sendFeedback(): Promise<void>;
   searchRunHistory(): Promise<void>;
+  showUsage(): Promise<void>;
   showSessionRecap(): Promise<void>;
   undoLastEdit(): Promise<void>;
   selectModel(modelKey?: string): Promise<void>;
@@ -59,6 +61,7 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
     exportTranscript: () =>
       exportTranscript({ conversations: parts.conversations(), state: parts.state() }),
     searchRunHistory: () => searchRunHistory({ journals: parts.journals() }),
+    showUsage: () => showUsage({ state: parts.state() }),
     sendFeedback: () =>
       sendFeedback({
         backend: parts.backend,
