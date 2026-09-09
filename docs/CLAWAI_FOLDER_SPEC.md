@@ -2,6 +2,9 @@
 
 `.clawai` is optional, project-owned, and safe to commit when it contains no
 secrets. **ClawAI: Initialize .clawai** creates missing files only.
+`policies/policy.json` and `agents/agents.json` get editor validation and
+autocomplete from the schemas the extension registers in
+`contributes.jsonValidation`.
 
 ```text
 .clawai/
