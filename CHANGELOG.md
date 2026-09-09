@@ -2,6 +2,17 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.95.0
+
+Minor: nested `.clawai` memory files, with precedence (F076).
+
+- **A subdirectory can carry its own `.clawai/rules.md`,**
+  `architecture.md` and `memory.md`. Every directory from the workspace root
+  down to the file you have open is searched.
+- **Nearer guidance wins.** Files are read root-first and nearest-last, so a
+  rule for one package speaks after the repository-wide rule it narrows.
+- The walk is depth-bounded and never resolves outside the workspace.
+
 ## 0.94.0
 
 Minor: a usage dialog (F107, client half).

@@ -41,6 +41,11 @@ autocomplete from the schemas the extension registers in
 - `policies/policy.json`: the project permission policy. See below.
 - `agents/agents.json`: named sub-agent presets. See below.
 
+A subdirectory may carry its own `.clawai/rules.md`, `architecture.md` and
+`memory.md`. Every directory from the workspace root down to the open file is
+searched, root first and nearest last, so guidance closer to the code speaks
+after the repository-wide guidance it narrows.
+
 ## `policies/policy.json`
 
 Every field narrows what the agent may do; none widens it.

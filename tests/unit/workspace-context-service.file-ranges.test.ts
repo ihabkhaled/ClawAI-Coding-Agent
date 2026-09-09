@@ -240,3 +240,63 @@ describe('WorkspaceContextService line-range candidates', () => {
     });
   });
 });
+
+describe('WorkspaceContextService nested memory files', () => {
+  beforeEach(() => {
+    vscodeEnvironment.workspaceFolders = [
+      {
+        name: 'claw-workspace',
+        uri: {
+          fsPath: '/workspace',
+          path: '/workspace',
+          scheme: 'file',
+          toString: () => 'file:///workspace',
+        },
+      },
+    ];
+    vscodeEnvironment.activeTextEditor = undefined;
+    vi.clearAllMocks();
+  });
+
+  it('reads only the root memory files when no file is open', async () => {
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(new TextEncoder().encode('rule'));
+    const service = new WorkspaceContextService();
+
+    await service.projectRules();
+
+    const read = vi
+      .mocked(vscode.workspace.fs.readFile)
+      .mock.calls.map(([uri]) => (uri as { path: string }).path);
+    expect(read).toEqual([
+      '/workspace/.clawai/rules.md',
+      '/workspace/.clawai/architecture.md',
+      '/workspace/.clawai/memory.md',
+    ]);
+  });
+
+  it('reads nested memory files with the nearest directory last', async () => {
+    vscodeEnvironment.activeTextEditor = {
+      document: {
+        uri: {
+          fsPath: '/workspace/apps/web/app.ts',
+          path: '/workspace/apps/web/app.ts',
+          scheme: 'file',
+          toString: () => 'file:///workspace/apps/web/app.ts',
+        },
+        getText: () => '',
+      },
+      selection: { isEmpty: true },
+    };
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(new TextEncoder().encode('rule'));
+    const service = new WorkspaceContextService();
+
+    await service.projectRules();
+
+    const read = vi
+      .mocked(vscode.workspace.fs.readFile)
+      .mock.calls.map(([uri]) => (uri as { path: string }).path);
+    expect(read[0]).toBe('/workspace/.clawai/rules.md');
+    expect(read.at(-1)).toBe('/workspace/apps/web/.clawai/memory.md');
+    expect(read).toContain('/workspace/apps/.clawai/rules.md');
+  });
+});
