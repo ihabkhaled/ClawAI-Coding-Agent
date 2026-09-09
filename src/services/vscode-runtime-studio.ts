@@ -49,6 +49,7 @@ import { VscodeWorkspaceSymbols } from '../infrastructure/vscode-workspace-symbo
 
 import { BrowserControllerService } from './browser-controller-service';
 import { ContainerEngineService } from './container-engine-service';
+import { conversationEndPort } from './conversation-end-service';
 import { DatabaseProfileVault } from './database-profile-vault';
 import {
   DatabaseWorkbenchService,
@@ -370,6 +371,11 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       { definition: browserToolDefinition, executor: new BrowserToolExecutor(browser, readiness) },
       ...analysisToolRegistrations({
         questions: this.approvals,
+        conversationEnd: conversationEndPort({
+          state: this.state,
+          journals: this.journals,
+          activeRunId: () => this.activeRunId,
+        }),
         intelligence,
         transactions: this.transactions,
         tasks: this.stores.tasks,

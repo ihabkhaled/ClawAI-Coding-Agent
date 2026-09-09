@@ -293,6 +293,9 @@ export const runtimeToolInputSchemas = {
     contextLines: integer,
     transaction: opaque,
   }),
+  end: strict({ reason: text, lifecycle: { type: 'string', enum: ['completed', 'abandoned'] } }, [
+    'reason',
+  ]),
   git: strict({
     rootKey: text,
     path: text,

@@ -103,6 +103,8 @@ export const durableRunJournalSchema = z
       })
       .strict()
       .optional(),
+    /** What the agent said when it declared the run finished, if it did. */
+    terminalReason: z.string().min(1).max(2_000).optional(),
     labels: z.array(z.string().min(1).max(100)).max(100),
     pinned: z.boolean(),
     lastEventSequence: z.number().int().min(-1),

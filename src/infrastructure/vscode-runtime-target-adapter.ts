@@ -16,6 +16,7 @@ import { containerToolDefinition } from './container-tool-executor';
 import { databaseToolDefinition } from './database-tool-executor';
 import { developmentServiceToolDefinition } from './development-service-tool-executor';
 import { elevationToolDefinition } from './elevation-tool-executor';
+import { endConversationToolDefinition } from './end-conversation-tool-executor';
 import { evidenceToolDefinition } from './evidence-tool-executor';
 import { flagshipToolDefinition } from './flagship-tool-executor';
 import { gitToolDefinition } from './git-tool-executor';
@@ -313,6 +314,9 @@ function localToolDefinitions(probe: RuntimeHostProbe) {
     // trust, nothing read or written. Advertised unconditionally or the model
     // is never told it can reach a user who walked away.
     notifyUserToolDefinition,
+    // Declaring a run finished needs no host prerequisite either, and a run
+    // that cannot say how it ended leaves no terminal record at all.
+    endConversationToolDefinition,
     intelligenceToolDefinition,
     planningToolDefinition,
     runJournalToolDefinition,
