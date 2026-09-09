@@ -2365,8 +2365,48 @@ const onboardingTranslations = {
   },
 };
 
+const turnNavigationTranslations = {
+  ar: {
+    '{who}, turn {position} of {total}': '{who}، الدور {position} من {total}',
+  },
+  de: {
+    '{who}, turn {position} of {total}': '{who}, Beitrag {position} von {total}',
+  },
+  es: {
+    '{who}, turn {position} of {total}': '{who}, turno {position} de {total}',
+  },
+  fa: {
+    '{who}, turn {position} of {total}': '{who}، نوبت {position} از {total}',
+  },
+  fr: {
+    '{who}, turn {position} of {total}': '{who}, tour {position} sur {total}',
+  },
+  hi: {
+    '{who}, turn {position} of {total}': '{who}, बारी {position} / {total}',
+  },
+  it: {
+    '{who}, turn {position} of {total}': '{who}, turno {position} di {total}',
+  },
+  ja: {
+    '{who}, turn {position} of {total}': '{who}、{total} 件中 {position} 件目',
+  },
+  pt: {
+    '{who}, turn {position} of {total}': '{who}, turno {position} de {total}',
+  },
+  ru: {
+    '{who}, turn {position} of {total}': '{who}, реплика {position} из {total}',
+  },
+  th: {
+    '{who}, turn {position} of {total}': '{who} ลำดับที่ {position} จาก {total}',
+  },
+  zh: {
+    '{who}, turn {position} of {total}': '{who}，第 {position} 条，共 {total} 条',
+  },
+};
+
 function translate(locale, message) {
   return (
+    turnNavigationTranslations[locale][message] ??
     onboardingTranslations[locale][message] ??
     focusViewTranslations[locale][message] ??
     threadOrganizationTranslations[locale][message] ??

@@ -17,6 +17,7 @@
   "{0}/{1} tokens": "{0}/{1} tokens",
   "{0}/10 attachments · {1}/50 MiB": "{0}/10 attachments · {1}/50 MiB",
   "{count} workspace files match": "Совпадений в рабочей области: {count}",
+  "{who}, turn {position} of {total}": "{who}, реплика {position} из {total}",
   "0 of 5 selected": "0 of 5 selected",
   "0 running": "0 running",
   "0 waiting": "0 waiting",
