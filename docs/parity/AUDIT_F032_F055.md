@@ -30,7 +30,10 @@ module with no callers is scaffolding, not SHIPPED.
 | F054 | Managed MCP allowlists and denylists                | MISSING                               | zero `mcp` matches in `src/`, `tests/`, `docs/`, `package.json`                                                                                                                                  | MCP does not exist in the extension, so there is no policy surface to gate.                                                                                                                                                                                                                                                                                                                                                                                                                                                     |
 | F055 | Zero data retention mode                            | MISSING                               | `src/core/enterprise-policy.ts:14`, `src/services/attachment-request-service.ts:69`                                                                                                              | No retention flag, no backend capability negotiation, no local-only transcript path, no posture receipt.                                                                                                                                                                                                                                                                                                                                                                                                                        |
 
-Tally: 2 SHIPPED, 12 PARTIAL, 8 MISSING, 2 CONFLICT.
+Tally: 5 SHIPPED, 11 PARTIAL, 7 MISSING, 1 CONFLICT. (Recounted row-by-row in
+batch 23 — this line had never been updated after F034 and F045 were found
+already SHIPPED at audit time, or after F049/F050/F052 shipped and F046 was
+found to be the file's only remaining CONFLICT row.)
 
 ## Reuse map — the seam each gap must extend
 
