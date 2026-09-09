@@ -309,6 +309,7 @@
   "The website may receive the browser request.": "The website may receive the browser request.",
   "The workspace moved. Plan again before resuming.": "The workspace moved. Plan again before resuming.",
   "The workspace policy file is too large.": "The workspace policy file is too large.",
+  "The workspace sub-agent definitions file is too large.": "The workspace sub-agent definitions file is too large.",
   "Theme": "پوسته",
   "There are no ClawAI conversations to export yet.": "There are no ClawAI conversations to export yet.",
   "There are no recorded ClawAI runs to recap yet.": "There are no recorded ClawAI runs to recap yet.",
