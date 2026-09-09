@@ -7,6 +7,7 @@ import type { PermissionMode } from '../core/permission-policy.types';
 import type { ResearchMode } from '../core/research-mode';
 import type { SpeedMode } from '../core/speed-mode';
 import type { RequestAdmission } from '../services/agent-coordinator.types';
+import type { MentionSuggestions } from '../services/mention-suggestion.types';
 
 interface SessionInput {
   sessionId: string;
@@ -35,6 +36,7 @@ export interface ChatViewActions {
   configureLanguage(): Promise<void>;
   connect(profile: ConnectionProfile): Promise<void>;
   manageExternalOutputFolders(): Promise<void>;
+  mentionSuggestions(text: string, caretIndex: number): Promise<MentionSuggestions>;
   logout(): Promise<void>;
   openFolder(): Promise<void>;
   openThread(input: SessionInput & { threadId: string }): Promise<void>;

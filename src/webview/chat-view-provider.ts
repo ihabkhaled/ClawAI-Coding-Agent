@@ -245,6 +245,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       }
       return;
     }
+    if (request.type === 'mentionQuery') {
+      const suggestions = await this.actions.mentionSuggestions(request.text, request.caretIndex);
+      await sourceWebview.postMessage({ type: 'mentionSuggestions', ...suggestions });
+      return;
+    }
     if (isPromptMessage(request)) {
       await this.handlePromptMessage(request, sourceSessionId);
       return;

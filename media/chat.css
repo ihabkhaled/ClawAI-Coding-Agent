@@ -2251,6 +2251,34 @@ pre {
   color: var(--vscode-input-placeholderForeground);
 }
 
+.mention-panel {
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0 var(--sp-3) var(--sp-2);
+  border: 1px solid var(--claw-line);
+  border-radius: var(--radius-sm);
+  background: var(--claw-card);
+}
+
+.mention-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mention-option {
+  padding: var(--sp-1) var(--sp-2);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.9em;
+}
+
+.mention-option[aria-selected='true'] {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
 .attachment-tray {
   padding: 0 var(--sp-3) var(--sp-2);
 }

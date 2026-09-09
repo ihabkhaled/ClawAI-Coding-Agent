@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.98.0
+
+Minor: `@` mentions with fuzzy matching (F032).
+
+- **Type `@` in the composer** and a ranked list of workspace files and folders
+  appears. Arrows walk it, Enter or Tab chooses, Escape dismisses, and picking
+  a folder keeps the mention open so the next keystroke narrows inside it.
+- **Matching is a subsequence, not a substring:** `wcs` finds
+  `workspace-context-service.ts`. Matches in the file name beat matches in a
+  directory, and runs of consecutive characters beat scattered ones.
+- **A mention is real context.** `@src/app.ts` pulls that file in;
+  `@src/app.ts:10-20` pulls exactly those lines, the same syntax that already
+  worked without the `@`.
+- **Secrets are never offered,** and a mention of one is dropped with the
+  reason recorded in the context receipt rather than silently.
+- The extension owns the matching, so the composer and the collector cannot
+  disagree about what a mention means.
+
 ## 0.97.0
 
 Minor: Plan mode survives a resume, and so does the plan it approved (F048).

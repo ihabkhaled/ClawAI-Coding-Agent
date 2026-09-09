@@ -9,6 +9,7 @@ import { createRuntimeSnapshot } from './core/runtime/runtime-event-reducer';
 import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
 import { OutputLogger } from './infrastructure/output-logger';
+import { VscodeMentionIndex } from './infrastructure/vscode-mention-index';
 import { probeRuntimeHost } from './infrastructure/vscode-runtime-host-probe';
 import { buildRuntimeCapabilityManifest } from './infrastructure/vscode-runtime-target-adapter';
 import { VscodeUserNotifier } from './infrastructure/vscode-user-notifier';
@@ -18,6 +19,7 @@ import { ConfigurationService } from './services/configuration-service';
 import { ClawaiUriHandler } from './services/deep-link-handler';
 import { ExternalOutputGrantService } from './services/external-output-grant-service';
 import { GlobalContextService } from './services/global-context-service';
+import { MentionSuggestionService } from './services/mention-suggestion-service';
 import { WorkspaceContextService } from './services/workspace-context-service';
 import { WorkspaceScopeService } from './services/workspace-scope-service';
 import { createClawIconPath } from './views/claw-icon-path';
@@ -195,6 +197,7 @@ export function activate(context: vscode.ExtensionContext): void {
     context,
     workspaceScope,
   );
+  const mentions = new MentionSuggestionService(new VscodeMentionIndex());
   const chatView = new ChatViewProvider(context.extensionUri, state, {
     agent: (input) => coordinator.runAgent(input),
     cancel: (requestId) => coordinator.cancel(requestId),
@@ -213,6 +216,7 @@ export function activate(context: vscode.ExtensionContext): void {
       await vscode.commands.executeCommand('workbench.action.configureLocale');
     },
     logout: () => coordinator.logout(),
+    mentionSuggestions: (text, caretIndex) => mentions.suggest(text, caretIndex),
     manageExternalOutputFolders: () => externalOutputGrants.manage(),
     openThread: (input) => coordinator.openThread(input),
     openFolder: async () => {

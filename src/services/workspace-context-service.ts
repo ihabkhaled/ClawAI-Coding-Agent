@@ -13,7 +13,7 @@ import {
   type WorkspaceReadiness,
 } from '../core/context-mode';
 import { EMPTY_CONTEXT } from '../core/empty-context';
-import { findFileRangeReferences } from '../core/file-range-reference';
+import { findFileRangeReferences, findMentionedPaths } from '../core/file-range-reference';
 import { memoryFileCandidates } from '../core/memory-file-discovery';
 import { forEachPrefetched, readConcurrency } from '../core/speed-mode';
 import {
@@ -124,41 +124,40 @@ export class WorkspaceContextService {
   }
 
   /**
-   * Resolves `path:L-L` references found in the prompt text itself, so a
-   * message can pull in an exact range of any workspace file regardless of
-   * what is open or selected. A reference that does not resolve — outside
-   * the workspace, missing, or past the end of the file — is silently
-   * skipped rather than failing the whole request: free text can coincide
-   * with the syntax by accident, and a typo should not block a send.
+   * Resolves the file references written into the prompt text itself — a
+   * `path:L-L` range, or a whole-file `@path` mention — so a message can pull
+   * in any workspace file regardless of what is open or selected. A reference
+   * that does not resolve — outside the workspace, missing, sensitive, or past
+   * the end of the file — is silently skipped rather than failing the whole
+   * request: free text can coincide with the syntax by accident, and a typo
+   * should not block a send.
    */
   async referencedRanges(
     promptText: string,
     configuration: RuntimeConfiguration,
   ): Promise<CollectedContext> {
     const references = findFileRangeReferences(promptText);
-    if (references.length === 0 || this.scope.refresh().selectedFolderKey === undefined) {
+    const mentioned = findMentionedPaths(promptText);
+    if (
+      (references.length === 0 && mentioned.length === 0) ||
+      this.scope.refresh().selectedFolderKey === undefined
+    ) {
       return EMPTY_CONTEXT;
     }
     const folder = this.scope.selectedFolder();
     const canonicalWorkspacePath = await this.canonicalWorkspacePath(folder.uri);
     const candidates: ContextCandidate[] = [];
+    for (const path of mentioned) {
+      const text = await this.readReferencedFile(folder.uri, canonicalWorkspacePath, path);
+      if (text !== undefined) candidates.push({ path, content: text });
+    }
     for (const reference of references) {
-      const uri = vscode.Uri.joinPath(folder.uri, reference.path);
-      if (
-        canonicalWorkspacePath !== undefined &&
-        uri.scheme === 'file' &&
-        !(await isRealPathInsideWorkspace(canonicalWorkspacePath, uri.fsPath))
-      ) {
-        continue;
-      }
-      let text: string;
-      try {
-        text = new TextDecoder('utf-8', { fatal: false }).decode(
-          await vscode.workspace.fs.readFile(uri),
-        );
-      } catch {
-        continue;
-      }
+      const text = await this.readReferencedFile(
+        folder.uri,
+        canonicalWorkspacePath,
+        reference.path,
+      );
+      if (text === undefined) continue;
       const lines = text.split(/\r?\n/u);
       if (reference.startLine > lines.length) continue;
       const endLine = Math.min(reference.endLine, lines.length);
@@ -170,6 +169,40 @@ export class WorkspaceContextService {
       });
     }
     return this.finish(candidates, configuration, []);
+  }
+
+  /**
+   * One referenced workspace file, or nothing if it may not be handed over.
+   *
+   * The screen is the same for a ranged reference and a whole-file mention,
+   * because the question is the same: naming a file in a prompt is not
+   * authority to read one outside the workspace. A path that fails is skipped
+   * silently — a typo must not block a send.
+   *
+   * Secrets are not screened here on purpose. `finish` already drops them and
+   * records why in the receipt, and a user who mentions `.env` is better told
+   * it was excluded than left wondering why their message did nothing.
+   */
+  private async readReferencedFile(
+    folderUri: vscode.Uri,
+    canonicalWorkspacePath: string | undefined,
+    path: string,
+  ): Promise<string | undefined> {
+    const uri = vscode.Uri.joinPath(folderUri, path);
+    if (
+      canonicalWorkspacePath !== undefined &&
+      uri.scheme === 'file' &&
+      !(await isRealPathInsideWorkspace(canonicalWorkspacePath, uri.fsPath))
+    ) {
+      return undefined;
+    }
+    try {
+      return new TextDecoder('utf-8', { fatal: false }).decode(
+        await vscode.workspace.fs.readFile(uri),
+      );
+    } catch {
+      return undefined;
+    }
   }
 
   async activeFile(configuration: RuntimeConfiguration): Promise<CollectedContext> {

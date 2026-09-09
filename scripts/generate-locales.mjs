@@ -1919,8 +1919,60 @@ const composerTranslations = {
     'Web research': '网络检索',
   },
 };
+const mentionTranslations = {
+  ar: {
+    '{count} workspace files match': 'تطابق {count} من ملفات مساحة العمل',
+    'Workspace files': 'ملفات مساحة العمل',
+  },
+  de: {
+    '{count} workspace files match': '{count} Arbeitsbereichsdateien stimmen überein',
+    'Workspace files': 'Arbeitsbereichsdateien',
+  },
+  es: {
+    '{count} workspace files match': '{count} archivos del espacio de trabajo coinciden',
+    'Workspace files': 'Archivos del espacio de trabajo',
+  },
+  fa: {
+    '{count} workspace files match': '{count} فایل فضای کاری مطابقت دارد',
+    'Workspace files': 'فایل‌های فضای کاری',
+  },
+  fr: {
+    '{count} workspace files match': '{count} fichiers de l’espace de travail correspondent',
+    'Workspace files': 'Fichiers de l’espace de travail',
+  },
+  hi: {
+    '{count} workspace files match': '{count} वर्कस्पेस फ़ाइलें मेल खाती हैं',
+    'Workspace files': 'वर्कस्पेस फ़ाइलें',
+  },
+  it: {
+    '{count} workspace files match': '{count} file dell’area di lavoro corrispondono',
+    'Workspace files': 'File dell’area di lavoro',
+  },
+  ja: {
+    '{count} workspace files match': '{count} 件のワークスペースファイルが一致',
+    'Workspace files': 'ワークスペースのファイル',
+  },
+  pt: {
+    '{count} workspace files match': '{count} arquivos do espaço de trabalho correspondem',
+    'Workspace files': 'Arquivos do espaço de trabalho',
+  },
+  ru: {
+    '{count} workspace files match': 'Совпадений в рабочей области: {count}',
+    'Workspace files': 'Файлы рабочей области',
+  },
+  th: {
+    '{count} workspace files match': 'ไฟล์ในเวิร์กสเปซตรงกัน {count} รายการ',
+    'Workspace files': 'ไฟล์ในเวิร์กสเปซ',
+  },
+  zh: {
+    '{count} workspace files match': '{count} 个工作区文件匹配',
+    'Workspace files': '工作区文件',
+  },
+};
+
 function translate(locale, message) {
   return (
+    mentionTranslations[locale][message] ??
     composerTranslations[locale][message] ??
     administratorTranslations[locale][message] ??
     runtimeV2Translations[locale][message] ??
