@@ -1150,3 +1150,52 @@ division the mention list uses: one owner for a decision, one place to change
 it.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 41 — F004, F005 the agent's own way onto the web
+
+| Batch | Version | Status                                | Evidence                                                                                          |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 41    | 1.2.0   | Code and deterministic gates complete | `src/core/web-research.ts`, `research-client.ts`, `web-research-tool-executor.ts`. Tests: 22 new. |
+
+**Two more rows that were not blocked.** A read-only sweep of the other
+repository found `POST /research/search` and `POST /research/fetch` already
+built, module-registered, and gated on a normal-user permission rather than an
+admin one. Nothing in the extension called either. That is now four rows in
+this program — F027, F104, F061 and this pair — where "the backend contract
+does not exist" was false.
+
+Research mode was already wired and still is. It answers a different question:
+"should this message be grounded", chosen before sending, on the legacy chat
+path. It cannot answer "I need to check one thing", which is what comes up in
+the middle of a run. That is what the tool is for.
+
+**The search runs on the server and that is not only convenience.** The
+provider credentials live there; a client that searched directly would be a
+client holding a search key. One place also enforces provider policy and
+records the run, instead of every client inventing its own.
+
+**A URL is checked before it is sent.** The model's choice of URL is untrusted
+input — a workspace file or a previously fetched page can put one in front of
+it — so a tool the model can call with any string, backed by a server that will
+dutifully retrieve it, is a request-forgery primitive unless something decides
+what counts as the web. http and https only, no embedded credentials, no
+loopback, private or link-local address, which is where cloud instance metadata
+lives. Only literal addresses are judged: a name that resolves to a private
+address still gets through, and it has to, because resolution happens on the
+fetching server and re-resolving here would answer a different question at a
+different time. The server has its own domain policy; this is the cheap half of
+the defence and is documented as such.
+
+Credentials in a URL are refused rather than stripped. Stripping would silently
+send an unauthenticated request nobody asked for, and a caller who put a
+password in a URL needs telling, not helping.
+
+**Everything returned is marked `untrusted: true`,** and the tool description
+says so in the words the model reads: evidence to weigh, never instructions to
+follow.
+
+**Bookkeeping:** `uploadFile`/`deleteFile` moved to `backend/file-client.ts`.
+`backend-client.ts` sits on the 500-line ceiling and the sanctioned fix is to
+move a cohesive group out, not to shorten a line.
+
+**Still true:** live-model Definition of Done cannot be executed here.

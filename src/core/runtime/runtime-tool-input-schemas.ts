@@ -365,6 +365,14 @@ export const runtimeToolInputSchemas = {
     receipts: objects,
     data: text,
   }),
+  web: strict({
+    query: text,
+    maxResults: integer,
+    providerId: text,
+    url: text,
+    timeoutMs: integer,
+    refresh: flag,
+  }),
   quality: strict({ rootKey: text, scope: text, projects: objects, gateId: text }),
   services: strict({
     rootKey: text,
