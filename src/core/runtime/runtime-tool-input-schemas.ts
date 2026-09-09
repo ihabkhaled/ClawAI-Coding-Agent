@@ -325,6 +325,9 @@ export const runtimeToolInputSchemas = {
     maxResults: integer,
   }),
   journal: strict({ journal: opaque, query: text, runId: text }),
+  notify: strict({ message: shortText, kind: { type: 'string', enum: ['info', 'warning'] } }, [
+    'message',
+  ]),
   planning: strict({ plan: opaque, output: opaque }),
   process: strict({
     executablePath: text,

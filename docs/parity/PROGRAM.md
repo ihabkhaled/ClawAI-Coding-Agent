@@ -658,3 +658,44 @@ given `rootKey`, so a main-session `create-worktree` with
 call using that very common key. The guard lives in `GitAgentService`
 instead, checked once, before anything runs, only against the one operation
 that can reach it from an unbound caller.
+
+### Batch 26 — F023 push notifications
+
+| Batch | Version | Status                                | Evidence                                                                                                                                                                                                            |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 26    | 0.87.0  | Code and deterministic gates complete | `src/core/user-notification.ts`, `src/views/notification-controller.ts`, `src/infrastructure/notify-user-tool-executor.ts`, `src/infrastructure/vscode-user-notifier.ts`. Tests: 16 + 5 + 5 across three new files. |
+
+Two halves the audit named separately, closed together: an agent-callable
+`runtime.notify`, and automatic notification when an approval, a question, a
+failure or a completion lands.
+
+The audit pointed the automatic half at `approval-broker.ts`. The broker was
+the wrong seam. It already publishes every interruption it raises into
+`ExtensionState`, so an observer of the published snapshot covers all four
+events through one path — and adds nothing to the queue the broker has to
+withdraw when a run ends, which a hook inside it would have. `StatusBarController`
+was already this exact shape, so the controller is a sibling of something that
+existed rather than a new pattern.
+
+Three decisions worth keeping:
+
+- **Nothing fires while the window has focus.** A notification exists to say
+  "come back". A user already looking at the panel can see the approval, the
+  question and the result without being told, and a toast there is how people
+  learn to ignore the channel that matters.
+- **No ClawAI setting to silence it.** VS Code's own Do Not Disturb and
+  per-source notification controls already own that decision for every
+  extension. A second switch beside them would only be a way for the two to
+  disagree.
+- **`runtime.notify` returns nothing to wait on.** An approval blocks a run
+  until it settles and a question waits for an answer, so both have a result
+  worth returning. A notification has none, and giving one back would hand a
+  model a reason to stall a run on an acknowledgement that never comes.
+
+One correction mid-batch, from the repo's own rules rather than a test. The
+executor waits on nothing, so making it `async` for symmetry with its siblings
+tripped `require-await` — and the first reflex, an `eslint-disable` line, is a
+prohibition here, not a style preference. The honest shape was the one the code
+already had: a synchronous method under a promise-returning signature, with the
+tests asserting a thrown error rather than a rejected promise, and a comment
+recording that the dispatcher catches both identically.
