@@ -90,6 +90,7 @@ function registerCommands(
     ['clawAI.undoLastEdit', () => coordinator.commands.undoLastEdit()],
     ['clawAI.exportTranscript', () => coordinator.commands.exportTranscript()],
     ['clawAI.showSessionRecap', () => coordinator.commands.showSessionRecap()],
+    ['clawAI.sendFeedback', () => coordinator.commands.sendFeedback()],
     [
       'clawAI.showLogs',
       () => {

@@ -493,6 +493,7 @@ export class AgentCoordinator implements vscode.Disposable {
     findings: () => this.runtimeStudio.stores.findings,
     view: () => this.view,
     configuration: () => this.configuration,
+    backend: () => this.backend,
   });
 
   async cancel(requestId?: string): Promise<void> {

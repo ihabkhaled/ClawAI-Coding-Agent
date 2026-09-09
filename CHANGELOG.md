@@ -2,6 +2,19 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.89.0
+
+Minor: send feedback with a diagnostic report you read first (F027).
+
+- **ClawAI: Send Feedback** builds a report describing the installation —
+  versions, connection state, modes, recent run ids, and a redacted last
+  error — opens it in an editor, and sends it only when you choose Send.
+- **What you approve is what is sent**, edits included. Closing the editor
+  sends nothing.
+- The report has no field for a prompt, a transcript, a path or file
+  content, and the backend URL is reduced to its origin.
+- A submission that fails says so. It is never reported as sent.
+
 ## 0.88.0
 
 Minor: the files the agent makes for you are now delivered, not just written (F024).
