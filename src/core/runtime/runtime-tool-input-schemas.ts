@@ -299,6 +299,8 @@ export const runtimeToolInputSchemas = {
     ref: text,
     branch: text,
     startPoint: text,
+    newRootKey: text,
+    worktreeRootKey: text,
     paths: texts,
     message: text,
     amend: flag,

@@ -26,6 +26,7 @@ export const gitToolDefinition: ToolDefinition = {
     'topology',
     'create-branch',
     'create-worktree',
+    'remove-worktree',
     'stage',
     'unstage',
     'commit',

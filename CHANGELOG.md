@@ -2,6 +2,30 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.86.0
+
+Minor: the main session can create, address, and remove its own Git
+worktree (F017).
+
+- **`workspace.git create-worktree` now takes a `newRootKey`.** After the
+  worktree is created, that key resolves on every later `workspace.files`
+  and `workspace.git` call, the same way `workspace-1` already does for the
+  primary folder. Previously the worktree existed on disk but nothing could
+  ever address it again.
+- **`workspace.git remove-worktree` cleans one up.** `git worktree remove
+--force` plus releasing the key, only after the command actually
+  succeeds — a failed removal leaves the worktree addressable rather than
+  silently orphaning it.
+- **A `newRootKey` cannot shadow an advertised `workspace-N` key.** A
+  sub-agent worktree is allowed to register under the key its own task runs
+  as — that is what keeps it from escaping into the parent checkout by
+  accident — but the main session has no equivalent binding, so a
+  `create-worktree` call from it is refused outright if it tries to reuse
+  one of those keys instead of picking its own.
+- Not a stateful "enter/exit": every call in this protocol already carries
+  its own explicit root, so there is no implicit "current directory" to
+  switch. The substance — create, address, clean up — is there.
+
 ## 0.85.0
 
 Minor: line-range references and coordinate-preserving selection context
