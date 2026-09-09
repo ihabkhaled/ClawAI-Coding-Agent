@@ -6,6 +6,7 @@ import { searchRunHistory } from './search-run-history-command';
 import { sendFeedback } from './send-feedback-command';
 import { showSessionRecap } from './session-recap-command';
 import { showUsage } from './show-usage-command';
+import { archiveChat, browseArchivedChats, renameChat } from './thread-organization-command';
 import { exportTranscript } from './transcript-export-command';
 
 import type { AgentConnectionService } from './agent-connection-service';
@@ -15,6 +16,7 @@ import type { ConversationSessionService } from './conversation-session-service'
 import type { FindingsService } from './findings-service';
 import type { RunJournalService } from './run-journal-service';
 import type { SafeEditService } from './safe-edit-service';
+import type { ThreadOrganizationDependencies } from './thread-organization.types';
 import type { BackendClient } from '../backend/backend-client';
 import type { ExtensionState } from '../core/extension-state';
 import type { ChatViewProvider } from '../webview/chat-view-provider';
@@ -27,6 +29,9 @@ export interface CoordinatorCommands {
   searchRunHistory(): Promise<void>;
   showUsage(): Promise<void>;
   showSessionRecap(): Promise<void>;
+  renameChat(): Promise<void>;
+  archiveChat(): Promise<void>;
+  browseArchivedChats(): Promise<void>;
   undoLastEdit(): Promise<void>;
   selectModel(modelKey?: string): Promise<void>;
 }
@@ -43,6 +48,7 @@ interface CommandCollaborators {
   readonly view: () => ChatViewProvider | null;
   readonly configuration: () => ConfigurationService;
   readonly backend: () => BackendClient;
+  readonly refreshHistory: () => Promise<void>;
 }
 
 /**
@@ -54,6 +60,14 @@ interface CommandCollaborators {
  * it over by two or three lines, which is the ceiling doing its job — the fix
  * is to move a group out, not to shorten a line.
  */
+function threadParts(parts: CommandCollaborators): ThreadOrganizationDependencies {
+  return {
+    backend: parts.backend,
+    state: parts.state,
+    refreshHistory: parts.refreshHistory,
+  };
+}
+
 export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCommands {
   return {
     refreshModels: () => parts.connection().refresh(),
@@ -62,6 +76,9 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
       exportTranscript({ conversations: parts.conversations(), state: parts.state() }),
     searchRunHistory: () => searchRunHistory({ journals: parts.journals() }),
     showUsage: () => showUsage({ state: parts.state() }),
+    renameChat: () => renameChat(threadParts(parts)),
+    archiveChat: () => archiveChat(threadParts(parts)),
+    browseArchivedChats: () => browseArchivedChats(threadParts(parts)),
     sendFeedback: () =>
       sendFeedback({
         backend: parts.backend,

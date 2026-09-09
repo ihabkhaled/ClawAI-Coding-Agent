@@ -95,6 +95,9 @@ function registerCommands(
     ['clawAI.sendFeedback', () => coordinator.commands.sendFeedback()],
     ['clawAI.searchRunHistory', () => coordinator.commands.searchRunHistory()],
     ['clawAI.showUsage', () => coordinator.commands.showUsage()],
+    ['clawAI.renameChat', () => coordinator.commands.renameChat()],
+    ['clawAI.archiveChat', () => coordinator.commands.archiveChat()],
+    ['clawAI.browseArchivedChats', () => coordinator.commands.browseArchivedChats()],
     [
       'clawAI.showLogs',
       () => {

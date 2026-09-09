@@ -1,3 +1,5 @@
+import { visibleThreads } from '../core/thread-list';
+
 import type { ExtensionSnapshot } from '../core/extension-state';
 import type { RuntimeSnapshot } from '../core/runtime/runtime-event-reducer';
 
@@ -147,7 +149,7 @@ export function toPublicChatState(snapshot: ExtensionSnapshot) {
     frontendUrl: snapshot.frontendUrl,
     contextReceipt: snapshot.contextReceipt,
     generationQueue: snapshot.generationQueue,
-    history: snapshot.history.map((thread) => ({
+    history: visibleThreads(snapshot.history).map((thread) => ({
       createdAt: publicDate(thread.createdAt),
       id: thread.id,
       messageCount: thread._count?.messages ?? 0,

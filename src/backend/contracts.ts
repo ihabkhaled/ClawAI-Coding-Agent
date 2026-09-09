@@ -163,6 +163,10 @@ export const threadSchema = z
   .object({
     id: z.string(),
     title: z.string().nullable().optional(),
+    // Both already exist on the thread contract; the extension simply never
+    // read them, so archived conversations stayed in the history list.
+    isArchived: z.boolean().optional(),
+    isPinned: z.boolean().optional(),
     routingMode: z.string().optional(),
     preferredProvider: z.string().nullable().optional(),
     preferredModel: z.string().nullable().optional(),
