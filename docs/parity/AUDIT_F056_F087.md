@@ -5,7 +5,7 @@ module with no callers is scaffolding, not SHIPPED.
 
 | ID   | Feature                            | Class                        | Evidence                                                                                                              | Gap                                                                                                                                                                                                                                                                                                                                                    |
 | ---- | ---------------------------------- | ---------------------------- | --------------------------------------------------------------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| F056 | Editable diffs                     | MISSING                      | `src/views/diff-preview-provider.ts:13`, `src/services/safe-edit-confirmation.ts:26`                                  | Preview is an immutable virtual doc; no write-back of edited content into the edit plan.                                                                                                                                                                                                                                                               |
+| F056 | Editable diffs                     | SHIPPED in 0.93.0            | `src/views/preview-draft-file-system.ts`, `DiffPreviewProvider.edits`, `src/core/preview-edits.ts`                    | The right-hand pane is a writable `FileSystemProvider` draft, and corrections standing at approval time are folded back into the plan before it is applied. Only content is taken: the path, the operation and the root stay what the user approved, so an edit cannot turn an update into a delete. The left pane stays read-only.                    |
 | F057 | Checkpoints and rewind             | PARTIAL, narrowed in 0.77.0  | `src/services/file-transaction-service.ts`, `src/extension.ts:87`                                                     | Code undo is now an N-step stack, bounded, boundary-cleared, and retryable after a failed rollback. Still open: named checkpoints and conversation fork, both of which need the durable checkpoint store F059 and F074 also want.                                                                                                                      |
 | F058 | Autosave before tool reads/writes  | SHIPPED in 0.92.0            | `src/core/autosave-policy.ts`, `FileTransactionService.preview`, `clawAI.autosave`                                    | `clawAI.autosave` adds `before-edit` beside the existing fail-closed default. It saves only the files the transaction already names, and only before the preview snapshot — saving between preview and apply would trip the very drift check it exists to resolve. Dirty-buffer drift still fails closed when autosave is off.                         |
 | F059 | Conversation rewind command        | BLOCKED, audit corrected     | `apps/claw-chat-service/.../chat-messages.controller.ts`, `chat-threads.controller.ts:59`                             | Not implementable in this client. The backend deletes a whole thread and offers no message-level delete and no fork, so later turns cannot be dropped and continued from. Needs a backend contract, like F052.                                                                                                                                         |
@@ -38,7 +38,7 @@ module with no callers is scaffolding, not SHIPPED.
 | F086 | Agent SDK                          | MISSING                      | `package.json` exposes no library entry                                                                               | No host-free SDK over the Runtime V2 contracts.                                                                                                                                                                                                                                                                                                        |
 | F087 | Headless mode                      | MISSING                      | `scripts/` has no CLI entry                                                                                           | No non-interactive runner or exit-code contract.                                                                                                                                                                                                                                                                                                       |
 
-Tally: 7 SHIPPED, 7 PARTIAL, 17 MISSING, 1 BLOCKED, 0 CONFLICT. (Batch 21's
+Tally: 8 SHIPPED, 7 PARTIAL, 16 MISSING, 1 BLOCKED, 0 CONFLICT. (Batch 21's
 correction undercounted MISSING by one — F056 itself was left out of the
 recount. Fixed in batch 23 alongside the other three audit files, this time
 by counting every row rather than adjusting a running total.)
@@ -47,7 +47,9 @@ by counting every row rather than adjusting a running total.)
 
 No parallel subsystem. Each entry names the existing file to grow.
 
-- **F056** → `src/views/diff-preview-provider.ts` writable side, returning edited
+- **F056** → SHIPPED. A writable side needs a `FileSystemProvider`, not a
+  `TextDocumentContentProvider`: the latter is read-only by construction, which
+  is why the proposal could be read and never corrected. Write-back returns edited
   text through `EditConfirmation` in `src/services/safe-edit-confirmation.ts:16`
   into `SafeEditService`; re-preflight at `file-transaction-service.ts:143`.
 - **F057** → `src/core/durable-run-journal.ts` and
@@ -121,7 +123,7 @@ No parallel subsystem. Each entry names the existing file to grow.
 
 1. **F057 gates F059 and F074.** Rewind and recap both read a conversation
    checkpoint store that does not exist yet.
-2. **F058 gates F056.** An editable preview would trip the dirty-buffer abort at
+2. **F058 gates F056.** Both shipped, and the gating held: an editable preview trips the dirty-buffer abort at
    `file-transaction-service.ts:143` on every use.
 3. **`ChatSessionDescriptor` is the single chokepoint for F061–F066.** It has five
    fields and no room for archive, group, unread or status. Widen it once —

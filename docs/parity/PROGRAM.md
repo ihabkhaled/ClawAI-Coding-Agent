@@ -861,3 +861,36 @@ Two narrowings worth keeping:
 
 `create` and `mkdir` are excluded because there is no buffer to save for a file
 that does not exist yet.
+
+### Batch 32 — F056 editable diffs
+
+| Batch | Version | Status                                | Evidence                                                                                                              |
+| ----- | ------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------------- |
+| 32    | 0.93.0  | Code and deterministic gates complete | `src/views/preview-draft-file-system.ts`, `DiffPreviewProvider.edits`, `src/core/preview-edits.ts`. Tests: 8 + 4 new. |
+
+The proposal could be read and never corrected, and the reason was structural:
+a `TextDocumentContentProvider` is read-only by construction. The right-hand
+side moves to a `FileSystemProvider`, which is the only editable virtual
+document VS Code offers. The left side deliberately stays read-only — a diff
+whose _before_ pane could be edited would be inviting someone to rewrite
+history.
+
+Four decisions:
+
+- **Only `content` is folded back.** The path, the operation and the root are
+  the shape of the change the user approved; letting the pane move a file or
+  turn an update into a delete would mean the plan applied was not the plan
+  reviewed, which is the one property the preview exists to provide.
+- **Read after the decision, not during.** The corrections that count are the
+  ones standing when Approve was pressed, not every keystroke along the way.
+- **The open document wins over the saved draft.** A pane someone typed in but
+  never saved is exactly the case worth honouring; requiring a save before
+  Apply would make the correction easy to lose.
+- **The edits ride the confirmation, not a new constructor argument.** The
+  confirmation already carried `previewId`; carrying what was approved
+  alongside it kept `agent-coordinator.ts` untouched, which mattered because it
+  sits on its 500-line ceiling.
+
+F058 gated this and the gating was real: an edited preview changes the buffer,
+and without an autosave policy the drift check would abort every corrected
+edit.

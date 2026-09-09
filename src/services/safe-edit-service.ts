@@ -1,3 +1,4 @@
+import { applyPreviewEdits, type PreviewEdits } from '../core/preview-edits';
 import { WorkspaceMutationGate } from '../core/workspace-mutation-gate';
 
 import { assertSmallPatchIsNonDestructive, parseSmallPatchPolicy } from './small-patch-safety';
@@ -38,15 +39,22 @@ export interface SafeEditResult {
 export interface EditConfirmation {
   approved: boolean;
   previewId: string;
+  /** Corrections the reviewer made in the preview, keyed by path. */
+  edits?: PreviewEdits;
 }
 
 function confirmationResult(confirmation: boolean | EditConfirmation): {
   approved: boolean;
   previewId?: string;
+  edits: PreviewEdits;
 } {
   return typeof confirmation === 'boolean'
-    ? { approved: confirmation }
-    : { approved: confirmation.approved, previewId: confirmation.previewId };
+    ? { approved: confirmation, edits: new Map() }
+    : {
+        approved: confirmation.approved,
+        previewId: confirmation.previewId,
+        edits: confirmation.edits ?? new Map(),
+      };
 }
 
 function editResult(applied: boolean, previews: EditPreview[], previewId?: string): SafeEditResult {
@@ -120,7 +128,7 @@ export class SafeEditService {
     signal?.throwIfAborted();
     const confirmation = await this.confirm(previews, plan.summary, session, signal);
     signal?.throwIfAborted();
-    const { approved, previewId } = confirmationResult(confirmation);
+    const { approved, previewId, edits } = confirmationResult(confirmation);
     if (!approved) {
       return editResult(false, previews, previewId);
     }
@@ -128,7 +136,12 @@ export class SafeEditService {
       throw new Error('Workspace trust changed before the edit could be applied.');
     }
     signal?.throwIfAborted();
-    const applied = await this.workspace.applyAtomically(plan, review, signal);
-    return editResult(applied, previews, previewId);
+    // Corrections made in the right-hand pane are folded in here, after the
+    // approval and before the write: the approval was of what is on screen,
+    // and what is on screen is what the reviewer edited.
+    const edited = applyPreviewEdits(plan, edits);
+    const review2 = edited === plan ? review : await this.workspace.preview(edited);
+    const applied = await this.workspace.applyAtomically(edited, review2, signal);
+    return editResult(applied, review2.previews, previewId);
   }
 }
