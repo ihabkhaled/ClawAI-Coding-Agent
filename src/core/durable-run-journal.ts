@@ -82,6 +82,17 @@ export const durableRunJournalSchema = z
     ]),
     goal: z.string().min(1).max(50_000),
     planReference: z.string().max(4_096).optional(),
+    /**
+     * The mode the run started in, so resuming cannot silently widen it.
+     * Optional because journals written before this existed have no answer,
+     * and guessing one would be worse than deferring to the current setting.
+     */
+    agentMode: z.enum(['AUTO', 'PLAN']).optional(),
+    /** The plan revision the run last asserted it was working against. */
+    planRevision: z
+      .string()
+      .regex(/^sha256:[a-f0-9]{64}$/u)
+      .optional(),
     taskGraphReference: z.string().max(4_096).optional(),
     policySnapshotHash: z.string().regex(/^sha256:[a-f0-9]{64}$/u),
     capabilitySnapshotHash: z.string().regex(/^sha256:[a-f0-9]{64}$/u),

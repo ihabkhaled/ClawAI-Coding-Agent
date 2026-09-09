@@ -93,3 +93,35 @@ export function assertPlanRevision(bound: string | undefined, requested: string 
   if (bound === undefined) throw new Error('No plan revision has been recorded yet');
   if (bound !== requested) throw new Error(`Plan revision is stale: expected ${bound}`);
 }
+
+/**
+ * The plan revision a planning call is working against, read off the call.
+ *
+ * Taken from the request rather than the result so the journal learns it
+ * without waiting for the tool to finish: a run that is interrupted mid-export
+ * still recorded which plan it was exporting.
+ *
+ * Every failure is `undefined`, never a throw. Journalling a call must not be
+ * the thing that rejects it — the tool itself validates, and a malformed call
+ * simply has no revision to record.
+ */
+export function planningInvocationRevision(
+  operation: string,
+  args: Readonly<Record<string, unknown>>,
+): string | undefined {
+  if (operation === 'export') {
+    const plan = implementationPlanSchema.safeParse(args.plan);
+    return plan.success ? planRevisionHash(plan.data) : undefined;
+  }
+  if (operation === 'adopt') {
+    if (typeof args.document !== 'string') return undefined;
+    try {
+      return parsePlanDocument(args.document).revision;
+    } catch {
+      return undefined;
+    }
+  }
+  return typeof args.revision === 'string' && /^sha256:[a-f0-9]{64}$/u.test(args.revision)
+    ? args.revision
+    : undefined;
+}

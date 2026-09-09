@@ -6,6 +6,7 @@ import {
   describePlanRevisionChange,
   embedPlanRevision,
   parsePlanDocument,
+  planningInvocationRevision,
   planRevisionHash,
 } from '../../src/core/plan-revision';
 import { examplePlan as plan } from '../helpers/implementation-plan';
@@ -101,5 +102,33 @@ describe('assertPlanRevision', () => {
     expect(() => {
       assertPlanRevision(undefined, 'sha256:a');
     }).toThrow(/No plan revision/u);
+  });
+});
+
+describe('planningInvocationRevision', () => {
+  const document = embedPlanRevision(renderImplementationPlanMarkdown(plan()), plan());
+
+  it('hashes the plan an export is writing', () => {
+    expect(planningInvocationRevision('export', { plan: plan() })).toBe(planRevisionHash(plan()));
+  });
+
+  it('reads the revision out of the document an adopt is handing back', () => {
+    expect(planningInvocationRevision('adopt', { document })).toBe(planRevisionHash(plan()));
+  });
+
+  it('takes the revision another operation names', () => {
+    const revision = `sha256:${'a'.repeat(64)}`;
+
+    expect(planningInvocationRevision('issue-payloads', { revision })).toBe(revision);
+  });
+
+  it('has no revision for a call that names none', () => {
+    expect(planningInvocationRevision('list-tasks', {})).toBeUndefined();
+  });
+
+  it('records nothing rather than throwing on a call the tool will reject', () => {
+    expect(planningInvocationRevision('export', { plan: { nope: true } })).toBeUndefined();
+    expect(planningInvocationRevision('adopt', { document: '# no plan here' })).toBeUndefined();
+    expect(planningInvocationRevision('validate', { revision: 'not-a-hash' })).toBeUndefined();
   });
 });
