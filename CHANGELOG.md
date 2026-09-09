@@ -2,6 +2,19 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.93.0
+
+Minor: correct the proposal in the diff before applying it (F056).
+
+- **The right-hand pane of a ClawAI preview is editable.** Fix the proposal
+  where you noticed it was wrong, then approve; what you edited is what gets
+  written.
+- Only the content is taken from your edit. The file, the operation and the
+  root stay what you approved, so an edit cannot turn an update into a
+  delete.
+- The left pane stays read-only, and unsaved edits still count — you do not
+  have to save the preview before approving.
+
 ## 0.92.0
 
 Minor: an autosave policy for edits (F058).
