@@ -30,6 +30,9 @@ export function renderComposerMarkup(translated: ChatMarkupTranslator): string {
           <button id="attachmentButton" class="icon-button attachment-button" type="button" title="${translated('Attach files')}" aria-label="${translated('Attach files')}">
             ${iconMarkup('attach')}
           </button>
+          <button id="focusToggle" class="icon-button focus-toggle" type="button" aria-pressed="false" title="${translated('Focus view')}" aria-label="${translated('Focus view')}">
+            <span aria-hidden="true">&#9678;</span>
+          </button>
           <label class="compact-control model-control" for="modelSelect"><span>${translated('Model')}</span>
             <select id="modelSelect" aria-label="${translated('Model')}" title="${translated('Automatic routing')}">
               <option value="AUTO">${translated('Automatic routing')}</option>

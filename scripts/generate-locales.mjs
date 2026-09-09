@@ -2191,8 +2191,84 @@ const threadOrganizationTranslations = {
   },
 };
 
+const focusViewTranslations = {
+  ar: {
+    'Focus view': 'وضع التركيز',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'إظهار الواجهة كاملة، أو المحادثة ومربع الكتابة فقط.',
+    'Toggle Focus View': 'تبديل وضع التركيز',
+  },
+  de: {
+    'Focus view': 'Fokusansicht',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Das gesamte Cockpit anzeigen oder nur Unterhaltung und Eingabefeld.',
+    'Toggle Focus View': 'Fokusansicht umschalten',
+  },
+  es: {
+    'Focus view': 'Vista de enfoque',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Mostrar todo el panel, o solo la conversación y el editor.',
+    'Toggle Focus View': 'Alternar vista de enfoque',
+  },
+  fa: {
+    'Focus view': 'نمای تمرکز',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'نمایش کل کابین، یا فقط گفتگو و کادر نوشتن.',
+    'Toggle Focus View': 'تغییر نمای تمرکز',
+  },
+  fr: {
+    'Focus view': 'Vue focalisée',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Afficher tout le cockpit, ou seulement la conversation et le champ de saisie.',
+    'Toggle Focus View': 'Basculer la vue focalisée',
+  },
+  hi: {
+    'Focus view': 'फ़ोकस दृश्य',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'पूरा कॉकपिट दिखाएँ, या केवल बातचीत और लेखन बॉक्स।',
+    'Toggle Focus View': 'फ़ोकस दृश्य टॉगल करें',
+  },
+  it: {
+    'Focus view': 'Vista focus',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Mostra tutto il pannello, o solo la conversazione e il campo di scrittura.',
+    'Toggle Focus View': 'Attiva/disattiva vista focus',
+  },
+  ja: {
+    'Focus view': 'フォーカス表示',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'すべてのパネルを表示するか、会話と入力欄だけを表示します。',
+    'Toggle Focus View': 'フォーカス表示の切り替え',
+  },
+  pt: {
+    'Focus view': 'Modo foco',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Mostrar todo o painel, ou apenas a conversa e o campo de escrita.',
+    'Toggle Focus View': 'Alternar modo foco',
+  },
+  ru: {
+    'Focus view': 'Режим фокуса',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Показывать всю панель или только беседу и поле ввода.',
+    'Toggle Focus View': 'Переключить режим фокуса',
+  },
+  th: {
+    'Focus view': 'มุมมองโฟกัส',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'แสดงแผงทั้งหมด หรือแสดงเฉพาะการสนทนาและช่องพิมพ์',
+    'Toggle Focus View': 'สลับมุมมองโฟกัส',
+  },
+  zh: {
+    'Focus view': '专注视图',
+    'Show the whole cockpit, or only the conversation and composer.':
+      '显示完整面板，或仅显示对话与输入框。',
+    'Toggle Focus View': '切换专注视图',
+  },
+};
+
 function translate(locale, message) {
   return (
+    focusViewTranslations[locale][message] ??
     threadOrganizationTranslations[locale][message] ??
     sessionTabTranslations[locale][message] ??
     mentionTranslations[locale][message] ??

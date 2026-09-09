@@ -37,6 +37,7 @@ describe('SessionControlService', () => {
       permissionMode: configuration.permissionMode,
     }),
     selectAgentMode: vi.fn(),
+    selectViewDensity: vi.fn(),
     selectEffortMode: vi.fn(),
     selectSpeedMode: vi.fn(),
     selectPermissionMode: vi.fn(),

@@ -14,6 +14,7 @@ import type { ExtensionSnapshot } from '../../src/core/extension-state';
 function snapshot(patch: Partial<ExtensionSnapshot> = {}): ExtensionSnapshot {
   return {
     agentMode: 'AUTO',
+    viewDensity: 'full',
     effortMode: 'ULTRA',
     speedMode: '1X',
     agentRun: undefined,

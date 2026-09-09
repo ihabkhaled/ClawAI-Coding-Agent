@@ -2251,6 +2251,26 @@ pre {
   color: var(--vscode-input-placeholderForeground);
 }
 
+/*
+ * Focus view hides what reports on or steers work, not the work itself, and
+ * gives the conversation the room the hidden surfaces were using.
+ */
+body[data-view-density='focus'] #runtimeTimeline,
+body[data-view-density='focus'] #modelTray,
+body[data-view-density='focus'] #runDeck {
+  display: none !important;
+}
+
+body[data-view-density='focus'] .conversation {
+  max-width: 78ch;
+  margin-inline: auto;
+}
+
+.focus-toggle[aria-pressed='true'] {
+  color: var(--vscode-list-activeSelectionForeground);
+  background: var(--vscode-list-activeSelectionBackground);
+}
+
 .mention-panel {
   max-height: 220px;
   overflow-y: auto;

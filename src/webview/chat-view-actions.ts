@@ -6,6 +6,7 @@ import type { EffortMode } from '../core/effort-mode';
 import type { PermissionMode } from '../core/permission-policy.types';
 import type { ResearchMode } from '../core/research-mode';
 import type { SpeedMode } from '../core/speed-mode';
+import type { ViewDensity } from '../core/view-density.types';
 import type { RequestAdmission } from '../services/agent-coordinator.types';
 import type { MentionSuggestions } from '../services/mention-suggestion.types';
 
@@ -50,6 +51,7 @@ export interface ChatViewActions {
   runtimeSteer(message: string): Promise<void>;
   runtimeStop(): Promise<void>;
   selectAgentMode(mode: AgentMode): Promise<void>;
+  selectViewDensity(density: ViewDensity): Promise<void>;
   selectEffortMode(mode: EffortMode): Promise<void>;
   selectSpeedMode(mode: SpeedMode): Promise<void>;
   selectModel(modelKey: string): Promise<void>;

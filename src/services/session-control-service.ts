@@ -16,6 +16,7 @@ import type { AgentMode } from '../core/agent-mode.types';
 import type { EffortMode } from '../core/effort-mode';
 import type { PermissionMode, PermissionOperation } from '../core/permission-policy.types';
 import type { SpeedMode } from '../core/speed-mode';
+import type { ViewDensity } from '../core/view-density.types';
 
 function approvalMessage(operation: PermissionOperation): string {
   if (operation === 'externalFinalDiff') {
@@ -148,6 +149,13 @@ export class SessionControlService {
     return this.enqueueMutation(async () => {
       await this.configuration.selectAgentMode(mode);
       this.state.update({ agentMode: mode });
+    });
+  }
+
+  selectViewDensity(density: ViewDensity): Promise<void> {
+    return this.enqueueMutation(async () => {
+      await this.configuration.selectViewDensity(density);
+      this.state.update({ viewDensity: density });
     });
   }
 

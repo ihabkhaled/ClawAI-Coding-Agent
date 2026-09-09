@@ -73,6 +73,7 @@ const elements = {
   effortMode: byId('effortMode'),
   speedMode: byId('speedMode'),
   permissionMode: byId('permissionMode'),
+  focusToggle: byId('focusToggle'),
   mentionList: byId('mentionList'),
   mentionPanel: byId('mentionPanel'),
   mentionStatus: byId('mentionStatus'),
@@ -1563,6 +1564,7 @@ function renderState(state) {
   const previousState = currentState;
   currentState = state;
   reconcilePending(state);
+  applyViewDensity(state.viewDensity);
   const authorizing = !state.connected && state.backendStatus === 'loading';
   elements.connectionGate.hidden = state.connected;
   elements.authenticatedUi.hidden = !state.connected;
@@ -2626,6 +2628,21 @@ function requestMentions() {
     caretIndex: elements.prompt.selectionStart ?? elements.prompt.value.length,
   });
 }
+
+// Focus view: a reading mode. The extension owns the setting so the choice
+// survives a reload and a second panel; the webview only reflects it.
+function applyViewDensity(density) {
+  const focused = density === 'focus';
+  document.body.dataset.viewDensity = focused ? 'focus' : 'full';
+  elements.focusToggle.setAttribute('aria-pressed', String(focused));
+}
+
+elements.focusToggle.addEventListener('click', () => {
+  vscode.postMessage({
+    type: 'selectViewDensity',
+    density: document.body.dataset.viewDensity === 'focus' ? 'full' : 'focus',
+  });
+});
 
 elements.prompt.addEventListener('blur', closeMentions);
 elements.prompt.addEventListener('click', requestMentions);

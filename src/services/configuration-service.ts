@@ -17,11 +17,13 @@ import {
 } from '../core/configuration';
 import { normalizeEffortMode } from '../core/effort-mode';
 import { normalizeSpeedMode } from '../core/speed-mode';
+import { normalizeViewDensity } from '../core/view-density';
 
 import type { AgentMode } from '../core/agent-mode.types';
 import type { EffortMode } from '../core/effort-mode';
 import type { PermissionMode } from '../core/permission-policy.types';
 import type { SpeedMode } from '../core/speed-mode';
+import type { ViewDensity } from '../core/view-density.types';
 
 function normalizePermissionMode(value: unknown): PermissionMode {
   if (
@@ -45,6 +47,7 @@ function normalizeSelectedPermissionMode(mode: PermissionMode): PermissionMode {
 
 export interface RuntimeConfiguration extends GlobalConfiguration {
   agentMode: AgentMode;
+  viewDensity: ViewDensity;
   backendCustomUrl?: string;
   backendEnvironment?: ConnectionEnvironment;
   backendUrl: string;
@@ -157,6 +160,7 @@ export class ConfigurationService {
     const frontendCustomUrl = configuration.get<string>('frontendCustomUrl') ?? '';
     return {
       agentMode: configuration.get<AgentMode>('agentMode') ?? 'AUTO',
+      viewDensity: normalizeViewDensity(configuration.get<unknown>('viewDensity')),
       effortMode: normalizeEffortMode(configuration.get<unknown>('effortMode')),
       speedMode: normalizeSpeedMode(configuration.get<unknown>('speedMode')),
       backendCustomUrl,
@@ -175,6 +179,12 @@ export class ConfigurationService {
       permissionMode: normalizePermissionMode(configuration.get<unknown>('permissionMode')),
       autosave: normalizeAutosavePolicy(configuration.get<unknown>('autosave')),
     };
+  }
+
+  async selectViewDensity(density: ViewDensity): Promise<void> {
+    await vscode.workspace
+      .getConfiguration('clawAI')
+      .update('viewDensity', density, vscode.ConfigurationTarget.Workspace);
   }
 
   async selectAgentMode(mode: AgentMode): Promise<void> {

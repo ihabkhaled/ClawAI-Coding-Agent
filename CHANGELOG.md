@@ -2,6 +2,20 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.1.0
+
+Minor: a focus view for reading (F068).
+
+- **ClawAI: Toggle Focus View**, or the target button in the composer, hides
+  the activity timeline, the compare tray and the run deck.
+- **The conversation and the composer stay.** A reading mode that hid the
+  conversation would be a blank screen, and one that hid the composer would be
+  a transcript you cannot answer.
+- **The way out stays reachable.** A mode you cannot leave is not a mode, so
+  the toggle lives in the composer rail rather than in the chrome it hides.
+- The choice is a workspace setting (`clawAI.viewDensity`), so it survives a
+  reload and applies to every panel rather than the one you toggled.
+
 ## 1.0.0
 
 Minor: conversations you can name and put away (F061).
