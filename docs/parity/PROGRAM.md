@@ -412,7 +412,7 @@ That reuse target is wrong. Tracing the full path on both sides settles it:
 
 Genuine deferred-schema ToolSearch means giving the model a name and a short
 description up front, then loading the full schema only when the model asks
-for it *mid-run*. Both repositories currently forbid that: the catalog is
+for it _mid-run_. Both repositories currently forbid that: the catalog is
 fixed at `start()` and hash-checked for the run's lifetime. A client-only
 change could only fake the affordance — offer a `tool_search` tool that
 returns names, then silently answer from the catalog already sent in full,
@@ -429,3 +429,25 @@ carries the corrected row and the file:line evidence above.
 The catalog-bloat pressure that motivated F028 is still real and still
 unaddressed; the mitigation available today is holding every new tool
 description to the existing budget, not a narrower filter.
+
+### Batch 20 — a real bug found while reading the F028 evidence
+
+| Batch | Version | Status                                | Evidence                                                                                                            |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------- |
+| 20    | 0.82.1  | Code and deterministic gates complete | `src/core/runtime/runtime-tool-input-schemas.ts` (`subAgentTask`), `tests/unit/runtime-tool-input-schemas.test.ts`. |
+
+Reading `runtime-tool-input-schemas.ts` for the F028 investigation surfaced a
+schema-drift bug independent of ToolSearch: the JSON schema advertised to the
+model for `runtime.agents run` offered `mandatoryGateIds` on every task,
+copied from the unrelated `integrationRequest` shape two blocks down.
+`subAgentTaskSchema` is `.strict()` and never declared that field, so a model
+that took the advertised offer had the entire fork rejected with an
+unrecognized-key error — the same class of incident as the 0.72.0 truncation
+bug and the missing-`pattern` incident this program's own audit already cites,
+found the same way: by reading the code, not by matching it against the pack.
+
+No test exercised the advertised property set against the real validator, so
+nothing caught it. The fix removes the stray property and adds a regression
+test that asserts the advertised task properties are a subset of what
+`subAgentTaskSchema.shape` accepts, so this exact drift cannot reappear
+silently.

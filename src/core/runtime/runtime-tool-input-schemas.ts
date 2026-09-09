@@ -72,7 +72,6 @@ const subAgentTask = strict(
     tools: texts,
     riskCeiling: { type: 'string', enum: ['R0', 'R1', 'R2', 'R3'] },
     acceptanceChecks: texts,
-    mandatoryGateIds: texts,
     epochs,
   },
   [
