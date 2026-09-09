@@ -360,3 +360,32 @@ Two fields are deliberately enforced elsewhere and are not yet done:
 configuration clamp, because an invocation carries neither a model nor a mode.
 Enforcing them in the tool evaluator would have put them where they cannot be
 checked.
+
+### Batch 18 — closing the two named gaps
+
+| Batch | Version | Status                                | Evidence                                                                                                                                                                                                                                                                                                                                                                 |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| 18    | 0.82.0  | Code and deterministic gates complete | `src/services/model-service.ts` (`applyOrganizationModelAccess`), `src/core/organization-permission-floor.ts` (`clampToOrganizationFloor`), wired into `SessionControlService.selectPermissionMode`. Tests: 4 new in `tests/unit/model-service.test.ts`, 5 in `tests/unit/organization-permission-floor.test.ts`, 3 new in `tests/unit/session-control-service.test.ts`. |
+
+Batch 17 shipped tool-call enforcement and named two fields as stored, served,
+and not yet enforced. This batch closes both, at the two points that actually
+carry the information an invocation does not: the model catalog and the
+permission-mode selector.
+
+The model allowlist had to be its own filter rather than a parameter to the
+existing entitlement one, because they answer different questions and disagree
+on local models: entitlements exempt every local model (a local model costs
+nothing, so a billing entitlement has no opinion on it), while an organization
+allowlist is about what a member is _permitted_ to use and must reach local
+models too — an unvetted local model is exactly what an organization would
+forbid. Reusing `applyModelAccess`'s exemption would have silently left every
+organization's local-model restriction unenforced.
+
+The permission-mode clamp runs first in `selectPermissionMode`, before the
+Autonomous Scoped confirmation dialog. That ordering was deliberate rather than
+incidental: a request the organization has already ruled out must never reach a
+dialog asking the user to confirm it, or a user could grant themselves a
+confirmation for a mode that was never on offer.
+
+F052 is now fully shipped across three enforcement points, none of them
+duplicating another's answer.

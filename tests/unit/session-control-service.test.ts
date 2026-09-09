@@ -12,6 +12,7 @@ vi.mock('vscode', () => ({
 import { SessionControlService } from '../../src/services/session-control-service';
 
 import type { AgentMode } from '../../src/core/agent-mode.types';
+import type { RankedPermissionMode } from '../../src/core/organization-permission-floor';
 import type { PermissionMode } from '../../src/core/permission-policy.types';
 
 function deferred() {
@@ -45,9 +46,14 @@ describe('SessionControlService', () => {
     update: (patch: unknown) => {
       patches.push(patch);
     },
+    snapshot: {
+      organizationPolicy: undefined as
+        { minimumPermissionMode: RankedPermissionMode | null } | undefined,
+    },
   };
 
   beforeEach(() => {
+    state.snapshot = { organizationPolicy: undefined };
     configuration.agentMode = 'AUTO';
     configuration.permissionMode = 'MANUAL';
     configuration.selectAgentMode.mockReset();
@@ -275,6 +281,55 @@ describe('SessionControlService', () => {
     await expect(service.selectPermissionMode('BYPASS_PERMISSIONS')).resolves.toBe(true);
     expect(configuration.selectPermissionMode).toHaveBeenCalledWith('BYPASS_PERMISSIONS');
     expect(approvals.request).toHaveBeenCalledTimes(2);
+  });
+
+  // Clamped before anything else: a request the organization has already ruled
+  // out must never reach the Autonomous Scoped confirmation dialog.
+  it('clamps a requested mode to the organization floor before persisting it', async () => {
+    state.snapshot = { organizationPolicy: { minimumPermissionMode: 'ASK' } };
+    configuration.selectPermissionMode.mockImplementation(async (mode: PermissionMode) => {
+      configuration.permissionMode = mode;
+      return true;
+    });
+    const approvals = { request: vi.fn(async () => true) };
+    const service = new SessionControlService(state, configuration, approvals);
+
+    await expect(service.selectPermissionMode('AUTONOMOUS_SCOPED')).resolves.toBe(true);
+
+    expect(configuration.selectPermissionMode).toHaveBeenCalledWith('ASK');
+    expect(patches).toEqual([{ permissionMode: 'ASK' }]);
+    expect(approvals.request).not.toHaveBeenCalled();
+  });
+
+  it('leaves a request already at or under the organization floor untouched', async () => {
+    state.snapshot = { organizationPolicy: { minimumPermissionMode: 'AUTONOMOUS_SCOPED' } };
+    configuration.selectPermissionMode.mockImplementation(async (mode: PermissionMode) => {
+      configuration.permissionMode = mode;
+      return true;
+    });
+    const service = new SessionControlService(state, configuration, {
+      request: vi.fn(async () => true),
+    });
+
+    await expect(service.selectPermissionMode('PLAN')).resolves.toBe(true);
+
+    expect(configuration.selectPermissionMode).toHaveBeenCalledWith('PLAN');
+  });
+
+  // ENTERPRISE_LOCKED is not on the ranked scale, so a floor never touches it.
+  it('never clamps a mode outside the ranked scale', async () => {
+    state.snapshot = { organizationPolicy: { minimumPermissionMode: 'PLAN' } };
+    configuration.selectPermissionMode.mockImplementation(async (mode: PermissionMode) => {
+      configuration.permissionMode = mode;
+      return true;
+    });
+    const service = new SessionControlService(state, configuration, {
+      request: vi.fn(async () => true),
+    });
+
+    await expect(service.selectPermissionMode('ENTERPRISE_LOCKED')).resolves.toBe(true);
+
+    expect(configuration.selectPermissionMode).toHaveBeenCalledWith('ENTERPRISE_LOCKED');
   });
 
   it('applies final diffs without another approval after Full Access has been enabled', async () => {

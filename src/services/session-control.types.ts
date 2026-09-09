@@ -1,6 +1,7 @@
 import type { AgentMode } from '../core/agent-mode.types';
 import type { ApprovalRequestInput } from '../core/approval-broker';
 import type { EffortMode } from '../core/effort-mode';
+import type { RankedPermissionMode } from '../core/organization-permission-floor';
 import type { PermissionMode, PermissionOperation } from '../core/permission-policy.types';
 import type { SpeedMode } from '../core/speed-mode';
 
@@ -24,6 +25,11 @@ export interface SessionStatePort {
     speedMode?: SpeedMode;
     permissionMode?: PermissionMode;
   }): void;
+  /** Only the one field this service needs to read, from the wider snapshot. */
+  readonly snapshot: {
+    readonly organizationPolicy:
+      { readonly minimumPermissionMode: RankedPermissionMode | null } | undefined;
+  };
 }
 
 export interface SessionControlPort {
