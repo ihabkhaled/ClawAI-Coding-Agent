@@ -25,6 +25,7 @@
   "command.cancel": "ยกเลิกคำขอที่ทำงานอยู่",
   "command.undoLastEdit": "เลิกทำการแก้ไขล่าสุด",
   "command.exportTranscript": "Export Transcript",
+  "command.showSessionRecap": "Session Recap",
   "command.showLogs": "แสดงบันทึก",
   "config.backendUrl": "ClawAI backend origin. Tokens and credentials must not be included in this URL.",
   "config.backendEnvironment": "แบ็กเอนด์",

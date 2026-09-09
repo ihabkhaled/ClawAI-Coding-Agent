@@ -2,12 +2,15 @@ import * as vscode from 'vscode';
 
 import { pickModelKey } from './agent-coordinator-prompts';
 import { applyModelSelection } from './agent-coordinator-runtime';
+import { showSessionRecap } from './session-recap-command';
 import { exportTranscript } from './transcript-export-command';
 
 import type { AgentConnectionService } from './agent-connection-service';
 import type { ClawaiInitializer } from './clawai-initializer';
 import type { ConfigurationService } from './configuration-service';
 import type { ConversationSessionService } from './conversation-session-service';
+import type { FindingsService } from './findings-service';
+import type { RunJournalService } from './run-journal-service';
 import type { SafeEditService } from './safe-edit-service';
 import type { ExtensionState } from '../core/extension-state';
 import type { ChatViewProvider } from '../webview/chat-view-provider';
@@ -16,6 +19,7 @@ export interface CoordinatorCommands {
   refreshModels(): Promise<void>;
   initializeWorkspace(): Promise<void>;
   exportTranscript(): Promise<void>;
+  showSessionRecap(): Promise<void>;
   undoLastEdit(): Promise<void>;
   selectModel(modelKey?: string): Promise<void>;
 }
@@ -27,6 +31,8 @@ interface CommandCollaborators {
   readonly state: () => ExtensionState;
   readonly safeEdits: () => SafeEditService;
   readonly undoDepth: () => number;
+  readonly journals: () => RunJournalService;
+  readonly findings: () => FindingsService;
   readonly view: () => ChatViewProvider | null;
   readonly configuration: () => ConfigurationService;
 }
@@ -49,6 +55,8 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
     // Undo can now be run repeatedly, so the notice says whether there is
     // anything left to take back. Without that, a user cannot tell a stack with
     // more history from one that has reached the end.
+    showSessionRecap: () =>
+      showSessionRecap({ journals: parts.journals(), findings: parts.findings() }),
     undoLastEdit: async () => {
       if (!(await parts.safeEdits().undoLast())) return;
       const remaining = parts.undoDepth();

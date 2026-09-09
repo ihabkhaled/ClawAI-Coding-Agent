@@ -86,6 +86,7 @@ function registerCommands(
     ['clawAI.cancel', () => coordinator.cancel()],
     ['clawAI.undoLastEdit', () => coordinator.commands.undoLastEdit()],
     ['clawAI.exportTranscript', () => coordinator.commands.exportTranscript()],
+    ['clawAI.showSessionRecap', () => coordinator.commands.showSessionRecap()],
     [
       'clawAI.showLogs',
       () => {

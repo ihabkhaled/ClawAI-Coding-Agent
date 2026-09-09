@@ -25,6 +25,7 @@
   "command.cancel": "Cancelar solicitud activa",
   "command.undoLastEdit": "Deshacer última edición de ClawAI",
   "command.exportTranscript": "Export Transcript",
+  "command.showSessionRecap": "Session Recap",
   "command.showLogs": "Mostrar registros",
   "config.backendUrl": "ClawAI backend origin. Tokens and credentials must not be included in this URL.",
   "config.backendEnvironment": "Servidor",

@@ -281,3 +281,21 @@ the fork the audit warned about two rows earlier.
 Scoped to the code half deliberately. Named checkpoints and conversation fork
 need a durable checkpoint store, which F059 rewind and F074 recaps also want;
 building one for undo alone would be the third of them to grow its own.
+
+### Batch 14
+
+| Batch | Version | Status                                                                   | Evidence                                                                                                                               |
+| ----- | ------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------- |
+| 14    | 0.78.0  | Code and deterministic gates complete, including a real VS Code host run | F074 session recaps: `src/core/session-recap.ts`, `src/services/session-recap-command.ts`; tests in `tests/unit/session-recap.test.ts` |
+
+This batch began as the durable checkpoint store that F057, F059 and F074 were
+all said to need. Checking the backend first showed there was no consumer for
+its main case: the chat service deletes a whole thread and offers no
+message-level delete and no fork, so F059 rewind cannot drop later turns and
+continue however the client stores checkpoints. F059 is now recorded BLOCKED
+alongside F052, and the batch became F074, which needs no store at all — the
+run journal already holds every fact a recap states.
+
+A third audit row corrected by reading rather than trusting: three features
+were said to share a missing primitive, and the primitive would have served
+one of them.

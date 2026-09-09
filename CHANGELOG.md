@@ -2,6 +2,33 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.78.0
+
+Minor: a run can be recapped instead of re-read.
+
+- Adds **ClawAI: Session Recap**, which summarises a recorded run: the goal,
+  files changed, tool calls, failures, unfinished calls, outstanding findings,
+  what is blocking a resume, and the one thing worth doing next. Returning to a
+  session replayed the raw messages and nothing else, so learning that three
+  files changed and the last tool call failed meant reading the whole transcript
+  and inferring it. Every one of those facts was already in the run journal;
+  none was ever summarised.
+- A failed tool call is counted separately from one left mid-flight by a
+  restart. They mean different things to a reader: a failure happened and is
+  known, while an unfinished call may or may not have taken effect.
+- The suggested next action is ordered by what ignoring it would waste. A
+  drifted workspace has to be replanned before anything else is attempted; a
+  stale approval has to be granted again before a resume proceeds; a failure is
+  worth understanding before it is repeated; findings are worth reading before
+  more code lands on top of them.
+- A low-confidence finding does not become the next action, for the same reason
+  it does not block a release: it is a question rather than a verdict.
+
+Also records a blocked feature honestly. F059 conversation rewind cannot be
+built on this client: the backend can delete a whole thread but has no
+message-level delete and no fork, so there is no way to drop later turns and
+continue. It is BLOCKED on a backend contract, like F052.
+
 ## 0.77.0
 
 Minor: undo takes back more than the last change.

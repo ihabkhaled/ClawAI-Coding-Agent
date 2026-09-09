@@ -25,6 +25,7 @@
   "command.cancel": "Cancel Active Request",
   "command.undoLastEdit": "Undo Last ClawAI Edit",
   "command.exportTranscript": "Export Transcript",
+  "command.showSessionRecap": "Session Recap",
   "command.showLogs": "Show Logs",
   "config.backendUrl": "ClawAI backend origin. Tokens and credentials must not be included in this URL.",
   "config.backendEnvironment": "Choose the local, cloud, or custom ClawAI backend.",
