@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.83.0",
+  "version": "0.84.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -466,6 +466,16 @@
         "key": "ctrl+shift+enter",
         "mac": "cmd+shift+enter",
         "when": "editorTextFocus && editorHasSelection"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "/.clawai/policies/policy.json",
+        "url": "./schemas/clawai-policy.schema.json"
+      },
+      {
+        "fileMatch": "/.clawai/agents/agents.json",
+        "url": "./schemas/clawai-agents.schema.json"
       }
     ]
   },

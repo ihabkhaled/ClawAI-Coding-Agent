@@ -2,6 +2,17 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.84.0
+
+Minor: adds JSON schema autocomplete for `.clawai` config files (F085).
+
+- **`policy.json` and `agents.json` get editor validation.** Two new
+  `contributes.jsonValidation` entries point at hand-authored schema files
+  mirroring `projectPolicySchema`/`policyRuleSchema` and
+  `subAgentDefinitionSchema`. Kept in sync by a test asserting the same
+  property set both directions, rather than generated, since no `.ts`-import
+  precedent exists in `scripts/` for a build step that small.
+
 ## 0.83.0
 
 Minor: adds named, persisted sub-agent presets (F007).

@@ -1,0 +1,22 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clawai.dev/schemas/clawai-agents.schema.json",
+  "title": "ClawAI sub-agent definitions",
+  "description": "Mirrors subAgentDefinitionsFileSchema in src/core/sub-agent-definitions.ts. A definition only ever adds instructions to a fork's prompt; it never grants tools, a model, or a budget. See docs/CLAWAI_FOLDER_SPEC.md.",
+  "type": "array",
+  "maxItems": 200,
+  "items": {
+    "type": "object",
+    "additionalProperties": false,
+    "properties": {
+      "name": {
+        "type": "string",
+        "description": "Lowercase, starts with a letter, letters/digits/hyphens only. Unique within this file.",
+        "pattern": "^[a-z][a-z0-9-]{1,79}$"
+      },
+      "description": { "type": "string", "minLength": 1, "maxLength": 2000 },
+      "systemPrompt": { "type": "string", "minLength": 1, "maxLength": 20000 }
+    },
+    "required": ["name", "description", "systemPrompt"]
+  }
+}

@@ -491,3 +491,37 @@ takes the selected root's filesystem path, resolved through
 `assembleSubAgents` already receives — instead of a whole `WorkspaceScopeService`
 plumbed through a new field. Narrower dependency, zero new lines in the file
 already at its ceiling.
+
+### Batch 22 — F085 JSON schema autocomplete, and a stale tally corrected
+
+| Batch | Version | Status                                | Evidence                                                                                                                                                                         |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 22    | 0.84.0  | Code and deterministic gates complete | `package.json` `contributes.jsonValidation`, `schemas/clawai-policy.schema.json`, `schemas/clawai-agents.schema.json`. Tests: 4 new in `tests/unit/clawai-json-schemas.test.ts`. |
+
+The audit called F085 independent and cheap, and it was: two
+`contributes.jsonValidation` entries pointing `policy.json` and the new
+`agents.json` (batch 21) at two JSON schemas, so the editor validates and
+autocompletes both without either file needing to be run through the
+extension first.
+
+One real decision inside an otherwise small batch: Zod v4 ships a native
+`toJSONSchema()`, which the audit's own reuse note implicitly assumed
+("only a JSON Schema emit step... is missing"). Generating the schema files
+from their Zod sources at build time was considered and rejected — nothing
+in `scripts/` imports a `.ts` module today, so wiring that would mean adding
+a TypeScript-execution step to the build pipeline for two files, a bigger
+change than the feature itself. The schemas are hand-authored instead,
+matching the precedent `runtime-tool-input-schemas.ts` already set for the
+tool catalog, and `tests/unit/clawai-json-schemas.test.ts` asserts both
+directions: every property the JSON schema advertises is one the Zod
+validator accepts, and vice versa. Batch 20 exists because that exact
+asymmetry went untested once already; this batch does not repeat it.
+
+Reading `AUDIT_F056_F087.md` closely enough to place F085 correctly surfaced
+a second, unrelated finding: its tally line still read "0 SHIPPED" after
+F072, F073, F074, and F075 had each shipped and F059 had been reclassified
+BLOCKED in earlier batches — the per-row classifications were current, but
+nothing had recomputed the summary line at the top of the file. Corrected to
+5 SHIPPED, 9 PARTIAL, 16 MISSING, 1 BLOCKED alongside this batch's own F085
+row, since leaving a known-stale count next to a batch that would make it
+one row staler was not defensible.
