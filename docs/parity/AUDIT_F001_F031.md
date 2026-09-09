@@ -32,12 +32,12 @@ module with no callers is scaffolding, not SHIPPED.
 | F025 | Artifact publishing          | MISSING                                | `src/core/file-transaction.ts:74` writes locally only                                                                                                   | No hosted page, no scrub-before-publish path.                                                                                                                                                                                                                                                                                           |
 | F026 | ReportFindings               | SHIPPED in 0.73.0                      | `src/core/findings.ts`, `src/services/findings-service.ts`, `src/infrastructure/quality-tool-executor.ts`                                               | `workspace.quality report` and `list-findings` record structured findings with dedupe, confidence, remediation and a release verdict, surfaced in a Findings view. Not covered: suppressing a known false positive across runs, which needs durable per-repository state.                                                               |
 | F027 | SendFeedback                 | MISSING                                | `src/services/run-journal-service.ts` `safeExport` is the nearest artifact                                                                              | No user-reviewable diagnostic report or opt-in submission.                                                                                                                                                                                                                                                                              |
-| F028 | ToolSearch                   | PARTIAL                                | `src/core/runtime/runtime-executable-tools.ts:22`, `src/services/runtime-tool-router.ts:33`                                                             | Catalog narrowing is static and the whole catalog is offered every turn: no query-driven discovery, no deferred schema loading.                                                                                                                                                                                                         |
+| F028 | ToolSearch                   | BLOCKED, audit corrected               | `src/infrastructure/backend-runtime-transport.ts` (`start()` only), monorepo `runtime-v2.store.ts:91-114` (`toolCatalogHash` `superRefine`), `runtime-v2-loop.manager.ts:255,554,647,678` | Not a client narrowing gap: `runtime.start()` is the only RPC that carries `toolDefinitions`; `steer()` carries only a `SteeringMessage`. The backend stores the catalog once per run binding and validates every later read against a `toolCatalogHash`, with no append path. Deferred schema loading needs a new RPC on both sides. |
 | F029 | RemoteTrigger                | MISSING                                | backend route literals in `src/backend/*.ts` are auth, chat and runtime only                                                                            | No remote job creation, trigger, idempotency key or status.                                                                                                                                                                                                                                                                             |
 | F030 | Computer use                 | PARTIAL                                | `src/infrastructure/browser-tool-executor.ts:16`, `src/services/browser-controller-service.ts:67`                                                       | Screen understanding and input are Playwright-page-scoped: no OS-level capture, desktop input or app launching.                                                                                                                                                                                                                         |
 | F031 | EndConversation safeguard    | PARTIAL, audit corrected               | `src/core/approval-broker.ts:139`, `src/services/runtime-studio-execution.ts:227`, `:292`                                                               | The audit claimed nothing blocks ending while approvals are pending. That is wrong: `cancelKind` withdraws the ending run pending approvals, and both terminal paths call it from a `finally`, so no abandoned modal prompt survives a run. What is genuinely absent is an agent-callable terminal action and an evidence flush on end. |
 
-Tally: 3 SHIPPED, 14 PARTIAL, 14 MISSING, 0 CONFLICT.
+Tally: 3 SHIPPED, 13 PARTIAL, 14 MISSING, 1 BLOCKED, 0 CONFLICT.
 
 ## Reuse map — the seam each gap must extend
 
@@ -90,8 +90,11 @@ Tally: 3 SHIPPED, 14 PARTIAL, 14 MISSING, 0 CONFLICT.
   `quality-tool-executor.ts`.
 - **F027** → `run-journal-service.ts` `safeExport`, `redaction.ts` and
   `output-logger.ts`.
-- **F028** → `runtime-executable-tools.ts`, already the single narrowing point,
-  and `capability-manifest.ts`.
+- **F028** → BLOCKED. `runtime-executable-tools.ts` and `capability-manifest.ts`
+  only narrow which tools are *offered*; they cannot add a tool's schema mid-run.
+  That needs a new backend RPC (append to `binding.toolDefinitions`, rehash,
+  re-validate) and a matching extension transport method — a two-repo
+  protocol batch on the scale of F052, not a filter change.
 - **F029** → `backend-client.ts` and `backend/contracts.ts`; the idempotency
   pattern is in `runtime-steering-queue.ts`.
 - **F030** → the `browser-controller-service.ts` scope model and
@@ -103,12 +106,20 @@ Tally: 3 SHIPPED, 14 PARTIAL, 14 MISSING, 0 CONFLICT.
 
 ## Ordering constraints found in the code
 
-1. **F028 gates everything downstream.** Every added tool inflates the catalog
-   offered each turn, and the tool-description budget is already load-bearing:
-   `vscode-filesystem-tool-executor.ts:130` records that exceeding 2,000
-   characters fails the entire run-start request, and the missing-`pattern`
-   incident at `:86` came from exactly that pressure. Land F028 before adding
-   roughly fifteen tools, or the catalog becomes the binding constraint.
+1. **F028's catalog-bloat pressure is real and still gates downstream growth,
+   but F028 itself is BLOCKED, not landable client-side.** Every added tool
+   still inflates the catalog offered each turn, and the tool-description
+   budget is still load-bearing: `vscode-filesystem-tool-executor.ts:130`
+   records that exceeding 2,000 characters fails the entire run-start request,
+   and the missing-`pattern` incident at `:86` came from exactly that
+   pressure. What changed on investigation: the fix is not a narrower filter
+   at `runtime-executable-tools.ts` (that point already exists and already
+   narrows by capability). Genuine query-driven, deferred-schema discovery
+   requires adding a tool's full schema to an *already-running* turn, and
+   neither repo's protocol supports that today — see the corrected F028 row
+   above. Adding roughly fifteen more tools without this still risks the
+   budget; the mitigation available now is holding new tools to the same
+   description-length discipline, not ToolSearch.
 2. **F001 before F022.** PowerShell shares `runCommandSpec`; adding streaming
    after a separate path exists means doing it twice.
 3. **F002 gates F018.** NotebookEdit must be a new kind in the file-transaction

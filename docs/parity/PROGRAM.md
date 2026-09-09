@@ -389,3 +389,43 @@ confirmation for a mode that was never on offer.
 
 F052 is now fully shipped across three enforcement points, none of them
 duplicating another's answer.
+
+### Batch 19 — F028 reclassified, no code shipped
+
+F028 (ToolSearch) was the next candidate: the audit's own ordering note called
+it the gate for every tool added after it, and a real incident already proved
+the 2,000-character per-tool description budget is load-bearing. The original
+row read PARTIAL, with the fix pointed at `runtime-executable-tools.ts` — the
+existing capability-based narrowing point.
+
+That reuse target is wrong. Tracing the full path on both sides settles it:
+
+- `src/infrastructure/backend-runtime-transport.ts` sends `toolDefinitions`
+  only inside `start()`. `steer(runId, steering, signal)` carries a
+  `SteeringMessage` and nothing else — there is no RPC to add a tool
+  definition to a run already in progress.
+- The monorepo's `runtime-v2.store.ts` (`chat-messages` module) stores the
+  catalog once per run binding and `superRefine`-validates it against a
+  `toolCatalogHash` computed at store time. `runtime-v2-loop.manager.ts`
+  reads `binding.toolDefinitions` — the frozen array — on every turn to build
+  the system prompt and parse model output, with no append path.
+
+Genuine deferred-schema ToolSearch means giving the model a name and a short
+description up front, then loading the full schema only when the model asks
+for it *mid-run*. Both repositories currently forbid that: the catalog is
+fixed at `start()` and hash-checked for the run's lifetime. A client-only
+change could only fake the affordance — offer a `tool_search` tool that
+returns names, then silently answer from the catalog already sent in full,
+which is the "present but not wired to a real capability" shape the audit
+protocol exists to catch, not a step toward the real feature.
+
+F028 is reclassified BLOCKED, matching F059's pattern: not a missing filter,
+a missing backend contract. The real fix is a protocol extension on the scale
+of F052 — a new RPC to append a tool definition to a bound run, rehash, and
+re-validate, on both the transport and the store/loop — and it is sized for
+its own batch rather than folded into this one. `docs/parity/AUDIT_F001_F031.md`
+carries the corrected row and the file:line evidence above.
+
+The catalog-bloat pressure that motivated F028 is still real and still
+unaddressed; the mitigation available today is holding every new tool
+description to the existing budget, not a narrower filter.
