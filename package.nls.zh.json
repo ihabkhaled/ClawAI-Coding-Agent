@@ -56,6 +56,7 @@
   "view.container": "ClawAI",
   "view.chat": "聊天",
   "view.chatTitle": "ClawAI Coding Agent",
+  "view.setup": "快速开始",
   "view.model": "模型和路由",
   "view.context": "上下文",
   "view.history": "历史",

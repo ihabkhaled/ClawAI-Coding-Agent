@@ -56,6 +56,7 @@
   "view.container": "ClawAI",
   "view.chat": "チャット",
   "view.chatTitle": "ClawAI Coding Agent",
+  "view.setup": "はじめに",
   "view.model": "モデルとルート",
   "view.context": "コンテキスト",
   "view.history": "履歴",

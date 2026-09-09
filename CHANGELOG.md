@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.3.0
+
+Minor: a Getting Started checklist that knows where you actually are (F071).
+
+- **Four steps in the order they depend on each other**: sign in, open a
+  folder, trust it, load the model catalog. A model cannot be chosen before an
+  account is known, and rules cannot be written into a folder that is not open.
+- **Every step is derived from live state**, not a flag set once. Sign out or
+  revoke trust and that step goes back to undone, because a checklist that says
+  "done" about something no longer true is worse than no checklist.
+- **The view hides itself once setup is finished** and comes back on its own if
+  something is undone. A checklist that stays after it is finished is a
+  permanent reminder of nothing.
+- The next step is labelled, because the earliest gap is the only one you can
+  close right now.
+
 ## 1.2.0
 
 Minor: the agent can search the web and read a page (F004, F005).

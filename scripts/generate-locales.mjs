@@ -2266,8 +2266,108 @@ const focusViewTranslations = {
   },
 };
 
+const onboardingTranslations = {
+  ar: {
+    'Do this next': 'الخطوة التالية',
+    'Getting Started': 'البداية',
+    'Load the model catalog': 'تحميل كتالوج النماذج',
+    'Open a project folder': 'فتح مجلد مشروع',
+    'Sign in to ClawAI': 'تسجيل الدخول إلى ClawAI',
+    'Trust this workspace': 'الوثوق بمساحة العمل هذه',
+  },
+  de: {
+    'Do this next': 'Als Nächstes',
+    'Getting Started': 'Erste Schritte',
+    'Load the model catalog': 'Modellkatalog laden',
+    'Open a project folder': 'Projektordner öffnen',
+    'Sign in to ClawAI': 'Bei ClawAI anmelden',
+    'Trust this workspace': 'Diesem Arbeitsbereich vertrauen',
+  },
+  es: {
+    'Do this next': 'Haz esto ahora',
+    'Getting Started': 'Primeros pasos',
+    'Load the model catalog': 'Carga el catálogo de modelos',
+    'Open a project folder': 'Abre una carpeta de proyecto',
+    'Sign in to ClawAI': 'Inicia sesión en ClawAI',
+    'Trust this workspace': 'Confía en este espacio de trabajo',
+  },
+  fa: {
+    'Do this next': 'گام بعدی',
+    'Getting Started': 'شروع کار',
+    'Load the model catalog': 'بارگذاری فهرست مدل‌ها',
+    'Open a project folder': 'باز کردن پوشه پروژه',
+    'Sign in to ClawAI': 'ورود به ClawAI',
+    'Trust this workspace': 'اعتماد به این فضای کاری',
+  },
+  fr: {
+    'Do this next': 'Étape suivante',
+    'Getting Started': 'Prise en main',
+    'Load the model catalog': 'Charger le catalogue de modèles',
+    'Open a project folder': 'Ouvrir un dossier de projet',
+    'Sign in to ClawAI': 'Se connecter à ClawAI',
+    'Trust this workspace': 'Faire confiance à cet espace de travail',
+  },
+  hi: {
+    'Do this next': 'अगला यह करें',
+    'Getting Started': 'शुरू करें',
+    'Load the model catalog': 'मॉडल कैटलॉग लोड करें',
+    'Open a project folder': 'प्रोजेक्ट फ़ोल्डर खोलें',
+    'Sign in to ClawAI': 'ClawAI में साइन इन करें',
+    'Trust this workspace': 'इस वर्कस्पेस पर भरोसा करें',
+  },
+  it: {
+    'Do this next': 'Passaggio successivo',
+    'Getting Started': 'Per iniziare',
+    'Load the model catalog': 'Carica il catalogo dei modelli',
+    'Open a project folder': 'Apri una cartella di progetto',
+    'Sign in to ClawAI': 'Accedi a ClawAI',
+    'Trust this workspace': 'Considera attendibile questa area di lavoro',
+  },
+  ja: {
+    'Do this next': '次はこれ',
+    'Getting Started': 'はじめに',
+    'Load the model catalog': 'モデルカタログを読み込む',
+    'Open a project folder': 'プロジェクトフォルダーを開く',
+    'Sign in to ClawAI': 'ClawAI にサインイン',
+    'Trust this workspace': 'このワークスペースを信頼する',
+  },
+  pt: {
+    'Do this next': 'Faça isto a seguir',
+    'Getting Started': 'Primeiros passos',
+    'Load the model catalog': 'Carregar o catálogo de modelos',
+    'Open a project folder': 'Abrir uma pasta de projeto',
+    'Sign in to ClawAI': 'Entrar no ClawAI',
+    'Trust this workspace': 'Confiar neste espaço de trabalho',
+  },
+  ru: {
+    'Do this next': 'Следующий шаг',
+    'Getting Started': 'Начало работы',
+    'Load the model catalog': 'Загрузить каталог моделей',
+    'Open a project folder': 'Открыть папку проекта',
+    'Sign in to ClawAI': 'Войти в ClawAI',
+    'Trust this workspace': 'Доверять этой рабочей области',
+  },
+  th: {
+    'Do this next': 'ทำสิ่งนี้ต่อไป',
+    'Getting Started': 'เริ่มต้นใช้งาน',
+    'Load the model catalog': 'โหลดแคตตาล็อกโมเดล',
+    'Open a project folder': 'เปิดโฟลเดอร์โปรเจกต์',
+    'Sign in to ClawAI': 'ลงชื่อเข้าใช้ ClawAI',
+    'Trust this workspace': 'เชื่อถือเวิร์กสเปซนี้',
+  },
+  zh: {
+    'Do this next': '下一步',
+    'Getting Started': '快速开始',
+    'Load the model catalog': '加载模型目录',
+    'Open a project folder': '打开项目文件夹',
+    'Sign in to ClawAI': '登录 ClawAI',
+    'Trust this workspace': '信任此工作区',
+  },
+};
+
 function translate(locale, message) {
   return (
+    onboardingTranslations[locale][message] ??
     focusViewTranslations[locale][message] ??
     threadOrganizationTranslations[locale][message] ??
     sessionTabTranslations[locale][message] ??

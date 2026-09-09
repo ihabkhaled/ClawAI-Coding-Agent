@@ -56,6 +56,7 @@
   "view.container": "ClawAI",
   "view.chat": "Chat",
   "view.chatTitle": "ClawAI Coding Agent",
+  "view.setup": "Getting Started",
   "view.model": "Model & Route",
   "view.context": "Context",
   "view.history": "History",

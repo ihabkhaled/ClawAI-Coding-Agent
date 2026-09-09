@@ -25,6 +25,7 @@ import { WorkspaceScopeService } from './services/workspace-scope-service';
 import { createClawIconPath } from './views/claw-icon-path';
 import { DiffPreviewProvider } from './views/diff-preview-provider';
 import { NotificationController } from './views/notification-controller';
+import { watchSetupCompletion } from './views/setup-context-key';
 import { StateTreeProvider } from './views/state-tree-provider';
 import { StatusBarController } from './views/status-bar-controller';
 import { ChatViewProvider } from './webview/chat-view-provider';
@@ -261,6 +262,7 @@ export function activate(context: vscode.ExtensionContext): void {
   });
   coordinator.attachView(chatView);
 
+  const setupTree = new StateTreeProvider('setup', state);
   const modelTree = new StateTreeProvider('model', state);
   const contextTree = new StateTreeProvider('context', state);
   const historyTree = new StateTreeProvider('history', state);
@@ -268,6 +270,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const tasksTree = new StateTreeProvider('tasks', state);
   const artifactsTree = new StateTreeProvider('artifacts', state);
   const statusBar = new StatusBarController(state);
+  const setupVisibility = watchSetupCompletion(state);
   const notifications = new NotificationController(state, new VscodeUserNotifier());
 
   context.subscriptions.push(
@@ -276,6 +279,8 @@ export function activate(context: vscode.ExtensionContext): void {
     logger,
     diffPreview,
     chatView,
+    setupVisibility,
+    setupTree,
     modelTree,
     contextTree,
     historyTree,
@@ -289,6 +294,7 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerUriHandler(
       new ClawaiUriHandler({ openChat: (threadId) => coordinator.openChat(threadId) }),
     ),
+    vscode.window.registerTreeDataProvider('clawAI.setup', setupTree),
     vscode.window.registerTreeDataProvider('clawAI.model', modelTree),
     vscode.window.registerTreeDataProvider('clawAI.context', contextTree),
     vscode.window.registerTreeDataProvider('clawAI.history', historyTree),

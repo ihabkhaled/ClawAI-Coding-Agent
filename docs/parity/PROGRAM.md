@@ -1199,3 +1199,34 @@ follow.
 move a cohesive group out, not to shorten a line.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 42 — F071 a Getting Started checklist
+
+| Batch | Version | Status                                | Evidence                                                                             |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------ |
+| 42    | 1.3.0   | Code and deterministic gates complete | `src/core/onboarding-checklist.ts`, `src/views/setup-context-key.ts`. Tests: 11 new. |
+
+Four steps, ordered by what depends on what: sign in, open a folder, trust it,
+load the model catalog. The order is not a preference — a model cannot be
+chosen before an account is known, and project rules cannot be written into a
+folder that is not open. Presented in any other order, a user fails at step
+three and concludes the product is broken.
+
+**Every step is derived from the snapshot, never stored.** A stored checklist
+and the thing it describes drift the moment someone signs out, closes a folder
+or revokes trust, and a checklist that says "done" about something no longer
+true is worse than no checklist at all. Revoke trust and that row goes back to
+undone by itself.
+
+**The view hides when setup is finished**, through a context key the state
+subscription publishes, and returns on its own if something becomes undone. A
+checklist that stays after it is finished is a permanent reminder of nothing.
+
+Rows that are already done stay visible rather than disappearing, because a
+list that shrinks as you work it gives no sense of how much is left. Only the
+next actionable row is labelled.
+
+Titles live in the view rather than in core: the checklist is state, and the
+wording is not.
+
+**Still true:** live-model Definition of Done cannot be executed here.
