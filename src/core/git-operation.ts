@@ -50,6 +50,21 @@ export const gitOperationSchema = z.discriminatedUnion('operation', [
       path: safePath,
       branch: safeRef,
       startPoint: safeRef.optional(),
+      /**
+       * The identity later `rootKey` arguments will address this worktree
+       * by. Without this, `create-worktree` puts a real worktree on disk
+       * that no later tool call can ever reach — the worktree exists, but
+       * there is no way in.
+       */
+      newRootKey: base.rootKey,
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
+      operation: z.literal('remove-worktree'),
+      /** The worktree to remove and stop being able to address. */
+      worktreeRootKey: base.rootKey,
     })
     .strict(),
   z

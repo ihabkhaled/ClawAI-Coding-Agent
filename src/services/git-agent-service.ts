@@ -1,7 +1,9 @@
 import { createHash } from 'node:crypto';
+import path from 'node:path';
 
 import { gitOperationSchema, type GitOperation, type GitReceipt } from '../core/git-operation';
 import { findStagedSecret } from '../core/staged-secret-scan';
+import { advertisedWorkspaceRootIndex } from '../core/workspace-scope';
 import { runCommandSpec } from '../infrastructure/bounded-command-runner';
 
 import type { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
@@ -18,6 +20,18 @@ export class GitAgentService {
 
   async execute(candidate: unknown, signal?: AbortSignal): Promise<GitReceipt> {
     const operation = gitOperationSchema.parse(candidate);
+    // A sub-agent's own scoped executor deliberately shadows an advertised
+    // `workspace-N` key with its worktree, and that is safe there: every
+    // call the sub-agent makes is bound to its own worktreeId. The main
+    // session has no such bound — a `workspace-N` collision here would
+    // silently redirect every later ordinary call using that key, not just
+    // this one caller's.
+    if (
+      operation.operation === 'create-worktree' &&
+      advertisedWorkspaceRootIndex(operation.newRootKey) !== undefined
+    ) {
+      throw new Error('newRootKey cannot reuse an advertised workspace folder key');
+    }
     const root = this.files.workspaceRootUri(operation.rootKey);
     const before = await this.identity(root.fsPath, signal);
     let stagedDiffHash: string | undefined;
@@ -38,6 +52,18 @@ export class GitAgentService {
         throw new Error('Commit was not approved after staged-diff review');
     }
     const output = await this.git(root.fsPath, this.arguments(operation), signal);
+    // Only after the command actually succeeds: a worktree that failed to
+    // create must not become addressable, and one that failed to remove
+    // must stay addressable.
+    if (operation.operation === 'create-worktree') {
+      this.files.registerRuntimeRoot(
+        operation.newRootKey,
+        path.resolve(root.fsPath, operation.path),
+      );
+    }
+    if (operation.operation === 'remove-worktree') {
+      this.files.unregisterRuntimeRoot(operation.worktreeRootKey);
+    }
     const after = await this.identity(root.fsPath, signal);
     return {
       operation: operation.operation,
@@ -167,18 +193,12 @@ export class GitAgentService {
   }
 
   private workspaceMutationArguments(operation: GitOperation): string[] {
+    if (operation.operation === 'create-worktree' || operation.operation === 'remove-worktree') {
+      return this.worktreeMutationArguments(operation);
+    }
     switch (operation.operation) {
       case 'create-branch':
         return ['branch', operation.branch, operation.startPoint ?? 'HEAD'];
-      case 'create-worktree':
-        return [
-          'worktree',
-          'add',
-          '-b',
-          operation.branch,
-          operation.path,
-          operation.startPoint ?? 'HEAD',
-        ];
       case 'stage':
         return ['add', '--', ...operation.paths];
       case 'unstage':
@@ -195,6 +215,27 @@ export class GitAgentService {
       default:
         throw new Error('Unsupported Git workspace mutation');
     }
+  }
+
+  private worktreeMutationArguments(
+    operation: Extract<GitOperation, { operation: 'create-worktree' | 'remove-worktree' }>,
+  ): string[] {
+    if (operation.operation === 'create-worktree') {
+      return [
+        'worktree',
+        'add',
+        '-b',
+        operation.branch,
+        operation.path,
+        operation.startPoint ?? 'HEAD',
+      ];
+    }
+    return [
+      'worktree',
+      'remove',
+      '--force',
+      this.files.workspaceRootUri(operation.worktreeRootKey).fsPath,
+    ];
   }
 
   private historyMutationArguments(operation: GitOperation): string[] {

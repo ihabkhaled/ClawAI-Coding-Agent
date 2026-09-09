@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { gitOperationSchema } from '../../src/core/git-operation';
 import { subAgentTaskSchema } from '../../src/core/multi-agent-dag';
 import { runtimeToolInputSchemas } from '../../src/core/runtime/runtime-tool-input-schemas';
 
@@ -48,5 +49,24 @@ describe('runtime.agents fork task schema stays in sync with the validator', () 
 
   it('does not offer mandatoryGateIds on a sub-agent task', () => {
     expect(taskProperties()).not.toHaveProperty('mandatoryGateIds');
+  });
+});
+
+/**
+ * `workspace.git` advertises one flat property bag for every operation, and
+ * `gitOperationSchema` is a `.strict()` discriminated union — a property
+ * offered here that no variant accepts fails the same way the sub-agent
+ * fork bug above did.
+ */
+describe('workspace.git schema stays in sync with the validator', () => {
+  it('offers only properties some gitOperationSchema variant accepts', () => {
+    const advertised = new Set(
+      Object.keys(asObject(asObject(runtimeToolInputSchemas.git).properties)),
+    );
+    const accepted = new Set(
+      gitOperationSchema.options.flatMap((variant) => Object.keys(variant.shape)),
+    );
+
+    expect([...advertised].filter((key) => !accepted.has(key))).toEqual([]);
   });
 });

@@ -610,3 +610,51 @@ only here. The actual fix was structural rather than cosmetic: `collect`'s
 own parameter order already matches `collectAgentContext`'s tail exactly, so
 the wrapper takes `(...args)` and forwards them with a spread instead of
 naming and re-listing all five, net negative lines with no behavior change.
+
+### Batch 25 — F017 main-session worktree create and remove
+
+| Batch | Version | Status                                | Evidence                                                                                                                                                                                                                                    |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 25    | 0.86.0  | Code and deterministic gates complete | `src/core/git-operation.ts` (`create-worktree.newRootKey`, `remove-worktree`), `src/services/git-agent-service.ts`. Tests: 7 in `tests/unit/git-agent-service.worktrees.test.ts`, 1 new in `tests/unit/runtime-tool-input-schemas.test.ts`. |
+
+The audit's reuse target for F017 pointed at `workspace-scope-service.ts` —
+VS Code's own multi-root workspace API, switching which folder is the active
+one. Reading the actual runtime protocol before writing anything showed that
+target was wrong: every tool invocation in this protocol already carries an
+explicit `rootKey` argument, resolved per call through
+`RuntimeRootRegistry.workspaceRootUri`. There is no implicit "current
+directory" anywhere in the protocol for an enter/exit pair to switch — every
+call already says which root it means. Building one would have meant adding
+exactly the kind of hidden, order-dependent state this architecture has
+consistently avoided everywhere else.
+
+`create-worktree` already existed and already worked as a `git worktree add`
+wrapper, but the worktree it created was unreachable: nothing registered the
+new path as an addressable root, so a model that created one had no way to
+target a later `workspace.files` or `workspace.git` call at it. The gap
+closes with a `newRootKey` field and one call to
+`RuntimeRootRegistry.registerRuntimeRoot` after the git command succeeds —
+the same registry the sub-agent worktree adapter already uses, not a new
+one. `remove-worktree` is the cleanup half the audit named directly missing:
+`git worktree remove --force` plus `unregisterRuntimeRoot`, gated the same
+way — only after the command succeeds, so a failed removal leaves the root
+addressable rather than silently orphaning it.
+
+One real security question came up mid-investigation and resolved backward
+from the first instinct. `tests/unit/vscode-file-transaction-adapter-roots.test.ts`
+already tests, by name, that a _registered_ runtime root wins over an
+_advertised_ `workspace-N` folder key — and the comment explains why: a
+sub-agent worktree deliberately registers under the key the task runs as, so
+that even a task that references `workspace-1` by mistake stays inside its
+own isolated worktree instead of escaping into the parent checkout. That is
+a safety mechanism, not a bug, and a first pass at closing this gap nearly
+"fixed" it by rejecting any `workspace-N`-shaped registration at the
+adapter level — which would have silently broken that isolation guarantee
+for every sub-agent. The registry itself was left untouched. The real risk
+is narrower and sits only in the new surface: the _main_ session has no
+`ScopedSubAgentExecutor`-style binding limiting which of its calls may use a
+given `rootKey`, so a main-session `create-worktree` with
+`newRootKey: "workspace-1"` would silently redirect every ordinary later
+call using that very common key. The guard lives in `GitAgentService`
+instead, checked once, before anything runs, only against the one operation
+that can reach it from an unbound caller.
