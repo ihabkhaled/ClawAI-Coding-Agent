@@ -2,6 +2,34 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.85.0
+
+Minor: line-range references and coordinate-preserving selection context
+(F033).
+
+- **Type `path:L-L` (or `path:L`) directly into a message to pull that exact
+  range of a workspace file into context.** No autocomplete yet — that
+  discovery layer is a separate, later feature — but the reference resolves
+  today: `src/service.ts:40-58 what does this do?` sends exactly those
+  lines. A reference outside the workspace, to a missing file, or past the
+  end of a file is silently skipped rather than failing the send, since
+  these tokens come from free-form prose, not a deliberate command. The
+  existing sensitive-path and exclude-pattern checks still run
+  unconditionally: an explicit `.env:1` reference is refused the same way
+  every other path into context already is.
+- **A selection's line range now survives into the request.** `Ask about a
+selection` previously sent the selected text with no way to say which
+  lines it came from. The range now travels through the context receipt and
+  onto the `<workspace-file startLine="..." endLine="...">` tag the model
+  actually reads.
+- **Choosing "None" context still means none.** A reference found in the
+  prompt text is not resolved when the selected context mode is `none` —
+  the deliberate choice to send no context always wins over an incidental
+  `path:L-L`-shaped token in the message.
+- Not yet closed: stale-range UI. Nothing re-hashes a referenced file to
+  flag that it changed since the range was collected; adding an unread hash
+  field now would only have been unwired data.
+
 ## 0.84.0
 
 Minor: adds JSON schema autocomplete for `.clawai` config files (F085).

@@ -90,7 +90,7 @@ function harness(options?: { fileIds?: string[]; threadId?: string; viewAvailabl
       files: [{ content: 'export const value = 1;', path: 'src/value.ts' }],
       receipt: {
         excluded: [],
-        included: ['src/value.ts'],
+        included: [{ path: 'src/value.ts' }],
         totalBytes: 23,
         truncated: false,
       },
@@ -160,7 +160,7 @@ describe('PromptExecutionService', () => {
         context: [{ content: 'export const value = 1;', path: 'src/value.ts' }],
         contextReceipt: {
           excluded: [],
-          included: ['src/value.ts'],
+          included: [{ path: 'src/value.ts' }],
           totalBytes: 23,
           truncated: false,
         },
@@ -326,7 +326,7 @@ describe('PromptExecutionService', () => {
       ],
       receipt: {
         excluded: [],
-        included: ['src/small.ts', 'src/large.ts'],
+        included: [{ path: 'src/small.ts' }, { path: 'src/large.ts' }],
         totalBytes: 150_011,
         truncated: false,
       },
@@ -360,7 +360,7 @@ describe('PromptExecutionService', () => {
     expect(subject.dependencies.state.update).toHaveBeenCalledWith({
       contextReceipt: {
         excluded: [{ path: 'src/large.ts', reason: 'limit' }],
-        included: ['src/small.ts'],
+        included: [{ path: 'src/small.ts' }],
         totalBytes: 11,
         truncated: true,
       },

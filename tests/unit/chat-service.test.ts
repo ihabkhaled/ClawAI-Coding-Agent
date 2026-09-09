@@ -137,7 +137,7 @@ describe('ChatService', () => {
         ],
         contextReceipt: {
           excluded: [{ path: 'ignored.ts', reason: 'excluded' }],
-          included: ['small.ts', 'large.ts'],
+          included: [{ path: 'small.ts' }, { path: 'large.ts' }],
           totalBytes: 150_011,
           truncated: false,
         },
@@ -155,7 +155,7 @@ describe('ChatService', () => {
         { path: 'ignored.ts', reason: 'excluded' },
         { path: 'large.ts', reason: 'limit' },
       ],
-      included: ['small.ts'],
+      included: [{ path: 'small.ts' }],
       totalBytes: 11,
       truncated: true,
     });
@@ -354,7 +354,7 @@ describe('ChatService', () => {
           ],
           contextReceipt: {
             excluded: [],
-            included: ['src/small.ts', 'src/large.ts'],
+            included: [{ path: 'src/small.ts' }, { path: 'src/large.ts' }],
             totalBytes: 150_011,
             truncated: false,
           },
@@ -368,7 +368,7 @@ describe('ChatService', () => {
     expect(receipts).toEqual([
       {
         excluded: [{ path: 'src/large.ts', reason: 'limit' }],
-        included: ['src/small.ts'],
+        included: [{ path: 'src/small.ts' }],
         totalBytes: 11,
         truncated: true,
       },
@@ -395,7 +395,7 @@ describe('ChatService', () => {
           context: [{ path: 'src/app.ts', content: 'export {};\n' }],
           contextReceipt: {
             excluded: [],
-            included: ['src/app.ts'],
+            included: [{ path: 'src/app.ts' }],
             totalBytes: 11,
             truncated: false,
           },
@@ -408,7 +408,7 @@ describe('ChatService', () => {
     expect(receipts).toEqual([
       {
         excluded: [],
-        included: ['src/app.ts'],
+        included: [{ path: 'src/app.ts' }],
         totalBytes: 11,
         truncated: false,
       },

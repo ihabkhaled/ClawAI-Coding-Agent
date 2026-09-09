@@ -11,7 +11,7 @@ in the ClawAI platform.
 
 ## Runtime foundation
 
-Version 0.84.0 delivers the model-neutral Runtime Protocol V2 studio. Bounded
+Version 0.85.0 delivers the model-neutral Runtime Protocol V2 studio. Bounded
 workspace, command, process, Git, container, database, quality, browser,
 planning, service, journal, and evidence capabilities share one ordered,
 policy-controlled execution loop. An unavailable or incompatible additive
@@ -38,6 +38,8 @@ endpoint keeps the supported V1 chat and reviewed edit workflow active.
 - Compare two to five models in structured responsive result cards and
   optionally request a judge response.
 - Ask about a selection, active file, or bounded workspace context.
+- Type `path:L-L` in a message to pull that exact line range of a workspace
+  file into context, independent of what is open or selected.
 - Generate, fix, review, test, document, plan, and audit code.
 - Follow two request-owned run lanes and vivid reported/estimated token use for
   prompts, reasoning status, tools, files, responses, comparisons, and the
@@ -186,7 +188,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.84.0` is current and implements the extension surface from the ClawAI
+Version `0.85.0` is current and implements the extension surface from the ClawAI
 VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 

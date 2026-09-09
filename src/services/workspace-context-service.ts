@@ -13,6 +13,7 @@ import {
   type WorkspaceReadiness,
 } from '../core/context-mode';
 import { EMPTY_CONTEXT } from '../core/empty-context';
+import { findFileRangeReferences } from '../core/file-range-reference';
 import { forEachPrefetched, readConcurrency } from '../core/speed-mode';
 import {
   isRealPathInsideWorkspace,
@@ -113,8 +114,61 @@ export class WorkspaceContextService {
     const candidate = {
       path,
       content: editor.document.getText(editor.selection),
+      // VS Code positions are 0-indexed; the range a person reads and types
+      // is 1-indexed.
+      startLine: editor.selection.start.line + 1,
+      endLine: editor.selection.end.line + 1,
     };
     return this.finish([candidate], configuration, []);
+  }
+
+  /**
+   * Resolves `path:L-L` references found in the prompt text itself, so a
+   * message can pull in an exact range of any workspace file regardless of
+   * what is open or selected. A reference that does not resolve — outside
+   * the workspace, missing, or past the end of the file — is silently
+   * skipped rather than failing the whole request: free text can coincide
+   * with the syntax by accident, and a typo should not block a send.
+   */
+  async referencedRanges(
+    promptText: string,
+    configuration: RuntimeConfiguration,
+  ): Promise<CollectedContext> {
+    const references = findFileRangeReferences(promptText);
+    if (references.length === 0 || this.scope.refresh().selectedFolderKey === undefined) {
+      return EMPTY_CONTEXT;
+    }
+    const folder = this.scope.selectedFolder();
+    const canonicalWorkspacePath = await this.canonicalWorkspacePath(folder.uri);
+    const candidates: ContextCandidate[] = [];
+    for (const reference of references) {
+      const uri = vscode.Uri.joinPath(folder.uri, reference.path);
+      if (
+        canonicalWorkspacePath !== undefined &&
+        uri.scheme === 'file' &&
+        !(await isRealPathInsideWorkspace(canonicalWorkspacePath, uri.fsPath))
+      ) {
+        continue;
+      }
+      let text: string;
+      try {
+        text = new TextDecoder('utf-8', { fatal: false }).decode(
+          await vscode.workspace.fs.readFile(uri),
+        );
+      } catch {
+        continue;
+      }
+      const lines = text.split(/\r?\n/u);
+      if (reference.startLine > lines.length) continue;
+      const endLine = Math.min(reference.endLine, lines.length);
+      candidates.push({
+        path: reference.path,
+        content: lines.slice(reference.startLine - 1, endLine).join('\n'),
+        startLine: reference.startLine,
+        endLine,
+      });
+    }
+    return this.finish(candidates, configuration, []);
   }
 
   async activeFile(configuration: RuntimeConfiguration): Promise<CollectedContext> {
