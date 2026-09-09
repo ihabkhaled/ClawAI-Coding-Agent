@@ -23,7 +23,6 @@ import {
   usageSchema,
   userProfileSchema,
   vscodeAuthorizationInitResultSchema,
-  uploadedFileSchema,
   type ChatMessage,
   type ChatThread,
   type ConnectorModel,
@@ -38,8 +37,10 @@ import {
   type UploadedFile,
 } from './contracts';
 import { submitFeedback, type FeedbackSubmission } from './feedback-client';
+import { deleteFile, uploadFile } from './file-client';
 import { modelCatalogClient, type Requester } from './model-catalog-client';
 import { fetchOrganizationPolicy } from './organization-policy-client';
+import { type ResearchRequester } from './research-client';
 import {
   discardResponseBody,
   readBoundedResponseText,
@@ -238,6 +239,16 @@ export class BackendClient {
 
   private readonly catalogRequest: Requester = (path, schema) => this.request(path, schema);
 
+  private readonly fileRequest = <T>(
+    path: string,
+    schema: z.ZodType<T>,
+    options: { method: 'POST' | 'DELETE'; body?: unknown; signal?: AbortSignal },
+  ): Promise<T> => this.request(path, schema, options);
+
+  /** POST seam for the research endpoints. See `research-client`. */
+  readonly researchPost: ResearchRequester = (path, schema, options) =>
+    this.request(path, schema, options);
+
   async getRouterModels(): Promise<RouterModel[]> {
     return modelCatalogClient.routerModels(this.catalogRequest);
   }
@@ -292,22 +303,11 @@ export class BackendClient {
   }
 
   async uploadFile(input: ChatAttachment, signal?: AbortSignal): Promise<UploadedFile> {
-    return this.request('/files/upload', uploadedFileSchema, {
-      body: {
-        content: input.content,
-        filename: input.filename,
-        mimeType: input.mimeType,
-        sizeBytes: input.sizeBytes,
-      },
-      method: 'POST',
-      ...(signal === undefined ? {} : { signal }),
-    });
+    return uploadFile(this.fileRequest, input, signal);
   }
 
   async deleteFile(id: string): Promise<void> {
-    await this.request(`/files/${encodeURIComponent(id)}`, z.unknown(), {
-      method: 'DELETE',
-    });
+    await deleteFile(this.fileRequest, id);
   }
 
   async sendMessage(input: MessageRequest, signal?: AbortSignal): Promise<ChatMessage> {

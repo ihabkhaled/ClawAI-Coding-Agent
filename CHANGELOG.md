@@ -2,6 +2,25 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.2.0
+
+Minor: the agent can search the web and read a page (F004, F005).
+
+- **`workspace.web` has two operations.** `search` returns ranked results with
+  titles, URLs and snippets; `fetch` returns the cleaned text of one page.
+- **Both run on the server**, through the research service that already holds
+  the provider credentials and records the run. No new server contract was
+  needed — the endpoints existed and nothing called them.
+- **Everything returned is marked untrusted.** It is content someone else
+  wrote: evidence to weigh, never instructions to follow.
+- **A URL is checked before it is sent.** Only http and https; no embedded
+  credentials; no loopback, private or link-local addresses. The model's choice
+  of URL is untrusted input, because a workspace file or a fetched page can put
+  one in front of it.
+- Research mode still exists and still works. It answers "should this message
+  be grounded"; the tool answers "I need to check one thing", which is the
+  question that comes up in the middle of a run.
+
 ## 1.1.0
 
 Minor: a focus view for reading (F068).

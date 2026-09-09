@@ -60,6 +60,10 @@ import {
   workspaceFilesystemToolDefinition,
 } from '../infrastructure/vscode-filesystem-tool-executor';
 import { VscodeUserNotifier } from '../infrastructure/vscode-user-notifier';
+import {
+  WebResearchToolExecutor,
+  webResearchToolDefinition,
+} from '../infrastructure/web-research-tool-executor';
 
 import type {
   RuntimeStudioAdvancedTools,
@@ -98,6 +102,10 @@ export function analysisToolRegistrations(
     {
       definition: runJournalToolDefinition,
       executor: new RunJournalToolExecutor(parts.journals),
+    },
+    {
+      definition: webResearchToolDefinition,
+      executor: new WebResearchToolExecutor(parts.research),
     },
   ];
 }

@@ -48,6 +48,7 @@ import { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-bind
 import { VscodeWorkspaceDiagnostics } from '../infrastructure/vscode-workspace-diagnostics';
 import { VscodeWorkspaceSymbols } from '../infrastructure/vscode-workspace-symbols';
 
+import { backendWebResearch } from './backend-web-research';
 import { BrowserControllerService } from './browser-controller-service';
 import { ContainerEngineService } from './container-engine-service';
 import { conversationEndPort } from './conversation-end-service';
@@ -105,6 +106,7 @@ import type { RuntimeStudioInput } from './runtime-studio.types';
 import type { TargetAwareToolRouter } from './target-aware-tool-router';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { BackendClient } from '../backend/backend-client';
+import type { WebResearchPort } from '../backend/research-client';
 import type { RUNTIME_EFFECT_APPROVAL_KIND } from '../core/approval-broker';
 import type { ApprovalBroker } from '../core/approval-broker';
 import type { ExtensionState } from '../core/extension-state';
@@ -118,6 +120,8 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   private readonly processes = new ProcessSupervisorService();
   readonly transport: BackendRuntimeTransport;
   private readonly bindingStore: VscodeRuntimeBindingStore;
+
+  private readonly research: WebResearchPort;
   readonly stream: RuntimeEventStreamService;
   readonly router: RuntimeToolRouter;
   private readonly targets: ExecutionTargetRegistry;
@@ -152,6 +156,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       () => this.configuration.read().autosave,
     );
     this.bindingStore = new VscodeRuntimeBindingStore(context.workspaceState);
+    this.research = backendWebResearch(backend);
     this.transport = new BackendRuntimeTransport(backend, this.bindingStore);
     this.stream = new RuntimeEventStreamService(this.transport);
     this.observability = new LocalObservabilityService(new VscodeObservabilitySink(logger));
@@ -385,6 +390,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         transactions: this.transactions,
         tasks: this.stores.tasks,
         journals: this.journals,
+        research: this.research,
       }),
       ...advancedToolRegistrations({
         evidence,

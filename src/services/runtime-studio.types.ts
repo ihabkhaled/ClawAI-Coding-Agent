@@ -8,6 +8,7 @@ import type { IntegrationCoordinatorService } from './integration-coordinator-se
 import type { ProcessSupervisorService } from './process-supervisor-service';
 import type { RunJournalService } from './run-journal-service';
 import type { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
+import type { WebResearchPort } from './web-research.types';
 import type { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { UserQuestionPort } from '../infrastructure/ask-user-tool-executor';
@@ -41,6 +42,7 @@ export interface RuntimeStudioAnalysisTools {
   readonly transactions: FileTransactionService;
   readonly tasks: AgentTaskService;
   readonly journals: RunJournalService;
+  readonly research: WebResearchPort;
 }
 
 export type RuntimeApprovalPhase = 'waiting' | 'approved' | 'rejected';
