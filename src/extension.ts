@@ -14,6 +14,7 @@ import { buildRuntimeCapabilityManifest } from './infrastructure/vscode-runtime-
 import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-edit-adapter';
 import { AgentCoordinator } from './services/agent-coordinator';
 import { ConfigurationService } from './services/configuration-service';
+import { ClawaiUriHandler } from './services/deep-link-handler';
 import { ExternalOutputGrantService } from './services/external-output-grant-service';
 import { GlobalContextService } from './services/global-context-service';
 import { WorkspaceContextService } from './services/workspace-context-service';
@@ -264,6 +265,10 @@ export function activate(context: vscode.ExtensionContext): void {
         retainContextWhenHidden: true,
       },
     }),
+    // Navigation only. See docs/adr/0001-uri-handler-navigation-only.md.
+    vscode.window.registerUriHandler(
+      new ClawaiUriHandler({ openChat: (threadId) => coordinator.openChat(threadId) }),
+    ),
     vscode.window.registerTreeDataProvider('clawAI.model', modelTree),
     vscode.window.registerTreeDataProvider('clawAI.context', contextTree),
     vscode.window.registerTreeDataProvider('clawAI.history', historyTree),

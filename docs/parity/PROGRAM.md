@@ -317,3 +317,21 @@ The studio hit its 500-line ceiling for the third time in this program. Findings
 and tasks are now created and cleared together in `runtime-studio-stores.ts`,
 which also removes the chance of a future change clearing one and forgetting the
 other.
+
+### Batch 16 — the first unblock
+
+| Batch | Version | Status                                                                   | Evidence                                                                                                                                                             |
+| ----- | ------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 16    | 0.80.0  | Code and deterministic gates complete, including a real VS Code host run | F072 and F073: `docs/adr/0001-uri-handler-navigation-only.md`, `src/core/deep-link.ts`, `src/services/deep-link-handler.ts`; tests in `tests/unit/deep-link.test.ts` |
+
+F072 and F073 were BLOCKED on a decision rather than on a missing contract,
+which made them the cheapest of the four blockers to clear. The ADR separates
+the risk that justified the original removal — an authorization code travelling
+through a channel any page can trigger and any extension can register for —
+from the surface that carries none of it. Authorization is untouched.
+
+Two things went better than expected and are worth recording, because both were
+the opposite of what the plan assumed. No `onUri` activation event was needed,
+so the extension-host assertion that guarded the boundary did not have to be
+weakened at all; and refusing prompt text outright turned out to be simpler
+than the confirmation dialog the alternative would have required.

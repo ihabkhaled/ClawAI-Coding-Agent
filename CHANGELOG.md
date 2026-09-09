@@ -2,6 +2,32 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.80.0
+
+Minor: `vscode://` links can open the view or a conversation, and nothing else.
+
+- Adds a URI handler for `vscode://clawai.clawai-coding-agent/open` and
+  `/session?id=<uuid>`, so the ClawAI web app can link into an open
+  conversation.
+- The surface is deliberately narrow, and the reasoning is recorded in
+  `docs/adr/0001-uri-handler-navigation-only.md`. A `vscode://` link is
+  triggerable by any web page, so no credential passes through it, no prompt
+  text comes from it, and no side effect follows from the link alone. It cannot
+  express a command, an approval or a connection, which removes the injection
+  vector rather than mitigating it.
+- Authorization is untouched and still uses the state-validated one-shot
+  loopback callback. The 2026 decision to remove the URI **authorization**
+  callback stands permanently; this narrows a blanket absence that also
+  forbade surfaces carrying none of that risk.
+- No `onUri` activation event is added. Activation is already
+  `onStartupFinished`, so the handler registers in every window regardless, and
+  the extension-host assertion that guarded the authorization boundary is
+  unchanged and still passes. A unit test now asserts the same property at the
+  source level.
+- An unrecognised link is ignored rather than raising an error, because a
+  dialog from a link the user did not knowingly click is a nuisance a page
+  could trigger repeatedly.
+
 ## 0.79.0
 
 Minor: the agent keeps a task list, and the sidebar shows it.
