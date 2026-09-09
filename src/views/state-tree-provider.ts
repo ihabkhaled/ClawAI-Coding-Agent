@@ -59,8 +59,12 @@ function contextItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
   summary.iconPath = new vscode.ThemeIcon('list-selection');
   return [
     summary,
-    ...receipt.included.map((path) => {
-      const item = new vscode.TreeItem(path);
+    ...receipt.included.map((entry) => {
+      const label =
+        entry.startLine === undefined
+          ? entry.path
+          : `${entry.path}:${String(entry.startLine)}-${String(entry.endLine)}`;
+      const item = new vscode.TreeItem(label);
       item.iconPath = new vscode.ThemeIcon('file-code');
       return item;
     }),

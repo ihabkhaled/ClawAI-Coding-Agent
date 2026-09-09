@@ -235,17 +235,14 @@ export class AgentCoordinator implements vscode.Disposable {
       backend: () => this.backend,
       captureAdmission: (threadId) => this.captureAdmission(threadId),
       chat: this.chat,
-      collect: (mode, configuration, session, signal) =>
+      collect: (...args) =>
         collectAgentContext(
           this.context,
           this.state,
           () => {
             this.refreshWorkspaceReadiness();
           },
-          mode,
-          configuration,
-          session,
-          signal,
+          ...args,
         ),
       configuration: this.configuration,
       conversations: this.conversations,

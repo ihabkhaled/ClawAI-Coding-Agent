@@ -63,7 +63,7 @@ const snapshot: ExtensionSnapshot = {
   },
   contextReceipt: {
     excluded: [{ path: '.env', reason: 'sensitive' }],
-    included: ['src/app.ts'],
+    included: [{ path: 'src/app.ts' }],
     totalBytes: 42,
     truncated: false,
   },

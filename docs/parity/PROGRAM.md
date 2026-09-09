@@ -536,3 +536,77 @@ regenerating all 13 bundles rather than an amend, since the batch had
 already pushed. Any batch adding a new `l10n.t()` call needs
 `npm run l10n:build` run explicitly — `npm run check` will not catch its
 absence.
+
+### Batch 23 — a second tally audit, no code shipped
+
+Asked directly for a progress count against the pack, and re-verified every
+tally line programmatically before answering rather than trusting the
+running numbers this document already carried. Two more instances of the
+same drift class batch 22 found in `AUDIT_F056_F087.md` turned up:
+`AUDIT_F001_F031.md`'s line had been incremented by delta from a stale base
+across batches 19 and 21 instead of recomputed, undercounting SHIPPED by
+5 (F002, F006, and F022 were SHIPPED before this program began and were
+never folded in), and `AUDIT_F032_F055.md`'s line had never been updated at
+all. Recounted every row in all four files by script rather than by eye
+this time. Confirmed, current totals: 20 SHIPPED, 43 PARTIAL, 42 MISSING,
+2 BLOCKED, 1 CONFLICT of 108.
+
+The lesson worth keeping: a tally line is exactly the kind of derived fact
+this program's own "present is not wired" rule should have caught sooner —
+not dead code, but a dead count nobody was recomputing. It is now recomputed
+by counting the table, not by editing the previous number, every time a row
+changes class.
+
+### Batch 24 — F033 line-range references
+
+| Batch | Version | Status                                | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                   |
+| ----- | ------- | ------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 24    | 0.85.0  | Code and deterministic gates complete | `src/core/file-range-reference.ts`, `src/core/context-collector.ts` (`ContextInclusion`, `mergeCollectedContext`), `src/services/workspace-context-service.ts` (`referencedRanges`, `selection`), `src/core/context-envelope.ts`, `src/services/agent-context-service.ts`. Tests: 20 in `tests/unit/file-range-reference.test.ts`, 3 new in `tests/unit/context-collector.test.ts`, 10 in `tests/unit/workspace-context-service.file-ranges.test.ts`, 1 new in `tests/unit/context-envelope.test.ts`, 1 new in `tests/unit/agent-context-service.test.ts`. |
+
+The audit's own ordering note said to land this before F032: mentions would
+otherwise design the range-bearing shape twice. That held. The scope that
+actually shipped is narrower than "the user-facing syntax" reads at a
+glance, and the narrowing was deliberate rather than a shortfall:
+
+- **Two of the three named gaps close; the third stays open, named.**
+  Coordinate preservation now runs end to end — a selection's line range
+  survives from `editor.selection` through `ContextCandidate`, through the
+  receipt, into the `startLine`/`endLine` attributes on the `<workspace-file>`
+  tag the model reads, none of which existed before. `path:L-L` typed
+  directly into a message already resolves today, without needing the
+  autocomplete affordance F032 will add — that affordance is a discovery
+  layer on top of a mechanism that already works. Stale-range UI does not:
+  closing it needs a hash captured at collection time and a real trigger to
+  re-check it against, and adding an unread hash field now would have been
+  exactly the defect this audit protocol exists to catch.
+- **`referencedRanges` skips a hit outside the workspace, a missing file, or
+  a range past the end of the file — silently, not as an error.** These
+  tokens come from free-form prompt text, not a deliberate command; a prose
+  sentence that happens to contain a colon and two numbers should never
+  abort a send. `isSensitiveWorkspacePath` and the existing exclude patterns
+  still run unconditionally through `collectContext`, so an explicit
+  `.env:1` reference is refused the same way every other path into context
+  already refuses it.
+- **`'none'` mode wins over a reference found in the prompt.** Once
+  `referencedRanges` ran independently of the selected mode, a message that
+  happened to contain `path:L-L` while the user had deliberately chosen to
+  send no context at all would have overridden that choice. `none` is
+  checked explicitly and short-circuits to `EMPTY_CONTEXT` before the
+  reference scan runs, so the deliberate choice always wins.
+- **The merge is a skip-on-path-collision, not a union of ranges.** A
+  reference to a path already present from the selected mode is dropped
+  rather than appended: the file is already in context in full or as the
+  mode's own range, and a second, possibly overlapping slice of the same
+  path would only inflate the payload for no new information.
+
+One lint-driven correction shipped alongside the feature. Threading a
+`promptText` argument through `collect`'s five-parameter signature pushed
+`agent-coordinator.ts` from 500 lines to 501, its established ceiling. Every
+attempted line-count reduction inside the file hit the same wall — this
+codebase's `no-confusing-void-expression` rule forbids exactly the
+brace-removal trick that would have shaved a line, and it turns out to
+forbid it everywhere a void-returning method is wrapped in a callback, not
+only here. The actual fix was structural rather than cosmetic: `collect`'s
+own parameter order already matches `collectAgentContext`'s tail exactly, so
+the wrapper takes `(...args)` and forwards them with a spread instead of
+naming and re-listing all five, net negative lines with no behavior change.

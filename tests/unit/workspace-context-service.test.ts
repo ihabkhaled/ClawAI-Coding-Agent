@@ -419,7 +419,7 @@ describe('WorkspaceContextService smart context', () => {
 
     expect(context.files).toEqual([{ path: 'src/file-0.ts', content: '12345678' }]);
     expect(context.receipt).toMatchObject({
-      included: ['src/file-0.ts'],
+      included: [{ path: 'src/file-0.ts' }],
       totalBytes: 8,
       truncated: true,
     });
