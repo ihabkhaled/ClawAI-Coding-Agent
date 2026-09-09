@@ -3,6 +3,7 @@ import type { RuntimeConfiguration } from '../../src/services/configuration-serv
 export function testRuntimeConfiguration(): RuntimeConfiguration {
   return {
     agentMode: 'AUTO',
+    viewDensity: 'full' as const,
     effortMode: 'ULTRA',
     speedMode: '1X',
     backendCustomUrl: '',

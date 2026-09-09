@@ -487,6 +487,7 @@ export class AgentCoordinator implements vscode.Disposable {
     configuration: () => this.configuration,
     backend: () => this.backend,
     refreshHistory: () => this.refreshConversations(),
+    sessionControls: () => this.sessionControls,
   });
 
   private readonly refreshConversations = conversationRefresher(() => ({

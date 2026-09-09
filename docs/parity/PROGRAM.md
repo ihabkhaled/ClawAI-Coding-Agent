@@ -1127,3 +1127,26 @@ call, not an endpoint, and the product question of which model pays for it is
 not settled here.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 40 — F068 focus view
+
+| Batch | Version | Status                                | Evidence                                                        |
+| ----- | ------- | ------------------------------------- | --------------------------------------------------------------- |
+| 40    | 1.1.0   | Code and deterministic gates complete | `src/core/view-density.ts`, `media/chat.css`. Tests: 8 + 4 e2e. |
+
+Focus hides what reports on work or steers it — the runtime timeline, the
+compare tray, the run deck — and widens the conversation to a readable measure.
+
+What it does **not** hide is the whole design. The conversation and the
+composer are the work: hiding the first gives a blank screen, hiding the second
+gives a transcript you cannot answer. The workspace bar stays too, even though
+it is chrome, because the toggle has to remain reachable — a mode you cannot
+leave is not a mode. That is why the toggle sits in the composer rail.
+
+The density is a workspace setting rather than webview state, so it survives a
+reload and applies to every panel rather than only the one that was toggled.
+The webview reflects the setting and never decides it, which is the same
+division the mention list uses: one owner for a decision, one place to change
+it.
+
+**Still true:** live-model Definition of Done cannot be executed here.

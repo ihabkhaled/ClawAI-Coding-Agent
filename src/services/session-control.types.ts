@@ -4,6 +4,7 @@ import type { EffortMode } from '../core/effort-mode';
 import type { RankedPermissionMode } from '../core/organization-permission-floor';
 import type { PermissionMode, PermissionOperation } from '../core/permission-policy.types';
 import type { SpeedMode } from '../core/speed-mode';
+import type { ViewDensity } from '../core/view-density.types';
 
 export interface SessionConfiguration {
   agentMode: AgentMode;
@@ -13,6 +14,7 @@ export interface SessionConfiguration {
 export interface SessionConfigurationPort {
   read(): SessionConfiguration;
   selectAgentMode(mode: AgentMode): Promise<void>;
+  selectViewDensity(density: ViewDensity): Promise<void>;
   selectEffortMode(mode: EffortMode): Promise<void>;
   selectSpeedMode(mode: SpeedMode): Promise<void>;
   selectPermissionMode(mode: PermissionMode): Promise<boolean>;
@@ -21,6 +23,7 @@ export interface SessionConfigurationPort {
 export interface SessionStatePort {
   update(patch: {
     agentMode?: AgentMode;
+    viewDensity?: ViewDensity;
     effortMode?: EffortMode;
     speedMode?: SpeedMode;
     permissionMode?: PermissionMode;

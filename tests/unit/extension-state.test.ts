@@ -8,6 +8,7 @@ const initialSnapshot: ExtensionSnapshot = {
   agentRun: undefined,
   agentRuns: {},
   agentMode: 'AUTO',
+  viewDensity: 'full',
   effortMode: 'ULTRA',
   speedMode: '1X',
   approvalRequest: undefined,

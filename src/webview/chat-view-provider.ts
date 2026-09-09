@@ -360,6 +360,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.actions.manageExternalOutputFolders();
     } else if (request.type === 'selectModel') {
       await this.actions.selectModel(request.modelKey);
+    } else if (request.type === 'selectViewDensity') {
+      await this.actions.selectViewDensity(request.density);
     } else if (request.type === 'selectAgentMode') {
       await this.actions.selectAgentMode(request.mode);
     } else if (request.type === 'selectEffortMode') {

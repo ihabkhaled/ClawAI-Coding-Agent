@@ -45,6 +45,7 @@ export function baseState() {
     agentRun: undefined,
     agentRuns: {},
     agentMode: 'AUTO',
+    viewDensity: 'full',
     approvalRequest: undefined,
     questionRequest: undefined,
     findings: [],

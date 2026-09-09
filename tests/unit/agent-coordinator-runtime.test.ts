@@ -33,6 +33,7 @@ describe('agent coordinator account boundary', () => {
   it('clears every account-scoped value while preserving workspace and local settings', () => {
     const state = new ExtensionState({
       agentMode: 'PLAN',
+      viewDensity: 'full' as const,
       effortMode: 'ULTRA',
       speedMode: '1X',
       agentRun: { phase: 'generating' } as never,
@@ -100,6 +101,7 @@ describe('agent coordinator account boundary', () => {
 
     expect(state.snapshot).toMatchObject({
       agentMode: 'PLAN',
+      viewDensity: 'full' as const,
       effortMode: 'ULTRA',
       speedMode: '1X',
       agentRun: undefined,

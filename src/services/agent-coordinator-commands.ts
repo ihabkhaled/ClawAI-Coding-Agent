@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+import { toggleViewDensity } from '../core/view-density';
+
 import { pickModelKey } from './agent-coordinator-prompts';
 import { applyModelSelection } from './agent-coordinator-runtime';
 import { searchRunHistory } from './search-run-history-command';
@@ -16,6 +18,7 @@ import type { ConversationSessionService } from './conversation-session-service'
 import type { FindingsService } from './findings-service';
 import type { RunJournalService } from './run-journal-service';
 import type { SafeEditService } from './safe-edit-service';
+import type { SessionControlService } from './session-control-service';
 import type { ThreadOrganizationDependencies } from './thread-organization.types';
 import type { BackendClient } from '../backend/backend-client';
 import type { ExtensionState } from '../core/extension-state';
@@ -29,6 +32,7 @@ export interface CoordinatorCommands {
   searchRunHistory(): Promise<void>;
   showUsage(): Promise<void>;
   showSessionRecap(): Promise<void>;
+  toggleFocusView(): Promise<void>;
   renameChat(): Promise<void>;
   archiveChat(): Promise<void>;
   browseArchivedChats(): Promise<void>;
@@ -49,6 +53,7 @@ interface CommandCollaborators {
   readonly configuration: () => ConfigurationService;
   readonly backend: () => BackendClient;
   readonly refreshHistory: () => Promise<void>;
+  readonly sessionControls: () => SessionControlService;
 }
 
 /**
@@ -76,6 +81,10 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
       exportTranscript({ conversations: parts.conversations(), state: parts.state() }),
     searchRunHistory: () => searchRunHistory({ journals: parts.journals() }),
     showUsage: () => showUsage({ state: parts.state() }),
+    toggleFocusView: () =>
+      parts
+        .sessionControls()
+        .selectViewDensity(toggleViewDensity(parts.state().snapshot.viewDensity)),
     renameChat: () => renameChat(threadParts(parts)),
     archiveChat: () => archiveChat(threadParts(parts)),
     browseArchivedChats: () => browseArchivedChats(threadParts(parts)),

@@ -23,6 +23,7 @@ import type { CapabilityManifest } from './runtime/capability-manifest';
 import type { RuntimeProtocolSelection } from './runtime/runtime-negotiation';
 import type { SpeedMode } from './speed-mode';
 import type { UserQuestion } from './user-question';
+import type { ViewDensity } from './view-density.types';
 import type { WorkspaceScopeSnapshot } from './workspace-scope.types';
 import type { OrganizationPolicy } from '../backend/contracts';
 import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contracts';
@@ -33,6 +34,7 @@ export interface ExtensionSnapshot {
   agentRun: AgentRunSnapshot | undefined;
   agentRuns: Record<string, AgentRunSnapshot>;
   agentMode: AgentMode;
+  viewDensity: ViewDensity;
   effortMode: EffortMode;
   speedMode: SpeedMode;
   approvalRequest: ApprovalRequest | undefined;

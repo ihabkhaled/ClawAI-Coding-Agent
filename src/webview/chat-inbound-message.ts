@@ -106,6 +106,10 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
     modelKey: z.string().min(1).max(500),
   }),
   z.object({
+    type: z.literal('selectViewDensity'),
+    density: z.enum(['full', 'focus']),
+  }),
+  z.object({
     type: z.literal('selectAgentMode'),
     mode: z.enum(['AUTO', 'PLAN']),
   }),
