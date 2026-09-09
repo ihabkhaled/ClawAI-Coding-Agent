@@ -60,3 +60,32 @@ authoritative regardless of what a plan document says.
 | Hashing, embedding, parsing, staleness  | `src/core/plan-revision.ts`                    |
 | Plan schema and Markdown renderer       | `src/core/implementation-plan.ts`              |
 | Operation wiring and the bound revision | `src/infrastructure/planning-tool-executor.ts` |
+
+## Resuming
+
+A run records the mode it started in and the plan revision it last asserted it
+was working against. Both live on the durable run journal, because that is what
+survives a window reload; the chat session registry does not.
+
+**The prompt carries the mode, and the journal's goal does not.** Plan mode is
+applied where the run starts, so the journal keeps the raw request. A goal that
+already carried the read-only instruction would collect a second copy of it on
+every resume.
+
+**Restoring the mode is tighten-only in both directions.** A run that was
+planning does not start writing because the workspace setting moved while it
+was parked, and a workspace since switched to Plan is not overridden by an
+older Auto run. `PLAN` anywhere wins. A journal written before runs recorded
+their mode contributes nothing, and the current setting decides alone. Because
+restoring can only narrow, it never needs an approval of its own.
+
+**The revision is read off the call, not the result.** `export` is hashed from
+the plan it is writing, `adopt` from the document it is handing back, and every
+other operation from the `revision` it names. A run interrupted mid-export
+still recorded which plan it was exporting. Anything malformed records nothing
+rather than throwing: journalling a call must not be what rejects it.
+
+Plan mode itself is enforced by policy, not by the prompt —
+`src/core/policy-v2.ts` denies every non-read effect in `PLAN` as an immutable
+rail. The instruction exists so the model plans rather than discovering the
+mode by having each edit refused in turn.

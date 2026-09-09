@@ -2,6 +2,23 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.97.0
+
+Minor: Plan mode survives a resume, and so does the plan it approved (F048).
+
+- **Runtime Protocol V2 now tells the model it is in Plan mode.** Policy
+  already denied every non-read effect there, so the model learned the mode by
+  having each edit refused in turn. The instruction is applied where the run
+  starts, so the journal's goal stays the raw request.
+- **A run records its mode and its plan revision** on the durable run journal,
+  which is what survives a window reload.
+- **Restoring the mode is tighten-only in both directions.** A parked planning
+  run does not start writing because the setting moved, and a workspace since
+  switched to Plan is not overridden by an older Auto run.
+- **The plan revision is read off the call, not the result,** so a run
+  interrupted mid-export still recorded which plan it was exporting.
+- See [docs/PLAN_REVISIONS.md](docs/PLAN_REVISIONS.md).
+
 ## 0.96.0
 
 Minor: plan documents you can edit, and revisions that bind what follows (F047).

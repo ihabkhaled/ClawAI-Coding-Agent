@@ -982,3 +982,42 @@ work belongs.
 feature across providers — cannot be executed here. There is no authenticated
 backend and no entitled model credentials in this environment. Everything
 claimed above is proven by deterministic gates only.
+
+### Batch 36 — F048 Plan mode and plan revision survive a resume
+
+| Batch | Version | Status                                | Evidence                                                                                                        |
+| ----- | ------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------------- |
+| 36    | 0.97.0  | Code and deterministic gates complete | `resumeAgentMode`, `durable-run-journal` `agentMode`/`planRevision`, `runtime-studio-execution`. Tests: 12 new. |
+
+The audit said the mode was workspace-global rather than per session. Reading
+the code found something worse: on the Runtime V2 path the prompt went to the
+model untouched, so **Plan mode never reached the model at all**. It was still
+enforced — `policy-v2.ts:317` denies every non-read effect in `PLAN` as an
+immutable rail — but the model learned it by having each edit refused in turn
+instead of being told to plan.
+
+The mode is now applied at run start rather than at the caller, which keeps the
+journal's `goal` the raw request. That matters for resume: a goal that already
+carried the read-only instruction would collect a second copy of it every time
+the run came back.
+
+Restoring is tighten-only in both directions. A parked planning run must not
+start writing because the setting moved under it; a workspace since switched to
+Plan must not be overridden by an older Auto run. `PLAN` anywhere wins, so
+restoring can only narrow and never needs an approval of its own. A journal
+written before this existed records no mode and defers to the current setting
+rather than guessing one.
+
+The plan revision F047 introduced is recorded from the planning call itself —
+`export` hashed from the plan it writes, `adopt` from the document handed back,
+anything else from the `revision` it names — so an interrupted run still
+recorded which plan it was working on. Malformed calls record nothing rather
+than throwing: journalling must never be the thing that rejects a call.
+
+**Deviation from the audit's reuse note.** It named `ChatSessionDescriptor`.
+That registry is in-memory and disposed with the window, so nothing stored
+there could be restored on the resume this feature is about. The durable run
+journal is the record that survives, and it is where both fields went.
+
+**Still true:** live-model Definition of Done cannot be executed here. No
+authenticated backend, no entitled model credentials. Deterministic gates only.

@@ -5,6 +5,7 @@ import {
   durableRunJournalSchema,
   type DurableRunJournal,
 } from '../core/durable-run-journal';
+import { planningInvocationRevision } from '../core/plan-revision';
 import { parseToolInvocation } from '../core/runtime/runtime-tool-contracts';
 
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
@@ -24,6 +25,7 @@ type RuntimeJournalStart = Pick<
   | 'budget'
   | 'createdAt'
   | 'recovery'
+  | 'agentMode'
 >;
 
 const budgetCheckpointSchema = z.object({
@@ -52,6 +54,34 @@ const readOperations = new Set([
   'snapshot',
   'discover',
 ]);
+
+/** Folds a requested tool call into the journal that must survive a restart. */
+function requestedInvocation(
+  journal: DurableRunJournal,
+  invocation: ReturnType<typeof parseToolInvocation>,
+): DurableRunJournal {
+  let next = journal;
+  // The plan a run is working against is durable state: resuming has to put
+  // the run back on the same revision, not whichever one is bound now.
+  if (invocation.toolName === 'workspace.planning') {
+    const revision = planningInvocationRevision(invocation.operation, invocation.arguments);
+    if (revision !== undefined) next = { ...next, planRevision: revision };
+  }
+  if (next.invocations.some(({ invocationId }) => invocationId === invocation.invocationId))
+    return next;
+  return {
+    ...next,
+    invocations: [
+      ...next.invocations,
+      {
+        invocationId: invocation.invocationId,
+        idempotencyKey: invocation.idempotencyKey,
+        repeatability: readOperations.has(invocation.operation) ? 'idempotent' : 'non-repeatable',
+        effectState: 'prepared',
+      },
+    ],
+  };
+}
 
 export class RuntimeJournalTracker {
   private journal: DurableRunJournal | undefined;
@@ -88,23 +118,7 @@ export class RuntimeJournalTracker {
     if (event.sequence <= journal.lastEventSequence) return;
     let next = appendJournalEventSequence(journal, event.sequence);
     if (event.type === 'tool.requested') {
-      const invocation = parseToolInvocation(event.payload.invocation);
-      if (!next.invocations.some(({ invocationId }) => invocationId === invocation.invocationId)) {
-        next = {
-          ...next,
-          invocations: [
-            ...next.invocations,
-            {
-              invocationId: invocation.invocationId,
-              idempotencyKey: invocation.idempotencyKey,
-              repeatability: readOperations.has(invocation.operation)
-                ? 'idempotent'
-                : 'non-repeatable',
-              effectState: 'prepared',
-            },
-          ],
-        };
-      }
+      next = requestedInvocation(next, parseToolInvocation(event.payload.invocation));
     } else if (event.type.startsWith('tool.')) {
       next = this.updateInvocation(next, event);
     }
