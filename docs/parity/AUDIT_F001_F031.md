@@ -11,7 +11,7 @@ module with no callers is scaffolding, not SHIPPED.
 | F004 | WebSearch                    | MISSING                                | tool list at `src/services/vscode-runtime-studio.ts:373`                                                                                                                                  | No search tool of any kind.                                                                                                                                                                                                                                                                                                             |
 | F005 | WebFetch                     | MISSING                                | no HTTP tool in `src/services/vscode-runtime-studio.ts:373`                                                                                                                               | No agent-callable URL retrieval; `workspace.browser` navigate is a full Playwright session, not a fetch.                                                                                                                                                                                                                                |
 | F006 | Agent tool / subagents       | SHIPPED                                | `src/infrastructure/sub-agent-tool-executor.ts:15`, `src/services/sub-agent-coordinator-service.ts:62`, `src/services/runtime-sub-agent-executor.ts:59`                                   |                                                                                                                                                                                                                                                                                                                                         |
-| F007 | Custom subagent definitions  | PARTIAL                                | `src/core/runtime/runtime-tool-input-schemas.ts:52`, `src/services/global-context-service.ts:3`                                                                                           | No persisted named registry; roles are a fixed seven-value enum and every graph re-supplies instructions, tools, model and budget inline.                                                                                                                                                                                               |
+| F007 | Custom subagent definitions  | SHIPPED in 0.83.0                      | `src/core/sub-agent-definitions.ts`, `src/services/sub-agent-definitions-service.ts`, `.clawai/agents/agents.json` per `docs/CLAWAI_FOLDER_SPEC.md`                                       | A task may name a persisted preset by `definitionName`; the preset's `systemPrompt` and `description` prepend to that fork's prompt. Roles stay the fixed seven-value enum, and tools/model/budget still come from the task on every fork — a definition only ever adds instructions, never a runtime grant.                            |
 | F008 | Fork mode for subagents      | MISSING                                | `src/core/runtime/runtime-tool-input-schemas.ts:64`, `src/services/runtime-sub-agent-executor.ts:59`                                                                                      | Subagents receive graph node ids, never a parent-conversation snapshot; no inheritance mode.                                                                                                                                                                                                                                            |
 | F009 | Agent teams                  | PARTIAL                                | `src/services/sub-agent-coordinator-service.ts:62`, `src/services/file-lease-manager.ts`                                                                                                  | DAG ownership, write-set leases and steering exist, but steering is parent to child only: no agent-to-agent messaging, no shared task board.                                                                                                                                                                                            |
 | F010 | Cross-session messaging      | MISSING                                | `src/core/runtime/runtime-steering-queue.ts:22`                                                                                                                                           | Steering is scoped to one `runId`; no addressing between sessions.                                                                                                                                                                                                                                                                      |
@@ -37,7 +37,7 @@ module with no callers is scaffolding, not SHIPPED.
 | F030 | Computer use                 | PARTIAL                                | `src/infrastructure/browser-tool-executor.ts:16`, `src/services/browser-controller-service.ts:67`                                                                                         | Screen understanding and input are Playwright-page-scoped: no OS-level capture, desktop input or app launching.                                                                                                                                                                                                                         |
 | F031 | EndConversation safeguard    | PARTIAL, audit corrected               | `src/core/approval-broker.ts:139`, `src/services/runtime-studio-execution.ts:227`, `:292`                                                                                                 | The audit claimed nothing blocks ending while approvals are pending. That is wrong: `cancelKind` withdraws the ending run pending approvals, and both terminal paths call it from a `finally`, so no abandoned modal prompt survives a run. What is genuinely absent is an agent-callable terminal action and an evidence flush on end. |
 
-Tally: 3 SHIPPED, 13 PARTIAL, 14 MISSING, 1 BLOCKED, 0 CONFLICT.
+Tally: 4 SHIPPED, 12 PARTIAL, 14 MISSING, 1 BLOCKED, 0 CONFLICT.
 
 ## Reuse map — the seam each gap must extend
 
@@ -49,8 +49,11 @@ Tally: 3 SHIPPED, 13 PARTIAL, 14 MISSING, 1 BLOCKED, 0 CONFLICT.
 - **F004/F005** → a network-classed executor modelled on
   `browser-tool-executor.ts`. The `network` risk class already exists, and
   `src/core/runtime/external-output-catalog.ts` shows the domain-grant pattern.
-- **F007** → `src/core/multi-agent-dag.ts`, turning the role enum into a named
-  definition reference, with the on-disk store in `global-context-service.ts`.
+- **F007** → SHIPPED. `subAgentTaskSchema.definitionName` is an additive
+  reference alongside the role enum, not a replacement for it; the on-disk
+  store is `.clawai/agents/agents.json`, its own file rather than
+  `global-context-service.ts`'s free-text `global-rules.md`/`global-skills.md`,
+  because a preset needs structured fields a Markdown blob cannot validate.
 - **F008** → `runtime-sub-agent-executor.ts` where the nested run starts: add a
   bounded parent-transcript snapshot alongside the node ids.
 - **F009** → `sub-agent-coordinator-service.ts` observer and steering array, plus
@@ -127,8 +130,9 @@ Tally: 3 SHIPPED, 13 PARTIAL, 14 MISSING, 1 BLOCKED, 0 CONFLICT.
    F019 depends on F018: cell targeting first, then execution.
 4. **F021 → F020 → F026.** Diagnostics reading is the smallest of the three and
    gives F020 its diagnostics operation and F026 its evidence source.
-5. **F007 → F008 → F009.** Fork needs a named definition to attach an inheritance
-   mode to; teams need both plus agent-to-agent messaging.
+5. **F007 → F008 → F009.** F007 shipped in 0.83.0: fork now has a named
+   definition to attach an inheritance mode to. F008 and F009 remain open;
+   teams need both plus agent-to-agent messaging.
 6. **F010 → F009 and F029.** The steering envelope is the routing primitive for
    both agent-to-agent and remote trigger. Generalize it once.
 7. **F015 → F009 and F014.** Shared task state is both the team board and the

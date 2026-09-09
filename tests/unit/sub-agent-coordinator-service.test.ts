@@ -334,7 +334,14 @@ describe('SubAgentCoordinatorService', () => {
     const executor = new ScopedSubAgentExecutor(plannerTask, delegate, telemetry);
 
     await executor.execute(
-      invocation('workspace.planning', 'validate', { plan: planGraph, output: {} }),
+      // Round-tripped through JSON, like a real invocation off the wire: a
+      // typed SubAgentGraph carries optional fields TypeScript won't let a
+      // strict RuntimeJsonObject accept directly, but JSON never carries an
+      // `undefined` property in the first place.
+      invocation('workspace.planning', 'validate', {
+        plan: JSON.parse(JSON.stringify(planGraph)),
+        output: {},
+      }),
     );
 
     expect(telemetry.graph).toEqual(planGraph);

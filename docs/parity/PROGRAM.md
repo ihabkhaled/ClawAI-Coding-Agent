@@ -451,3 +451,43 @@ nothing caught it. The fix removes the stray property and adds a regression
 test that asserts the advertised task properties are a subset of what
 `subAgentTaskSchema.shape` accepts, so this exact drift cannot reappear
 silently.
+
+### Batch 21 — F007 custom subagent definitions
+
+| Batch | Version | Status                                | Evidence                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 21    | 0.83.0  | Code and deterministic gates complete | `src/core/sub-agent-definitions.ts`, `src/services/sub-agent-definitions-service.ts`, `subAgentTaskSchema.definitionName` in `src/core/multi-agent-dag.ts`, `buildSubAgentPrompt` in `src/services/runtime-sub-agent-executor.ts`. Tests: 12 in `tests/unit/sub-agent-definitions.test.ts`, 4 in `tests/unit/sub-agent-definitions-service.test.ts`, 4 new in `tests/unit/runtime-sub-agent-executor-failure-reason.test.ts`. |
+
+The audit's reuse target for F007 — turn the role enum into a named
+definition and store it in `global-context-service.ts` — was wrong on both
+counts, and both were worth correcting before writing code. Replacing the
+role enum would have broken the Git-mutation gate in
+`ScopedSubAgentExecutor` (`this.task.role === 'integrator'`) for no reason: a
+definition is an identity a task optionally adopts, not a replacement for the
+coarse category the executor already gates on, so `definitionName` sits
+alongside `role`, additive. And `global-context-service.ts` stores two free
+Markdown blobs; a preset needs a `name`, a uniqueness constraint, and a
+bounded `systemPrompt` — fields Markdown cannot validate — so it gets its own
+file, `.clawai/agents/agents.json`, following the same opt-in,
+absent-means-empty pattern `policies/policy.json` already established rather
+than inventing a second one.
+
+The design constraint worth keeping: a definition can only ever add
+instructions. `resolveSubAgentDefinition` returns a preset whose
+`systemPrompt` and `description` prepend to the fork's own prompt; the task
+still declares its own `tools`, `modelPolicy`, `budget`, and `riskCeiling` on
+every fork, unchanged. A definition cannot be used to smuggle a wider grant
+than the task itself already carries, which matters because the file it comes
+from is workspace content — untrusted the same way `rules.md` is, and safe
+for the same reason `policies/policy.json` is: it can only narrow or instruct,
+never widen.
+
+One implementation correction happened mid-batch: the first wiring pushed
+`vscode-runtime-studio.ts` from exactly 500 lines to 501, its established
+ceiling in this program. Rather than extract another file for one line, the
+dependency was re-shaped to avoid needing it — `SubAgentDefinitionsService`
+takes the selected root's filesystem path, resolved through
+`RuntimeRootRegistry.workspaceRootUri` and `selectedFolderKey`, both of which
+`assembleSubAgents` already receives — instead of a whole `WorkspaceScopeService`
+plumbed through a new field. Narrower dependency, zero new lines in the file
+already at its ceiling.

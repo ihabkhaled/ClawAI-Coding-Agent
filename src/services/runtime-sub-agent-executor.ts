@@ -3,6 +3,7 @@ import { createHash, randomUUID } from 'node:crypto';
 import { fileTransactionSchema } from '../core/file-transaction';
 import { findingsSchema, type Finding } from '../core/findings';
 import { subAgentGraphSchema } from '../core/multi-agent-dag';
+import { resolveSubAgentDefinition } from '../core/sub-agent-definitions';
 
 import { RuntimeRunService } from './runtime-run-service';
 
@@ -18,6 +19,7 @@ import type { BackendClient } from '../backend/backend-client';
 import type { SubAgentGraph, SubAgentOutcome, SubAgentTask } from '../core/multi-agent-dag';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { SubAgentDefinition } from '../core/sub-agent-definitions';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
 export interface RuntimeSubAgentDependencies {
@@ -28,6 +30,8 @@ export interface RuntimeSubAgentDependencies {
   readonly policy: RuntimeToolPolicyPort;
   readonly stream: RuntimeEventStreamService;
   readonly transport: BackendRuntimeTransport;
+  /** Named sub-agent presets a task may reference by `definitionName`. */
+  readonly subAgentPresets: () => Promise<readonly SubAgentDefinition[]>;
 }
 
 interface SubAgentTelemetry {
@@ -58,6 +62,34 @@ export function describeSubAgentFailure(payload: Record<string, unknown>): strin
   return `Nested runtime failed: ${message} (${code})`;
 }
 
+/**
+ * Builds the prompt handed to a sub-agent's own runtime.
+ *
+ * A named preset (`resolveSubAgentDefinition`) only ever adds instructions —
+ * its `systemPrompt` and `description` — never a runtime parameter. Tools,
+ * model, and budget still come from the task alone, so a definition cannot be
+ * used to grant a wider scope than the task itself declares.
+ */
+export function buildSubAgentPrompt(
+  task: SubAgentTask,
+  steering: readonly string[],
+  preset: SubAgentDefinition | undefined,
+): string {
+  return [
+    `Role: ${task.role}`,
+    preset === undefined ? '' : `Definition: ${preset.name} — ${preset.description}`,
+    preset === undefined ? '' : preset.systemPrompt,
+    `Goal: ${task.goal}`,
+    `Worktree/root key: ${task.worktreeId}`,
+    `Declared write set: ${task.writeSet.join(', ') || '(read-only)'}`,
+    `Acceptance checks:\n${task.acceptanceChecks.map((check) => `- ${check}`).join('\n')}`,
+    steering.length === 0 ? '' : `Current steering:\n${steering.join('\n')}`,
+    'Do not broaden scope, elevate, push, publish, or access another root.',
+  ]
+    .filter((part) => part.length > 0)
+    .join('\n\n');
+}
+
 export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
   constructor(private readonly dependencies: RuntimeSubAgentDependencies) {}
 
@@ -68,6 +100,10 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
   ): Promise<SubAgentOutcome> {
     const definitions = this.allowedDefinitions(task);
     if (definitions.length === 0) return this.blocked(task, 'No admitted tools match the task');
+    const preset = resolveSubAgentDefinition(
+      await this.dependencies.subAgentPresets(),
+      task.definitionName,
+    );
     const selection = this.modelSelection(task);
     const thread = await this.dependencies.backend().createThread({
       title: `[${task.role}] ${task.goal.slice(0, 120)}`,
@@ -93,7 +129,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       threadId: thread.id,
       clientRequestId: requestId,
       idempotencyKey: requestId,
-      prompt: this.prompt(task, steering()),
+      prompt: buildSubAgentPrompt(task, steering(), preset),
       manifestHash: this.hash({ taskId: task.taskId, worktreeId: task.worktreeId }),
       toolCatalogHash: this.hash(definitions),
       provider: selection.provider,
@@ -180,20 +216,6 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       provider: task.modelPolicy.allowedProviders[0] ?? 'AUTO',
       model: task.modelPolicy.allowedModels[0] ?? 'AUTO',
     };
-  }
-
-  private prompt(task: SubAgentTask, steering: readonly string[]): string {
-    return [
-      `Role: ${task.role}`,
-      `Goal: ${task.goal}`,
-      `Worktree/root key: ${task.worktreeId}`,
-      `Declared write set: ${task.writeSet.join(', ') || '(read-only)'}`,
-      `Acceptance checks:\n${task.acceptanceChecks.map((check) => `- ${check}`).join('\n')}`,
-      steering.length === 0 ? '' : `Current steering:\n${steering.join('\n')}`,
-      'Do not broaden scope, elevate, push, publish, or access another root.',
-    ]
-      .filter((part) => part.length > 0)
-      .join('\n\n');
   }
 
   private observe(event: RuntimeEvent, telemetry: SubAgentTelemetry): void {
