@@ -894,3 +894,31 @@ Four decisions:
 F058 gated this and the gating was real: an edited preview changes the buffer,
 and without an autosave policy the drift check would abort every corrected
 edit.
+
+### Batch 33 — F107 usage dialog, half of a two-sided feature
+
+| Batch | Version | Status                                | Evidence                                                                        |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------- |
+| 33    | 0.94.0  | Code and deterministic gates complete | `src/core/usage-report.ts`, `src/services/show-usage-command.ts`. Tests: 7 new. |
+
+F107 has two halves and only one of them is a client feature. The dialog is
+shipped; the per-skill, subagent, plugin and workflow dimensions are not, and
+cannot be — those keys do not exist in the backend ledger, so there is nothing
+to render. The row stays PARTIAL and says which half is which.
+
+The dialog needed no new data at all. Three usage windows and every feature
+limit already arrived with the account refresh and were rendered as a single
+status-bar tooltip line — enough to notice a number, not enough to act on one.
+
+Two rendering decisions:
+
+- **An unlimited window has no percentage.** Not zero, not a hundred: a
+  fraction of unlimited is nothing, and printing a number there would invent a
+  ceiling the account does not have. A zero limit is treated the same way
+  rather than dividing by it.
+- **Unlimited, unused features are dropped.** A list where most rows say
+  "unlimited, unused" buries the two rows that are about to run out.
+
+It renders the last refresh rather than fetching on open, because this is the
+same usage every other surface reads and a dialog that quietly disagreed with
+the status bar would be worse than one that is a refresh behind.

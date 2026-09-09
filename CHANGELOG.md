@@ -2,6 +2,19 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.94.0
+
+Minor: a usage dialog (F107, client half).
+
+- **ClawAI: Show Usage** lists the day, week and month windows and every
+  feature that carries a limit. All of it already arrived with your account
+  and was shown as one status-bar tooltip line.
+- An unlimited window shows no percentage rather than 0% or 100%, and
+  features that are unlimited and unused are left out so the ones running
+  low are visible.
+- Not included: per-skill, subagent, plugin and workflow breakdowns. Those
+  dimensions do not exist in the backend ledger yet.
+
 ## 0.93.0
 
 Minor: correct the proposal in the diff before applying it (F056).

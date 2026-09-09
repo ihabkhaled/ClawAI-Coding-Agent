@@ -26,6 +26,7 @@
   "command.undoLastEdit": "अंतिम ClawAI संपादन वापस लें",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.showUsage": "Show Usage",
   "command.searchRunHistory": "Search Run History",
   "command.sendFeedback": "Send Feedback",
   "command.showLogs": "लॉग दिखाएँ",
