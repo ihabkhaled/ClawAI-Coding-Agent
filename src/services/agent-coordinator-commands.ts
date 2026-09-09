@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import { pickModelKey } from './agent-coordinator-prompts';
 import { applyModelSelection } from './agent-coordinator-runtime';
+import { searchRunHistory } from './search-run-history-command';
 import { sendFeedback } from './send-feedback-command';
 import { showSessionRecap } from './session-recap-command';
 import { exportTranscript } from './transcript-export-command';
@@ -22,6 +23,7 @@ export interface CoordinatorCommands {
   initializeWorkspace(): Promise<void>;
   exportTranscript(): Promise<void>;
   sendFeedback(): Promise<void>;
+  searchRunHistory(): Promise<void>;
   showSessionRecap(): Promise<void>;
   undoLastEdit(): Promise<void>;
   selectModel(modelKey?: string): Promise<void>;
@@ -56,6 +58,7 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
     initializeWorkspace: () => parts.initializer().promptAndInitialize(),
     exportTranscript: () =>
       exportTranscript({ conversations: parts.conversations(), state: parts.state() }),
+    searchRunHistory: () => searchRunHistory({ journals: parts.journals() }),
     sendFeedback: () =>
       sendFeedback({
         backend: parts.backend,

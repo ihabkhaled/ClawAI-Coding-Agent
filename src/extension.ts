@@ -91,6 +91,7 @@ function registerCommands(
     ['clawAI.exportTranscript', () => coordinator.commands.exportTranscript()],
     ['clawAI.showSessionRecap', () => coordinator.commands.showSessionRecap()],
     ['clawAI.sendFeedback', () => coordinator.commands.sendFeedback()],
+    ['clawAI.searchRunHistory', () => coordinator.commands.searchRunHistory()],
     [
       'clawAI.showLogs',
       () => {

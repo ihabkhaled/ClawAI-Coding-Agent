@@ -804,3 +804,31 @@ A run with no journal records nothing and says so, rather than inventing one:
 fabricating the policy and capability hashes is what would make the record
 untrustworthy. `terminalReason` is an optional addition to the journal schema,
 so records written before this batch still parse.
+
+### Batch 30 — F060 faceted run-history search
+
+| Batch | Version | Status                                | Evidence                                                                                                                   |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 30    | 0.91.0  | Code and deterministic gates complete | `src/core/run-journal-search.ts`, `RunJournalService.search`, `src/services/search-run-history-command.ts`. Tests: 14 new. |
+
+Two gaps, one batch, because they were the same gap seen from two ends.
+
+The search matched a substring of the goal or a label and nothing else, so
+"which runs did I abandon this week" was unanswerable no matter how the query
+was worded — not a phrasing problem, a vocabulary one. Lifecycle, exact label,
+pinned and an updated-since bound are now facets, and every one of them
+narrows; an empty search still matches everything.
+
+It was also model-facing only. The one party who knows which run they are
+looking for could not look. **ClawAI: Search Run History** is that bridge, and
+it opens the same redacted `safeExport` the agent gets rather than the record
+itself — a history browser that showed more than the export would be a way
+around the export.
+
+Deviation from the audit's reuse note, stated: the surface is a command, not
+`state-tree-provider.ts`. A tree renders one fixed list; a search has no list
+until a query and a facet exist, so the tree would have had to grow a query
+input to be the same feature.
+
+The tool's `search` still accepts a bare string, so the existing agent-facing
+call keeps working while the facets it did not know about are simply absent.

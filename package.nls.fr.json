@@ -26,6 +26,7 @@
   "command.undoLastEdit": "Annuler la dernière modification ClawAI",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.searchRunHistory": "Search Run History",
   "command.sendFeedback": "Send Feedback",
   "command.showLogs": "Afficher les journaux",
   "config.backendUrl": "ClawAI backend origin. Tokens and credentials must not be included in this URL.",

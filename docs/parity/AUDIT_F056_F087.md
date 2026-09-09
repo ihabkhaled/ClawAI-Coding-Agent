@@ -9,7 +9,7 @@ module with no callers is scaffolding, not SHIPPED.
 | F057 | Checkpoints and rewind             | PARTIAL, narrowed in 0.77.0  | `src/services/file-transaction-service.ts`, `src/extension.ts:87`                                                     | Code undo is now an N-step stack, bounded, boundary-cleared, and retryable after a failed rollback. Still open: named checkpoints and conversation fork, both of which need the durable checkpoint store F059 and F074 also want.                                                                                                                      |
 | F058 | Autosave before tool reads/writes  | PARTIAL                      | `src/infrastructure/vscode-file-transaction-adapter.ts:90`, `src/services/file-transaction-service.ts:143`            | Detects dirty-buffer drift and fails closed; no autosave policy or setting.                                                                                                                                                                                                                                                                            |
 | F059 | Conversation rewind command        | BLOCKED, audit corrected     | `apps/claw-chat-service/.../chat-messages.controller.ts`, `chat-threads.controller.ts:59`                             | Not implementable in this client. The backend deletes a whole thread and offers no message-level delete and no fork, so later turns cannot be dropped and continued from. Needs a backend contract, like F052.                                                                                                                                         |
-| F060 | Session history search             | PARTIAL                      | `src/services/run-journal-service.ts:94`, `src/views/state-tree-provider.ts:73`                                       | Matches journal goal and labels only, model-facing, no facets.                                                                                                                                                                                                                                                                                         |
+| F060 | Session history search             | SHIPPED in 0.91.0            | `src/core/run-journal-search.ts`, `src/services/search-run-history-command.ts`                                        | Lifecycle, exact label, pinned and an updated-since bound narrow the text query, and **ClawAI: Search Run History** puts the search in front of a person for the first time — it was model-facing only. Results open the same redacted `safeExport` the agent gets, so browsing history cannot see more than the export allows.                        |
 | F061 | AI session titles and archive      | PARTIAL                      | `src/core/chat-session.ts:52`, `src/webview/chat-view-provider.ts:101`                                                | Deterministic first-sentence fallback only; no rename, no archive.                                                                                                                                                                                                                                                                                     |
 | F062 | Session groups                     | MISSING                      | `src/webview/chat-session-registry.ts:16`                                                                             | Flat map; no group entity or persistence.                                                                                                                                                                                                                                                                                                              |
 | F063 | Reopen closed session              | MISSING                      | `src/webview/chat-view-provider.ts:205`                                                                               | Closed session discarded with no tombstone or MRU stack.                                                                                                                                                                                                                                                                                               |
@@ -38,7 +38,7 @@ module with no callers is scaffolding, not SHIPPED.
 | F086 | Agent SDK                          | MISSING                      | `package.json` exposes no library entry                                                                               | No host-free SDK over the Runtime V2 contracts.                                                                                                                                                                                                                                                                                                        |
 | F087 | Headless mode                      | MISSING                      | `scripts/` has no CLI entry                                                                                           | No non-interactive runner or exit-code contract.                                                                                                                                                                                                                                                                                                       |
 
-Tally: 5 SHIPPED, 9 PARTIAL, 17 MISSING, 1 BLOCKED, 0 CONFLICT. (Batch 21's
+Tally: 6 SHIPPED, 8 PARTIAL, 17 MISSING, 1 BLOCKED, 0 CONFLICT. (Batch 21's
 correction undercounted MISSING by one — F056 itself was left out of the
 recount. Fixed in batch 23 alongside the other three audit files, this time
 by counting every row rather than adjusting a running total.)
@@ -59,8 +59,10 @@ No parallel subsystem. Each entry names the existing file to grow.
   in `configuration-service.ts` and `contributes.configuration`.
 - **F059** → `conversation-session-service.ts` `loadThread` and `attachThread`,
   and `chat-view-provider.ts:128` `postHistory`.
-- **F060** → `run-journal-service.ts:94` `search()` with facets, surfaced through
-  `state-tree-provider.ts:73`.
+- **F060** → SHIPPED. Facets landed in `search()` as planned; the surface is a
+  command rather than `state-tree-provider.ts`, because a tree renders one
+  fixed list and a search needs a query and a facet before it has a list at
+  all.
 - **F061** → `chat-session.ts:52` `deriveConversationSubject` stays the
   deterministic fallback; `chat-view-provider.ts:101` is the call site.
 - **F062–F066** → `ChatSessionDescriptor` in `src/core/chat-session.ts:23` and
@@ -137,5 +139,6 @@ No parallel subsystem. Each entry names the existing file to grow.
 9. **F085 shipped in 0.84.0**, independently and cheaply as predicted: two
    `contributes.jsonValidation` entries and two hand-authored schema files,
    with a sync test rather than a generator.
-10. **F060 and F075 share `run-journal-service.ts`** and the same missing
-    journal-to-user bridge. Do them together.
+10. **F060 and F075 share `run-journal-service.ts`.** Both shipped; the
+    journal-to-user bridge exists twice now, as the recap and as the history
+    search.

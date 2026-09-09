@@ -327,7 +327,25 @@ export const runtimeToolInputSchemas = {
     minimumSeverity: text,
     maxResults: integer,
   }),
-  journal: strict({ journal: opaque, query: text, runId: text }),
+  journal: strict({
+    journal: opaque,
+    query: text,
+    runId: text,
+    lifecycle: {
+      type: 'string',
+      enum: [
+        'resumable',
+        'needs-revalidation',
+        'blocked-by-drift',
+        'completed',
+        'cancelled',
+        'abandoned',
+      ],
+    },
+    label: shortText,
+    pinned: flag,
+    updatedSince: shortText,
+  }),
   notify: strict({ message: shortText, kind: { type: 'string', enum: ['info', 'warning'] } }, [
     'message',
   ]),
