@@ -11,6 +11,7 @@ import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
 import { OutputLogger } from './infrastructure/output-logger';
 import { probeRuntimeHost } from './infrastructure/vscode-runtime-host-probe';
 import { buildRuntimeCapabilityManifest } from './infrastructure/vscode-runtime-target-adapter';
+import { VscodeUserNotifier } from './infrastructure/vscode-user-notifier';
 import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-edit-adapter';
 import { AgentCoordinator } from './services/agent-coordinator';
 import { ConfigurationService } from './services/configuration-service';
@@ -21,6 +22,7 @@ import { WorkspaceContextService } from './services/workspace-context-service';
 import { WorkspaceScopeService } from './services/workspace-scope-service';
 import { createClawIconPath } from './views/claw-icon-path';
 import { DiffPreviewProvider } from './views/diff-preview-provider';
+import { NotificationController } from './views/notification-controller';
 import { StateTreeProvider } from './views/state-tree-provider';
 import { StatusBarController } from './views/status-bar-controller';
 import { ChatViewProvider } from './webview/chat-view-provider';
@@ -251,8 +253,10 @@ export function activate(context: vscode.ExtensionContext): void {
   const findingsTree = new StateTreeProvider('findings', state);
   const tasksTree = new StateTreeProvider('tasks', state);
   const statusBar = new StatusBarController(state);
+  const notifications = new NotificationController(state, new VscodeUserNotifier());
 
   context.subscriptions.push(
+    notifications,
     coordinator,
     logger,
     diffPreview,

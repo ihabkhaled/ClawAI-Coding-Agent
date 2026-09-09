@@ -28,6 +28,10 @@ import {
   intelligenceToolDefinition,
 } from '../infrastructure/intelligence-tool-executor';
 import {
+  NotifyUserToolExecutor,
+  notifyUserToolDefinition,
+} from '../infrastructure/notify-user-tool-executor';
+import {
   PlanningToolExecutor,
   planningToolDefinition,
 } from '../infrastructure/planning-tool-executor';
@@ -39,6 +43,7 @@ import {
   SubAgentToolExecutor,
   subAgentToolDefinition,
 } from '../infrastructure/sub-agent-tool-executor';
+import { VscodeUserNotifier } from '../infrastructure/vscode-user-notifier';
 
 import type {
   RuntimeStudioAdvancedTools,
@@ -60,6 +65,10 @@ export function analysisToolRegistrations(
     {
       definition: intelligenceToolDefinition,
       executor: new IntelligenceToolExecutor(parts.intelligence),
+    },
+    {
+      definition: notifyUserToolDefinition,
+      executor: new NotifyUserToolExecutor(new VscodeUserNotifier()),
     },
     {
       definition: planningToolDefinition,

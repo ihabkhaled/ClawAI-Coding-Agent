@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.87.0
+
+Minor: notifications when a run needs you or finishes without you (F023).
+
+- **The agent can reach you with `runtime.notify`.** One sentence, info or
+  warning, for a result you are waiting on. It asks nothing and returns
+  nothing to act on — `runtime.ask` is still the way to put a decision to
+  you.
+- **Approvals, questions, failures and completions notify on their own.** No
+  more discovering an hour later that the run stopped on an approval nobody
+  clicked.
+- **Nothing fires while the window has focus.** A notification exists to say
+  come back; if you are already looking at the panel you can see all four of
+  those without being told.
+- **VS Code owns the off switch.** Do Not Disturb and the per-source
+  notification controls already decide this for every extension, so there is
+  no second ClawAI setting to disagree with them.
+
 ## 0.86.0
 
 Minor: the main session can create, address, and remove its own Git

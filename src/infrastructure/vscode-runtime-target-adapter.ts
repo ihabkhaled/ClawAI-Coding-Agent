@@ -21,6 +21,7 @@ import { flagshipToolDefinition } from './flagship-tool-executor';
 import { gitToolDefinition } from './git-tool-executor';
 import { integrationToolDefinition } from './integration-tool-executor';
 import { intelligenceToolDefinition } from './intelligence-tool-executor';
+import { notifyUserToolDefinition } from './notify-user-tool-executor';
 import { planningToolDefinition } from './planning-tool-executor';
 import { processSupervisorToolDefinition } from './process-supervisor-tool-executor';
 import { qualityToolDefinition } from './quality-tool-executor';
@@ -308,6 +309,10 @@ function localToolDefinitions(probe: RuntimeHostProbe) {
     // or `executableToolDefinitions` filters it out of the offered catalog and
     // the model is never told the question channel exists.
     askUserToolDefinition,
+    // Notifying carries the same reasoning as asking: no host prerequisite, no
+    // trust, nothing read or written. Advertised unconditionally or the model
+    // is never told it can reach a user who walked away.
+    notifyUserToolDefinition,
     intelligenceToolDefinition,
     planningToolDefinition,
     runJournalToolDefinition,
