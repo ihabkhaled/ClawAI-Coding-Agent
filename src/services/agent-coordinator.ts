@@ -35,7 +35,7 @@ import {
   type ExternalOutputGrantStore,
   type RequestAdmission,
 } from './agent-coordinator.types';
-import { refreshAgentData, refreshConversationData } from './agent-data-service';
+import { conversationRefresher, refreshAgentData } from './agent-data-service';
 import { AgentExecutionPresenter } from './agent-execution-presenter';
 import { AgentRunService } from './agent-run-service';
 import { AgentWorkflowService } from './agent-workflow-service';
@@ -133,15 +133,7 @@ export class AgentCoordinator implements vscode.Disposable {
         if (!this.state.snapshot.connected) {
           return;
         }
-        const settings = this.configuration.read();
-        await refreshConversationData(
-          this.backend,
-          settings.historyLimit,
-          this.state,
-          this.accountEpoch,
-          signal,
-          this.dataRefreshEpoch,
-        );
+        await this.refreshConversations(signal);
       },
       before: () => prepareGeneration(this.state),
       dropped: (requestId) => {
@@ -494,7 +486,16 @@ export class AgentCoordinator implements vscode.Disposable {
     view: () => this.view,
     configuration: () => this.configuration,
     backend: () => this.backend,
+    refreshHistory: () => this.refreshConversations(),
   });
+
+  private readonly refreshConversations = conversationRefresher(() => ({
+    backend: this.backend,
+    historyLimit: this.configuration.read().historyLimit,
+    state: this.state,
+    accountEpoch: this.accountEpoch,
+    refreshEpoch: this.dataRefreshEpoch,
+  }));
 
   async cancel(requestId?: string): Promise<void> {
     await cancelCoordinator({

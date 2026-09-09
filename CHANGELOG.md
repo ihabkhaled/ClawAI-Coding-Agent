@@ -2,6 +2,21 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.0.0
+
+Minor: conversations you can name and put away (F061).
+
+- **ClawAI: Rename Conversation** gives a thread a name you will still
+  recognise a week later. The derived first-sentence title was a guess made
+  before the conversation had happened.
+- **ClawAI: Archive Conversation** takes a thread out of the history list, and
+  **ClawAI: Restore Archived Conversation** brings it back. Without the second
+  one, archiving is a trapdoor rather than a filing cabinet.
+- **Pinned conversations sort first** in the history list.
+- No new server contract was needed: `PATCH /chat-threads/:id` has accepted
+  `title`, `isArchived` and `isPinned` since before this client existed. The
+  extension simply never called it.
+
 ## 0.99.0
 
 Minor: chat tabs that say what they are doing, and an undo for closing one

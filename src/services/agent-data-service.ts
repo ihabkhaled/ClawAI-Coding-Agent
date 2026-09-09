@@ -84,3 +84,32 @@ export async function refreshAgentData(
     usage,
   });
 }
+
+/**
+ * A conversation refresh bound to collaborators that are read at call time.
+ *
+ * Read late rather than captured, because the history limit is a setting the
+ * user can change under a long-lived coordinator, and a refresher holding the
+ * value from construction would quietly go on using the old one.
+ */
+export function conversationRefresher(
+  parts: () => {
+    backend: BackendClient;
+    historyLimit: number;
+    state: ExtensionState;
+    accountEpoch: AccountEpoch;
+    refreshEpoch: AccountEpoch;
+  },
+): (signal?: AbortSignal) => Promise<void> {
+  return async (signal) => {
+    const current = parts();
+    await refreshConversationData(
+      current.backend,
+      current.historyLimit,
+      current.state,
+      current.accountEpoch,
+      signal,
+      current.refreshEpoch,
+    );
+  };
+}

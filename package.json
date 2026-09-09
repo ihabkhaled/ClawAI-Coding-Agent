@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.99.0",
+  "version": "1.0.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -178,6 +178,21 @@
       {
         "command": "clawAI.showSessionRecap",
         "title": "%command.showSessionRecap%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.renameChat",
+        "title": "%command.renameChat%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.archiveChat",
+        "title": "%command.archiveChat%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.browseArchivedChats",
+        "title": "%command.browseArchivedChats%",
         "category": "ClawAI"
       },
       {

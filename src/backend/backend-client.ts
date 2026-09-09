@@ -18,10 +18,8 @@ import { BackendRuntimeClient } from './backend-runtime-client';
 import {
   entitlementsSchema,
   messageSchema,
-  paginatedSchema,
   parallelResponseSchema,
   refreshResultSchema,
-  threadSchema,
   usageSchema,
   userProfileSchema,
   vscodeAuthorizationInitResultSchema,
@@ -50,6 +48,14 @@ import {
   type ResponseLease,
 } from './response-lease';
 import { SessionRefresher } from './session-refresher';
+import {
+  createThread,
+  listMessages,
+  listThreads,
+  updateThread,
+  type ThreadCreateInput,
+  type ThreadPatch,
+} from './thread-client';
 
 import type {
   BackendClientOptions,
@@ -252,24 +258,21 @@ export class BackendClient {
     return `${this.backendUrl}${path}`;
   }
 
-  async createThread(input: {
-    title?: string;
-    routingMode: 'AUTO' | 'MANUAL_MODEL';
-    preferredProvider?: string;
-    preferredModel?: string;
-  }): Promise<ChatThread> {
-    return this.request('/chat-threads', threadSchema, {
-      body: input,
-      method: 'POST',
-    });
+  async createThread(input: ThreadCreateInput): Promise<ChatThread> {
+    return createThread((path, schema, options) => this.request(path, schema, options), input);
+  }
+
+  /** See `updateThread` for why this needed no new server contract. */
+  async updateThread(threadId: string, patch: ThreadPatch): Promise<ChatThread> {
+    return updateThread(
+      (path, schema, options) => this.request(path, schema, options),
+      threadId,
+      patch,
+    );
   }
 
   async listThreads(limit = 50): Promise<ChatThread[]> {
-    const result = await this.request(
-      `/chat-threads?limit=${String(limit)}`,
-      paginatedSchema(threadSchema),
-    );
-    return result.data;
+    return listThreads((path, schema) => this.request(path, schema), limit);
   }
 
   /** See `fetchOrganizationPolicy` for why a missing endpoint fails open. */
@@ -285,11 +288,7 @@ export class BackendClient {
     );
   }
   async listMessages(threadId: string, limit = 100): Promise<ChatMessage[]> {
-    const result = await this.request(
-      `/chat-messages/thread/${encodeURIComponent(threadId)}?limit=${String(limit)}`,
-      paginatedSchema(messageSchema),
-    );
-    return result.data;
+    return listMessages((path, schema) => this.request(path, schema), threadId, limit);
   }
 
   async uploadFile(input: ChatAttachment, signal?: AbortSignal): Promise<UploadedFile> {

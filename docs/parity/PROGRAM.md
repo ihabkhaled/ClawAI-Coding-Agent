@@ -1088,3 +1088,42 @@ VS Code panels take a title, not a badge, so the marker is a leading symbol
 rather than an icon. That is a platform limit, not a preference.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 39 — F061 rename, archive and restore a conversation
+
+| Batch | Version | Status                                | Evidence                                                                                                  |
+| ----- | ------- | ------------------------------------- | --------------------------------------------------------------------------------------------------------- |
+| 39    | 1.0.0   | Code and deterministic gates complete | `thread-client.ts`, `thread-title.ts`, `thread-list.ts`, `thread-organization-command.ts`. Tests: 17 new. |
+
+**The audit row was wrong about the cause, and reading the other repository is
+what found it.** `PATCH /chat-threads/:id` has accepted `title`, `isArchived`
+and `isPinned` since before this client existed, and `GET /chat-threads` takes
+both as filters. Nothing was missing on the server. The extension had simply
+never called it, so a conversation could be named only by whatever its first
+message derived, and could never be put away.
+
+That is the third time in this program a row assumed a missing backend contract
+that already existed — F104 and F027 were the others. The lesson has been
+written down each time and is worth stating once more: check the other
+repository before concluding a contract is missing.
+
+**Archiving hides rather than dims.** Archiving is the user saying they are
+done with a conversation; a list that still shows it has not done what they
+asked. The filter lives at the public-state boundary, so the webview and the
+tree get the same filtered list, while the archived browser reads the same
+unfiltered snapshot. One request that both views read cannot disagree with
+itself.
+
+**Restore ships with archive, in the same batch, on purpose.** Without it,
+archiving is a trapdoor, and a user unsure whether they are done will keep
+everything in the list forever rather than risk it.
+
+Renaming to the same name sends nothing: it would bump `updatedAt` and move the
+thread to the top of a list sorted by recency, which is a visible change nobody
+asked for.
+
+**Not shipped, and the row says so:** AI-generated titles. Those need a model
+call, not an endpoint, and the product question of which model pays for it is
+not settled here.
+
+**Still true:** live-model Definition of Done cannot be executed here.
