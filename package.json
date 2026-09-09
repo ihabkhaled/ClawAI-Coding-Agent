@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "1.4.0",
+  "version": "1.5.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -534,6 +534,54 @@
         "command": "clawAI.askSelection",
         "key": "ctrl+shift+enter",
         "mac": "cmd+shift+enter",
+        "when": "editorTextFocus && editorHasSelection"
+      },
+      {
+        "command": "clawAI.cancel",
+        "key": "ctrl+alt+escape",
+        "mac": "cmd+alt+escape"
+      },
+      {
+        "command": "clawAI.undoLastEdit",
+        "key": "ctrl+alt+z",
+        "mac": "cmd+alt+z"
+      },
+      {
+        "command": "clawAI.toggleFocusView",
+        "key": "ctrl+alt+f",
+        "mac": "cmd+alt+f"
+      },
+      {
+        "command": "clawAI.reopenClosedChat",
+        "key": "ctrl+alt+t",
+        "mac": "cmd+alt+t"
+      },
+      {
+        "command": "clawAI.selectModel",
+        "key": "ctrl+alt+m",
+        "mac": "cmd+alt+m"
+      },
+      {
+        "command": "clawAI.searchRunHistory",
+        "key": "ctrl+alt+h",
+        "mac": "cmd+alt+h"
+      },
+      {
+        "command": "clawAI.reviewCode",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "clawAI.generateTests",
+        "key": "ctrl+alt+u",
+        "mac": "cmd+alt+u",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "clawAI.fixCode",
+        "key": "ctrl+alt+x",
+        "mac": "cmd+alt+x",
         "when": "editorTextFocus && editorHasSelection"
       }
     ],

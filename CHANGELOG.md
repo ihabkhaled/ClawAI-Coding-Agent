@@ -2,6 +2,26 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.5.0
+
+Minor: a status line that says what the agent is doing, and shortcuts for the
+commands that need them (F084).
+
+- **The status line reports activity, not just connection.** Waiting for you,
+  running, running with N queued, N queued, or idle — and the model the next
+  prompt will use.
+- **Something waiting on you outranks work in flight.** A status line that said
+  "busy" while a question sat unanswered would be telling you to wait for
+  yourself, so that state gets the one colour the status bar has for "look
+  here".
+- **Automatic routing is reported as automatic**, never resolved to whichever
+  model it happened to pick last time — naming one would promise the next
+  request goes to the same place, which is the one thing routing does not
+  promise.
+- **Nine more commands have shortcuts**, including stopping a run, which is the
+  one that cannot wait for a palette search. Editor-scoped shortcuts are guarded
+  on editor focus so they do not fire from the chat.
+
 ## 1.4.0
 
 Minor: per-turn semantics and keyboard navigation of the transcript (F070).

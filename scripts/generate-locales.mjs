@@ -2404,8 +2404,84 @@ const turnNavigationTranslations = {
   },
 };
 
+const statusLineTranslations = {
+  ar: {
+    Running: 'قيد التشغيل',
+    'Running, {0} queued': 'قيد التشغيل، {0} في الانتظار',
+    'Waiting for you': 'في انتظارك',
+    '{0} queued': '{0} في الانتظار',
+  },
+  de: {
+    Running: 'Läuft',
+    'Running, {0} queued': 'Läuft, {0} in der Warteschlange',
+    'Waiting for you': 'Wartet auf Sie',
+    '{0} queued': '{0} in der Warteschlange',
+  },
+  es: {
+    Running: 'En ejecución',
+    'Running, {0} queued': 'En ejecución, {0} en cola',
+    'Waiting for you': 'Esperándote',
+    '{0} queued': '{0} en cola',
+  },
+  fa: {
+    Running: 'در حال اجرا',
+    'Running, {0} queued': 'در حال اجرا، {0} در صف',
+    'Waiting for you': 'در انتظار شما',
+    '{0} queued': '{0} در صف',
+  },
+  fr: {
+    Running: 'En cours',
+    'Running, {0} queued': 'En cours, {0} en file',
+    'Waiting for you': 'En attente de vous',
+    '{0} queued': '{0} en file',
+  },
+  hi: {
+    Running: 'चल रहा है',
+    'Running, {0} queued': 'चल रहा है, {0} कतार में',
+    'Waiting for you': 'आपकी प्रतीक्षा में',
+    '{0} queued': '{0} कतार में',
+  },
+  it: {
+    Running: 'In esecuzione',
+    'Running, {0} queued': 'In esecuzione, {0} in coda',
+    'Waiting for you': 'In attesa di te',
+    '{0} queued': '{0} in coda',
+  },
+  ja: {
+    Running: '実行中',
+    'Running, {0} queued': '実行中、{0} 件待機',
+    'Waiting for you': '応答待ち',
+    '{0} queued': '{0} 件待機',
+  },
+  pt: {
+    Running: 'Em execução',
+    'Running, {0} queued': 'Em execução, {0} na fila',
+    'Waiting for you': 'Aguardando você',
+    '{0} queued': '{0} na fila',
+  },
+  ru: {
+    Running: 'Выполняется',
+    'Running, {0} queued': 'Выполняется, в очереди: {0}',
+    'Waiting for you': 'Ожидает вас',
+    '{0} queued': 'В очереди: {0}',
+  },
+  th: {
+    Running: 'กำลังทำงาน',
+    'Running, {0} queued': 'กำลังทำงาน รออีก {0}',
+    'Waiting for you': 'กำลังรอคุณ',
+    '{0} queued': 'รออยู่ {0}',
+  },
+  zh: {
+    Running: '运行中',
+    'Running, {0} queued': '运行中，{0} 个排队',
+    'Waiting for you': '等待你的操作',
+    '{0} queued': '{0} 个排队',
+  },
+};
+
 function translate(locale, message) {
   return (
+    statusLineTranslations[locale][message] ??
     turnNavigationTranslations[locale][message] ??
     onboardingTranslations[locale][message] ??
     focusViewTranslations[locale][message] ??

@@ -1262,3 +1262,40 @@ run Playwright, so the drift only surfaced when this batch ran it. The baseline
 is updated and the two-percent diff is the new button and nothing else.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 44 — F084 status line and keybindings
+
+| Batch | Version | Status                                | Evidence                                                                           |
+| ----- | ------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
+| 44    | 1.5.0   | Code and deterministic gates complete | `src/core/status-line.ts`, `status-bar-controller.ts`, keybindings. Tests: 18 new. |
+
+Two bound commands became eleven, and the status line went from reporting the
+connection to reporting the run.
+
+**Something waiting on you outranks work in flight.** A status line that read
+"busy" while a modal question sat unanswered would be telling the user to wait
+for themselves, so that state takes the one background colour the status bar
+has for "look here".
+
+**"Running" and "running with four queued" are different situations** for the
+person deciding whether to send a fifth, so queue depth is reported rather than
+folded into a single busy state.
+
+**Automatic routing is reported as automatic.** Resolving it to whichever model
+it last chose would promise the next request goes to the same place, and that
+is the one thing routing does not promise.
+
+Keybindings carry an invariant test rather than trust: every binding names a
+contributed command, no chord is claimed twice, each has a mac equivalent
+because cmd is not ctrl, and the three editor-scoped ones are guarded on editor
+focus so they cannot fire from the chat view.
+
+**Finding recorded here, acted on separately:** 316 of 421 runtime messages are
+byte-identical to English in every non-English bundle. The generator falls
+through to the English source for any string with no entry, and CI checks only
+that the bundles are _fresh_, never that they are _translated_. The delivery
+policy asks for real translations in all thirteen locales; three quarters of
+the surface does not have them, and that predates this program. It needs its
+own work, not a footnote in a batch about the status bar.
+
+**Still true:** live-model Definition of Done cannot be executed here.
