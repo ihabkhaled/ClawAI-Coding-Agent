@@ -492,6 +492,8 @@ export class AgentCoordinator implements vscode.Disposable {
     state: () => this.state,
     safeEdits: () => this.safeEdits,
     undoDepth: () => this.runtimeStudio.undoDepth,
+    journals: () => this.runtimeStudio.journals,
+    findings: () => this.runtimeStudio.findings,
     view: () => this.view,
     configuration: () => this.configuration,
   });
