@@ -2,6 +2,26 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.83.0
+
+Minor: adds named, persisted sub-agent presets (F007).
+
+- **`.clawai/agents/agents.json` defines reusable sub-agent identities.** A
+  preset has a `name`, `description`, and `systemPrompt`; a sub-agent task can
+  reference one by `definitionName` instead of restating instructions on
+  every fork. The role enum (`explorer`, `implementer`, `tester`, `reviewer`,
+  `security-reviewer`, `documenter`, `integrator`) is unchanged and still
+  gates behavior directly, most visibly the integrator-only Git mutation
+  exception — `definitionName` is additive, not a replacement.
+- **A definition only ever adds instructions, never a runtime grant.** Tools,
+  model policy, budget, and risk ceiling still come from the task itself on
+  every fork; a preset's `systemPrompt` and `description` prepend to that
+  fork's prompt and nothing else. The file is workspace content, trusted the
+  same way `rules.md` already is, and safe for the same reason
+  `policies/policy.json` is: it can only instruct, never widen.
+- **Absent means no presets**, matching `policies/policy.json`: the file is
+  opt-in and not created by **ClawAI: Initialize .clawai**.
+
 ## 0.82.1
 
 Patch: fixes a `runtime.agents` fork schema-drift bug found while auditing

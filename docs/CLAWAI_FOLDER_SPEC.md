@@ -11,6 +11,8 @@ secrets. **ClawAI: Initialize .clawai** creates missing files only.
 ├── ignore
 ├── policies/
 │   └── policy.json
+├── agents/
+│   └── agents.json
 ├── context/
 │   ├── product.md
 │   ├── api.md
@@ -34,6 +36,7 @@ secrets. **ClawAI: Initialize .clawai** creates missing files only.
 - `prompts/*`: reusable review and planning instructions.
 - `ignore`: one glob per line; blank lines and `#` comments are ignored.
 - `policies/policy.json`: the project permission policy. See below.
+- `agents/agents.json`: named sub-agent presets. See below.
 
 ## `policies/policy.json`
 
@@ -76,6 +79,34 @@ input.
 
 Workspace collection treats all of these files as normal bounded context.
 Project workflows explicitly prepend rules, architecture, and memory.
+
+## `agents/agents.json`
+
+Named presets a sub-agent graph can reference by name instead of restating an
+identity on every fork. Each entry adds instructions; none of them can widen
+what a forked task is already allowed to do.
+
+```json
+[
+  {
+    "name": "strict-reviewer",
+    "description": "Reviews for correctness and security with no tolerance for scope creep.",
+    "systemPrompt": "You are a strict reviewer. Flag every unverified claim and reject scope creep."
+  }
+]
+```
+
+A sub-agent task still declares its own `tools`, `modelPolicy`, `budget`, and
+`riskCeiling` on every fork — those never come from a definition. Naming a
+`definitionName` only prepends the matching preset's `systemPrompt` and
+`description` to that task's prompt; an unresolved name is silently ignored,
+never guessed at. `name` must be lowercase, start with a letter, and contain
+only letters, digits, and hyphens; names must be unique within the file.
+
+This file is workspace content, trusted the same way `rules.md`,
+`architecture.md`, and `memory.md` already are — a definition's `systemPrompt`
+is instructions, not a grant, so it carries no more authority than any other
+project guidance a sub-agent already reads.
 
 The extension always excludes `.git`, dependency/output directories, `.env`,
 and secret/credential/API-key-like paths. `.clawai/ignore` can only add

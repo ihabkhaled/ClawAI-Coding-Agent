@@ -6,6 +6,7 @@ import { VscodeSubAgentWorktreeAdapter } from '../infrastructure/vscode-sub-agen
 import { FileLeaseManager } from './file-lease-manager';
 import { RuntimeSubAgentExecutor } from './runtime-sub-agent-executor';
 import { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
+import { SubAgentDefinitionsService } from './sub-agent-definitions-service';
 import { SubAgentFindingsObserver } from './sub-agent-findings-observer';
 import { SubAgentWorktreeService } from './sub-agent-worktree-service';
 
@@ -21,7 +22,7 @@ export interface SubAgentAssembly {
 }
 
 interface SubAgentAssemblyInput {
-  readonly runtime: RuntimeSubAgentDependencies;
+  readonly runtime: Omit<RuntimeSubAgentDependencies, 'subAgentPresets'>;
   readonly files: RuntimeRootRegistry;
   readonly globalStorageUri: vscode.Uri;
   readonly selectedFolderKey: () => string;
@@ -46,11 +47,17 @@ export function assembleSubAgents(input: SubAgentAssemblyInput): SubAgentAssembl
     input.selectedFolderKey,
   );
   const worktrees = new SubAgentWorktreeService(worktreeAdapter);
+  const subAgentDefinitions = new SubAgentDefinitionsService(
+    () => input.files.workspaceRootUri(input.selectedFolderKey()).fsPath,
+  );
   return {
     worktreeAdapter,
     worktrees,
     coordinator: new SubAgentCoordinatorService(
-      new RuntimeSubAgentExecutor(input.runtime),
+      new RuntimeSubAgentExecutor({
+        ...input.runtime,
+        subAgentPresets: () => subAgentDefinitions.load(),
+      }),
       new FileLeaseManager(),
       input.epochs,
       new SubAgentFindingsObserver(

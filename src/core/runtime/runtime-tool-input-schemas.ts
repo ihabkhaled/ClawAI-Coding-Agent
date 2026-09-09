@@ -61,6 +61,7 @@ const subAgentTask = strict(
         'integrator',
       ],
     },
+    definitionName: { type: 'string', minLength: 2, maxLength: 80 },
     goal: text,
     modelPolicy,
     contextNodeIds: texts,

@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { subAgentDefinitionNameSchema } from './sub-agent-definitions';
 import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
 
 import type { Finding } from './findings';
@@ -48,6 +49,8 @@ export const subAgentTaskSchema = z
   .object({
     taskId: z.string().regex(/^[a-z][a-z0-9-]{1,99}$/u),
     role: subAgentRoleSchema,
+    /** Optional reference to a named preset from `sub-agent-definitions.ts`. */
+    definitionName: subAgentDefinitionNameSchema.optional(),
     goal: z.string().min(1).max(20_000),
     modelPolicy: z
       .object({

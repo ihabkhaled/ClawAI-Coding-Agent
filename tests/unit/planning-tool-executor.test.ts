@@ -70,7 +70,11 @@ function invocation(graph: SubAgentGraph): ToolInvocation {
     toolName: 'workspace.planning',
     toolVersion: '2.0.0',
     operation: 'validate',
-    arguments: { plan: graph, output: {} },
+    // Round-tripped through JSON, like a real invocation off the wire: a
+    // typed SubAgentGraph carries optional fields TypeScript won't let a
+    // strict RuntimeJsonObject accept directly, but JSON never carries an
+    // `undefined` property in the first place.
+    arguments: { plan: JSON.parse(JSON.stringify(graph)), output: {} },
     targetId: 'target:workspace',
     epochs,
     idempotencyKey: 'idempotency:planning-test',

@@ -11,7 +11,7 @@ in the ClawAI platform.
 
 ## Runtime foundation
 
-Version 0.82.1 delivers the model-neutral Runtime Protocol V2 studio. Bounded
+Version 0.83.0 delivers the model-neutral Runtime Protocol V2 studio. Bounded
 workspace, command, process, Git, container, database, quality, browser,
 planning, service, journal, and evidence capabilities share one ordered,
 policy-controlled execution loop. An unavailable or incompatible additive
@@ -138,7 +138,9 @@ The **Context** view shows exactly what was included, excluded, and truncated.
 Run **ClawAI: Initialize .clawai** to create the documented project structure
 without overwriting existing files. Use **Open Global Rules** and
 **Open Global Skills** for profile-wide guidance. Global guidance is read before
-project rules.
+project rules. Optionally define named sub-agent presets in
+`.clawai/agents/agents.json`; a sub-agent graph can then reference one by
+name instead of restating its identity on every fork.
 
 See [the `.clawai` specification](docs/CLAWAI_FOLDER_SPEC.md) for the complete
 layout.
@@ -184,7 +186,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.82.1` is current and implements the extension surface from the ClawAI
+Version `0.83.0` is current and implements the extension surface from the ClawAI
 VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 
