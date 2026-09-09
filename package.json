@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.91.0",
+  "version": "0.92.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -310,6 +310,16 @@
           "default": "",
           "scope": "resource",
           "description": "%config.selectedModel%"
+        },
+        "clawAI.autosave": {
+          "type": "string",
+          "enum": [
+            "off",
+            "before-edit"
+          ],
+          "default": "off",
+          "scope": "resource",
+          "description": "%config.autosave%"
         },
         "clawAI.maxContextBytes": {
           "type": "number",

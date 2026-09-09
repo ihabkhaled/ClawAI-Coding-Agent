@@ -1,4 +1,9 @@
 import {
+  autosaveTargets,
+  DEFAULT_AUTOSAVE_POLICY,
+  type AutosavePolicy,
+} from '../core/autosave-policy';
+import {
   applyExactHunks,
   contentHash,
   fileTransactionSchema,
@@ -28,6 +33,11 @@ export interface PreparedFileOperation {
 
 export interface FileTransactionAdapter {
   isTrusted(): boolean;
+  /** Saves any open, dirty document among these, and resolves when written. */
+  saveIfDirty(
+    targets: readonly { readonly rootKey: string; readonly path: string }[],
+    signal?: AbortSignal,
+  ): Promise<void>;
   snapshot(operation: FileTransactionOperation, signal?: AbortSignal): Promise<FileSnapshot>;
   apply(
     transaction: FileTransaction,
@@ -124,11 +134,16 @@ export class FileTransactionService {
   constructor(
     private readonly adapter: FileTransactionAdapter,
     private readonly gate = new WorkspaceMutationGate(),
+    private readonly autosavePolicy: () => AutosavePolicy = () => DEFAULT_AUTOSAVE_POLICY,
   ) {}
 
   async preview(candidate: unknown, signal?: AbortSignal): Promise<FileTransactionPreview> {
     const transaction = fileTransactionSchema.parse(candidate);
     if (!this.adapter.isTrusted()) throw new Error('Trust the workspace before reviewing changes');
+    // Before the snapshot, never after. Saving a dirty buffer changes the file
+    // the preview is about to hash, so a save between preview and apply would
+    // trip the very drift check it is meant to resolve.
+    await this.adapter.saveIfDirty(autosaveTargets(transaction, this.autosavePolicy()), signal);
     const prepared: PreparedFileOperation[] = [];
     for (const operation of transaction.operations) {
       signal?.throwIfAborted();

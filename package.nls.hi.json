@@ -41,6 +41,7 @@
   "config.effortMode": "How much a run may spend: model turns, tool calls, wall clock and output size. Ultra is the default and matches the fixed budget used before effort modes existed.",
   "config.permissionMode": "Control approvals for workspace context and edit generation. Final diff review is always required.",
   "config.selectedModel": "Manual model selection encoded as provider:model.",
+  "config.autosave": "Save unsaved changes to the files an edit touches before ClawAI reviews them.",
   "config.maxContextBytes": "Maximum total UTF-8 bytes collected as workspace context.",
   "config.maxContextFiles": "Maximum files collected as workspace context.",
   "config.exclude": "Glob patterns excluded from workspace context.",

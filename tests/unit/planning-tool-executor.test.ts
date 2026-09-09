@@ -46,6 +46,7 @@ describe('PlanningToolExecutor', () => {
     } satisfies SubAgentGraph;
     const transactions = new FileTransactionService({
       isTrusted: () => true,
+      saveIfDirty: async () => undefined,
       snapshot: vi.fn(async () => {
         throw new Error('not used');
       }),

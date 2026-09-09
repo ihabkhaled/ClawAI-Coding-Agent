@@ -15,6 +15,7 @@ const configuration: RuntimeConfiguration = {
   maxContextFiles: 40,
   permissionMode: 'MANUAL',
   requestTimeoutMs: 60_000,
+  autosave: 'off' as const,
   routingMode: 'MANUAL_MODEL',
   selectedModel: 'OLLAMA:qwen2.5-coder:0.5b',
 };

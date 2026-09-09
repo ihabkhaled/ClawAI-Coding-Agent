@@ -87,6 +87,7 @@ const configuration: RuntimeConfiguration = {
   maxContextFiles: 10,
   permissionMode: 'MANUAL',
   requestTimeoutMs: 60_000,
+  autosave: 'off' as const,
   routingMode: 'AUTO',
   selectedModel: '',
 };

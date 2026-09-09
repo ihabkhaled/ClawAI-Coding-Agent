@@ -20,6 +20,7 @@ const configuration = {
   maxContextFiles: 40,
   permissionMode: 'EDIT_AUTOMATICALLY' as const,
   requestTimeoutMs: 60_000,
+  autosave: 'off' as const,
   routingMode: 'AUTO' as const,
   selectedModel: 'AUTO',
 };

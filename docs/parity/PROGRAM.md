@@ -832,3 +832,32 @@ input to be the same feature.
 
 The tool's `search` still accepts a bare string, so the existing agent-facing
 call keeps working while the facets it did not know about are simply absent.
+
+### Batch 31 — F058 autosave policy
+
+| Batch | Version | Status                                | Evidence                                                                                                                   |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------------------- |
+| 31    | 0.92.0  | Code and deterministic gates complete | `src/core/autosave-policy.ts`, `FileTransactionService.preview`, `VscodeFileTransactionAdapter.saveIfDirty`. Tests: 8 new. |
+
+Dirty-buffer drift already failed closed, which is the right default and stays
+the default. What was missing was the other option: `clawAI.autosave` set to
+`before-edit` saves the files an edit touches rather than refusing the edit.
+
+The placement is the whole correctness argument. Saving a dirty buffer changes
+the file's content and its hash, so a save between preview and apply would trip
+the drift check it is meant to resolve — the abort would just move. The save
+therefore happens _before_ the snapshot the preview hashes, which is also why
+the reuse note's "buffer capture plus a policy" was not quite the whole shape.
+
+Two narrowings worth keeping:
+
+- **Only the paths the transaction already names.** Saving the workspace would
+  write files the user never put in play, which is a larger action than the one
+  they approved, and the drift this resolves is only ever about files being
+  edited.
+- **A path that will not resolve is skipped, not fatal.** Autosave is a
+  convenience ahead of the real work, and a convenience that can abort an edit
+  is worse than no convenience.
+
+`create` and `mkdir` are excluded because there is no buffer to save for a file
+that does not exist yet.
