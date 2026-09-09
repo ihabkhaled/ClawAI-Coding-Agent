@@ -38,11 +38,10 @@ module with no callers is scaffolding, not SHIPPED.
 | F086 | Agent SDK                          | MISSING                      | `package.json` exposes no library entry                                                                               | No host-free SDK over the Runtime V2 contracts.                                                                                                                                                                                                                                                                                                        |
 | F087 | Headless mode                      | MISSING                      | `scripts/` has no CLI entry                                                                                           | No non-interactive runner or exit-code contract.                                                                                                                                                                                                                                                                                                       |
 
-Tally: 5 SHIPPED, 9 PARTIAL, 16 MISSING, 1 BLOCKED, 0 CONFLICT. (Updated in
-batch 21 to reflect F072/F073/F074/F075 shipping and F059 being reclassified
-BLOCKED in earlier batches, plus F085 shipping in this batch — the tally line
-had drifted from the row-level truth and is corrected here rather than left
-stale.)
+Tally: 5 SHIPPED, 9 PARTIAL, 17 MISSING, 1 BLOCKED, 0 CONFLICT. (Batch 21's
+correction undercounted MISSING by one — F056 itself was left out of the
+recount. Fixed in batch 23 alongside the other three audit files, this time
+by counting every row rather than adjusting a running total.)
 
 ## Reuse map — the seam each gap must extend
 

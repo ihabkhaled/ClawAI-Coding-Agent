@@ -37,7 +37,11 @@ module with no callers is scaffolding, not SHIPPED.
 | F030 | Computer use                 | PARTIAL                                | `src/infrastructure/browser-tool-executor.ts:16`, `src/services/browser-controller-service.ts:67`                                                                                         | Screen understanding and input are Playwright-page-scoped: no OS-level capture, desktop input or app launching.                                                                                                                                                                                                                         |
 | F031 | EndConversation safeguard    | PARTIAL, audit corrected               | `src/core/approval-broker.ts:139`, `src/services/runtime-studio-execution.ts:227`, `:292`                                                                                                 | The audit claimed nothing blocks ending while approvals are pending. That is wrong: `cancelKind` withdraws the ending run pending approvals, and both terminal paths call it from a `finally`, so no abandoned modal prompt survives a run. What is genuinely absent is an agent-callable terminal action and an evidence flush on end. |
 
-Tally: 4 SHIPPED, 12 PARTIAL, 14 MISSING, 1 BLOCKED, 0 CONFLICT.
+Tally: 9 SHIPPED, 9 PARTIAL, 12 MISSING, 1 BLOCKED, 0 CONFLICT. (Recounted
+row-by-row in batch 23 — the running tally had been incremented by delta
+since an earlier stale base rather than recomputed from the table, and
+undercounted SHIPPED by 5: F002, F006, F022 were already SHIPPED before this
+program started and had never been folded into the count.)
 
 ## Reuse map — the seam each gap must extend
 
