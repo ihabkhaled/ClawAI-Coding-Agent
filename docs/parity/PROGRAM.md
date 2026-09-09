@@ -1230,3 +1230,35 @@ Titles live in the view rather than in core: the checklist is state, and the
 wording is not.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 43 — F070 per-turn semantics and turn navigation
+
+| Batch | Version | Status                                | Evidence                                                           |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------ |
+| 43    | 1.4.0   | Code and deterministic gates complete | `src/core/turn-navigation.ts`, `media/chat.js`. Tests: 10 + 6 e2e. |
+
+Landmarks and live regions were already there. What was missing is the thing
+that makes a long transcript usable without sight: knowing where you are in it
+and being able to move.
+
+Two decisions carry the feature, and both are about what a transcript is
+rather than what a list is.
+
+**From nowhere, "previous" means the most recent turn.** A reader who has not
+entered the transcript and presses Alt+Up is asking for the newest thing said,
+not the oldest.
+
+**Either end stops rather than wrapping.** Wrapping is fine in a menu of five
+items. In a conversation it silently moves the reader from the newest message
+to the oldest, and a screen-reader user has no peripheral vision to catch it.
+
+Positions are renumbered on append and on drop rather than stored, because
+messages are appended, removed when a request is dropped, and replaced on
+retry — a stored index would be wrong after any of the three.
+
+**A stale visual baseline was corrected here.** The composer gained a button in
+1.1.0 and `workbench-dark-win32.png` was never updated; `npm run check` does not
+run Playwright, so the drift only surfaced when this batch ran it. The baseline
+is updated and the two-percent diff is the new button and nothing else.
+
+**Still true:** live-model Definition of Done cannot be executed here.

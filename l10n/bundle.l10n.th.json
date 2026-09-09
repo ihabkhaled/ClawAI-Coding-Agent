@@ -17,6 +17,7 @@
   "{0}/{1} tokens": "{0}/{1} tokens",
   "{0}/10 attachments · {1}/50 MiB": "{0}/10 attachments · {1}/50 MiB",
   "{count} workspace files match": "ไฟล์ในเวิร์กสเปซตรงกัน {count} รายการ",
+  "{who}, turn {position} of {total}": "{who} ลำดับที่ {position} จาก {total}",
   "0 of 5 selected": "0 of 5 selected",
   "0 running": "0 running",
   "0 waiting": "0 waiting",

@@ -679,6 +679,10 @@ function appendMessage(
 ) {
   const article = document.createElement('article');
   article.className = `message timeline-item message-${role}`;
+  // Per-turn semantics: a screen reader announces which turn this is and who
+  // said it, and the turn can take focus so it can be navigated to.
+  article.tabIndex = -1;
+  article.dataset.turnRole = role;
   if (requestId.length > 0) {
     article.dataset.requestId = requestId;
   }
@@ -723,6 +727,7 @@ function appendMessage(
   }
   article.append(card);
   elements.conversation.append(article);
+  renumberTurns();
   setConversationVisibility();
   article.scrollIntoView({ block: 'end', behavior: 'smooth' });
   return body;
@@ -1559,6 +1564,73 @@ function closeConnectionSettings() {
   connectionSettingsReturnFocus?.focus?.();
   connectionSettingsReturnFocus = null;
 }
+
+// Turn navigation. A transcript read linearly is unusable once it is long, so
+// each turn is focusable and Alt+Up / Alt+Down step between them. Positions
+// are renumbered on every change rather than stored, because messages are
+// appended, removed when a request is dropped, and replaced on retry.
+let focusedTurn;
+
+function turnElements() {
+  return [...elements.conversation.querySelectorAll('.timeline-item')];
+}
+
+function renumberTurns() {
+  const turns = turnElements();
+  turns.forEach((turn, index) => {
+    const who = turn.dataset.turnRole === 'user' ? labels.you : labels.assistant;
+    turn.setAttribute('role', 'article');
+    turn.setAttribute(
+      'aria-label',
+      labels.turnPosition
+        .replace('{who}', who)
+        .replace('{position}', String(index + 1))
+        .replace('{total}', String(turns.length)),
+    );
+  });
+  if (focusedTurn !== undefined && focusedTurn >= turns.length) {
+    focusedTurn = undefined;
+  }
+}
+
+function focusTurn(index) {
+  if (index === undefined) {
+    return;
+  }
+  const target = turnElements()[index];
+  if (target === undefined) {
+    return;
+  }
+  focusedTurn = index;
+  target.focus();
+  target.scrollIntoView({ block: 'nearest' });
+  elements.announcer.textContent = target.getAttribute('aria-label') ?? '';
+}
+
+// Mirrors nextTurnIndex in src/core/turn-navigation.ts: from nowhere,
+// "previous" means the most recent turn, and either end stops rather than
+// wrapping a reader from the newest message to the oldest.
+function stepTurn(delta) {
+  const total = turnElements().length;
+  if (total <= 0) {
+    return;
+  }
+  if (focusedTurn === undefined) {
+    focusTurn(delta < 0 ? total - 1 : 0);
+    return;
+  }
+  focusTurn(Math.min(Math.max(focusedTurn + delta, 0), total - 1));
+}
+
+document.addEventListener('keydown', (event) => {
+  if (!event.altKey || event.ctrlKey || event.metaKey || event.isComposing) {
+    return;
+  }
+  if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+    event.preventDefault();
+    stepTurn(event.key === 'ArrowDown' ? 1 : -1);
+  }
+});
 
 function renderState(state) {
   const previousState = currentState;
@@ -2865,6 +2937,7 @@ window.addEventListener('message', (event) => {
     renderHistoryMessages([]);
   } else if (message?.type === 'requestDropped' && typeof message.requestId === 'string') {
     responseBodies.get(message.requestId)?.closest('.timeline-item')?.remove();
+    renumberTurns();
     responseBodies.delete(message.requestId);
     streamStates.delete(message.requestId);
     activityLists.delete(message.requestId);

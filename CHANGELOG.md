@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.4.0
+
+Minor: per-turn semantics and keyboard navigation of the transcript (F070).
+
+- **Every turn is an `article` with a label** saying who spoke and which turn
+  it is out of how many, renumbered as the conversation grows or a dropped
+  request removes one.
+- **Alt+Up and Alt+Down step between turns.** From nowhere, Alt+Up means the
+  most recent turn — a reader who has not entered the transcript and presses
+  "previous" means the newest thing said, not the oldest.
+- **Either end stops rather than wrapping.** Wrapping is fine in a menu of
+  five items; in a conversation it silently teleports the reader from the
+  newest message to the oldest, and a screen-reader user has no peripheral
+  vision to notice.
+- Each move is announced, so the position is spoken rather than implied.
+
 ## 1.3.0
 
 Minor: a Getting Started checklist that knows where you actually are (F071).

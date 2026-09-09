@@ -17,6 +17,7 @@
   "{0}/{1} tokens": "{0}/{1} tokens",
   "{0}/10 attachments · {1}/50 MiB": "{0}/10 attachments · {1}/50 MiB",
   "{count} workspace files match": "{count} 件のワークスペースファイルが一致",
+  "{who}, turn {position} of {total}": "{who}、{total} 件中 {position} 件目",
   "0 of 5 selected": "0 of 5 selected",
   "0 running": "0 running",
   "0 waiting": "0 waiting",
