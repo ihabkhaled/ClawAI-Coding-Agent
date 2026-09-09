@@ -175,6 +175,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         workspaceRoot: () => this.workspaceScope.selectedFolder().uri.toString(),
         mode: () => this.configuration.read().permissionMode,
         workspaceTrusted: () => vscode.workspace.isTrusted,
+        organizationPolicy: () => this.state.snapshot.organizationPolicy,
         userPresent: () => vscode.window.state.focused,
         approve: (request, signal) =>
           approveRuntimeEffect(approvals, request, signal, this.activeInput?.onApproval),

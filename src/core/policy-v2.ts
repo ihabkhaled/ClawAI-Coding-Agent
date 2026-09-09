@@ -108,6 +108,25 @@ export const projectPolicySchema = z
   })
   .strict();
 
+/**
+ * The organization policy, as the client applies it.
+ *
+ * Mirrors what `GET agent/organizations/policy/effective` returns. Unsigned on
+ * purpose: every field narrows and none widens, so a forged policy could only
+ * refuse work. `allowedModels` is absent here because an invocation does not
+ * carry a model — that field is enforced where a model is chosen.
+ */
+export const organizationPolicySchema = z
+  .object({
+    allowedTools: z.array(z.string().max(200)).max(256).default([]),
+    maximumRisk: z.enum(RISK_CLASSES).default('R4'),
+    deniedEffects: z.array(z.enum(EFFECT_KINDS)).max(EFFECT_KINDS.length).default([]),
+    requireApproval: z.array(z.enum(EFFECT_KINDS)).max(EFFECT_KINDS.length).default([]),
+  })
+  .loose();
+
+export type OrganizationPolicyConstraints = z.infer<typeof organizationPolicySchema>;
+
 export type PolicyRule = z.infer<typeof policyRuleSchema>;
 export type PolicySubject = z.infer<typeof policySubjectSchema>;
 
@@ -207,18 +226,77 @@ function ruleDecision(
   };
 }
 
+/**
+ * What the organization imposes, checked after the immutable rails and before
+ * the project's own narrowing.
+ *
+ * Ordered that way because an organization may tighten what a project allows
+ * but must never loosen a safety rail. An empty `allowedTools` means every tool
+ * is permitted — the same convention the backend intersection uses, where an
+ * empty allowlist is "everything" rather than "nothing".
+ */
+function organizationDecision(
+  request: PolicyRequest,
+  organization: OrganizationPolicyConstraints | undefined,
+): PolicyV2Decision | undefined {
+  if (organization === undefined) return undefined;
+  const tool = request.subject?.tool;
+  if (
+    organization.allowedTools.length > 0 &&
+    tool !== undefined &&
+    !organization.allowedTools.includes(tool)
+  ) {
+    return {
+      outcome: 'deny',
+      code: 'ORGANIZATION_TOOL_DENIED',
+      risk: request.risk,
+      immutable: false,
+    };
+  }
+  if (
+    organization.deniedEffects.includes(request.effect) ||
+    riskIndex(request.risk) > riskIndex(organization.maximumRisk)
+  ) {
+    return {
+      outcome: 'deny',
+      code: 'ORGANIZATION_POLICY_NARROWED',
+      risk: request.risk,
+      immutable: false,
+    };
+  }
+  if (organization.requireApproval.includes(request.effect)) {
+    return {
+      outcome: 'ask',
+      code: 'ORGANIZATION_APPROVAL_REQUIRED',
+      risk: request.risk,
+      immutable: false,
+    };
+  }
+  return undefined;
+}
+
 function requiresExplicitApproval(request: PolicyRequest, project: ProjectPolicy): boolean {
   return request.mode === 'ASK' || project.requireApproval.includes(request.effect);
 }
 
-export function evaluatePolicyV2(candidate: unknown, projectCandidate?: unknown): PolicyV2Decision {
+export function evaluatePolicyV2(
+  candidate: unknown,
+  projectCandidate?: unknown,
+  organizationCandidate?: unknown,
+): PolicyV2Decision {
   const request = policyRequestSchema.parse(candidate);
   const project = projectPolicySchema.parse(projectCandidate ?? {});
+  const organization =
+    organizationCandidate === undefined || organizationCandidate === null
+      ? undefined
+      : organizationPolicySchema.parse(organizationCandidate);
   if (!request.workspaceTrusted) {
     return { outcome: 'deny', code: 'WORKSPACE_UNTRUSTED', risk: request.risk, immutable: true };
   }
   const immutableDecision = immutableRailDecision(request);
   if (immutableDecision !== undefined) return immutableDecision;
+  const organizationOutcome = organizationDecision(request, organization);
+  if (organizationOutcome !== undefined) return organizationOutcome;
   const projectDecision = narrowedProjectDecision(request, project);
   if (projectDecision !== undefined) return projectDecision;
   // After the immutable rail, so a rule can never loosen a hard deny, and

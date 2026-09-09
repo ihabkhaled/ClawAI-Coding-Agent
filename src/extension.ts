@@ -133,6 +133,7 @@ export function activate(context: vscode.ExtensionContext): void {
     questionRequest: undefined,
     findings: [],
     tasks: [],
+    organizationPolicy: undefined,
     backendCustomUrl: configuration.backendCustomUrl,
     backendEnvironment: configuration.backendEnvironment,
     backendUrl: configuration.backendUrl,

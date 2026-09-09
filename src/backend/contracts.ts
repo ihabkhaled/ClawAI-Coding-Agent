@@ -308,5 +308,29 @@ export type ChatThread = z.infer<typeof threadSchema>;
 export type ChatMessage = z.infer<typeof messageSchema>;
 export type UploadedFile = z.infer<typeof uploadedFileSchema>;
 export type ParallelResponse = z.infer<typeof parallelResponseSchema>;
+/**
+ * The policy an organization imposes on this client.
+ *
+ * Unsigned on purpose. Every field narrows and none widens, so a forged policy
+ * could only refuse work, never grant it — the same reason the project policy
+ * file may not carry an `allow`. Entitlements, which gate money, already arrive
+ * over the same authenticated channel. `enterprise-policy.ts` keeps its
+ * signature verification for a future distribution that must also survive a
+ * compromised backend; nothing here needs it yet.
+ */
+export const organizationPolicySchema = z
+  .object({
+    allowedTools: z.array(z.string().max(200)).max(256),
+    allowedModels: z.array(z.string().max(200)).max(1_000),
+    maximumRisk: z.enum(['R0', 'R1', 'R2', 'R3', 'R4']),
+    deniedEffects: z.array(z.string().max(100)).max(20),
+    requireApproval: z.array(z.string().max(100)).max(20),
+    maximumRetentionDays: z.number().int().min(0).max(3_650),
+    minimumPermissionMode: z.enum(['PLAN', 'ASK', 'AUTO_EDIT', 'AUTONOMOUS_SCOPED']).nullable(),
+  })
+  .strict();
+
+export type OrganizationPolicy = z.infer<typeof organizationPolicySchema>;
+
 export type Entitlements = z.infer<typeof entitlementsSchema>;
 export type Usage = z.infer<typeof usageSchema>;

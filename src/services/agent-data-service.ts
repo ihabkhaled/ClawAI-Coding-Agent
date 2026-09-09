@@ -49,10 +49,14 @@ export async function refreshAgentData(
   const epoch = accountEpoch.capture();
   const refresh = beginRefresh(refreshEpoch);
   const settings = configuration.read();
-  const [models, usage, history] = await Promise.all([
+  const [models, usage, history, organizationPolicy] = await Promise.all([
     modelService.refresh(),
     backend.getUsage(),
     backend.listThreads(settings.historyLimit),
+    // Fetched with the rest of the account data rather than on demand: a policy
+    // consulted lazily is a policy that has not applied yet the first time it
+    // matters.
+    backend.getOrganizationPolicy(),
   ]);
   if (
     !accountEpoch.isCurrent(epoch) ||
@@ -74,6 +78,7 @@ export async function refreshAgentData(
     history,
     modelWarnings: models.warnings,
     models: models.catalog,
+    organizationPolicy,
     routingMode: useAuto ? 'AUTO' : current.routingMode,
     selectedModel: useAuto ? '' : current.selectedModel,
     usage,

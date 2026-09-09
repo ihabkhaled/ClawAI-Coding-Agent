@@ -49,6 +49,7 @@ export function baseState() {
     questionRequest: undefined,
     findings: [],
     tasks: [],
+    organizationPolicy: undefined,
     backendCustomUrl: '',
     backendEnvironment: 'LOCAL',
     backendStatus: 'connected',
