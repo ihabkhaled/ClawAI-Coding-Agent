@@ -1,6 +1,11 @@
 import * as vscode from 'vscode';
 
 import {
+  DEFAULT_AUTOSAVE_POLICY,
+  isAutosavePolicy,
+  type AutosavePolicy,
+} from '../core/autosave-policy';
+import {
   BACKEND_LOCAL_URL,
   connectionEnvironmentSchema,
   normalizeBackendUrl,
@@ -51,6 +56,11 @@ export interface RuntimeConfiguration extends GlobalConfiguration {
   historyLimit: number;
   permissionMode: PermissionMode;
   requestTimeoutMs: number;
+  autosave: AutosavePolicy;
+}
+
+function normalizeAutosavePolicy(value: unknown): AutosavePolicy {
+  return isAutosavePolicy(value) ? value : DEFAULT_AUTOSAVE_POLICY;
 }
 
 const DEFAULT_EXCLUDES = [
@@ -163,6 +173,7 @@ export class ConfigurationService {
       exclude: configuration.get<string[]>('exclude') ?? DEFAULT_EXCLUDES,
       historyLimit: numberSetting(configuration, 'historyLimit', 50),
       permissionMode: normalizePermissionMode(configuration.get<unknown>('permissionMode')),
+      autosave: normalizeAutosavePolicy(configuration.get<unknown>('autosave')),
     };
   }
 

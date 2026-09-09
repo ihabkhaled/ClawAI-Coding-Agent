@@ -16,6 +16,7 @@ const before = new TextEncoder().encode('original');
 function adapter(overrides: Partial<FileTransactionAdapter> = {}): FileTransactionAdapter {
   return {
     isTrusted: () => true,
+    saveIfDirty: async () => undefined,
     snapshot: async (operation): Promise<FileSnapshot> => ({
       rootKey: operation.rootKey,
       path: operation.path,

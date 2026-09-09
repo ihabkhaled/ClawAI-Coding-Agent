@@ -2,6 +2,18 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.92.0
+
+Minor: an autosave policy for edits (F058).
+
+- **`clawAI.autosave`** adds `before-edit` beside the existing default.
+  Set it and ClawAI saves the files an edit touches instead of refusing the
+  edit because a buffer was dirty.
+- Only the files the edit already names are saved, and only before the
+  review snapshot is taken — saving later would change the file the review
+  was about.
+- The default is unchanged: `off`, and dirty-buffer drift still fails closed.
+
 ## 0.91.0
 
 Minor: run history is searchable, by you, with facets (F060).

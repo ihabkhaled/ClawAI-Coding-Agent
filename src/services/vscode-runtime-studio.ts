@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { WorkspaceMutationGate } from '../core/workspace-mutation-gate';
 import { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 import {
   BrowserToolExecutor,
@@ -145,7 +146,11 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     private readonly logger: OutputLogger,
   ) {
     this.files = new VscodeFileTransactionAdapter(externalOutputs);
-    this.transactions = new FileTransactionService(this.files);
+    this.transactions = new FileTransactionService(
+      this.files,
+      new WorkspaceMutationGate(),
+      () => this.configuration.read().autosave,
+    );
     this.bindingStore = new VscodeRuntimeBindingStore(context.workspaceState);
     this.transport = new BackendRuntimeTransport(backend, this.bindingStore);
     this.stream = new RuntimeEventStreamService(this.transport);
