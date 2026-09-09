@@ -26,6 +26,7 @@
   "command.undoLastEdit": "واگردانی آخرین ویرایش",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.searchRunHistory": "Search Run History",
   "command.sendFeedback": "Send Feedback",
   "command.showLogs": "نمایش گزارش‌ها",
   "config.backendUrl": "ClawAI backend origin. Tokens and credentials must not be included in this URL.",

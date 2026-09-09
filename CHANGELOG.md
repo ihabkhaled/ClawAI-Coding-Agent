@@ -2,6 +2,19 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.91.0
+
+Minor: run history is searchable, by you, with facets (F060).
+
+- **ClawAI: Search Run History** asks for a query and an outcome, then lists
+  what matched. Searching journals existed before this, but only as a tool
+  the model could call.
+- **Facets narrow the search**: outcome, exact label, pinned, and an
+  updated-since bound. Previously the goal text was the only thing a search
+  could say.
+- Results open the same redacted export the agent gets, so browsing history
+  cannot see more than that export allows.
+
 ## 0.90.0
 
 Minor: the agent can declare a run finished, and cannot do it behind your
