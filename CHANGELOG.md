@@ -2,6 +2,21 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 0.82.1
+
+Patch: fixes a `runtime.agents` fork schema-drift bug found while auditing
+F028 (ToolSearch).
+
+- **`mandatoryGateIds` no longer offered on a sub-agent task.** The JSON
+  schema shown to the model for `runtime.agents run` advertised a
+  `mandatoryGateIds` property on every task, copied from the unrelated
+  `integrationRequest` shape. `subAgentTaskSchema` is `.strict()` and never
+  accepted that key, so a model that took the offer had the whole fork
+  rejected with an unrecognized-key error. The property is removed from the
+  advertised schema; a regression test locks the advertised task properties
+  to the set the validator actually accepts, so the two cannot drift apart
+  silently again.
+
 ## 0.82.0
 
 Minor: finishes F052 enforcement — an organization's model allowlist and
