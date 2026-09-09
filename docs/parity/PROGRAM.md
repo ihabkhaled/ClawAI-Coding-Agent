@@ -299,3 +299,21 @@ run journal already holds every fact a recap states.
 A third audit row corrected by reading rather than trusting: three features
 were said to share a missing primitive, and the primitive would have served
 one of them.
+
+### Batch 15
+
+| Batch | Version | Status                                                                   | Evidence                                                                                                                                                                                                       |
+| ----- | ------- | ------------------------------------------------------------------------ | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 15    | 0.79.0  | Code and deterministic gates complete, including a real VS Code host run | F015 task tracking: `src/core/agent-tasks.ts`, `src/services/agent-task-service.ts`, `src/views/state-tree-provider.ts`; tests in `tests/unit/agent-tasks.test.ts` and `tests/unit/agent-task-service.test.ts` |
+
+The audit's reuse map pointed F015 at `implementation-plan.ts`, and that would
+have been wrong. The plan models epics, capabilities and stories, and requires
+an acceptance criterion and a verification step per task — the right shape for
+a reviewed artifact and the wrong one for a running list, where the cost of
+writing it down must be near zero. A second type is justified here; the note in
+`agent-tasks.ts` says why, so the next reader does not merge them.
+
+The studio hit its 500-line ceiling for the third time in this program. Findings
+and tasks are now created and cleared together in `runtime-studio-stores.ts`,
+which also removes the chance of a future change clearing one and forgetting the
+other.

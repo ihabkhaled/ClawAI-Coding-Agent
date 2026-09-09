@@ -7,6 +7,7 @@ import { parseRuntimeEvent } from './runtime/runtime-protocol.schemas';
 
 import type { AgentMode } from './agent-mode.types';
 import type { AgentRunSnapshot } from './agent-run';
+import type { AgentTask } from './agent-tasks';
 import type { ApprovalRequest } from './approval-broker';
 import type { RoutingMode } from './configuration';
 import type { ConnectionEnvironment } from './configuration';
@@ -35,6 +36,7 @@ export interface ExtensionSnapshot {
   approvalRequest: ApprovalRequest | undefined;
   questionRequest: UserQuestion | undefined;
   findings: readonly Finding[];
+  tasks: readonly AgentTask[];
   backendUrl: string;
   backendCustomUrl?: string | undefined;
   backendEnvironment?: ConnectionEnvironment | undefined;

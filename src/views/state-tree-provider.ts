@@ -1,9 +1,10 @@
 import * as vscode from 'vscode';
 
+import type { AgentTaskStatus } from '../core/agent-tasks';
 import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
 import type { FindingSeverity } from '../core/findings';
 
-export type TreeKind = 'context' | 'findings' | 'history' | 'model';
+export type TreeKind = 'context' | 'findings' | 'history' | 'model' | 'tasks';
 
 function modelItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
   const auto = new vscode.TreeItem(
@@ -126,6 +127,33 @@ ${finding.remediation}`;
   });
 }
 
+const taskIcons: Readonly<Record<AgentTaskStatus, string>> = {
+  pending: 'circle-large-outline',
+  'in-progress': 'sync',
+  blocked: 'warning',
+  done: 'pass-filled',
+};
+
+/**
+ * The task list the agent is working through, in the order it wrote it.
+ *
+ * Shown rather than only returned to the model, for the reason the Findings
+ * view exists: a list the agent keeps for itself is a list nobody can check
+ * against what is actually happening.
+ */
+function taskItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
+  if (snapshot.tasks.length === 0) {
+    return [new vscode.TreeItem(vscode.l10n.t('No tasks yet'))];
+  }
+  return snapshot.tasks.map((task) => {
+    const item = new vscode.TreeItem(task.title);
+    item.description = task.status;
+    item.iconPath = new vscode.ThemeIcon(taskIcons[task.status]);
+    if (task.note !== undefined) item.tooltip = task.note;
+    return item;
+  });
+}
+
 export class StateTreeProvider
   implements vscode.TreeDataProvider<vscode.TreeItem>, vscode.Disposable
 {
@@ -155,6 +183,9 @@ export class StateTreeProvider
     }
     if (this.kind === 'findings') {
       return findingItems(this.state.snapshot);
+    }
+    if (this.kind === 'tasks') {
+      return taskItems(this.state.snapshot);
     }
     return historyItems(this.state.snapshot);
   }

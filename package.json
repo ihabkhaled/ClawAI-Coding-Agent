@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.78.0",
+  "version": "0.79.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -373,6 +373,10 @@
         {
           "id": "clawAI.history",
           "name": "%view.history%"
+        },
+        {
+          "id": "clawAI.tasks",
+          "name": "%view.tasks%"
         },
         {
           "id": "clawAI.findings",

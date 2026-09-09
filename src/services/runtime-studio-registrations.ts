@@ -63,7 +63,7 @@ export function analysisToolRegistrations(
     },
     {
       definition: planningToolDefinition,
-      executor: new PlanningToolExecutor(parts.transactions),
+      executor: new PlanningToolExecutor(parts.transactions, parts.tasks),
     },
     {
       definition: runJournalToolDefinition,

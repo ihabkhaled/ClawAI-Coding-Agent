@@ -72,7 +72,6 @@ import { ElevationBrokerService } from './elevation-broker-service';
 import { EvidenceBundleService } from './evidence-bundle-service';
 import { ExecutionTargetRegistry } from './execution-target-registry';
 import { FileTransactionService } from './file-transaction-service';
-import { FindingsService } from './findings-service';
 import { FlagshipDeliveryService } from './flagship-delivery-service';
 import { GitAgentService } from './git-agent-service';
 import { IntegrationCoordinatorService } from './integration-coordinator-service';
@@ -100,6 +99,7 @@ import {
   advancedToolRegistrations,
   analysisToolRegistrations,
 } from './runtime-studio-registrations';
+import { createRunScopedStores, type RunScopedStores } from './runtime-studio-stores';
 import { assembleSubAgents } from './runtime-studio-sub-agents';
 import { RuntimeToolRouter } from './runtime-tool-router';
 import { ServerReadinessService } from './server-readiness-service';
@@ -136,7 +136,8 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   readonly flagship: FlagshipDeliveryService;
   private readonly git: GitAgentService;
   readonly journals: RunJournalService;
-  readonly findings: FindingsService;
+  /** Findings and tasks: run-scoped, cleared together on a workspace change. */
+  readonly stores: RunScopedStores;
   private active: RuntimeRunService | undefined;
   private activeRunId: string | undefined;
   private activeInput: RuntimeStudioInput | undefined;
@@ -272,7 +273,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       new VscodeWorkspaceDiagnostics(),
       new VscodeWorkspaceSymbols(this.files),
     );
-    this.findings = new FindingsService(this.state);
+    this.stores = createRunScopedStores(this.state);
     this.journals = new RunJournalService(
       new VscodeRunJournalStorage(context.globalStorageUri),
       new VscodeRunJournalKeyStore(context.secrets),
@@ -305,12 +306,12 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       selectedFolderKey: () =>
         this.workspaceScope.snapshot().selectedFolderKey ?? 'workspace:missing',
       epochs: () => this.epochs,
-      findings: this.findings,
+      findings: this.stores.findings,
       logger,
     });
     const subAgentWorktreeAdapter = subAgentLane.worktreeAdapter;
     const subAgents = subAgentLane.coordinator;
-    const quality = new QualityToolExecutor(this.files, this.findings);
+    const quality = new QualityToolExecutor(this.files, this.stores.findings);
     const integration = new IntegrationCoordinatorService(
       new RuntimeIntegrationGitAdapter(this.git, subAgentWorktreeAdapter),
       new RuntimeIntegrationQualityAdapter(quality),
@@ -390,6 +391,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         questions: this.approvals,
         intelligence,
         transactions: this.transactions,
+        tasks: this.stores.tasks,
         journals: this.journals,
       }),
       ...advancedToolRegistrations({
@@ -513,7 +515,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     // Replaying one after a folder change would write a stale file into a tree
     // that never had it.
     this.transactions.forgetUndoHistory();
-    this.findings.clear();
+    this.stores.clear();
     void this.cancel();
   }
 
