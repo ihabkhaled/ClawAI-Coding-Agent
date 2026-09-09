@@ -334,3 +334,35 @@ export type OrganizationPolicy = z.infer<typeof organizationPolicySchema>;
 
 export type Entitlements = z.infer<typeof entitlementsSchema>;
 export type Usage = z.infer<typeof usageSchema>;
+
+/**
+ * The feedback ticket the audit service returns for an accepted submission.
+ *
+ * `loose` for the same reason every other backend read is: a field the
+ * service adds later must not fail a client that only needs these three.
+ */
+export const feedbackTicketSchema = z
+  .object({
+    id: z.string().min(1).max(200),
+    ticketNumber: z.string().min(1).max(200),
+    status: z.string().min(1).max(100),
+  })
+  .loose();
+
+export type FeedbackTicket = z.infer<typeof feedbackTicketSchema>;
+
+/** Mirrors `createFeedbackSchema` in the audit service. */
+export const FEEDBACK_TYPES = [
+  'BUG_REPORT',
+  'GENERAL_FEEDBACK',
+  'FEATURE_REQUEST',
+  'UI_UX',
+  'PERFORMANCE',
+  'DATA_ISSUE',
+  'INTEGRATION_ISSUE',
+  'DOCUMENTATION',
+  'SECURITY_CONCERN',
+  'OTHER',
+] as const;
+
+export type FeedbackType = (typeof FEEDBACK_TYPES)[number];

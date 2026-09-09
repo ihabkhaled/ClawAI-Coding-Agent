@@ -32,12 +32,14 @@ import {
   type Entitlements,
   type LocalFrontierModel,
   type LocalOllamaModel,
+  type FeedbackTicket,
   type OrganizationPolicy,
   type ParallelResponse,
   type RouterModel,
   type Usage,
   type UploadedFile,
 } from './contracts';
+import { submitFeedback, type FeedbackSubmission } from './feedback-client';
 import { modelCatalogClient, type Requester } from './model-catalog-client';
 import { fetchOrganizationPolicy } from './organization-policy-client';
 import {
@@ -275,6 +277,13 @@ export class BackendClient {
     return fetchOrganizationPolicy(this.catalogRequest);
   }
 
+  /** See `submitFeedback` for why this one does not fail open. */
+  async submitFeedback(submission: FeedbackSubmission): Promise<FeedbackTicket> {
+    return submitFeedback(
+      (path, schema, options) => this.request(path, schema, options),
+      submission,
+    );
+  }
   async listMessages(threadId: string, limit = 100): Promise<ChatMessage[]> {
     const result = await this.request(
       `/chat-messages/thread/${encodeURIComponent(threadId)}?limit=${String(limit)}`,

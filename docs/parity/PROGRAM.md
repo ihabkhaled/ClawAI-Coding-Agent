@@ -733,3 +733,38 @@ Two decisions:
 opens the file has no root to resolve a relative path against, and a root that
 stops resolving later is not an error — the file was still written, and the
 only thing lost is the link.
+
+### Batch 28 — F027 send feedback
+
+| Batch | Version | Status                                | Evidence                                                                                                                      |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------------------------- |
+| 28    | 0.89.0  | Code and deterministic gates complete | `src/core/diagnostic-report.ts`, `src/backend/feedback-client.ts`, `src/services/send-feedback-command.ts`. Tests: 9 + 4 new. |
+
+The audit read this as MISSING with no submission path. Checking the backend
+before designing around its absence changed the batch: `POST /feedback`
+already exists in the audit service with a full ticket contract —
+`createFeedbackSchema`, ten feedback types, and a returned ticket number. So
+"opt-in submission" was never blocked; nobody had looked.
+
+That is the second time in this program that an audit row assumed a missing
+backend contract and the contract was already there (F104 was the first, in
+the other direction). The rule that keeps holding: read the other repository
+before recording something as blocked on it.
+
+The order of the flow is the feature. A support form that gathers state and
+sends it on one click is a disclosure channel the user has to take on trust.
+This one builds the report, opens the exact text in an editor, and only then
+offers Send — so what is approved is what is sent, edits included, and closing
+the editor is a complete answer.
+
+What the report carries is bounded by its input type, not by discipline:
+versions, connection state, modes, run ids, and a redacted last error. There
+is no field for a prompt, a transcript, a path or file content, so none can be
+added by accident later. The backend URL is rebuilt from protocol and host
+rather than trimmed, because a report is the wrong place to discover that a
+credential slipped past the connection screen.
+
+A failed submission is reported as failed. Every other backend read in this
+client that can fail open does — an organization policy that will not load
+means "nothing extra imposed" — but a support report the user believes arrived
+and did not is the one dishonest outcome available here.
