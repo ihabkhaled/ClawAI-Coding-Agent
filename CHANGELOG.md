@@ -2,6 +2,34 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.21.0
+
+Minor: a run terminal (F069, narrowed).
+
+- **`ClawAI: Open Run Terminal`** opens a pseudoterminal where a request is
+  typed and the run reports back as phases, files and commands, the way a build
+  log does. The panel remains the right home for an answer with code in it; a
+  run is a different shape and belongs where run logs go.
+- **Nothing about the run pipeline changed to support it.** The terminal
+  subscribes to the same run snapshots the panel does and prints what changed,
+  so the two surfaces cannot disagree about what a run did. Only the difference
+  is printed, so an idle subscription stays silent.
+- **Everything the model contributes is stripped of control sequences first.** A
+  pseudoterminal renders whatever it is handed. A summary written straight from
+  the wire could clear the scrollback, rewrite the window title, or turn a word
+  into a hyperlink pointing anywhere, and a repository the agent read can put
+  any of that in the model's mouth.
+- **Backspace is stripped for the same reason** — it lets a model overprint what
+  it already wrote, so the terminal would show something other than what was
+  sent.
+- **The line editor states every rule a shell gives for free**: what echoes,
+  what erases, what submits, what closes. Arrow keys are dropped whole rather
+  than echoed, because a terminal showing `^[[A` where the reader expected their
+  last line is worse than one that does nothing.
+- A second request while a run is going is refused rather than queued silently,
+  because a reader watching a run that is not the one they just asked for has no
+  way to tell.
+
 ## 1.20.0
 
 Minor: the model's private reasoning stays on the host (F043, narrowed).

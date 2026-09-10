@@ -30,6 +30,7 @@
   "command.restoreCheckpoint": "Prüfpunkt wiederherstellen",
   "command.askSideQuestion": "Nebenfrage stellen",
   "command.attachTerminalOutput": "Terminalausgabe anhängen",
+  "command.openTerminal": "Ausführungsterminal öffnen",
   "command.groupConversation": "Unterhaltung gruppieren",
   "command.openConversationInNewWindow": "Unterhaltung in neuem Fenster öffnen",
   "command.compactConversation": "Unterhaltung verdichten",

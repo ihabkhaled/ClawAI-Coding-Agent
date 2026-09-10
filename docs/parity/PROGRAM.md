@@ -1914,3 +1914,57 @@ support them. The gating half stays open against a backend field; the row names
 it rather than claiming the feature whole.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 61 — F069 run terminal
+
+| Batch | Version | Status                                | Evidence                                                                                                       |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------------- |
+| 61    | 1.21.0  | Code and deterministic gates complete | `terminal-output.ts`, `terminal-line-editor.ts`, `terminal-run-report.ts`, `agent-terminal.ts`. Tests: 36 new. |
+
+**A run is not a chat, and that is why the terminal is worth having.** The panel
+is the right home for an answer with code in it. A run is a sequence of phases,
+files and commands that reads like a build log, and a build log belongs in a
+terminal. The two are different shapes, not two skins on the same thing.
+
+**The terminal reads the same snapshots the panel does.** Nothing in the run
+pipeline changed. `ExtensionState` already publishes an `AgentRunSnapshot` per
+request, so the terminal subscribes and prints the difference. A second surface
+that fetched its own truth is a second surface that can disagree about what a
+run did.
+
+**Only the difference, matched on identity.** The state layer publishes a whole
+snapshot on every change, so rendering the snapshot would reprint the run each
+time. Files and commands are matched on what they are rather than on list
+length, because a plan can be revised and a shorter second plan must not read as
+the run going backwards.
+
+**A pseudoterminal renders whatever it is handed, which makes model output a
+capability.** `ESC [ 2J` clears the scrollback the reader was using, `ESC ] 0 ;`
+rewrites the window title, and `ESC ] 8 ; ;` turns any word into a hyperlink to
+any address. None of those are things an answer needs, and a repository the
+agent read can put them in the model's mouth. Every model-contributed string
+goes through `toTerminalSafeText` first, and backspace goes with them: it lets a
+model overprint what it already wrote, so the screen would stop matching what
+was sent.
+
+**Written as a code-point scanner, not a regular expression.** A pattern full of
+raw control characters is unreadable, unreviewable, and the one shape ESLint
+refuses outright. `no-control-regex` was not suppressed; the scanner names each
+boundary so it can be checked against the ECMA-48 table by eye.
+
+**The escape sequence is skipped whole, in both directions.** The first version
+of the line editor dropped the `ESC` byte alone, and a test caught what that
+means: an arrow key typed `[A` into the prompt. Output and input now share one
+`escapeSequenceEnd`, so neither can be fooled by a sequence the other
+understands.
+
+**Eleven phase names cost nothing to translate.** The panel already carries all
+of them as translated strings, so the terminal uses the same English sources and
+inherits thirteen locales without adding one.
+
+**Narrowed, and the row says how.** The answer text still lands in the panel, not
+the terminal: streaming it would mean a second event sink through
+`runQueuedAgent`, which is a pipeline change rather than a surface. The terminal
+reports the run and the final summary, which is what a run log is for.
+
+**Still true:** live-model Definition of Done cannot be executed here.

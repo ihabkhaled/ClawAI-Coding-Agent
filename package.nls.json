@@ -30,6 +30,7 @@
   "command.restoreCheckpoint": "Restore Checkpoint",
   "command.askSideQuestion": "Ask a Side Question",
   "command.attachTerminalOutput": "Attach Terminal Output",
+  "command.openTerminal": "Open Run Terminal",
   "command.groupConversation": "Group Conversation",
   "command.openConversationInNewWindow": "Open Conversation in New Window",
   "command.compactConversation": "Compact Conversation",

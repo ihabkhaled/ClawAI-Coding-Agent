@@ -30,6 +30,7 @@
   "command.restoreCheckpoint": "استعادة نقطة حفظ",
   "command.askSideQuestion": "طرح سؤال جانبي",
   "command.attachTerminalOutput": "إرفاق مخرجات الطرفية",
+  "command.openTerminal": "فتح طرفية التشغيل",
   "command.groupConversation": "تجميع المحادثة",
   "command.openConversationInNewWindow": "فتح المحادثة في نافذة جديدة",
   "command.compactConversation": "ضغط المحادثة",

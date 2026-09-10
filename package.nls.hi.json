@@ -30,6 +30,7 @@
   "command.restoreCheckpoint": "चेकपॉइंट पुनर्स्थापित करें",
   "command.askSideQuestion": "अलग से एक प्रश्न पूछें",
   "command.attachTerminalOutput": "टर्मिनल आउटपुट संलग्न करें",
+  "command.openTerminal": "रन टर्मिनल खोलें",
   "command.groupConversation": "बातचीत समूहित करें",
   "command.openConversationInNewWindow": "बातचीत नई विंडो में खोलें",
   "command.compactConversation": "बातचीत संक्षिप्त करें",

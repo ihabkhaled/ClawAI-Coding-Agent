@@ -30,6 +30,7 @@
   "command.restoreCheckpoint": "Ripristina punto di controllo",
   "command.askSideQuestion": "Fai una domanda a parte",
   "command.attachTerminalOutput": "Allega output del terminale",
+  "command.openTerminal": "Apri terminale di esecuzione",
   "command.groupConversation": "Raggruppa la conversazione",
   "command.openConversationInNewWindow": "Apri la conversazione in una nuova finestra",
   "command.compactConversation": "Compatta la conversazione",
