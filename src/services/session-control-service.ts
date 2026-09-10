@@ -1,8 +1,9 @@
 import * as vscode from 'vscode';
 
-import { applyAgentModeToPrompt } from '../core/agent-mode';
 import { clampToOrganizationFloor } from '../core/organization-permission-floor';
+import { outputStylePreamble } from '../core/output-style';
 import { decidePermission } from '../core/permission-policy';
+import { composePrompt } from '../core/prompt-composition';
 
 import type {
   SessionApprovalMemoryPort,
@@ -87,6 +88,9 @@ export class SessionControlService {
   async capture(): Promise<SessionControlPort> {
     await this.mutationTail;
     const configuration = this.configuration.read();
+    // Captured with the policy so a style changed mid-run does not rewrite the
+    // prompt of a run already in flight.
+    const style = this.configuration.outputStyle();
     const policy: SessionPolicySnapshot = {
       agentMode: configuration.agentMode,
       permissionMode: configuration.permissionMode,
@@ -96,7 +100,12 @@ export class SessionControlService {
       authorize: (operation, details, signal) =>
         this.authorizeWithPolicy(policy, operation, details, signal),
       isPlanMode: () => policy.agentMode === 'PLAN',
-      preparePrompt: (content) => applyAgentModeToPrompt(policy.agentMode, content),
+      preparePrompt: (content) =>
+        composePrompt({
+          agentMode: policy.agentMode,
+          stylePreamble: outputStylePreamble(style),
+          content,
+        }),
     };
   }
 
@@ -142,7 +151,11 @@ export class SessionControlService {
   }
 
   preparePrompt(content: string): string {
-    return applyAgentModeToPrompt(this.configuration.read().agentMode, content);
+    return composePrompt({
+      agentMode: this.configuration.read().agentMode,
+      stylePreamble: outputStylePreamble(this.configuration.outputStyle()),
+      content,
+    });
   }
 
   selectAgentMode(mode: AgentMode): Promise<void> {

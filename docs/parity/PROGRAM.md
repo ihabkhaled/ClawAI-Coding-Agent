@@ -1402,3 +1402,39 @@ it recurring, because knowing is not a control. `l10n:verify` now runs inside
 
 The lesson is the general one: when a gate exists in CI but not locally, the
 local gate is the one that decides how many red builds you ship.
+
+### Batch 48 — F082 output styles
+
+| Batch | Version | Status                                | Evidence                                                                              |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------- |
+| 48    | 1.8.0   | Code and deterministic gates complete | `output-style.ts`, `prompt-composition.ts`, `output-style-catalog.ts`. Tests: 19 new. |
+
+The audit named F077 as the gate for this row, on the grounds that both need a
+named, metadata-bearing instruction unit. That was right, and the reuse is
+literal: `.clawai/output-styles/*.md` are read by the parser skills use. A
+style and a skill are the same kind of thing — a named block of instruction in
+a file — and two readers for one format would drift apart.
+
+**Prompt assembly moved into one function.** There are two send paths, the
+legacy chat path and Runtime V2, and each was applying the Plan-mode
+instruction separately. A prompt assembled differently by each is a prompt
+whose behaviour depends on which transport happened to be selected. Adding the
+style to both would have doubled that; `composePrompt` removes it instead.
+
+**Order is a decision, not an accident.** Plan mode comes first because it is a
+constraint on what may happen; the style comes second because it is a
+preference about how to say it. A style that could be read as loosening the
+constraint has already been overruled by the time it is read.
+
+**The style is not part of the policy snapshot.** `SessionPolicySnapshot`
+extends the session configuration, and adding the style there would have put a
+presentation preference inside a record that exists to answer permission
+questions — one more field that looks like it was checked when a decision was
+made. It is read through its own port method and captured alongside the policy,
+so a style changed mid-run does not rewrite a prompt already in flight.
+
+**Preambles stay in English.** They are sent to the model, not shown to the
+user, and an instruction in one language modifying a prompt in another is two
+things the model has to reconcile. Only the picker labels are translated.
+
+**Still true:** live-model Definition of Done cannot be executed here.

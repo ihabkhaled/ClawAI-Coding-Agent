@@ -4,6 +4,7 @@ export function testRuntimeConfiguration(): RuntimeConfiguration {
   return {
     agentMode: 'AUTO',
     viewDensity: 'full' as const,
+    outputStyle: 'default',
     effortMode: 'ULTRA',
     speedMode: '1X',
     backendCustomUrl: '',

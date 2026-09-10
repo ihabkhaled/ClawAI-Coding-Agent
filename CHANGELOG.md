@@ -2,6 +2,27 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.8.0
+
+Minor: output styles (F082).
+
+- **ClawAI: Select Output Style** chooses how answers are written: default,
+  concise, explanatory, or learning.
+- **A workspace can define its own.** `.clawai/output-styles/*.md` are read by
+  the same parser skills use — a style and a skill are the same kind of thing,
+  a named block of instruction in a file, and two readers for one format would
+  drift apart. A project style replaces a built-in of the same name.
+- **One place assembles the prompt now.** The Plan-mode instruction and the
+  style were being applied on two different send paths; a prompt assembled
+  differently by each is a prompt whose behaviour depends on which transport
+  was selected.
+- **Plan mode comes first, style second.** The first is a constraint on what
+  may happen, the second a preference about how to say it — so a style that
+  could read as loosening the constraint is already overruled by the time it
+  is read.
+- Style preambles stay in English because the model reads them; only the
+  picker labels are translated.
+
 ## 1.7.1
 
 Patch: the translation block fills gaps instead of overriding, and `npm run
