@@ -2,6 +2,32 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.30.0
+
+Minor: a monitor tool the run can wait on (F012).
+
+- **`runtime.monitor` waits for one workspace file to reach a state.** It can
+  wait for a file to appear, to vanish, to change, or for its text to match a
+  pattern. Before this, a run that started a build had two options: read the
+  output file immediately and find it absent, or spend model turns re-reading
+  it. Both spend the budget on the same question.
+- **Every wait is bounded twice**, by the caller's timeout and by a ten-minute
+  ceiling the caller cannot raise. The budget that would otherwise stop a run
+  counts model turns, not wall clock, so a watcher with no ceiling is a run that
+  never ends.
+- **A timeout returns, it does not throw.** "The condition held" and "time ran
+  out" are different facts, and a timeout reported as an error would make the
+  model treat a slow build as a broken one.
+- **Polling backs off from a quarter second to five.** A file a command is about
+  to write is noticed within a second; a ten-minute wait costs about a hundred
+  and thirty looks instead of two thousand four hundred.
+- **`changed` compares against the state when the wait began**, not against the
+  previous look. A file written twice while nobody was looking has still
+  changed, and comparing consecutive polls would miss the second write landing
+  between them.
+- A bad pattern is refused before anything starts waiting, where the caller can
+  be told what was wrong with it.
+
 ## 1.29.0
 
 Minor: the browser tool can be pointed at your own sites (F036, narrowed).
