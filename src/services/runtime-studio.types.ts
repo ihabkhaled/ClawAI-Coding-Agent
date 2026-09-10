@@ -11,6 +11,7 @@ import type { SubAgentCoordinatorService } from './sub-agent-coordinator-service
 import type { WebResearchPort } from './web-research.types';
 import type { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
+import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { AdvisorPort } from '../infrastructure/advisor-tool-executor.types';
 import type { UserQuestionPort } from '../infrastructure/ask-user-tool-executor';
 import type { ConversationEndPort } from '../infrastructure/end-conversation-tool-executor';
@@ -47,6 +48,8 @@ export interface RuntimeStudioAnalysisTools {
   readonly research: WebResearchPort;
   readonly advisor: AdvisorPort;
   readonly goal: RunGoalPort;
+  /** The epoch generation a loaded workflow must be re-stamped with. */
+  readonly currentEpochs: () => ToolInvocation['epochs'];
   readonly files: VscodeFileTransactionAdapter;
 }
 
