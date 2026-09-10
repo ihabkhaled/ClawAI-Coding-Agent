@@ -97,6 +97,7 @@ function registerCommands(
     ['clawAI.sendFeedback', () => coordinator.commands.sendFeedback()],
     ['clawAI.searchRunHistory', () => coordinator.commands.searchRunHistory()],
     ['clawAI.showUsage', () => coordinator.commands.showUsage()],
+    ['clawAI.compactConversation', () => coordinator.commands.compactConversation()],
     ['clawAI.selectOutputStyle', () => coordinator.commands.selectOutputStyle()],
     ['clawAI.toggleFocusView', () => coordinator.commands.toggleFocusView()],
     ['clawAI.renameChat', () => coordinator.commands.renameChat()],

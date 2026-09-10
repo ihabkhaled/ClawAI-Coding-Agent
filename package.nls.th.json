@@ -26,6 +26,7 @@
   "command.undoLastEdit": "เลิกทำการแก้ไขล่าสุด",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.compactConversation": "ย่อการสนทนา",
   "command.selectOutputStyle": "เลือกรูปแบบคำตอบ",
   "command.toggleFocusView": "สลับมุมมองโฟกัส",
   "command.renameChat": "เปลี่ยนชื่อการสนทนา",

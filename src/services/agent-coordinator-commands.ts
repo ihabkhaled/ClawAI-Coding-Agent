@@ -4,6 +4,7 @@ import { toggleViewDensity } from '../core/view-density';
 
 import { pickModelKey } from './agent-coordinator-prompts';
 import { applyModelSelection } from './agent-coordinator-runtime';
+import { compactConversation } from './compact-conversation-command';
 import { searchRunHistory } from './search-run-history-command';
 import { selectOutputStyle } from './select-output-style-command';
 import { sendFeedback } from './send-feedback-command';
@@ -35,6 +36,7 @@ export interface CoordinatorCommands {
   showUsage(): Promise<void>;
   showSessionRecap(): Promise<void>;
   selectOutputStyle(): Promise<void>;
+  compactConversation(): Promise<void>;
   toggleFocusView(): Promise<void>;
   renameChat(): Promise<void>;
   archiveChat(): Promise<void>;
@@ -58,6 +60,8 @@ interface CommandCollaborators {
   readonly refreshHistory: () => Promise<void>;
   readonly sessionControls: () => SessionControlService;
   readonly outputStyles: () => OutputStyleCatalog;
+  readonly summarize: () => (threadId: string, instruction: string) => Promise<string>;
+  readonly startContinuation: () => (seed: string) => Promise<void>;
 }
 
 /**
@@ -85,6 +89,12 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
       exportTranscript({ conversations: parts.conversations(), state: parts.state() }),
     searchRunHistory: () => searchRunHistory({ journals: parts.journals() }),
     showUsage: () => showUsage({ state: parts.state() }),
+    compactConversation: () =>
+      compactConversation({
+        activeThreadId: () => parts.view()?.activeThreadId(),
+        summarize: (threadId, instruction) => parts.summarize()(threadId, instruction),
+        startContinuation: (seed) => parts.startContinuation()(seed),
+      }),
     selectOutputStyle: () =>
       selectOutputStyle({
         styles: parts.outputStyles(),

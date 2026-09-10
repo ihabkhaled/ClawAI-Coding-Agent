@@ -1574,3 +1574,43 @@ This also supplies the capacity denominator ordering constraint 6 said F041
 needs before compaction can know when to trigger.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 52 — F041 manual conversation compaction
+
+| Batch | Version | Status                                | Evidence                                                                   |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------- |
+| 52    | 1.12.0  | Code and deterministic gates complete | `context-compaction.ts`, `compact-conversation-command.ts`. Tests: 12 new. |
+
+Unblocked by batch 51, exactly as ordering constraint 6 predicted: compaction
+needs a capacity denominator to know when it is worth doing, and F040 supplied
+it.
+
+**Nothing is destroyed.** The original conversation keeps every word and stays
+in history; compaction starts a new one. A feature that rewrote the thing it
+compacted is a feature people are afraid to use, and fear of a button is worse
+than not having it.
+
+**The conversation summarizes itself.** The request goes into the thread being
+summarized, using the routing that thread has been using, and it is the last
+thing that happens there. A different model would be summarizing a
+conversation it never saw. A hidden side thread would conceal from the user
+what was written on their behalf — and something written on your behalf that
+you cannot see is the part people are right to object to.
+
+**The instruction asks for decisions, not prose.** Goal, decisions and why,
+work done, work outstanding, open questions, files and paths. A summary
+optimised for reading loses precisely what the next turn needs, and the next
+turn is the only reader.
+
+**Half the row is still open, and the row says so.** `shouldCompact` is
+written, tested against the F040 budget, and called by nothing. Automatic
+compaction means starting a new conversation without being asked, and that is a
+behavioural decision about someone else's work — not a threshold to pick. It
+needs a product answer before it needs code.
+
+`compareModels` moved to its own command module on the way. The coordinator has
+hit its line ceiling in four separate batches now, which is the ceiling doing
+its job: the fix each time was to move a cohesive group out, never to shorten a
+line.
+
+**Still true:** live-model Definition of Done cannot be executed here.

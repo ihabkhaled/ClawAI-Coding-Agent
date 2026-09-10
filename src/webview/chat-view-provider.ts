@@ -66,6 +66,22 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     void this.postStateTo(view.webview);
   }
 
+  /**
+   * The conversation a palette command should act on.
+   *
+   * The panel the user is looking at, or the most recently touched session if
+   * they are looking at something else entirely. A command run from the
+   * palette has no other way to know which conversation was meant.
+   */
+  activeThreadId(): string | undefined {
+    const sessions = this.sessions.list();
+    const active = sessions.find((session) => session.target.active);
+    const recent = [...sessions].sort(
+      (left, right) => right.descriptor.updatedAt - left.descriptor.updatedAt,
+    )[0];
+    return (active ?? recent)?.descriptor.threadId;
+  }
+
   async reveal(): Promise<string> {
     return this.createEditorSession();
   }

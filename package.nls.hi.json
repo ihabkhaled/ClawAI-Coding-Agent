@@ -26,6 +26,7 @@
   "command.undoLastEdit": "अंतिम ClawAI संपादन वापस लें",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.compactConversation": "बातचीत संक्षिप्त करें",
   "command.selectOutputStyle": "आउटपुट शैली चुनें",
   "command.toggleFocusView": "फ़ोकस दृश्य टॉगल करें",
   "command.renameChat": "बातचीत का नाम बदलें",
