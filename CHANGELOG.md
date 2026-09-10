@@ -2,6 +2,30 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.23.0
+
+Minor: multiline search and language scoping (F003, narrowed further).
+
+- **`multiline: true`** runs a pattern across line breaks and reports the line
+  the span starts on, which is the line a reader would open. The preview is the
+  matched span rather than its first line: a pattern written to span lines is
+  asking about the span, and showing one line of it hides what was found.
+- **`fileTypes: ["ts"]`** scopes a search by language or by bare extension.
+  Extensions are the part nobody remembers, and a glob written from memory
+  searches fewer files than the writer thinks, which reads as absence.
+- **An unknown type name is refused, not ignored.** Ignoring it would narrow the
+  search to nothing and answer "no matches", and a search that reports absence
+  without having looked is the one failure that cannot be caught downstream.
+- **Types filter the results, not the glob.** The caller's pattern is arbitrary,
+  and rewriting it to carry extensions is how a search quietly stops matching
+  what was asked for.
+- Multiline scanning is bounded per file and per match count. A per-line search
+  is bounded by the line; a spanning pattern has no such ceiling, and a nested
+  quantifier over minified source is the input that turns a search into a hang.
+- Both arguments are named in the tool description, which stayed inside its
+  1,600-character budget by shortening, because a capability the description
+  omits is one no model ever uses.
+
 ## 1.22.0
 
 Minor: a Needs You view with a badge (F102, narrowed).

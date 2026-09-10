@@ -291,6 +291,8 @@ export const runtimeToolInputSchemas = {
     regex: flag,
     ignoreCase: flag,
     contextLines: integer,
+    multiline: flag,
+    fileTypes: texts,
     transaction: opaque,
   }),
   end: strict({ reason: text, lifecycle: { type: 'string', enum: ['completed', 'abandoned'] } }, [

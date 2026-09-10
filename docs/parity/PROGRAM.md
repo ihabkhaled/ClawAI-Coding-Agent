@@ -2008,3 +2008,49 @@ remote sessions need the fleet contract that F013 and F095 are blocked on; the
 attention queue is the half that needed nothing and was worth the most.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 63 — F003 multiline search and language scoping
+
+| Batch | Version | Status                                | Evidence                                                                                                           |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------------------------ |
+| 63    | 1.23.0  | Code and deterministic gates complete | `workspace-search-query.ts`, `vscode-filesystem-tool-executor.ts`, `runtime-tool-input-schemas.ts`. Tests: 21 new. |
+
+**The last two gaps on the F003 row, closed together because they answer the
+same complaint.** A search that cannot span lines and cannot be scoped by
+language forces the same workaround: run it wide, get a hundred hits from a
+lockfile, and read files one at a time.
+
+**An unknown type name is an error, and that is the whole design.** Ignoring it
+would narrow the search to nothing and return no matches. A search that answers
+"not found" when it never looked is the only failure here that cannot be caught
+downstream, because the caller believes the workspace rather than the tool.
+
+**Types filter results, not the glob.** Folding extensions into the caller's
+pattern means rewriting a pattern the caller chose, and a rewritten glob that
+matches less than intended is the same silent-absence failure by another route.
+
+**The multiline preview is the span, not the first line of it.** A pattern
+written to reach across lines is asking about the span. Reporting the starting
+line and one line of text would answer a question nobody asked.
+
+**Bounded twice, because the per-line bound no longer applies.** A per-line
+search can never see more than one line; a spanning pattern can see the file, so
+the scan is capped in bytes and the matches are capped per file. A nested
+quantifier over minified source is the input that turns a search into a hang.
+
+**A zero-width match advances the cursor by hand.** `lastIndex` does not move
+for an empty match, and a pattern like `x*` would loop forever. A test asserts
+termination rather than trusting the engine.
+
+**The matcher is reset before every file.** A `g` regex carries `lastIndex`
+between calls, so a shared matcher would start the second file wherever it
+stopped in the first and silently skip its beginning. That is a bug the tests
+name directly.
+
+**The description budget was met by shortening, not by raising.** The 1,600
+character cap has headroom below the 2,000 the protocol enforces because an
+overflow rejects the whole run-start request and names no field. Both new
+arguments are documented inside it: the catalog reports a bare input shape, so a
+capability the description omits is one no model ever uses.
+
+**Still true:** live-model Definition of Done cannot be executed here.

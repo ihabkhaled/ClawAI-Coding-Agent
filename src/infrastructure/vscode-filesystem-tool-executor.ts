@@ -14,6 +14,12 @@ import {
   isSafeWorkspaceDirectoryPath,
   normalizeWorkspaceDirectoryPath,
 } from '../core/workspace-path-policy';
+import {
+  compileSearchMatcher,
+  findMultilineMatches,
+  matchesFileTypes,
+  resolveFileTypeExtensions,
+} from '../core/workspace-search-query';
 
 import {
   WORKSPACE_SCAN_EXCLUDE_GLOB,
@@ -22,6 +28,7 @@ import {
 } from './workspace-scan.constants';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
+import type { SearchHit } from './vscode-filesystem-tool-executor.types';
 import type { DeliveredArtifact } from '../core/delivered-artifact';
 import type { FileTransaction } from '../core/file-transaction';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -115,6 +122,12 @@ const searchSchema = globSchema.extend({
   // judge a match, and the result cap is shared, so generous context spends
   // the answer on fewer matches.
   contextLines: z.number().int().min(0).max(10).default(0),
+  // A pattern that spans lines answers a question a per-line search cannot:
+  // "where is this signature", not "which lines mention this word".
+  multiline: z.boolean().default(false),
+  // Named languages, or bare extensions. Scoping by type is what makes a
+  // common word searchable at all in a repository that also carries a lockfile.
+  fileTypes: z.array(z.string().min(1).max(20)).max(20).default([]),
 });
 
 const MAX_SEARCH_LINE_CHARS = 2_000;
@@ -138,23 +151,53 @@ function contextAround(
   };
 }
 
-/**
- * Compiles the query once, refusing a pattern the engine cannot run.
- *
- * A literal query is escaped rather than passed through, so a search for
- * `config.get(` keeps meaning those characters. `u` is deliberately omitted:
- * it would reject escapes a caller may reasonably write, and the alternative
- * to a usable regex here is the substring test this replaced.
- */
-function compileSearchMatcher(query: string, isRegex: boolean, ignoreCase: boolean): RegExp {
-  const source = isRegex ? query : query.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`);
-  try {
-    return new RegExp(source, ignoreCase ? 'i' : '');
-  } catch {
-    throw new Error(
-      'search regex is not valid; escape the pattern or pass regex: false for a literal query',
-    );
+function lineMatches(
+  text: string,
+  matcher: RegExp,
+  path: string,
+  contextLines: number,
+): SearchHit[] {
+  const lines = text.split(/\r?\n/u);
+  const hits: SearchHit[] = [];
+  for (const [index, line] of lines.entries()) {
+    // A caller-supplied regex runs against a bounded prefix. An unbounded line
+    // is the input that turns a nested quantifier into a hang, and no useful
+    // match is lost: the preview never showed more than this either.
+    if (matcher.test(line.slice(0, MAX_SEARCH_LINE_CHARS))) {
+      hits.push({
+        path,
+        line: index + 1,
+        preview: line.slice(0, 500),
+        ...(contextLines === 0 ? {} : { context: contextAround(lines, index, contextLines) }),
+      });
+    }
   }
+  return hits;
+}
+
+/**
+ * Every place one file matched, in the shape the result list uses.
+ *
+ * A multiline pattern is a different question, not a different flag: it asks
+ * where a span is, so it runs over the text and reports the line the span
+ * starts on. Context lines are a per-line idea and are left out of it, because
+ * the match already carries its own span.
+ */
+function fileMatches(
+  text: string,
+  matcher: RegExp,
+  path: string,
+  multiline: boolean,
+  contextLines: number,
+): SearchHit[] {
+  if (!multiline) {
+    return lineMatches(text, matcher, path, contextLines);
+  }
+  return findMultilineMatches(text, matcher).map((match) => ({
+    path,
+    line: match.line,
+    preview: match.preview,
+  }));
 }
 
 export const workspaceFilesystemToolDefinition: ToolDefinition = {
@@ -174,7 +217,8 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'relative. List the root with path "". List/glob/search return at most 100 results; narrow ' +
     'truncated results. After one targeted search and read, act; do not rediscover unchanged files. ' +
     'SEARCH matches a literal query by default; pass regex:true for a JavaScript pattern and ' +
-    'ignoreCase:true to fold case, and contextLines:N for N lines either side. It reports ' +
+    'ignoreCase:true to fold case, and contextLines:N for N lines either side. ' +
+    'multiline:true spans lines; fileTypes:["ts"] scopes by language. It reports ' +
     'scannedFiles and skips dependency and build output. ' +
     'Only treat an empty result as absence when truncated is false. ' +
     // Writing was undiscoverable: every mutation goes through a nested
@@ -439,25 +483,30 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
   ): Promise<RuntimeToolExecutionOutput> {
     const input = searchSchema.parse(candidate);
     const root = this.adapter.rootUri(input.rootKey);
-    const matcher = compileSearchMatcher(input.query, input.regex, input.ignoreCase);
+    const matcher = compileSearchMatcher(
+      input.query,
+      input.regex,
+      input.ignoreCase,
+      input.multiline,
+    );
+    const extensions = resolveFileTypeExtensions(input.fileTypes);
     const files = await vscode.workspace.findFiles(
       new vscode.RelativePattern(root, input.pattern),
       WORKSPACE_SCAN_EXCLUDE_GLOB,
       WORKSPACE_SEARCH_MAX_CANDIDATE_FILES,
     );
     const candidateSetTruncated = files.length >= WORKSPACE_SEARCH_MAX_CANDIDATE_FILES;
-    const results: {
-      path: string;
-      line: number;
-      preview: string;
-      context?: { before: string[]; after: string[] };
-    }[] = [];
+    const results: SearchHit[] = [];
     let scannedFiles = 0;
     let scannedBytes = 0;
     let budgetExhausted = false;
     for (const uri of files) {
       signal?.throwIfAborted();
       if (results.length >= input.maxResults) break;
+      // Filtered here rather than folded into the glob: the caller's pattern is
+      // arbitrary, and rewriting it to carry extensions is how a search quietly
+      // stops matching what the caller asked for.
+      if (!matchesFileTypes(uri.path, extensions)) continue;
       if (scannedBytes >= WORKSPACE_SEARCH_MAX_SCANNED_BYTES) {
         budgetExhausted = true;
         break;
@@ -473,23 +522,15 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
         continue;
       }
       scannedFiles += 1;
-      const lines = text.split(/\r?\n/u);
-      for (const [index, line] of lines.entries()) {
-        // A caller-supplied regex runs against a bounded prefix. An unbounded
-        // line is the input that turns a nested quantifier into a hang, and no
-        // useful match is lost: the preview never showed more than this either.
-        if (matcher.test(line.slice(0, MAX_SEARCH_LINE_CHARS))) {
-          results.push({
-            path: vscode.workspace.asRelativePath(uri, false),
-            line: index + 1,
-            preview: line.slice(0, 500),
-            ...(input.contextLines === 0
-              ? {}
-              : { context: contextAround(lines, index, input.contextLines) }),
-          });
-        }
-        if (results.length >= input.maxResults) break;
-      }
+      results.push(
+        ...fileMatches(
+          text,
+          matcher,
+          vscode.workspace.asRelativePath(uri, false),
+          input.multiline,
+          input.contextLines,
+        ).slice(0, input.maxResults - results.length),
+      );
     }
     return {
       structured: {
