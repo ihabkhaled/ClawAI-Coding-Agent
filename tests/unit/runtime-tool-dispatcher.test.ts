@@ -79,6 +79,9 @@ function harness(
     execute?: () => Promise<{ structured: { files: number }; modelText: string }>;
     definition?: ToolDefinition;
     invocation?: ToolInvocation;
+    hooks?: {
+      run: (event: string, toolName?: string) => Promise<{ blocked: boolean; reason: string }>;
+    };
   } = {},
 ) {
   const selectedInvocation = overrides.invocation ?? invocation;
@@ -110,6 +113,7 @@ function harness(
       return now;
     },
     receiptId: () => 'receipt_01JZZZZZZZZZZZZZZZZZZZZZ',
+    ...(overrides.hooks === undefined ? {} : { hooks: overrides.hooks }),
   });
   return { dispatcher, execute, policy };
 }
@@ -501,5 +505,50 @@ describe('runtime tool dispatcher', () => {
     });
     expect(policy).toHaveBeenCalledTimes(1);
     expect(execute).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('RuntimeToolDispatcher lifecycle hooks', () => {
+  it('runs the call when no hooks are configured at all', async () => {
+    const { dispatcher, execute } = harness();
+
+    await dispatcher.dispatch(invocation, continuation);
+
+    expect(execute).toHaveBeenCalledTimes(1);
+  });
+
+  it('refuses the call when a before-tool hook blocks it', async () => {
+    const run = vi.fn(async (event: string) => ({
+      blocked: event === 'before-tool',
+      reason: 'refused',
+    }));
+    const { dispatcher, execute } = harness({ hooks: { run } });
+
+    const result = await dispatcher.dispatch(invocation, continuation);
+
+    expect(execute).not.toHaveBeenCalled();
+    expect(JSON.stringify(result)).toContain('HOOK_REFUSED');
+  });
+
+  it('runs the after-tool hook once the call has happened', async () => {
+    const events: string[] = [];
+    const run = vi.fn(async (event: string) => {
+      events.push(event);
+      return { blocked: false, reason: 'passed' };
+    });
+    const { dispatcher } = harness({ hooks: { run } });
+
+    await dispatcher.dispatch(invocation, continuation);
+
+    expect(events).toEqual(['before-tool', 'after-tool']);
+  });
+
+  it('never runs a hook for a call the policy already denied', async () => {
+    const run = vi.fn(async () => ({ blocked: false, reason: 'passed' }));
+    const { dispatcher } = harness({ hooks: { run }, policyDecision: 'deny' });
+
+    await dispatcher.dispatch(invocation, continuation);
+
+    expect(run).not.toHaveBeenCalled();
   });
 });

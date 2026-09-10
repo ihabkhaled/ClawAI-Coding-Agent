@@ -13,6 +13,7 @@ const configuration = {
   agentMode: 'AUTO' as const,
   viewDensity: 'full' as const,
   outputStyle: 'default',
+  hooks: [],
   effortMode: 'ULTRA' as const,
   speedMode: '1X' as const,
   backendUrl: 'https://claw.local',

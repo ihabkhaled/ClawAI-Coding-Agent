@@ -5,6 +5,7 @@ import { executableToolDefinitions } from '../core/runtime/runtime-executable-to
 import type { ExternalOutputGrantStore } from './agent-coordinator.types';
 import type { ConfigurationService } from './configuration-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
+import type { LifecycleHookPort } from './lifecycle-hook.types';
 import type { LocalObservabilityService } from './observability-service';
 import type { RunJournalService } from './run-journal-service';
 import type { RuntimeEventStreamService } from './runtime-event-stream-service';
@@ -24,6 +25,7 @@ export interface VscodeRuntimeExecutionHost {
   readonly router: RuntimeToolRouter;
   readonly externalOutputs: ExternalOutputGrantStore;
   readonly policy: RuntimePolicyV2Adapter;
+  readonly hooks: LifecycleHookPort;
   readonly transport: BackendRuntimeTransport;
   readonly stream: RuntimeEventStreamService;
   readonly observability: LocalObservabilityService;
@@ -53,6 +55,7 @@ export function vscodeRuntimeExecutionDependencies(
       host.externalOutputs.snapshot(),
     ),
     policy: host.policy,
+    hooks: host.hooks,
     transport: host.transport,
     stream: host.stream,
     observability: host.observability,

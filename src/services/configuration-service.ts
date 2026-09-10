@@ -16,12 +16,14 @@ import {
   type GlobalConfiguration,
 } from '../core/configuration';
 import { normalizeEffortMode } from '../core/effort-mode';
+import { lifecycleHooksSchema } from '../core/lifecycle-hook';
 import { normalizeOutputStyle } from '../core/output-style';
 import { normalizeSpeedMode } from '../core/speed-mode';
 import { normalizeViewDensity } from '../core/view-density';
 
 import type { AgentMode } from '../core/agent-mode.types';
 import type { EffortMode } from '../core/effort-mode';
+import type { LifecycleHook } from '../core/lifecycle-hook.types';
 import type { OutputStyle } from '../core/output-style.types';
 import type { PermissionMode } from '../core/permission-policy.types';
 import type { SpeedMode } from '../core/speed-mode';
@@ -51,6 +53,8 @@ export interface RuntimeConfiguration extends GlobalConfiguration {
   agentMode: AgentMode;
   viewDensity: ViewDensity;
   outputStyle: OutputStyle;
+  /** Malformed entries are dropped as a group rather than half-applied. */
+  hooks: readonly LifecycleHook[];
   backendCustomUrl?: string;
   backendEnvironment?: ConnectionEnvironment;
   backendUrl: string;
@@ -165,6 +169,7 @@ export class ConfigurationService {
       agentMode: configuration.get<AgentMode>('agentMode') ?? 'AUTO',
       viewDensity: normalizeViewDensity(configuration.get<unknown>('viewDensity')),
       outputStyle: normalizeOutputStyle(configuration.get<unknown>('outputStyle')),
+      hooks: lifecycleHooksSchema.safeParse(configuration.get<unknown>('hooks')).data ?? [],
       effortMode: normalizeEffortMode(configuration.get<unknown>('effortMode')),
       speedMode: normalizeSpeedMode(configuration.get<unknown>('speedMode')),
       backendCustomUrl,

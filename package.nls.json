@@ -37,6 +37,7 @@
   "command.sendFeedback": "Send Feedback",
   "command.showLogs": "Show Logs",
   "config.backendUrl": "ClawAI backend origin. Tokens and credentials must not be included in this URL.",
+  "config.hooks": "Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.",
   "config.outputStyle": "How answers are written: default, concise, explanatory, learning, or a style this workspace defines.",
   "config.viewDensity": "Show the whole cockpit, or only the conversation and composer.",
   "config.backendEnvironment": "Choose the local, cloud, or custom ClawAI backend.",

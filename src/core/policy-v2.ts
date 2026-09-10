@@ -2,6 +2,8 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypt
 
 import { z } from 'zod';
 
+import { globMatches } from './glob-match';
+
 export const POLICY_MODES = [
   'PLAN',
   'ASK',
@@ -166,21 +168,6 @@ function narrowedProjectDecision(
     risk: request.risk,
     immutable: false,
   };
-}
-
-/**
- * Compiles a `*` glob into a matcher.
- *
- * Every other character is escaped, so the only metacharacter is `*` and the
- * result contains no nested quantifier. A pattern from an untrusted file can
- * therefore be slow at worst, never catastrophic.
- */
-function globMatches(pattern: string, value: string): boolean {
-  const source = pattern
-    .split('*')
-    .map((part) => part.replaceAll(/[.*+?^${}()|[\]\\]/gu, String.raw`\$&`))
-    .join(String.raw`[\s\S]*`);
-  return new RegExp(`^${source}$`, 'iu').test(value);
 }
 
 function ruleMatches(rule: PolicyRule, subject: PolicySubject): boolean {

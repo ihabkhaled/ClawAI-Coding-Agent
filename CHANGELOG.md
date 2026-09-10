@@ -2,6 +2,27 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.9.0
+
+Minor: lifecycle hooks (F078).
+
+- **`clawAI.hooks` runs your commands** at four moments: `run-start`,
+  `run-end`, `before-tool` and `after-tool`, optionally narrowed to a tool by
+  glob.
+- **Hooks live in VS Code settings, never in `.clawai`.** That is the whole
+  security design: a hook runs a command, and reading one from workspace
+  content would make cloning a repository enough to execute code. Project
+  configuration here may only ever tighten — `policy.json` has no `allow`
+  outcome for the same reason — and a hook is the opposite of a tightening.
+- **Only a `before-tool` hook marked `blocking` can stop a call.** Everything
+  else is advisory, so a broken hook slows a run rather than halting it.
+- **A hook that hangs is silence, not refusal.** Treating a timeout as a block
+  would let one wedged script stop every run on the machine.
+- **Hooks run after the policy has allowed a call**, never instead of it. A
+  hook must not become a way to reach something policy refused.
+- No shell: a hook is a command and its arguments, so a semicolon in a setting
+  cannot become a second command.
+
 ## 1.8.0
 
 Minor: output styles (F082).

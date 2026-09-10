@@ -4,12 +4,23 @@ import { describe, expect, it } from 'vitest';
 
 const LOCALES = ['ar', 'de', 'es', 'fa', 'fr', 'hi', 'it', 'ja', 'pt', 'ru', 'th', 'zh'] as const;
 
+function read(path: string): Record<string, string> {
+  return JSON.parse(readFileSync(path, 'utf8')) as Record<string, string>;
+}
+
+/**
+ * Runtime messages and manifest strings are two bundles with one problem.
+ * `package.nls.*` carries command titles and setting descriptions, and it fell
+ * through to English the same way — but the first version of this test only
+ * looked at `l10n/`, so a setting shipped untranslated twice before the gate
+ * that caught it was the CI diff rather than this.
+ */
 function bundle(locale?: string): Record<string, string> {
   const suffix = locale === undefined ? '' : `.${locale}`;
-  return JSON.parse(readFileSync(`l10n/bundle.l10n${suffix}.json`, 'utf8')) as Record<
-    string,
-    string
-  >;
+  return {
+    ...read(`l10n/bundle.l10n${suffix}.json`),
+    ...read(`package.nls${suffix}.json`),
+  };
 }
 
 const english = bundle();

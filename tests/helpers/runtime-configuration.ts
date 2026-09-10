@@ -5,6 +5,7 @@ export function testRuntimeConfiguration(): RuntimeConfiguration {
     agentMode: 'AUTO',
     viewDensity: 'full' as const,
     outputStyle: 'default',
+    hooks: [],
     effortMode: 'ULTRA',
     speedMode: '1X',
     backendCustomUrl: '',

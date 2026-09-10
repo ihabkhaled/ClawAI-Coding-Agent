@@ -12,6 +12,7 @@ import { RuntimeRunService } from './runtime-run-service';
 
 import type { RuntimeConfiguration } from './configuration-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
+import type { LifecycleHookPort } from './lifecycle-hook.types';
 import type { LocalObservabilityService } from './observability-service';
 import type { RunJournalService } from './run-journal-service';
 import type { RuntimeEventStreamService } from './runtime-event-stream-service';
@@ -34,6 +35,8 @@ export interface RuntimeStudioExecutionDependencies {
   readonly router: RuntimeToolRouter;
   readonly definitions?: readonly ToolDefinition[];
   readonly policy: RuntimePolicyV2Adapter;
+  /** Optional: a run with no configured hooks pays for nothing. */
+  readonly hooks?: LifecycleHookPort;
   readonly transport: BackendRuntimeTransport;
   readonly stream: RuntimeEventStreamService;
   readonly observability: LocalObservabilityService;
@@ -138,6 +141,7 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
     }),
     executor: dependencies.targetRouter(manifest),
     policy: dependencies.policy,
+    ...(dependencies.hooks === undefined ? {} : { hooks: dependencies.hooks }),
     receiptId: () => `receipt:${randomUUID()}`,
     transport: dependencies.transport,
   });
@@ -260,6 +264,7 @@ export async function recoverRuntimeStudio(
     }),
     executor: dependencies.targetRouter(dependencies.manifest),
     policy: dependencies.policy,
+    ...(dependencies.hooks === undefined ? {} : { hooks: dependencies.hooks }),
     receiptId: () => `receipt:${randomUUID()}`,
     transport: dependencies.transport,
   });
