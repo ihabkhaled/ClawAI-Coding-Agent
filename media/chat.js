@@ -73,6 +73,7 @@ const elements = {
   effortMode: byId('effortMode'),
   speedMode: byId('speedMode'),
   permissionMode: byId('permissionMode'),
+  contextWarning: byId('contextWarning'),
   focusToggle: byId('focusToggle'),
   mentionList: byId('mentionList'),
   mentionPanel: byId('mentionPanel'),
@@ -404,6 +405,52 @@ function activeContextCapacity() {
   return typeof capacity === 'number' && capacity > 0 ? capacity : null;
 }
 
+// Truncation risk. Mirrors src/core/context-budget.ts: a window is not a
+// budget for the prompt alone, because the answer has to fit in the same
+// window. A quarter is kept back, bounded at both ends.
+const RESERVED_FRACTION = 0.25;
+const MIN_RESERVED = 1024;
+const MAX_RESERVED = 32000;
+
+function promptBudget() {
+  const capacity = activeContextCapacity();
+  if (capacity === null) {
+    return undefined;
+  }
+  const reserved = Math.min(
+    MAX_RESERVED,
+    Math.max(MIN_RESERVED, Math.round(capacity * RESERVED_FRACTION)),
+  );
+  return { capacity, reserved, availableForPrompt: Math.max(0, capacity - reserved) };
+}
+
+function renderTruncationWarning() {
+  const budget = promptBudget();
+  if (budget === undefined) {
+    elements.contextWarning.hidden = true;
+    return;
+  }
+  const receipts = [...requestTokens.values()];
+  const spent = historyTokenTotal + receipts.reduce((total, receipt) => total + receipt.total, 0);
+  const drafted = Math.ceil(elements.prompt.value.length / 4);
+  const projected = spent + drafted;
+  if (projected > budget.availableForPrompt) {
+    elements.contextWarning.textContent = labels.contextOverflow;
+    elements.contextWarning.dataset.level = 'over';
+    elements.contextWarning.hidden = false;
+    return;
+  }
+  // Warned while it can still be acted on cheaply: this message fits, the next
+  // one will not. A meter that only speaks after the loss is a receipt.
+  if (projected > budget.availableForPrompt * 0.85) {
+    elements.contextWarning.textContent = labels.contextTight;
+    elements.contextWarning.dataset.level = 'tight';
+    elements.contextWarning.hidden = false;
+    return;
+  }
+  elements.contextWarning.hidden = true;
+}
+
 function renderConversationTokenCount() {
   const receipts = [...requestTokens.values()];
   const activeTotal = receipts.reduce((total, receipt) => total + receipt.total, 0);
@@ -428,6 +475,7 @@ function renderConversationTokenCount() {
     );
   }
   describeText(elements.conversationTokenMeter, summary);
+  renderTruncationWarning();
 }
 
 function updateRequestMeta(requestId) {
@@ -2730,6 +2778,7 @@ elements.prompt.addEventListener('input', () => {
   autoGrowPrompt();
   syncSendAvailability();
   requestMentions();
+  renderTruncationWarning();
 });
 
 elements.prompt.addEventListener('keydown', (event) => {

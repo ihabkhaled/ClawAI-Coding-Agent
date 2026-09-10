@@ -275,6 +275,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
   <div id="i18n" hidden
     data-question-dismissed="${translated('Question dismissed without an answer.')}"
     data-turn-position="${translated('{who}, turn {position} of {total}')}"
+    data-context-overflow="${translated('This message will not fit. The oldest of the conversation will be dropped.')}"
+    data-context-tight="${translated('Nearly out of room. The next message may not fit.')}"
     data-auto="${translated('Auto')}"
     data-mention-count="${translated('{count} workspace files match')}"
     data-agent-behavior-coding="${translated('Coding automatically')}"

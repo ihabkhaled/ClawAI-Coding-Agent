@@ -3029,6 +3029,78 @@ const attachmentTranslations = {
   },
 };
 
+const contextWarningTranslations = {
+  ar: {
+    'Nearly out of room. The next message may not fit.':
+      'أوشكت المساحة على النفاد. قد لا تتسع الرسالة التالية.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'لن تتسع هذه الرسالة. سيُسقط أقدم جزء من المحادثة.',
+  },
+  de: {
+    'Nearly out of room. The next message may not fit.':
+      'Fast kein Platz mehr. Die nächste Nachricht passt möglicherweise nicht.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Diese Nachricht passt nicht. Das Älteste der Unterhaltung wird verworfen.',
+  },
+  es: {
+    'Nearly out of room. The next message may not fit.':
+      'Casi sin espacio. El próximo mensaje puede no caber.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Este mensaje no cabe. Se descartará lo más antiguo de la conversación.',
+  },
+  fa: {
+    'Nearly out of room. The next message may not fit.':
+      'فضا رو به اتمام است. ممکن است پیام بعدی جا نشود.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'این پیام جا نمی‌شود. قدیمی‌ترین بخش گفتگو حذف خواهد شد.',
+  },
+  fr: {
+    'Nearly out of room. The next message may not fit.':
+      'Presque plus de place. Le prochain message pourrait ne pas tenir.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Ce message ne tient pas. Le plus ancien de la conversation sera supprimé.',
+  },
+  hi: {
+    'Nearly out of room. The next message may not fit.': 'जगह लगभग समाप्त। अगला संदेश शायद न समाए।',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'यह संदेश नहीं समाएगा। बातचीत का सबसे पुराना हिस्सा हटा दिया जाएगा।',
+  },
+  it: {
+    'Nearly out of room. The next message may not fit.':
+      'Quasi senza spazio. Il prossimo messaggio potrebbe non entrare.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Questo messaggio non entra. La parte più vecchia della conversazione verrà scartata.',
+  },
+  ja: {
+    'Nearly out of room. The next message may not fit.':
+      '残り容量がわずかです。次のメッセージは収まらないかもしれません。',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'このメッセージは収まりません。会話の最も古い部分が削除されます。',
+  },
+  pt: {
+    'Nearly out of room. The next message may not fit.':
+      'Quase sem espaço. A próxima mensagem pode não caber.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Esta mensagem não cabe. A parte mais antiga da conversa será descartada.',
+  },
+  ru: {
+    'Nearly out of room. The next message may not fit.':
+      'Места почти нет. Следующее сообщение может не поместиться.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Это сообщение не поместится. Самая старая часть беседы будет отброшена.',
+  },
+  th: {
+    'Nearly out of room. The next message may not fit.': 'พื้นที่ใกล้เต็มแล้ว ข้อความถัดไปอาจไม่พอ',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'ข้อความนี้ใหญ่เกินไป ส่วนที่เก่าที่สุดของการสนทนาจะถูกตัดออก',
+  },
+  zh: {
+    'Nearly out of room. The next message may not fit.': '空间快用完了，下一条消息可能放不下。',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      '这条消息放不下，对话中最早的部分将被丢弃。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -3048,6 +3120,7 @@ function translate(locale, message) {
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
+    contextWarningTranslations[locale][message] ??
     attachmentTranslations[locale][message] ??
     settingDescriptionTranslations[locale][message] ??
     outputStyleTranslations[locale][message] ??

@@ -2271,6 +2271,23 @@ body[data-view-density='focus'] .conversation {
   background: var(--vscode-list-activeSelectionBackground);
 }
 
+.context-warning {
+  margin: 0 var(--sp-3) var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+}
+
+.context-warning[data-level='tight'] {
+  background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 18%, transparent);
+  color: var(--vscode-editorWarning-foreground);
+}
+
+.context-warning[data-level='over'] {
+  background: color-mix(in srgb, var(--vscode-editorError-foreground) 18%, transparent);
+  color: var(--vscode-editorError-foreground);
+}
+
 .mention-panel {
   max-height: 220px;
   overflow-y: auto;
