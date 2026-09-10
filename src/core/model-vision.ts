@@ -1,3 +1,5 @@
+import { isRouterSelectedMode } from './configuration';
+
 import type { ExtensionSnapshot } from './extension-state';
 
 /**
@@ -13,7 +15,7 @@ import type { ExtensionSnapshot } from './extension-state';
  * reason: absence of a capability flag is not evidence of absence.
  */
 export function selectedModelAcceptsImages(snapshot: ExtensionSnapshot): boolean {
-  if (snapshot.routingMode === 'AUTO') return true;
+  if (isRouterSelectedMode(snapshot.routingMode)) return true;
   const entry = snapshot.models.find((model) => model.key === snapshot.selectedModel);
   return entry?.supportsVision !== false;
 }

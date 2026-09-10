@@ -2,6 +2,33 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.24.0
+
+Minor: all seven routing strategies, and a warning when the model cannot run
+the agent (F088, narrowed).
+
+- **Five routing strategies the backend has always offered are now reachable.**
+  Local models only, privacy first, fastest reply, strongest reasoning and
+  lowest cost were never missing from the backend; they were unreachable from
+  here. Someone who wanted local-only routing had to pick a model by hand and
+  keep picking, which is the manual mode wearing a different hat.
+- **The code now asks whether the router chooses, not whether the mode is
+  `AUTO`.** That comparison was correct while there were two modes and silently
+  wrong the moment there were seven, in a direction nothing would report: a
+  cost-saver run treated as manual looks for a model key that mode never sets.
+- **Switching to a strategy clears the stored model.** Leaving a stale key
+  behind means the next change reads a model nobody chose under that strategy,
+  and a local-only run resuming a cloud model is the surprise the mode exists to
+  avoid.
+- **The panel says when the selected model cannot call tools.** The catalog has
+  carried `supportsTools` from four backend shapes all along and nothing read
+  it. An agent run on a model without tools is not a slower run: it reads
+  nothing, writes nothing, and spends its whole budget describing work it never
+  did.
+- Only an explicit `false` warns. A model the catalog has not caught up with is
+  assumed capable, because absence of a capability flag is not evidence of
+  absence, and a router-selected mode never warns at all.
+
 ## 1.23.0
 
 Minor: multiline search and language scoping (F003, narrowed further).

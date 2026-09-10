@@ -1,3 +1,5 @@
+import { isRouterSelectedMode } from './configuration';
+
 import type { ExtensionSnapshot } from './extension-state';
 import type { StatusLineActivity, StatusLineModel } from './status-line.types';
 
@@ -29,7 +31,7 @@ export function statusLineActivity(snapshot: ExtensionSnapshot): StatusLineActiv
  * the same place, which is the one thing routing does not promise.
  */
 export function statusLineModel(snapshot: ExtensionSnapshot): StatusLineModel {
-  if (snapshot.routingMode === 'AUTO') return { automatic: true };
+  if (isRouterSelectedMode(snapshot.routingMode)) return { automatic: true };
   const entry = snapshot.models.find((model) => model.key === snapshot.selectedModel);
   const name = entry?.displayName ?? snapshot.selectedModel;
   return name.length === 0 ? { automatic: true } : { automatic: false, name };

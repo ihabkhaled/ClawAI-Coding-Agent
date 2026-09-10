@@ -4117,6 +4117,141 @@ const attentionQueueTranslations = {
   },
 };
 
+const routingStrategyTranslations = {
+  ar: {
+    'Fastest reply': 'أسرع رد',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'كيف تختار الخدمة الخلفية النموذج: تلقائيًا، أو باستراتيجية مسماة، أو نموذج تختاره بنفسك.',
+    'Local models only': 'النماذج المحلية فقط',
+    'Lowest cost': 'أقل تكلفة',
+    'Privacy first': 'الخصوصية أولاً',
+    'Strongest reasoning': 'أقوى استدلال',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'النموذج المحدد لا يستطيع استدعاء الأدوات، لذا لن يعدّل تشغيل الوكيل أي ملفات.',
+  },
+  de: {
+    'Fastest reply': 'Schnellste Antwort',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Wie das Backend ein Modell wählt: automatisch, nach benannter Strategie oder von Ihnen selbst gewählt.',
+    'Local models only': 'Nur lokale Modelle',
+    'Lowest cost': 'Geringste Kosten',
+    'Privacy first': 'Datenschutz zuerst',
+    'Strongest reasoning': 'Stärkstes Reasoning',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'Das gewählte Modell kann keine Tools aufrufen, daher ändert ein Agentenlauf keine Dateien.',
+  },
+  es: {
+    'Fastest reply': 'Respuesta más rápida',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Cómo elige el backend un modelo: automáticamente, con una estrategia con nombre o uno que elijas tú.',
+    'Local models only': 'Solo modelos locales',
+    'Lowest cost': 'Menor coste',
+    'Privacy first': 'Privacidad primero',
+    'Strongest reasoning': 'Razonamiento más potente',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'El modelo seleccionado no puede llamar a herramientas, así que una ejecución del agente no editará archivos.',
+  },
+  fa: {
+    'Fastest reply': 'سریع‌ترین پاسخ',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'روش انتخاب مدل توسط بک‌اند: خودکار، یک راهبرد نام‌گذاری‌شده، یا مدلی که خودتان انتخاب می‌کنید.',
+    'Local models only': 'فقط مدل‌های محلی',
+    'Lowest cost': 'کمترین هزینه',
+    'Privacy first': 'حریم خصوصی در اولویت',
+    'Strongest reasoning': 'قوی‌ترین استدلال',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'مدل انتخاب‌شده نمی‌تواند ابزارها را فراخوانی کند، بنابراین اجرای عامل هیچ فایلی را ویرایش نمی‌کند.',
+  },
+  fr: {
+    'Fastest reply': 'Réponse la plus rapide',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Comment le backend choisit un modèle : automatiquement, selon une stratégie nommée, ou celui que vous choisissez.',
+    'Local models only': 'Modèles locaux uniquement',
+    'Lowest cost': 'Coût le plus bas',
+    'Privacy first': 'Confidentialité d’abord',
+    'Strongest reasoning': 'Raisonnement le plus puissant',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'Le modèle sélectionné ne peut pas appeler d’outils, donc une exécution de l’agent ne modifiera aucun fichier.',
+  },
+  hi: {
+    'Fastest reply': 'सबसे तेज़ उत्तर',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'बैकएंड मॉडल कैसे चुनता है: स्वचालित रूप से, किसी नामित रणनीति से, या आपके द्वारा चुना गया।',
+    'Local models only': 'केवल स्थानीय मॉडल',
+    'Lowest cost': 'सबसे कम लागत',
+    'Privacy first': 'गोपनीयता पहले',
+    'Strongest reasoning': 'सबसे मज़बूत तर्क',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'चयनित मॉडल टूल नहीं बुला सकता, इसलिए एजेंट रन कोई फ़ाइल संपादित नहीं करेगा।',
+  },
+  it: {
+    'Fastest reply': 'Risposta più rapida',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Come il backend sceglie un modello: automaticamente, con una strategia denominata o uno scelto da te.',
+    'Local models only': 'Solo modelli locali',
+    'Lowest cost': 'Costo più basso',
+    'Privacy first': 'Privacy prima di tutto',
+    'Strongest reasoning': 'Ragionamento più forte',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'Il modello selezionato non può chiamare strumenti, quindi un’esecuzione dell’agente non modificherà file.',
+  },
+  ja: {
+    'Fastest reply': '最速の応答',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'バックエンドがモデルを選ぶ方法: 自動、名前付き戦略、または自分で選択。',
+    'Local models only': 'ローカルモデルのみ',
+    'Lowest cost': '最低コスト',
+    'Privacy first': 'プライバシー優先',
+    'Strongest reasoning': '最も強力な推論',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      '選択したモデルはツールを呼び出せないため、エージェント実行はファイルを編集しません。',
+  },
+  pt: {
+    'Fastest reply': 'Resposta mais rápida',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Como o backend escolhe um modelo: automaticamente, por uma estratégia nomeada ou um que você escolha.',
+    'Local models only': 'Apenas modelos locais',
+    'Lowest cost': 'Menor custo',
+    'Privacy first': 'Privacidade em primeiro lugar',
+    'Strongest reasoning': 'Raciocínio mais forte',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'O modelo selecionado não pode chamar ferramentas, portanto uma execução do agente não editará arquivos.',
+  },
+  ru: {
+    'Fastest reply': 'Самый быстрый ответ',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Как бэкенд выбирает модель: автоматически, по названной стратегии или по вашему выбору.',
+    'Local models only': 'Только локальные модели',
+    'Lowest cost': 'Наименьшая стоимость',
+    'Privacy first': 'Приоритет конфиденциальности',
+    'Strongest reasoning': 'Самое сильное рассуждение',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'Выбранная модель не может вызывать инструменты, поэтому запуск агента не изменит файлы.',
+  },
+  th: {
+    'Fastest reply': 'ตอบเร็วที่สุด',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'วิธีที่แบ็กเอนด์เลือกโมเดล: อัตโนมัติ กลยุทธ์ที่ระบุชื่อ หรือโมเดลที่คุณเลือกเอง',
+    'Local models only': 'เฉพาะโมเดลในเครื่อง',
+    'Lowest cost': 'ต้นทุนต่ำสุด',
+    'Privacy first': 'ความเป็นส่วนตัวมาก่อน',
+    'Strongest reasoning': 'การให้เหตุผลที่แข็งแกร่งที่สุด',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'โมเดลที่เลือกเรียกใช้เครื่องมือไม่ได้ การรันเอเจนต์จึงจะไม่แก้ไขไฟล์',
+  },
+  zh: {
+    'Fastest reply': '最快回复',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      '后端如何选择模型：自动、指定策略，或由你自己选择。',
+    'Local models only': '仅本地模型',
+    'Lowest cost': '成本最低',
+    'Privacy first': '隐私优先',
+    'Strongest reasoning': '最强推理',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      '所选模型无法调用工具，因此智能体运行不会修改任何文件。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -4151,6 +4286,7 @@ function translate(locale, message) {
     reasoningVisibilityTranslations[locale][message] ??
     runTerminalTranslations[locale][message] ??
     attentionQueueTranslations[locale][message] ??
+    routingStrategyTranslations[locale][message] ??
     message
   );
 }

@@ -14,6 +14,7 @@ import {
   type ConnectionEnvironment,
   type ConnectionProfile,
   type GlobalConfiguration,
+  type RoutingMode,
 } from '../core/configuration';
 import { normalizeEffortMode } from '../core/effort-mode';
 import { lifecycleHooksSchema } from '../core/lifecycle-hook';
@@ -233,8 +234,20 @@ export class ConfigurationService {
   }
 
   async selectAuto(): Promise<void> {
+    await this.selectRoutingMode('AUTO');
+  }
+
+  /**
+   * Hands model choice back to the router under a named strategy.
+   *
+   * The stored model is cleared with it. Leaving a stale key behind means the
+   * next mode change reads a model the user never chose under this strategy,
+   * and a local-only run resuming a cloud model is exactly the surprise the
+   * mode was picked to avoid.
+   */
+  async selectRoutingMode(mode: RoutingMode): Promise<void> {
     const configuration = vscode.workspace.getConfiguration('clawAI');
-    await configuration.update('routingMode', 'AUTO', vscode.ConfigurationTarget.Workspace);
+    await configuration.update('routingMode', mode, vscode.ConfigurationTarget.Workspace);
     await configuration.update('selectedModel', '', vscode.ConfigurationTarget.Workspace);
   }
 

@@ -53,7 +53,7 @@
   "config.frontendEnvironment": "ฟรอนต์เอนด์",
   "config.frontendCustomUrl": "URL ฟรอนต์เอนด์ที่กำหนดเอง",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
-  "config.routingMode": "Use automatic backend routing or a manually selected model.",
+  "config.routingMode": "วิธีที่แบ็กเอนด์เลือกโมเดล: อัตโนมัติ กลยุทธ์ที่ระบุชื่อ หรือโมเดลที่คุณเลือกเอง",
   "config.agentMode": "Choose automatic execution or read-only planning.",
   "config.speedMode": "How many workspace metadata lookups run at once while building context. Byte reads stay serial; approvals, writes, commands and the included file set are never affected.",
   "config.effortMode": "How much a run may spend: model turns, tool calls, wall clock and output size. Ultra is the default and matches the fixed budget used before effort modes existed.",

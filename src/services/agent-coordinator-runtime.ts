@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { BackendClient } from '../backend/backend-client';
+import { isRoutingModeName } from '../core/configuration';
 
 import {
   generationConcurrencyKey,
@@ -87,8 +88,11 @@ export async function applyModelSelection(
   if (selection === null) {
     return;
   }
-  if (selection === 'AUTO') {
-    await configuration.selectAuto();
+  // A router mode arrives here in the same field a model key does, because the
+  // panel offers them in one list: the user is choosing how the next request is
+  // routed, and "pick this model" is one of the answers.
+  if (isRoutingModeName(selection)) {
+    await configuration.selectRoutingMode(selection);
   } else {
     if (!state.snapshot.models.some((model) => model.key === selection)) {
       throw new Error(vscode.l10n.t('The selected model is not available.'));
