@@ -8,6 +8,9 @@ import { BoundedOutputBuffer } from '../core/bounded-output';
 import { commandSpecSchema, type CommandResult, type CommandSpec } from '../core/command-spec';
 import { redactText } from '../core/redaction';
 
+import { terminateProcess } from './process-terminator';
+
+import type { ProcessTerminationHandle } from './process-terminator.types';
 import type { CommandExecutionResult } from '../services/agent-run-service.types';
 import type { ChildProcess, ChildProcessWithoutNullStreams } from 'node:child_process';
 
@@ -48,13 +51,18 @@ export function runBoundedCommand(
     child.stderr.on('data', (chunk: Buffer) => {
       buffers.stderr.append(chunk);
     });
-    const timeout = setTimeout(() => child.kill(), 5 * 60_000);
+    let termination: ProcessTerminationHandle | null = null;
+    const terminate = (): void => {
+      termination ??= terminateProcess(child);
+    };
+    const timeout = setTimeout(terminate, 5 * 60_000);
     const cleanup = (): void => {
       clearTimeout(timeout);
+      termination?.settle();
       signal.removeEventListener('abort', aborted);
     };
     const aborted = (): void => {
-      child.kill();
+      terminate();
       cleanup();
       reject(new Error('ClawAI command execution was cancelled.'));
     };
@@ -189,9 +197,9 @@ export async function runCommandSpec(
     });
     if (specification.stdin !== undefined) child.stdin.end(specification.stdin);
     else child.stdin.end();
+    let termination: ProcessTerminationHandle | null = null;
     const terminate = (): void => {
-      if (process.platform === 'win32') child.kill();
-      else child.kill('SIGTERM');
+      termination ??= terminateProcess(child);
     };
     const timeout = setTimeout(() => {
       timedOut = true;
@@ -203,6 +211,7 @@ export async function runCommandSpec(
     };
     const cleanup = (): void => {
       clearTimeout(timeout);
+      termination?.settle();
       signal?.removeEventListener('abort', aborted);
     };
     child.once('error', (error) => {
@@ -225,6 +234,7 @@ export async function runCommandSpec(
         timedOut,
         cancelled,
         truncated: stdout.truncated || stderr.truncated,
+        forciblyTerminated: termination?.wasForced() ?? false,
       });
     });
     signal?.addEventListener('abort', aborted, { once: true });
