@@ -2,10 +2,12 @@ import { createHash } from 'node:crypto';
 import path from 'node:path';
 
 import { gitOperationSchema, type GitOperation, type GitReceipt } from '../core/git-operation';
+import { assessPullRequestReadiness, describeReadiness } from '../core/pull-request-readiness';
 import { findStagedSecret } from '../core/staged-secret-scan';
 import { advertisedWorkspaceRootIndex } from '../core/workspace-scope';
 import { runCommandSpec } from '../infrastructure/bounded-command-runner';
 
+import type { PullRequestFacts } from '../core/pull-request-readiness.types';
 import type { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
 
 export class GitAgentService {
@@ -51,6 +53,11 @@ export class GitAgentService {
       if (!(await this.reviewStagedDiff(staged, stagedDiffHash, signal)))
         throw new Error('Commit was not approved after staged-diff review');
     }
+    if (operation.operation === 'pr-readiness') {
+      // Answered rather than run: this is the one operation that asks a
+      // question about the repository instead of changing or printing it.
+      return this.pullRequestReceipt(root.fsPath, operation.baseBranch, before, signal);
+    }
     const output = await this.git(root.fsPath, this.arguments(operation), signal);
     // Only after the command actually succeeds: a worktree that failed to
     // create must not become addressable, and one that failed to remove
@@ -75,6 +82,83 @@ export class GitAgentService {
       ...(operation.operation === 'push' ? { pushedRef: operation.refspec } : {}),
       output: output.slice(0, 1_048_576),
     };
+  }
+
+  /**
+   * What git already knows about whether this branch could open a pull request.
+   *
+   * Every fact here is one an agent otherwise discovers by trying: it pushes,
+   * fails, and spends model turns learning that the repository has no remote or
+   * that it is sitting on the base branch. Gathering them costs five cheap
+   * reads.
+   *
+   * A failed read is treated as the absence of the thing it looked for, not as
+   * an error. `rev-list` against a base that does not exist locally fails, and
+   * the honest reading of that is "nothing is ahead of a base I cannot see" —
+   * which the caller is then told, rather than being handed a git error to
+   * interpret.
+   */
+  private async pullRequestReceipt(
+    cwd: string,
+    baseBranch: string | undefined,
+    before: { head: string | null; workingTreeHash: string },
+    signal?: AbortSignal,
+  ): Promise<GitReceipt> {
+    const currentBranch = (await this.safeGit(cwd, ['branch', '--show-current'], signal)).trim();
+    const base = baseBranch ?? (await this.defaultBase(cwd, signal));
+    const remotes = (await this.safeGit(cwd, ['remote'], signal))
+      .split(/\r?\n/u)
+      .map((line) => line.trim())
+      .filter((line) => line.length > 0);
+    const counts = (
+      await this.safeGit(cwd, ['rev-list', '--left-right', '--count', `${base}...HEAD`], signal)
+    )
+      .trim()
+      .split(/\s+/u)
+      .map((value) => Number.parseInt(value, 10));
+    const dirtyPaths = (await this.safeGit(cwd, ['status', '--porcelain'], signal))
+      .split(/\r?\n/u)
+      .map((line) => line.slice(3).trim())
+      .filter((line) => line.length > 0);
+    const upstream = (
+      await this.safeGit(cwd, ['rev-parse', '--abbrev-ref', '@{upstream}'], signal)
+    ).trim();
+    const facts: PullRequestFacts = {
+      currentBranch,
+      baseBranch: base,
+      remotes,
+      behindBy: Number.isFinite(counts[0]) ? (counts[0] ?? 0) : 0,
+      aheadBy: Number.isFinite(counts[1]) ? (counts[1] ?? 0) : 0,
+      dirtyPaths,
+      hasUpstream: upstream.length > 0,
+    };
+    const readiness = assessPullRequestReadiness(facts);
+    return {
+      operation: 'pr-readiness',
+      beforeHead: before.head,
+      afterHead: before.head,
+      beforeWorkingTreeHash: before.workingTreeHash,
+      afterWorkingTreeHash: before.workingTreeHash,
+      output: describeReadiness(readiness, facts),
+      pullRequest: { ...readiness, facts },
+    };
+  }
+
+  /** The base a pull request would target when the caller named none. */
+  private async defaultBase(cwd: string, signal?: AbortSignal): Promise<string> {
+    const head = (
+      await this.safeGit(cwd, ['symbolic-ref', '--short', 'refs/remotes/origin/HEAD'], signal)
+    ).trim();
+    return head.length === 0 ? 'main' : head.replace(/^origin\//u, '');
+  }
+
+  /** A read whose failure is an answer rather than an error. */
+  private async safeGit(cwd: string, arguments_: string[], signal?: AbortSignal): Promise<string> {
+    try {
+      return await this.git(cwd, arguments_, signal);
+    } catch {
+      return '';
+    }
   }
 
   async abortCherryPick(rootKey: string, signal?: AbortSignal): Promise<void> {

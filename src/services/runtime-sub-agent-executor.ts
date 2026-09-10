@@ -355,6 +355,7 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
         'conflicts',
         'submodules',
         'topology',
+        'pr-readiness',
       ].includes(invocation.operation) &&
       !(
         this.task.role === 'integrator' &&

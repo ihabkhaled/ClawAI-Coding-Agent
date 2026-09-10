@@ -155,6 +155,7 @@ const gitReadOperations = new Set([
   'conflicts',
   'submodules',
   'topology',
+  'pr-readiness',
 ]);
 
 function classifyGit(operation: string): Classification {
