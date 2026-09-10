@@ -399,6 +399,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         tasks: this.stores.tasks,
         journals: this.journals,
         research: this.research,
+        files: this.files,
       }),
       ...advancedToolRegistrations({
         evidence,
@@ -493,13 +494,13 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
 
   cancel = (): Promise<void> => this.active?.cancel() ?? Promise.resolve();
 
-  pause(): void {
+  pause = (): void => {
     this.flagship.pause();
-  }
+  };
 
-  resume(): void {
+  resume = (): void => {
     this.flagship.resume();
-  }
+  };
 
   async steer(message: string): Promise<void> {
     await steerRuntime(this.transport, this.active, this.activeRunId, this.epochs, message);

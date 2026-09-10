@@ -2,6 +2,27 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.16.0
+
+Minor: cell-granular notebook editing (F018).
+
+- **`workspace.notebook`** reads a notebook's cells and inserts, replaces or
+  deletes exactly one — instead of rewriting the whole `.ipynb` as opaque text
+  and destroying its structure.
+- **Everything the editor has no opinion about survives**: outputs, execution
+  counts, per-cell metadata, kernelspec, widget state. Parsing into a narrow
+  shape and writing it back is how a notebook gets destroyed by a tool that
+  meant well.
+- **The file is written back the way it was found** — same indentation, same
+  source representation per cell. A notebook reformatted from two spaces to
+  four is a diff nobody asked for.
+- **Changing a cell's code clears its outputs.** An output that no longer
+  corresponds to the code above it is worse than no output.
+- **An index outside the notebook is refused, not clamped.** "Edit cell 12" in
+  a nine-cell notebook silently editing cell nine is not help.
+- Edits go through the same preview, approval and undo as every other file
+  change, because a notebook edit is a file edit.
+
 ## 1.15.0
 
 Minor: reference a terminal you are already using (F035), and a redaction fix.
