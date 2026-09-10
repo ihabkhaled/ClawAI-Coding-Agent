@@ -17,6 +17,7 @@ export function renderComposerMarkup(translated: ChatMarkupTranslator): string {
         </div>
         <label class="sr-only" for="prompt">${translated('Ask ClawAI')}</label>
         <textarea id="prompt" class="prompt-field" rows="2" maxlength="20000" placeholder="${translated('Ask ClawAI to inspect, plan, or build…')}" required></textarea>
+        <p id="contextWarning" class="context-warning" role="status" aria-live="polite" hidden></p>
         <div id="mentionPanel" class="mention-panel" hidden>
           <ul id="mentionList" class="mention-list" role="listbox" aria-label="${translated('Workspace files')}"></ul>
         </div>

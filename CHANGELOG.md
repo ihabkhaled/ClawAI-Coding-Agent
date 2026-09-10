@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.11.0
+
+Minor: a reserved response budget and a truncation warning before you send
+(F040).
+
+- **A context window is not a budget for the prompt alone.** Whatever the model
+  says has to fit in the same window, so a quarter is kept back — bounded at
+  1 024 and 32 000, because the fraction that matters is small windows.
+- **The composer warns while you can still act on it.** "Nearly out of room"
+  fires while this message still fits and the next one will not, which is the
+  moment a person can do something cheaply. A meter that only speaks after the
+  loss is a receipt.
+- **It says nothing it cannot know.** Automatic routing has not chosen a model,
+  and a model may report no window; warning about a limit nobody knows is a
+  warning nobody can act on.
+
 ## 1.10.0
 
 Minor: images are stripped, gated and budgeted before they are sent (F039).

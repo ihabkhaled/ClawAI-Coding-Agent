@@ -1540,3 +1540,37 @@ logout race; measuring the machine instead was never the intent. Both budgets
 are now generous, and the suite is deterministic. A test that fails only when
 the machine is busy trains you to re-run it, which is how a real failure gets
 ignored.
+
+### Batch 51 — F040 reserved response budget and truncation warning
+
+| Batch | Version | Status                                | Evidence                                                          |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------- |
+| 51    | 1.11.0  | Code and deterministic gates complete | `src/core/context-budget.ts`, `media/chat.js`. Tests: 14 + 4 e2e. |
+
+**A context window is not a budget for the prompt.** Whatever the model says
+has to fit in the same window, so filling it entirely leaves no room for the
+answer. A quarter is reserved, bounded at both ends: a quarter of eight
+thousand is a usable answer, a quarter of a million is more than any reply
+needs.
+
+**The warning fires while it can still be acted on.** "Nearly out of room"
+means this message fits and the next will not — the moment a person can start
+a new conversation or trim their draft cheaply. A warning that arrives after
+the loss is a receipt, not a warning.
+
+**It stays silent when it cannot know.** Automatic routing has not chosen a
+model yet, and a model may report no window at all. Warning about a limit
+nobody knows is a warning nobody can act on, and a meter that always speaks is
+a meter nobody reads.
+
+**A test told the truth about the feature.** The first e2e attempt could not
+trigger the warning at all, and the reason was not a bug: the composer caps a
+prompt at 20 000 characters, about five thousand tokens, so against a large
+window the draft alone can never overflow. In practice the warning fires from
+accumulated history. The tests now use a narrow model, which is how the
+boundary is reachable in one message, and the file says so.
+
+This also supplies the capacity denominator ordering constraint 6 said F041
+needs before compaction can know when to trigger.
+
+**Still true:** live-model Definition of Done cannot be executed here.
