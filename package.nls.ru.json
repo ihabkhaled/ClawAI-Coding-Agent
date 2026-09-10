@@ -26,6 +26,7 @@
   "command.undoLastEdit": "Отменить последнее изменение ClawAI",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.askSideQuestion": "Задать отдельный вопрос",
   "command.attachTerminalOutput": "Прикрепить вывод терминала",
   "command.groupConversation": "Сгруппировать беседу",
   "command.openConversationInNewWindow": "Открыть беседу в новом окне",

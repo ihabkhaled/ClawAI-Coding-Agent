@@ -1758,3 +1758,33 @@ F019 (kernel execution) remains open and still depends on this, as ordering
 constraint said: cell targeting first, then execution.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 57 — F042 side questions
+
+| Batch | Version | Status                                | Evidence                                                     |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------ |
+| 57    | 1.17.0  | Code and deterministic gates complete | `side-question.ts`, `side-question-thread.ts`. Tests: 9 new. |
+
+**Deviation from the reuse note, and it matters.** The note suggested a variant
+of `send` that skips `ConversationSessionService.recordThread`. That would have
+sent the question into the conversation's own thread and merely not bound it to
+the session — the exchange would still be in the transcript the agent carries
+forward, which is the pollution, not the fix. A side question needs a different
+thread, not a different bookkeeping call.
+
+**Archived at creation, not afterwards.** A thread that appears in the history
+list for even a moment has already polluted the list the user was keeping
+clean. One thread is reused for the session: the account stays tidy, and
+re-deriving it from the archived list on every question would be a request to
+answer a question nobody asked.
+
+**It carries none of the conversation's context, and the answer says so.**
+There is no way to give it that context without writing into the thread, which
+is the thing being avoided. Shipping the limitation in the output is better
+than shipping a feature whose behaviour has to be explained elsewhere.
+
+**The answer opens as a document, not a message.** A message would be in the
+transcript, which is the whole point. A document is also keepable, which an
+answer worth asking for often is.
+
+**Still true:** live-model Definition of Done cannot be executed here.
