@@ -26,6 +26,7 @@ const task: SubAgentTask = {
   budget: { maxTokens: 200_000, maxToolCalls: 200, maxRuntimeMs: 2_700_000, maxRetries: 1 },
   tools: ['workspace.quality'],
   riskCeiling: 'R1',
+  inherit: 'none' as const,
   acceptanceChecks: ['npm test'],
   epochs: { account: 1, workspace: 1, target: 1, policy: 1 },
 };

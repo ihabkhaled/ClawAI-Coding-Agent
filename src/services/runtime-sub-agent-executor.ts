@@ -4,6 +4,7 @@ import { fileTransactionSchema } from '../core/file-transaction';
 import { findingsSchema, type Finding } from '../core/findings';
 import { subAgentGraphSchema } from '../core/multi-agent-dag';
 import { resolveSubAgentDefinition } from '../core/sub-agent-definitions';
+import { buildInheritedContext } from '../core/sub-agent-inheritance';
 
 import { RuntimeRunService } from './runtime-run-service';
 
@@ -20,6 +21,7 @@ import type { SubAgentGraph, SubAgentOutcome, SubAgentTask } from '../core/multi
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { SubAgentDefinition } from '../core/sub-agent-definitions';
+import type { ParentRunContext } from '../core/sub-agent-inheritance.types';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
 export interface RuntimeSubAgentDependencies {
@@ -32,6 +34,12 @@ export interface RuntimeSubAgentDependencies {
   readonly transport: BackendRuntimeTransport;
   /** Named sub-agent presets a task may reference by `definitionName`. */
   readonly subAgentPresets: () => Promise<readonly SubAgentDefinition[]>;
+  /**
+   * What the delegating run knows, for a task that asked to inherit it. Read
+   * at launch rather than captured once, so a child started later sees the
+   * decisions the parent made in the meantime.
+   */
+  readonly parentContext: () => ParentRunContext;
 }
 
 interface SubAgentTelemetry {
@@ -74,11 +82,18 @@ export function buildSubAgentPrompt(
   task: SubAgentTask,
   steering: readonly string[],
   preset: SubAgentDefinition | undefined,
+  parent?: ParentRunContext,
 ): string {
+  // Inherited context comes before the goal on purpose. A model reads the goal
+  // as its instruction; anything after it competes with the instruction, and a
+  // child told what to do and then told the history tends to answer the
+  // history.
+  const inherited = parent === undefined ? '' : buildInheritedContext(task.inherit, parent);
   return [
     `Role: ${task.role}`,
     preset === undefined ? '' : `Definition: ${preset.name} — ${preset.description}`,
     preset === undefined ? '' : preset.systemPrompt,
+    inherited,
     `Goal: ${task.goal}`,
     `Worktree/root key: ${task.worktreeId}`,
     `Declared write set: ${task.writeSet.join(', ') || '(read-only)'}`,
@@ -129,7 +144,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       threadId: thread.id,
       clientRequestId: requestId,
       idempotencyKey: requestId,
-      prompt: buildSubAgentPrompt(task, steering(), preset),
+      prompt: buildSubAgentPrompt(task, steering(), preset, this.dependencies.parentContext()),
       manifestHash: this.hash({ taskId: task.taskId, worktreeId: task.worktreeId }),
       toolCatalogHash: this.hash(definitions),
       provider: selection.provider,

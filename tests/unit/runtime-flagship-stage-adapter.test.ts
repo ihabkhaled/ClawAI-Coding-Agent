@@ -99,6 +99,7 @@ describe('RuntimeFlagshipStageAdapter', () => {
       budget: { maxTokens: 1_000, maxToolCalls: 1, maxRuntimeMs: 1_000, maxRetries: 0 },
       tools: ['workspace.files'],
       riskCeiling: 'R3',
+      inherit: 'none' as const,
       acceptanceChecks: ['done'],
       epochs: { account: 1, workspace: 1, target: 1, policy: 1 },
     } satisfies SubAgentTask;

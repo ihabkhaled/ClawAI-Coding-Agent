@@ -22,6 +22,7 @@ const task = {
   budget: { maxTokens: 1_000, maxToolCalls: 10, maxRuntimeMs: 10_000, maxRetries: 0 },
   tools: ['workspace.files'],
   riskCeiling: 'R3',
+  inherit: 'none' as const,
   acceptanceChecks: ['UI is complete'],
   epochs: { account: 1, workspace: 1, target: 1, policy: 1 },
 } satisfies SubAgentTask;
