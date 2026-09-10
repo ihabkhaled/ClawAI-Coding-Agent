@@ -53,6 +53,7 @@
   "config.frontendEnvironment": "فرانت‌اند",
   "config.frontendCustomUrl": "نشانی سفارشی فرانت‌اند",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
+  "config.autoCompact": "وقتی گفتگو تقریباً برای ادامه بیش از حد طولانی شد چه کند: هیچ کاری، پیشنهاد خلاصه‌سازی، یا خلاصه‌سازی خودکار.",
   "config.routingMode": "روش انتخاب مدل توسط بک‌اند: خودکار، یک راهبرد نام‌گذاری‌شده، یا مدلی که خودتان انتخاب می‌کنید.",
   "config.agentMode": "Choose automatic execution or read-only planning.",
   "config.speedMode": "How many workspace metadata lookups run at once while building context. Byte reads stay serial; approvals, writes, commands and the included file set are never affected.",

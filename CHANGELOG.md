@@ -2,6 +2,33 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.25.0
+
+Minor: automatic compaction (F041 complete).
+
+- **`shouldCompact` has been able to say "this conversation is nearly full"
+  since 1.12.0 and nothing ever asked it.** Now something does. The new
+  `clawAI.autoCompact` setting chooses between doing nothing, offering to
+  summarize, and summarizing automatically. It defaults to offering, which is
+  the only choice that cannot surprise anybody.
+- **The panel reports the number, the host decides what it means.** The running
+  token total for a conversation is known only to the panel, so it sends it. The
+  capacity is not sent with it: that is a reading of the model catalog and the
+  routing mode, both of which the host owns, and a number the host can derive is
+  one it should not accept from elsewhere.
+- **Nothing happens while a run is in flight.** Compaction continues the
+  conversation in a new thread, so starting one while a run writes into the old
+  thread splits the record and half the answer lands where nobody will look.
+- **A conversation is raised once, not on every render.** It stays nearly full
+  until something is done about it, and the state subscription fires constantly.
+  The flag clears when usage falls back, so a later fill asks again.
+- **An unknown capacity never triggers.** Compaction throws away detail, and
+  doing that on a guess is worse than letting the server drop the oldest
+  messages, which at least happens for a measured reason.
+- The automatic mode reuses the manual command verbatim and only skips its
+  question. A compaction that behaved differently when the extension started it
+  would be a second feature wearing the first one's name.
+
 ## 1.24.0
 
 Minor: all seven routing strategies, and a warning when the model cannot run

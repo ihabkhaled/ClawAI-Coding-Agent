@@ -8,6 +8,7 @@ const configuration: RuntimeConfiguration = {
   agentMode: 'AUTO',
   viewDensity: 'full' as const,
   outputStyle: 'default',
+  autoCompact: 'prompt' as const,
   hooks: [],
   effortMode: 'ULTRA',
   speedMode: '1X',

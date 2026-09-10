@@ -4252,6 +4252,57 @@ const routingStrategyTranslations = {
   },
 };
 
+const autoCompactionTranslations = {
+  ar: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'ما الذي يحدث عندما تقترب المحادثة من الطول الأقصى: لا شيء، أو عرض تلخيصها، أو تلخيصها تلقائيًا.',
+  },
+  de: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'Was geschehen soll, wenn eine Unterhaltung fast zu lang zum Fortsetzen ist: nichts, eine Zusammenfassung anbieten oder automatisch zusammenfassen.',
+  },
+  es: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'Qué hacer cuando una conversación está casi demasiado larga para continuar: nada, ofrecer resumirla o resumirla automáticamente.',
+  },
+  fa: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'وقتی گفتگو تقریباً برای ادامه بیش از حد طولانی شد چه کند: هیچ کاری، پیشنهاد خلاصه‌سازی، یا خلاصه‌سازی خودکار.',
+  },
+  fr: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'Que faire lorsqu’une conversation devient trop longue pour continuer : rien, proposer de la résumer, ou la résumer automatiquement.',
+  },
+  hi: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'जब बातचीत जारी रखने के लिए लगभग बहुत लंबी हो जाए तो क्या करें: कुछ नहीं, सारांश बनाने का प्रस्ताव दें, या स्वतः सारांश बनाएँ।',
+  },
+  it: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'Cosa fare quando una conversazione è quasi troppo lunga per continuare: niente, proporre di riassumerla o riassumerla automaticamente.',
+  },
+  ja: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      '会話が続けるには長くなりすぎそうなときの動作: 何もしない、要約を提案する、または自動的に要約する。',
+  },
+  pt: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'O que fazer quando uma conversa fica quase longa demais para continuar: nada, oferecer resumi-la ou resumi-la automaticamente.',
+  },
+  ru: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'Что делать, когда беседа почти слишком длинная для продолжения: ничего, предложить сократить её или сокращать автоматически.',
+  },
+  th: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'จะทำอย่างไรเมื่อการสนทนายาวเกินกว่าจะดำเนินต่อ: ไม่ทำอะไร เสนอให้สรุป หรือสรุปโดยอัตโนมัติ',
+  },
+  zh: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      '当对话长到几乎无法继续时的处理方式：不处理、提示是否总结，或自动总结。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -4287,6 +4338,7 @@ function translate(locale, message) {
     runTerminalTranslations[locale][message] ??
     attentionQueueTranslations[locale][message] ??
     routingStrategyTranslations[locale][message] ??
+    autoCompactionTranslations[locale][message] ??
     message
   );
 }

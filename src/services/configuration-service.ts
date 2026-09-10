@@ -5,6 +5,7 @@ import {
   isAutosavePolicy,
   type AutosavePolicy,
 } from '../core/autosave-policy';
+import { normalizeAutoCompactionMode } from '../core/compaction-trigger';
 import {
   BACKEND_LOCAL_URL,
   connectionEnvironmentSchema,
@@ -23,6 +24,7 @@ import { normalizeSpeedMode } from '../core/speed-mode';
 import { normalizeViewDensity } from '../core/view-density';
 
 import type { AgentMode } from '../core/agent-mode.types';
+import type { AutoCompactionMode } from '../core/compaction-trigger.types';
 import type { EffortMode } from '../core/effort-mode';
 import type { LifecycleHook } from '../core/lifecycle-hook.types';
 import type { OutputStyle } from '../core/output-style.types';
@@ -54,6 +56,7 @@ export interface RuntimeConfiguration extends GlobalConfiguration {
   agentMode: AgentMode;
   viewDensity: ViewDensity;
   outputStyle: OutputStyle;
+  autoCompact: AutoCompactionMode;
   /** Malformed entries are dropped as a group rather than half-applied. */
   hooks: readonly LifecycleHook[];
   backendCustomUrl?: string;
@@ -188,6 +191,7 @@ export class ConfigurationService {
       historyLimit: numberSetting(configuration, 'historyLimit', 50),
       permissionMode: normalizePermissionMode(configuration.get<unknown>('permissionMode')),
       autosave: normalizeAutosavePolicy(configuration.get<unknown>('autosave')),
+      autoCompact: normalizeAutoCompactionMode(configuration.get<unknown>('autoCompact')),
     };
   }
 

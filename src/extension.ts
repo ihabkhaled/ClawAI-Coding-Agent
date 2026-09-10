@@ -229,6 +229,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const chatView = new ChatViewProvider(context.extensionUri, state, {
     agent: (input) => coordinator.runAgent(input),
     cancel: (requestId) => coordinator.cancel(requestId),
+    conversationTokens: (threadId, tokens) => coordinator.conversationTokens(threadId, tokens),
     captureAdmission: (threadId) => coordinator.captureAdmission(threadId),
     compare: (input) => coordinator.compare(input),
     configureConnections: async (profile) => {

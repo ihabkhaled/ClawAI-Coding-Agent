@@ -43,6 +43,15 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
     text: z.string().max(20_000),
     caretIndex: z.number().int().min(0).max(20_000),
   }),
+  // The panel is the only place that knows a conversation's running token
+  // total, so it reports the number; the host decides what it means. The
+  // capacity is not sent with it, because the host can derive that from the
+  // catalog and a number the host owns is one it should not accept from here.
+  z.object({
+    type: z.literal('conversationTokens'),
+    threadId: z.string().min(1).max(200),
+    tokens: z.number().int().min(0).max(100_000_000),
+  }),
   z.object({ type: z.literal('newChat') }),
   z.object({ type: z.literal('openFolder') }),
   z.object({ type: z.literal('refreshModels') }),

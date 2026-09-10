@@ -8,6 +8,7 @@ import { ApprovalBroker } from '../core/approval-broker';
 import { totalAttachmentBytes } from '../core/chat-attachment';
 import { type ContextMode } from '../core/context-mode';
 import { GenerationThreadRegistry } from '../core/generation-thread-registry';
+import { selectedModelCapacity } from '../core/model-catalog';
 import { selectedModelAcceptsImages } from '../core/model-vision';
 import { type OutputLogger } from '../infrastructure/output-logger';
 import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-workspace-edit-adapter';
@@ -39,6 +40,7 @@ import { AgentExecutionPresenter } from './agent-execution-presenter';
 import { AgentRunService } from './agent-run-service';
 import { AgentWorkflowService } from './agent-workflow-service';
 import { AttachmentRequestService } from './attachment-request-service';
+import { AutoCompactionService } from './auto-compaction-service';
 import { BrowserAuthorizationService } from './browser-authorization-service';
 import { ChatParticipantService } from './chat-participant-service';
 import { ChatService } from './chat-service';
@@ -476,6 +478,31 @@ export class AgentCoordinator implements vscode.Disposable {
         seed,
       ),
   });
+
+  /**
+   * Watches how full the open conversation is.
+   *
+   * Built from the same pieces the manual command uses, because a compaction
+   * that behaves differently when the extension started it would be a second
+   * feature wearing the first one's name.
+   */
+  private readonly autoCompaction = new AutoCompactionService({
+    mode: () => this.configuration.read().autoCompact,
+    capacity: () =>
+      selectedModelCapacity(
+        this.state.snapshot.routingMode,
+        this.state.snapshot.selectedModel,
+        this.state.snapshot.models,
+      ),
+    busy: () => this.state.snapshot.busy,
+    compact: () => this.commands.compactConversation(),
+    compactSilently: () => this.commands.compactConversationUnattended(),
+  });
+
+  /** The panel's running token total for a conversation, which only it knows. */
+  async conversationTokens(threadId: string, tokens: number): Promise<void> {
+    await this.autoCompaction.observe(threadId, tokens);
+  }
 
   private readonly refreshConversations = conversationRefresher(() => ({
     backend: this.backend,

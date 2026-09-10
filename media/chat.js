@@ -479,6 +479,21 @@ function renderConversationTokenCount() {
   }
   describeText(elements.conversationTokenMeter, summary);
   renderTruncationWarning();
+  reportConversationTokens(total);
+}
+
+// The panel is the only place that knows this number, and the host is the only
+// place that can act on it. Sent as a bare total: the host derives the capacity
+// from the catalog it owns rather than trusting a denominator computed here.
+let reportedTokenTotal = -1;
+
+function reportConversationTokens(total) {
+  const threadId = currentSession?.threadId ?? '';
+  if (threadId.length === 0 || total === reportedTokenTotal) {
+    return;
+  }
+  reportedTokenTotal = total;
+  vscode.postMessage({ type: 'conversationTokens', threadId, tokens: total });
 }
 
 function updateRequestMeta(requestId) {
