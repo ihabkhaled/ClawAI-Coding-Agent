@@ -4303,6 +4303,57 @@ const autoCompactionTranslations = {
   },
 };
 
+const contextFreshnessTranslations = {
+  ar: {
+    'changed since it was read': 'تغيّر منذ قراءته',
+    'no longer there': 'لم يعد موجودًا',
+  },
+  de: {
+    'changed since it was read': 'seit dem Lesen geändert',
+    'no longer there': 'nicht mehr vorhanden',
+  },
+  es: {
+    'changed since it was read': 'cambiado desde que se leyó',
+    'no longer there': 'ya no existe',
+  },
+  fa: {
+    'changed since it was read': 'از زمان خواندن تغییر کرده',
+    'no longer there': 'دیگر وجود ندارد',
+  },
+  fr: {
+    'changed since it was read': 'modifié depuis sa lecture',
+    'no longer there': 'n’existe plus',
+  },
+  hi: {
+    'changed since it was read': 'पढ़े जाने के बाद बदला',
+    'no longer there': 'अब मौजूद नहीं',
+  },
+  it: {
+    'changed since it was read': 'modificato da quando è stato letto',
+    'no longer there': 'non esiste più',
+  },
+  ja: {
+    'changed since it was read': '読み取り後に変更されました',
+    'no longer there': 'すでに存在しません',
+  },
+  pt: {
+    'changed since it was read': 'alterado desde que foi lido',
+    'no longer there': 'já não existe',
+  },
+  ru: {
+    'changed since it was read': 'изменено после чтения',
+    'no longer there': 'больше не существует',
+  },
+  th: {
+    'changed since it was read': 'เปลี่ยนแปลงหลังจากถูกอ่าน',
+    'no longer there': 'ไม่มีอยู่แล้ว',
+  },
+  zh: {
+    'changed since it was read': '读取后已更改',
+    'no longer there': '已不存在',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -4339,6 +4390,7 @@ function translate(locale, message) {
     attentionQueueTranslations[locale][message] ??
     routingStrategyTranslations[locale][message] ??
     autoCompactionTranslations[locale][message] ??
+    contextFreshnessTranslations[locale][message] ??
     message
   );
 }

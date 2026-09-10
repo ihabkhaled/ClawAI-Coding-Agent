@@ -10,6 +10,7 @@ import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
 import { openAgentTerminal } from './infrastructure/agent-terminal';
 import { OutputLogger } from './infrastructure/output-logger';
+import { VscodeContextRangeReader } from './infrastructure/vscode-context-range-reader';
 import { VscodeMentionIndex } from './infrastructure/vscode-mention-index';
 import { probeRuntimeHost } from './infrastructure/vscode-runtime-host-probe';
 import { buildRuntimeCapabilityManifest } from './infrastructure/vscode-runtime-target-adapter';
@@ -19,6 +20,7 @@ import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-ed
 import { AgentCoordinator } from './services/agent-coordinator';
 import { attachTerminalOutput } from './services/attach-terminal-command';
 import { ConfigurationService } from './services/configuration-service';
+import { ContextFreshnessTracker } from './services/context-freshness-tracker';
 import { ClawaiUriHandler } from './services/deep-link-handler';
 import { ExternalOutputGrantService } from './services/external-output-grant-service';
 import { GlobalContextService } from './services/global-context-service';
@@ -287,7 +289,22 @@ export function activate(context: vscode.ExtensionContext): void {
 
   const setupTree = new StateTreeProvider('setup', state);
   const modelTree = new StateTreeProvider('model', state);
-  const contextTree = new StateTreeProvider('context', state);
+  // Declared before the tree so the tree can read it, and given the tree's
+  // refresh afterwards, because each needs the other and only one can be first.
+  let refreshContextTree = (): void => undefined;
+  const contextFreshness = new ContextFreshnessTracker(
+    state,
+    new VscodeContextRangeReader(workspaceScope),
+    () => {
+      refreshContextTree();
+    },
+  );
+  const contextTree = new StateTreeProvider('context', state, undefined, (key) =>
+    contextFreshness.freshness(key),
+  );
+  refreshContextTree = () => {
+    contextTree.refresh();
+  };
   const threadGroups = new ThreadGroupStore(context.workspaceState);
   const terminals = new VscodeTerminalTracker();
   const historyTree = new StateTreeProvider('history', state, () => threadGroups.read());
@@ -339,6 +356,12 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerTreeDataProvider('clawAI.setup', setupTree),
     vscode.window.registerTreeDataProvider('clawAI.model', modelTree),
     vscode.window.registerTreeDataProvider('clawAI.context', contextTree),
+    vscode.workspace.onDidSaveTextDocument((document) => {
+      // A save is the only moment the answer can change, and the moment a
+      // person is looking, so the mark appears while they still remember the
+      // edit that caused it.
+      void contextFreshness.fileSaved(vscode.workspace.asRelativePath(document.uri, false));
+    }),
     vscode.window.registerTreeDataProvider('clawAI.history', historyTree),
     vscode.window.registerTreeDataProvider('clawAI.tasks', tasksTree),
     tasksTree,

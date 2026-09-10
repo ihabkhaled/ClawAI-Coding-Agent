@@ -1,3 +1,4 @@
+import { contentDigest } from './context-freshness';
 import { isSensitiveWorkspacePath, normalizeWorkspacePath } from './workspace-path-policy';
 
 export interface ContextCandidate {
@@ -24,6 +25,12 @@ export interface ContextInclusion {
   path: string;
   startLine?: number;
   endLine?: number;
+  /**
+   * A digest of exactly the text that was collected — the range, not the whole
+   * file, because the range is what the reference names. Absent on a receipt
+   * taken before digests existed.
+   */
+  digest?: string;
 }
 
 export interface ContextReceipt {
@@ -117,6 +124,7 @@ export function collectContext(
         ...(file.startLine === undefined
           ? {}
           : { startLine: file.startLine, endLine: file.endLine }),
+        digest: contentDigest(file.content),
       })),
       excluded,
       totalBytes,

@@ -1,6 +1,7 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 import * as vscode from 'vscode';
 
+import { contentDigest } from '../../src/core/context-freshness';
 import { WorkspaceContextService } from '../../src/services/workspace-context-service';
 
 import type { RuntimeConfiguration } from '../../src/services/configuration-service';
@@ -135,7 +136,16 @@ describe('WorkspaceContextService line-range candidates', () => {
     expect(context.files).toEqual([
       { path: 'src/app.ts', content: 'const x = 1;', startLine: 10, endLine: 12 },
     ]);
-    expect(context.receipt.included).toEqual([{ path: 'src/app.ts', startLine: 10, endLine: 12 }]);
+    expect(context.receipt.included).toEqual([
+      {
+        path: 'src/app.ts',
+        startLine: 10,
+        endLine: 12,
+        // The digest covers the range that was collected, so a later edit to
+        // these lines is what marks the row stale, not an edit anywhere else.
+        digest: contentDigest('const x = 1;'),
+      },
+    ]);
   });
 
   describe('referencedRanges', () => {
@@ -211,7 +221,14 @@ describe('WorkspaceContextService line-range candidates', () => {
       expect(context.files).toEqual([
         { path: 'src/app.ts', content: 'two\nthree', startLine: 2, endLine: 3 },
       ]);
-      expect(context.receipt.included).toEqual([{ path: 'src/app.ts', startLine: 2, endLine: 3 }]);
+      expect(context.receipt.included).toEqual([
+        {
+          path: 'src/app.ts',
+          startLine: 2,
+          endLine: 3,
+          digest: contentDigest(context.files[0]?.content ?? ''),
+        },
+      ]);
     });
 
     it('clamps a range past the end of the file rather than failing', async () => {

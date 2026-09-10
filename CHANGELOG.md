@@ -2,6 +2,30 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.26.0
+
+Minor: stale referenced ranges are marked (F033 complete).
+
+- **A `path:L-L` reference is a snapshot, not a live view.** Edit the file
+  afterwards and the same line numbers point at different code, so the receipt
+  claims the model read something it never saw. Nothing errors, and the
+  conversation reads as though it were still about the current file. That is the
+  quiet kind of wrong.
+- **The receipt now records a digest of exactly what was collected** — the
+  range, not the whole file, because the range is what the reference names.
+- **The check runs on save.** A save is the only moment the answer can change,
+  and it is the moment someone is looking, so the mark appears while they still
+  remember making the edit. A save of a file the receipt does not name reads
+  nothing.
+- **Changed and gone are separate answers**, because they need different ones. A
+  changed range can be re-collected by sending again; a deleted one cannot, and
+  telling someone to refresh a file that is gone wastes their time.
+- **A receipt taken before digests existed reports fresh.** Calling a file
+  changed on the strength of a missing record would make every old receipt look
+  wrong at once.
+- Nothing re-collects behind your back. The view reports; the next message is
+  still yours to send.
+
 ## 1.25.0
 
 Minor: automatic compaction (F041 complete).
