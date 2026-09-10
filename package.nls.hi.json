@@ -26,6 +26,7 @@
   "command.undoLastEdit": "अंतिम ClawAI संपादन वापस लें",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.attachTerminalOutput": "टर्मिनल आउटपुट संलग्न करें",
   "command.groupConversation": "बातचीत समूहित करें",
   "command.openConversationInNewWindow": "बातचीत नई विंडो में खोलें",
   "command.compactConversation": "बातचीत संक्षिप्त करें",

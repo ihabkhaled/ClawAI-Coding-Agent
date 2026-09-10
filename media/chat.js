@@ -3091,6 +3091,18 @@ window.addEventListener('message', (event) => {
       elements.connectionError.hidden = false;
     }
     elements.announcer.textContent = message.message;
+  } else if (message?.type === 'appendToComposer' && typeof message.text === 'string') {
+    const existing = elements.prompt.value;
+    elements.prompt.value =
+      existing.length === 0
+        ? message.text
+        : `${existing}
+
+${message.text}`;
+    elements.prompt.focus();
+    autoGrowPrompt();
+    syncSendAvailability();
+    renderTruncationWarning();
   } else if (message?.type === 'notice' && typeof message.message === 'string') {
     showNotice(message.message);
   }

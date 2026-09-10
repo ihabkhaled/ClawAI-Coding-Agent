@@ -3462,6 +3462,93 @@ const threadGroupTranslations = {
   },
 };
 
+const terminalTranslations = {
+  ar: {
+    'Attach Terminal Output': 'إرفاق مخرجات الطرفية',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'تلك الطرفية ليس لها مخرجات قابلة للقراءة. يجب تفعيل تكامل الصدفة كي يقرأها ClawAI.',
+    'There are no open terminals.': 'لا توجد طرفيات مفتوحة.',
+    'Which terminal?': 'أي طرفية؟',
+  },
+  de: {
+    'Attach Terminal Output': 'Terminalausgabe anhängen',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'Dieses Terminal hat keine lesbare Ausgabe. Die Shell-Integration muss aktiv sein, damit ClawAI sie lesen kann.',
+    'There are no open terminals.': 'Es sind keine Terminals geöffnet.',
+    'Which terminal?': 'Welches Terminal?',
+  },
+  es: {
+    'Attach Terminal Output': 'Adjuntar salida del terminal',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'Ese terminal no tiene salida legible. La integración del shell debe estar activa para que ClawAI la lea.',
+    'There are no open terminals.': 'No hay terminales abiertos.',
+    'Which terminal?': '¿Qué terminal?',
+  },
+  fa: {
+    'Attach Terminal Output': 'پیوست خروجی ترمینال',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'آن ترمینال خروجی قابل خواندن ندارد. برای خواندن، یکپارچگی شل باید فعال باشد.',
+    'There are no open terminals.': 'هیچ ترمینال بازی وجود ندارد.',
+    'Which terminal?': 'کدام ترمینال؟',
+  },
+  fr: {
+    'Attach Terminal Output': 'Joindre la sortie du terminal',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      "Ce terminal n'a pas de sortie lisible. L'intégration du shell doit être active pour que ClawAI la lise.",
+    'There are no open terminals.': 'Aucun terminal ouvert.',
+    'Which terminal?': 'Quel terminal ?',
+  },
+  hi: {
+    'Attach Terminal Output': 'टर्मिनल आउटपुट संलग्न करें',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'उस टर्मिनल का आउटपुट पढ़ा नहीं जा सकता। ClawAI के पढ़ने के लिए शेल इंटीग्रेशन सक्रिय होना चाहिए।',
+    'There are no open terminals.': 'कोई टर्मिनल खुला नहीं है।',
+    'Which terminal?': 'कौन सा टर्मिनल?',
+  },
+  it: {
+    'Attach Terminal Output': 'Allega output del terminale',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      "Quel terminale non ha output leggibile. L'integrazione della shell deve essere attiva perché ClawAI possa leggerlo.",
+    'There are no open terminals.': 'Non ci sono terminali aperti.',
+    'Which terminal?': 'Quale terminale?',
+  },
+  ja: {
+    'Attach Terminal Output': 'ターミナル出力を添付',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'そのターミナルには読み取れる出力がありません。ClawAI が読むにはシェル統合が有効である必要があります。',
+    'There are no open terminals.': '開いているターミナルはありません。',
+    'Which terminal?': 'どのターミナルですか？',
+  },
+  pt: {
+    'Attach Terminal Output': 'Anexar saída do terminal',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'Esse terminal não tem saída legível. A integração do shell precisa estar ativa para o ClawAI ler.',
+    'There are no open terminals.': 'Não há terminais abertos.',
+    'Which terminal?': 'Qual terminal?',
+  },
+  ru: {
+    'Attach Terminal Output': 'Прикрепить вывод терминала',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'У этого терминала нет читаемого вывода. Для чтения должна быть активна интеграция с оболочкой.',
+    'There are no open terminals.': 'Нет открытых терминалов.',
+    'Which terminal?': 'Какой терминал?',
+  },
+  th: {
+    'Attach Terminal Output': 'แนบผลลัพธ์จากเทอร์มินัล',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'เทอร์มินัลนั้นไม่มีผลลัพธ์ที่อ่านได้ ต้องเปิดใช้ shell integration เพื่อให้ ClawAI อ่านได้',
+    'There are no open terminals.': 'ไม่มีเทอร์มินัลที่เปิดอยู่',
+    'Which terminal?': 'เทอร์มินัลใด',
+  },
+  zh: {
+    'Attach Terminal Output': '附加终端输出',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      '该终端没有可读取的输出。需要启用 shell 集成，ClawAI 才能读取。',
+    'There are no open terminals.': '没有打开的终端。',
+    'Which terminal?': '哪个终端？',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -3481,6 +3568,7 @@ function translate(locale, message) {
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
+    terminalTranslations[locale][message] ??
     threadGroupTranslations[locale][message] ??
     newWindowTranslations[locale][message] ??
     compactionTranslations[locale][message] ??

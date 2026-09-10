@@ -190,6 +190,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     await this.broadcast({ type: 'notice', message });
   }
 
+  /**
+   * Puts text into the composer for the user to send, rather than sending it.
+   *
+   * Attaching terminal output is the user gathering evidence, not asking a
+   * question. Sending it for them would decide what the question was.
+   */
+  async appendToComposer(text: string): Promise<void> {
+    await this.broadcast({ type: 'appendToComposer', text });
+  }
+
   dispose(): void {
     this.unsubscribe();
     this.sessions.dispose();
