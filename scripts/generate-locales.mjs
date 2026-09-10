@@ -3549,6 +3549,92 @@ const terminalTranslations = {
   },
 };
 
+const sideQuestionTranslations = {
+  ar: {
+    'Answered outside the conversation, without its context.':
+      'تتم الإجابة خارج المحادثة، دون سياقها.',
+    'Ask a Side Question': 'طرح سؤال جانبي',
+    'Ask a side question': 'اطرح سؤالاً جانبياً',
+    'Asking…': 'جارٍ السؤال…',
+  },
+  de: {
+    'Answered outside the conversation, without its context.':
+      'Wird außerhalb der Unterhaltung beantwortet, ohne deren Kontext.',
+    'Ask a Side Question': 'Nebenfrage stellen',
+    'Ask a side question': 'Nebenfrage stellen',
+    'Asking…': 'Wird gefragt…',
+  },
+  es: {
+    'Answered outside the conversation, without its context.':
+      'Se responde fuera de la conversación, sin su contexto.',
+    'Ask a Side Question': 'Hacer una pregunta aparte',
+    'Ask a side question': 'Haz una pregunta aparte',
+    'Asking…': 'Preguntando…',
+  },
+  fa: {
+    'Answered outside the conversation, without its context.':
+      'خارج از گفتگو و بدون زمینه آن پاسخ داده می‌شود.',
+    'Ask a Side Question': 'پرسیدن سوال جانبی',
+    'Ask a side question': 'یک سوال جانبی بپرسید',
+    'Asking…': 'در حال پرسیدن…',
+  },
+  fr: {
+    'Answered outside the conversation, without its context.':
+      'Répondu en dehors de la conversation, sans son contexte.',
+    'Ask a Side Question': 'Poser une question à part',
+    'Ask a side question': 'Poser une question à part',
+    'Asking…': 'Question en cours…',
+  },
+  hi: {
+    'Answered outside the conversation, without its context.':
+      'बातचीत के बाहर, उसके संदर्भ के बिना उत्तर दिया जाता है।',
+    'Ask a Side Question': 'अलग से एक प्रश्न पूछें',
+    'Ask a side question': 'अलग से एक प्रश्न पूछें',
+    'Asking…': 'पूछा जा रहा है…',
+  },
+  it: {
+    'Answered outside the conversation, without its context.':
+      'Risposta fuori dalla conversazione, senza il suo contesto.',
+    'Ask a Side Question': 'Fai una domanda a parte',
+    'Ask a side question': 'Fai una domanda a parte',
+    'Asking…': 'Domanda in corso…',
+  },
+  ja: {
+    'Answered outside the conversation, without its context.':
+      '会話の外で、その文脈なしに回答します。',
+    'Ask a Side Question': '別の質問をする',
+    'Ask a side question': '別の質問をする',
+    'Asking…': '質問しています…',
+  },
+  pt: {
+    'Answered outside the conversation, without its context.':
+      'Respondido fora da conversa, sem o contexto dela.',
+    'Ask a Side Question': 'Fazer uma pergunta à parte',
+    'Ask a side question': 'Faça uma pergunta à parte',
+    'Asking…': 'Perguntando…',
+  },
+  ru: {
+    'Answered outside the conversation, without its context.':
+      'Ответ вне беседы, без её контекста.',
+    'Ask a Side Question': 'Задать отдельный вопрос',
+    'Ask a side question': 'Задайте отдельный вопрос',
+    'Asking…': 'Отправка вопроса…',
+  },
+  th: {
+    'Answered outside the conversation, without its context.':
+      'ตอบนอกการสนทนา โดยไม่ใช้บริบทของการสนทนา',
+    'Ask a Side Question': 'ถามคำถามแยกต่างหาก',
+    'Ask a side question': 'ถามคำถามแยกต่างหาก',
+    'Asking…': 'กำลังถาม…',
+  },
+  zh: {
+    'Answered outside the conversation, without its context.': '在对话之外回答，不带对话的上下文。',
+    'Ask a Side Question': '提一个旁问',
+    'Ask a side question': '提一个旁问',
+    'Asking…': '正在提问…',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -3568,6 +3654,7 @@ function translate(locale, message) {
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
+    sideQuestionTranslations[locale][message] ??
     terminalTranslations[locale][message] ??
     threadGroupTranslations[locale][message] ??
     newWindowTranslations[locale][message] ??

@@ -57,6 +57,7 @@ import { RuntimeUiProjector } from './runtime-ui-projection';
 import { confirmSafeEdits } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
 import { SessionControlService } from './session-control-service';
+import { SideQuestionThread } from './side-question-thread';
 import { expandSkillPrompt } from './skill-expansion';
 import { VscodeRuntimeStudio } from './vscode-runtime-studio';
 import { type WorkflowKind } from './workflow-service';
@@ -103,6 +104,9 @@ export class AgentCoordinator implements vscode.Disposable {
   private readonly skills: SkillCatalogService;
 
   private readonly outputStyles: OutputStyleCatalog;
+
+  /** One archived thread for questions that must not enter the conversation. */
+  private readonly sideQuestions = new SideQuestionThread(() => this.backend);
 
   constructor(
     readonly state: ExtensionState,
@@ -477,6 +481,7 @@ export class AgentCoordinator implements vscode.Disposable {
     refreshHistory: () => this.refreshConversations(),
     sessionControls: () => this.sessionControls,
     outputStyles: () => this.outputStyles,
+    sideQuestions: () => this.sideQuestions,
     summarize: () => (threadId, instruction) =>
       summarizeThread(
         this.backend,

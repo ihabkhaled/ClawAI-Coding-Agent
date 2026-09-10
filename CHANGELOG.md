@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.17.0
+
+Minor: side questions (F042).
+
+- **ClawAI: Ask a Side Question** answers something without adding it to the
+  conversation. The question goes to a separate thread and the answer opens as
+  a document, not a message.
+- **The thread is archived at creation**, so it never appears in your history —
+  a thread visible for even a moment has already polluted the list you were
+  keeping clean. One thread is reused for the session rather than one per
+  question.
+- **It carries none of the conversation's context, on purpose.** There is no
+  way to give it that context without writing into the thread, which is the
+  thing being avoided — so the question is asked clean and the answer says so
+  at the bottom.
+
 ## 1.16.0
 
 Minor: cell-granular notebook editing (F018).

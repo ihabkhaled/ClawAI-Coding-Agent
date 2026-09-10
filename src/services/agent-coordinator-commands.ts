@@ -10,6 +10,7 @@ import { selectOutputStyle } from './select-output-style-command';
 import { sendFeedback } from './send-feedback-command';
 import { showSessionRecap } from './session-recap-command';
 import { showUsage } from './show-usage-command';
+import { askSideQuestion } from './side-question-command';
 import { archiveChat, browseArchivedChats, renameChat } from './thread-organization-command';
 import { exportTranscript } from './transcript-export-command';
 
@@ -22,6 +23,7 @@ import type { OutputStyleCatalog } from './output-style-catalog';
 import type { RunJournalService } from './run-journal-service';
 import type { SafeEditService } from './safe-edit-service';
 import type { SessionControlService } from './session-control-service';
+import type { SideQuestionThread } from './side-question-thread';
 import type { ThreadOrganizationDependencies } from './thread-organization.types';
 import type { BackendClient } from '../backend/backend-client';
 import type { ExtensionState } from '../core/extension-state';
@@ -37,6 +39,7 @@ export interface CoordinatorCommands {
   showSessionRecap(): Promise<void>;
   selectOutputStyle(): Promise<void>;
   compactConversation(): Promise<void>;
+  askSideQuestion(): Promise<void>;
   toggleFocusView(): Promise<void>;
   renameChat(): Promise<void>;
   archiveChat(): Promise<void>;
@@ -60,6 +63,7 @@ interface CommandCollaborators {
   readonly refreshHistory: () => Promise<void>;
   readonly sessionControls: () => SessionControlService;
   readonly outputStyles: () => OutputStyleCatalog;
+  readonly sideQuestions: () => SideQuestionThread;
   readonly summarize: () => (threadId: string, instruction: string) => Promise<string>;
   readonly startContinuation: () => (seed: string) => Promise<void>;
 }
@@ -89,6 +93,18 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
       exportTranscript({ conversations: parts.conversations(), state: parts.state() }),
     searchRunHistory: () => searchRunHistory({ journals: parts.journals() }),
     showUsage: () => showUsage({ state: parts.state() }),
+    askSideQuestion: () =>
+      askSideQuestion({
+        scratchThreadId: () => parts.sideQuestions().id(),
+        ask: (threadId, question) => parts.summarize()(threadId, question),
+        openAnswer: async (markdown) => {
+          const document = await vscode.workspace.openTextDocument({
+            content: markdown,
+            language: 'markdown',
+          });
+          await vscode.window.showTextDocument(document, { preview: false });
+        },
+      }),
     compactConversation: () =>
       compactConversation({
         activeThreadId: () => parts.view()?.activeThreadId(),
