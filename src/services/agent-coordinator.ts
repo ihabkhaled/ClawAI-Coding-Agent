@@ -9,6 +9,7 @@ import { totalAttachmentBytes } from '../core/chat-attachment';
 import { contextModeForCommand } from '../core/command-context';
 import { type ContextMode } from '../core/context-mode';
 import { GenerationThreadRegistry } from '../core/generation-thread-registry';
+import { selectedModelAcceptsImages } from '../core/model-vision';
 import { type OutputLogger } from '../infrastructure/output-logger';
 import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-workspace-edit-adapter';
 import { type DiffPreviewProvider } from '../views/diff-preview-provider';
@@ -59,9 +60,10 @@ import { SessionControlService } from './session-control-service';
 import { expandSkillPrompt } from './skill-expansion';
 import { VscodeRuntimeStudio } from './vscode-runtime-studio';
 import { type WorkflowKind } from './workflow-service';
-import { workspaceOutputStyles, workspaceSkillCatalog } from './workspace-skill-catalog';
+import { workspaceCatalogs } from './workspace-skill-catalog';
 
 import type { OutputStyleCatalog } from './output-style-catalog';
+import type { SkillCatalogService } from './skill-catalog-service';
 import type { WorkspaceContextService } from './workspace-context-service';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { ExtensionState } from '../core/extension-state';
@@ -97,9 +99,9 @@ export class AgentCoordinator implements vscode.Disposable {
   private view: ChatViewProvider | null = null;
 
   /** Slash commands the workspace and this VS Code profile define. */
-  private readonly skills: ReturnType<typeof workspaceSkillCatalog>;
+  /** Slash commands and response styles the workspace and profile define. */
+  private readonly skills: SkillCatalogService;
 
-  /** Response styles the workspace and this VS Code profile define. */
   private readonly outputStyles: OutputStyleCatalog;
 
   constructor(
@@ -115,11 +117,13 @@ export class AgentCoordinator implements vscode.Disposable {
     workspaceScope: WorkspaceScopeService,
   ) {
     this.backend = createBackendClient(this.configuration.read(), this.sessionVault);
-    this.skills = workspaceSkillCatalog(extensionContext.globalStorageUri, workspaceScope);
-    this.outputStyles = workspaceOutputStyles(extensionContext.globalStorageUri, workspaceScope);
+    const catalogs = workspaceCatalogs(extensionContext.globalStorageUri, workspaceScope);
+    this.skills = catalogs.skills;
+    this.outputStyles = catalogs.outputStyles;
     this.attachmentRequests = new AttachmentRequestService(
       () => this.backend,
       () => this.view,
+      () => selectedModelAcceptsImages(this.state.snapshot),
     );
     this.approvals = new ApprovalBroker(this.state);
     this.runtimeStudio = new VscodeRuntimeStudio(
@@ -373,9 +377,8 @@ export class AgentCoordinator implements vscode.Disposable {
     await this.connection.logout();
   }
 
-  async openChat(threadId?: string): Promise<string | undefined> {
-    return this.conversations.openChat(threadId);
-  }
+  openChat = (threadId?: string): Promise<string | undefined> =>
+    this.conversations.openChat(threadId);
 
   async openThread(input: { sessionId: string; threadId: string }): Promise<void> {
     if (!this.state.snapshot.connected) {
@@ -472,13 +475,11 @@ export class AgentCoordinator implements vscode.Disposable {
 
   ask = (contextMode: ContextMode): Promise<void> => this.workflowActions.ask(contextMode);
 
-  async runReadOnlyWorkflow(kind: WorkflowKind, contextMode: ContextMode): Promise<void> {
-    await this.workflowActions.runReadOnly(kind, contextMode);
-  }
+  runReadOnlyWorkflow = (kind: WorkflowKind, contextMode: ContextMode): Promise<void> =>
+    this.workflowActions.runReadOnly(kind, contextMode);
 
-  async runEditWorkflow(kind: WorkflowKind, contextMode: ContextMode): Promise<void> {
-    await this.workflowActions.runEdit(kind, contextMode);
-  }
+  runEditWorkflow = (kind: WorkflowKind, contextMode: ContextMode): Promise<void> =>
+    this.workflowActions.runEdit(kind, contextMode);
 
   readonly commands = coordinatorCommands({
     connection: () => this.connection,

@@ -1488,3 +1488,55 @@ carries command titles and setting descriptions and was never checked, so
 `config.outputStyle` shipped untranslated in 1.8.0 and nobody noticed. The test
 now reads both bundles as one surface. A gate that covers most of a problem
 teaches you it is solved.
+
+### Batch 50 — F039 images stripped, gated and budgeted
+
+| Batch | Version | Status                                | Evidence                                                                            |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------------- |
+| 50    | 1.10.0  | Code and deterministic gates complete | `image-metadata.ts`, `attachment-preparation.ts`, `model-vision.ts`. Tests: 25 new. |
+
+Ordering constraint 5 said F038 and F039 share one chokepoint and must ship
+together or the second rewrites the first. The chokepoint now exists —
+`prepareAttachments` is the single place an attachment is made ready to send —
+so F038's page ranges will extend one function rather than rewriting the image
+path. F039's own work landed on top of it.
+
+**EXIF is why this batch exists.** A screenshot is usually harmless. A photo
+taken on a phone carries GPS coordinates, a device serial and a timestamp, and
+attaching one sends all three to a model provider. Nobody means to do that, so
+it is not offered as a setting: it happens, on this machine, before upload, so
+nothing that describes the user leaves even if the upload later fails.
+
+**Segment surgery, not re-encoding.** Scan data is copied through byte for
+byte. Re-encoding would change the pixels to remove something that was never in
+the pixels, and the user would get back a different picture than they attached.
+
+**A format the stripper does not understand is returned unchanged.** Refusing
+to guess is what keeps a working attachment working; a half-understood
+container is how you corrupt files.
+
+**The capability gate errs toward sending.** Automatic routing answers yes,
+because the router has not chosen yet and may well pick a model that can see.
+A model the catalog has not caught up with also answers yes. A wrong yes costs
+one rejected request from the provider; a wrong no costs the user the feature
+with no way to find out why.
+
+**Resizing is the one gap left, and it is honestly blocked.** It needs a pixel
+decoder, which means a native dependency, which is a decision this program
+should not make silently. Oversized images are refused with a reason instead,
+which addresses the cost that resizing was for without pretending to resize.
+
+Refusals are returned rather than thrown, so one unusable attachment costs the
+user that attachment and a sentence, not the message they were writing.
+
+**Still true:** live-model Definition of Done cannot be executed here.
+
+**A flaky test was fixed rather than tolerated.** `backend-session-lifecycle`
+failed four assertions under a full-suite run and passed in isolation in half a
+second. The cause was the test, not the code: a one-second client timeout and
+the default one-second `vi.waitFor` window, on a machine where a loaded run
+starves both. These tests are about which token wins when a refresh and a
+logout race; measuring the machine instead was never the intent. Both budgets
+are now generous, and the suite is deterministic. A test that fails only when
+the machine is busy trains you to re-run it, which is how a real failure gets
+ignored.
