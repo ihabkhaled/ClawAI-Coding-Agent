@@ -4480,6 +4480,81 @@ const browserOriginTranslations = {
   },
 };
 
+const composerDropTranslations = {
+  ar: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'يمكن إسقاط الملفات الموجودة داخل المجلد المفتوح فقط في مربع الكتابة.',
+    'Open a folder before dropping files into the composer.':
+      'افتح مجلدًا قبل إسقاط الملفات في مربع الكتابة.',
+  },
+  de: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'Nur Dateien im geöffneten Ordner können in das Eingabefeld gezogen werden.',
+    'Open a folder before dropping files into the composer.':
+      'Öffnen Sie einen Ordner, bevor Sie Dateien in das Eingabefeld ziehen.',
+  },
+  es: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'Solo se pueden soltar en el editor los archivos que están dentro de la carpeta abierta.',
+    'Open a folder before dropping files into the composer.':
+      'Abre una carpeta antes de soltar archivos en el editor.',
+  },
+  fa: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'فقط فایل‌های داخل پوشه باز را می‌توان در کادر نوشتن رها کرد.',
+    'Open a folder before dropping files into the composer.':
+      'پیش از رها کردن فایل‌ها در کادر نوشتن، یک پوشه باز کنید.',
+  },
+  fr: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'Seuls les fichiers du dossier ouvert peuvent être déposés dans le champ de saisie.',
+    'Open a folder before dropping files into the composer.':
+      'Ouvrez un dossier avant de déposer des fichiers dans le champ de saisie.',
+  },
+  hi: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'केवल खुले फ़ोल्डर के अंदर की फ़ाइलें ही कंपोज़र में छोड़ी जा सकती हैं।',
+    'Open a folder before dropping files into the composer.':
+      'कंपोज़र में फ़ाइलें छोड़ने से पहले कोई फ़ोल्डर खोलें।',
+  },
+  it: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'Solo i file nella cartella aperta possono essere trascinati nel campo di scrittura.',
+    'Open a folder before dropping files into the composer.':
+      'Apri una cartella prima di trascinare file nel campo di scrittura.',
+  },
+  ja: {
+    'Only files inside the open folder can be dropped into the composer.':
+      '開いているフォルダー内のファイルだけを入力欄にドロップできます。',
+    'Open a folder before dropping files into the composer.':
+      '入力欄にファイルをドロップする前にフォルダーを開いてください。',
+  },
+  pt: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'Apenas arquivos dentro da pasta aberta podem ser soltos no campo de escrita.',
+    'Open a folder before dropping files into the composer.':
+      'Abra uma pasta antes de soltar arquivos no campo de escrita.',
+  },
+  ru: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'В поле ввода можно перетащить только файлы из открытой папки.',
+    'Open a folder before dropping files into the composer.':
+      'Откройте папку, прежде чем перетаскивать файлы в поле ввода.',
+  },
+  th: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'วางได้เฉพาะไฟล์ที่อยู่ในโฟลเดอร์ที่เปิดอยู่เท่านั้น',
+    'Open a folder before dropping files into the composer.':
+      'เปิดโฟลเดอร์ก่อนวางไฟล์ลงในช่องพิมพ์',
+  },
+  zh: {
+    'Only files inside the open folder can be dropped into the composer.':
+      '只能将已打开文件夹内的文件拖放到输入框。',
+    'Open a folder before dropping files into the composer.':
+      '请先打开文件夹，再将文件拖放到输入框。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -4519,6 +4594,7 @@ function translate(locale, message) {
     contextFreshnessTranslations[locale][message] ??
     fastModeTranslations[locale][message] ??
     browserOriginTranslations[locale][message] ??
+    composerDropTranslations[locale][message] ??
     message
   );
 }
