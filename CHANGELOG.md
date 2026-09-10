@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.6.0
+
+Minor: a translation ratchet, and the first twenty strings paid off.
+
+- **A new user-facing string must now be translated to land.** The locale
+  generator falls through to the English source for anything it has no entry
+  for, so every bundle was always complete and never said which entries were
+  real. CI checked only that bundles were fresh, never that they were
+  translated.
+- **`l10n/untranslated-baseline.json` is the ledger** of what is still English
+  in at least one locale. The test fails on anything untranslated that is not
+  in it, refuses entries that are now translated, and refuses entries for
+  messages that no longer exist — so the list can only shrink.
+- **Twenty high-traffic strings translated**, taking the ledger from 326 to 309. Strings that are legitimately identical in a language stay listed rather
+  than being guessed at: no rule can tell a real match from a fallback.
+
 ## 1.5.0
 
 Minor: a status line that says what the agent is doing, and shortcuts for the

@@ -1299,3 +1299,40 @@ the surface does not have them, and that predates this program. It needs its
 own work, not a footnote in a batch about the status bar.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 45 — a translation ratchet for the localization debt
+
+| Batch | Version | Status                                | Evidence                                                                       |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------ |
+| 45    | 1.6.0   | Code and deterministic gates complete | `tests/unit/localization-coverage.test.ts`, `l10n/untranslated-baseline.json`. |
+
+Not one of the 108. This is the largest standing violation of the repository's
+own delivery policy, found while shipping F084, and it needed a control before
+it needed a translator.
+
+**The measurement.** 326 of 421 runtime messages came back byte-identical to
+English in at least one locale. The generator falls through to the English
+source for any string it has no entry for, so a bundle is always complete and
+never says which entries are real — identity is the only available signal. CI
+ran `l10n:build` and `git diff --exit-code`, which proves bundles are _fresh_
+and says nothing about whether they are _translated_. The delivery checklist
+asks for real translations in all thirteen locales; three quarters of the
+surface did not have them, and that predates this program entirely.
+
+**The control.** A baseline file lists what is still English, and the test
+fails three ways: an untranslated message not in the baseline (a new string
+shipped without translation), a baseline entry that is now translated (the
+ledger lying about progress), and a baseline entry for a message that no longer
+exists (the ledger keeping ghosts). The list can therefore only shrink.
+
+Proven rather than assumed: a probe string added to the English and German
+bundles made the test fail with that string named, and removing it made it pass
+again.
+
+**Strings legitimately identical in a language stay listed.** No rule can tell
+a real German "Chat" from a fallback "Chat", and one that tried would be wrong
+quietly. Twenty high-traffic strings were translated here, taking the ledger
+from 326 to 309; three of the twenty stayed listed for exactly that reason.
+
+The remaining 309 are tracked work, not a footnote. They are visible, counted,
+and cannot grow.
