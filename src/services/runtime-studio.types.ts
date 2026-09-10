@@ -3,6 +3,7 @@ import type { DevelopmentServiceManager } from './development-service-manager';
 import type { ElevationBrokerService } from './elevation-broker-service';
 import type { EvidenceBundleService } from './evidence-bundle-service';
 import type { FileTransactionService } from './file-transaction-service';
+import type { FindingsService } from './findings-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
 import type { IntegrationCoordinatorService } from './integration-coordinator-service';
 import type { ProcessSupervisorService } from './process-supervisor-service';
@@ -48,6 +49,8 @@ export interface RuntimeStudioAnalysisTools {
   readonly research: WebResearchPort;
   readonly advisor: AdvisorPort;
   readonly goal: RunGoalPort;
+  /** Where an imported scanner report is recorded, beside a reviewer's own. */
+  readonly findings: FindingsService;
   /** The epoch generation a loaded workflow must be re-stamped with. */
   readonly currentEpochs: () => ToolInvocation['epochs'];
   readonly files: VscodeFileTransactionAdapter;

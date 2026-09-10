@@ -192,6 +192,7 @@ const elevationRecipe = strict(
 export const runtimeToolInputSchemas = {
   advisor: strict({ question: text, context: text }, ['question']),
   board: strict({ kind: text, text: text, since: integer }, []),
+  scan: strict({ path: text }, ['path']),
   workflows: strict({ name: text, description: text, graph: subAgentGraph }, []),
   goal: strict({ statement: text, checks: texts, checkId: text, state: text, evidence: text }, []),
   monitor: strict({ kind: text, path: text, pattern: text, timeoutMs: integer }, ['kind', 'path']),

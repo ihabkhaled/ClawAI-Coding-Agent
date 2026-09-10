@@ -384,6 +384,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
           goal: () => this.runContext.goal(),
         }),
         goal: this.runContext.goalPort(),
+        findings: this.stores.findings,
         currentEpochs: () => this.epochs,
         intelligence,
         transactions: this.transactions,

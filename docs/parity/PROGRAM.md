@@ -2606,3 +2606,50 @@ decide.
 rather than a resolution rule.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 77 — F106 SARIF ingest
+
+| Batch | Version | Status                                | Evidence                                                                            |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------------- |
+| 77    | 1.37.0  | Code and deterministic gates complete | `sarif.ts`, `sarif-import-tool-executor.ts`, `vscode-sarif-port.ts`. Tests: 16 new. |
+
+**The row counted references and found none.** Zero CWE, zero CVE, zero SARIF
+anywhere in either repository. The secret regexes are leak prevention and the
+workspace audit is a prompt, so the honest reading was that no vulnerability
+analysis existed at all.
+
+**The shape of the answer matters more than the feature.** Shipping a
+vulnerability database inside a VS Code extension is stale the day it ships,
+duplicates what the project's own pipeline runs, and puts the extension in the
+business of curating CVEs. Reading SARIF is the opposite: every scanner worth
+using already emits it, so the scanner a team already trusts reaches the agent
+without this repository having an opinion about which one it should be.
+
+**The score beats the word.** `level` gives a scanner three words for hundreds
+of rules. `security-severity` is the CVSS-style number the same scanners emit
+beside it, banded the way GitHub code scanning bands it so two dashboards use
+the same word for the same number. Without that, an injection rule and a style
+rule both arrive as "error".
+
+**Medium confidence, never high.** A scanner reports what its rule matched, not
+whether it matters in this codebase. Importing at high confidence would rank
+machine output above a reviewer who read the code, and the triage order is the
+whole value of the findings list.
+
+**A result that cannot be placed is dropped.** Reporting it at a guessed path is
+worse than losing it: the reader opens the file, sees nothing, and stops
+trusting every other entry. Both counts are returned, so a large gap says the
+report was produced against a different tree.
+
+**The schema is deliberately loose.** SARIF is large and every scanner emits a
+different subset. A schema demanding the whole shape would refuse real logs from
+real tools, so what is required is only what a finding cannot be built without.
+
+**Imported through the same recorder a reviewer uses.** Duplicates collapse and
+severity conflicts resolve upward, so a scanner result and a human finding about
+the same line become one entry rather than two competing ones.
+
+**Narrowed:** running a scanner, and CVE lookup for dependencies, stay open.
+Both need either a shipped database or a network call, and the row says so.
+
+**Still true:** live-model Definition of Done cannot be executed here.
