@@ -61,6 +61,10 @@ import {
   runJournalToolDefinition,
 } from '../infrastructure/run-journal-tool-executor';
 import {
+  SarifImportToolExecutor,
+  sarifImportToolDefinition,
+} from '../infrastructure/sarif-import-tool-executor';
+import {
   StructuredCommandToolExecutor,
   structuredCommandToolDefinition,
 } from '../infrastructure/structured-command-tool-executor';
@@ -74,6 +78,7 @@ import {
 } from '../infrastructure/vscode-filesystem-tool-executor';
 import { VscodeMonitorPort } from '../infrastructure/vscode-monitor-port';
 import { VscodeNotebookReader } from '../infrastructure/vscode-notebook-reader';
+import { VscodeSarifPort } from '../infrastructure/vscode-sarif-port';
 import { VscodeUserNotifier } from '../infrastructure/vscode-user-notifier';
 import { VscodeWorkflowStore } from '../infrastructure/vscode-workflow-store';
 import {
@@ -104,6 +109,10 @@ export function analysisToolRegistrations(
   return [
     { definition: advisorToolDefinition, executor: new AdvisorToolExecutor(parts.advisor) },
     { definition: goalToolDefinition, executor: new GoalToolExecutor(parts.goal) },
+    {
+      definition: sarifImportToolDefinition,
+      executor: new SarifImportToolExecutor(new VscodeSarifPort(parts.files, parts.findings)),
+    },
     {
       definition: workflowStoreToolDefinition,
       executor: new WorkflowStoreToolExecutor(

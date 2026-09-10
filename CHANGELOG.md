@@ -2,6 +2,34 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.37.0
+
+Minor: read what security scanners produce (F106, narrowed).
+
+- **`workspace.scan` imports a SARIF report and records it as findings.** The
+  audit found zero CWE, CVE or SARIF references anywhere: the secret regexes are
+  leak prevention, and the workspace audit is a prompt.
+- **ClawAI does not become a scanner.** Shipping a vulnerability database inside
+  a VS Code extension is stale the day it ships and duplicates what the
+  project's pipeline already runs. Reading SARIF is the right shape, because
+  every scanner worth using already emits it.
+- **The score beats the word.** A scanner has three useful levels and hundreds
+  of rules; `security-severity` is the CVSS-style number the same scanners emit
+  beside it. Reading the number first is what stops an injection rule and a
+  style rule arriving as the same "error".
+- **Everything imported is medium confidence, never high.** A scanner reports
+  what its rule matched, not whether it matters here, and importing at high
+  confidence would rank machine output above a reviewer who read the code.
+- **A result that cannot be placed in the workspace is dropped**, not reported
+  at a guessed path. A finding pointing at the wrong file is worse than one that
+  never arrived: the reader opens it, sees nothing, and stops trusting the list.
+- **CWE tags are kept**, because they are the one part of a finding that
+  survives changing scanners. Results go through the same recorder a reviewer's
+  own report uses, so a scanner result and a human finding about the same line
+  become one entry rather than two competing ones.
+- Both counts are reported. A large gap between found and recorded means the
+  report was produced against a different tree.
+
 ## 1.36.0
 
 Minor: drop files from the editor or the explorer (F037, narrowed).
