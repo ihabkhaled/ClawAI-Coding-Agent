@@ -33,6 +33,7 @@ import { ThreadGroupStore } from './services/thread-group-store';
 import { WorkspaceContextService } from './services/workspace-context-service';
 import { WorkspaceScopeService } from './services/workspace-scope-service';
 import { workspaceSkillCatalog } from './services/workspace-skill-catalog';
+import { AttentionView } from './views/attention-view';
 import { createClawIconPath } from './views/claw-icon-path';
 import { DiffPreviewProvider } from './views/diff-preview-provider';
 import { NotificationController } from './views/notification-controller';
@@ -292,6 +293,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const findingsTree = new StateTreeProvider('findings', state);
   const tasksTree = new StateTreeProvider('tasks', state);
   const artifactsTree = new StateTreeProvider('artifacts', state);
+  const attentionTree = new StateTreeProvider('attention', state);
   const statusBar = new StatusBarController(state);
   const setupVisibility = watchSetupCompletion(state);
   const newWindowParts: NewWindowDependencies = {
@@ -342,6 +344,8 @@ export function activate(context: vscode.ExtensionContext): void {
     vscode.window.registerTreeDataProvider('clawAI.findings', findingsTree),
     artifactsTree,
     vscode.window.registerTreeDataProvider('clawAI.artifacts', artifactsTree),
+    attentionTree,
+    new AttentionView('clawAI.attention', attentionTree, state),
     findingsTree,
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('clawAI')) {

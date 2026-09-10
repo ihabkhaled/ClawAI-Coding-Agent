@@ -3,6 +3,8 @@ import * as vscode from 'vscode';
 import { nextOnboardingStep, onboardingChecklist } from '../core/onboarding-checklist';
 import { groupedThreads } from '../core/thread-group';
 
+import { attentionItems } from './attention-items';
+
 import type { ChatThread } from '../backend/contracts';
 import type { AgentTaskStatus } from '../core/agent-tasks';
 import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
@@ -11,7 +13,7 @@ import type { OnboardingStepId } from '../core/onboarding-checklist.types';
 import type { ThreadGroupAssignments } from '../core/thread-group.types';
 
 export type TreeKind =
-  'artifacts' | 'context' | 'findings' | 'history' | 'model' | 'setup' | 'tasks';
+  'artifacts' | 'attention' | 'context' | 'findings' | 'history' | 'model' | 'setup' | 'tasks';
 
 function modelItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
   const auto = new vscode.TreeItem(
@@ -294,6 +296,9 @@ export class StateTreeProvider
     }
     if (this.kind === 'artifacts') {
       return artifactItems(this.state.snapshot);
+    }
+    if (this.kind === 'attention') {
+      return attentionItems(this.state.snapshot, Date.now());
     }
     return historyItems(this.state.snapshot, this.groups?.() ?? {});
   }

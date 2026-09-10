@@ -72,6 +72,7 @@
   "view.context": "Contexto",
   "view.history": "Historial",
   "view.artifacts": "Delivered Files",
+  "view.attention": "Te necesita",
   "view.findings": "Findings",
   "view.tasks": "Tasks",
   "welcome.model": "Choose AUTO routing or a model exposed by your ClawAI backend.",
