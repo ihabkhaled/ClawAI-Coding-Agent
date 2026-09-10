@@ -2517,3 +2517,46 @@ guidance a model actually reads past the cap. A separate tool says the same
 thing without spending someone else's words.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 75 — F051 sandbox capability probe
+
+| Batch | Version | Status                                | Evidence                                                                                   |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 75    | 1.35.0  | Code and deterministic gates complete | `sandbox-capability.ts`, `vscode-sandbox-probe.ts`, `diagnostic-report.ts`. Tests: 10 new. |
+
+**The row asked for four things and this batch ships the one that makes the
+other three honest.** An OS sandbox profile, network isolation and a filesystem
+jail are all real work with real dependencies. The capability probe is not, and
+without it the other three cannot be added safely: a build that gained a sandbox
+on Linux and silently had none on Windows would report the same thing on both.
+
+**Saying "none" out loud is the feature.** The extension bounds commands — no
+shell, no chaining, capped output and wall clock — and bounding is not
+isolation. A run that reported "sandboxed" on a host with no sandbox would be
+lying in the one place a reader is deciding whether to approve something.
+
+**Each guarantee is separate because each is a claim someone relies on.** A jail
+that isolates the filesystem and leaves the network open does not stop a command
+that exfiltrates; one that blocks the network and not the filesystem does not
+stop a command that reads a key. `isolatesCommands` requires both, because
+asking for isolation and getting half of it is worse than being told no — the
+caller stops looking.
+
+**Windows job objects are named, not counted.** They contain a command and its
+children, which is worth reporting, and they jail nothing. Rolling that into a
+"sandboxed: true" would be the exact overclaim this batch exists to prevent.
+
+**A helper on PATH is evidence, not proof.** A container can carry `bwrap` and
+lack the capabilities to use it. The probe reports what the host has a mechanism
+for and refuses to claim a sandbox where there is no mechanism at all, which is
+the failure that matters.
+
+**Probed once per session.** The answer cannot change while the process runs,
+and spawning a probe per command would spend more time asking than the isolation
+would save.
+
+**Narrowed:** the profile, the jail and the network namespace remain open. They
+need a decision about shipping or requiring a helper binary, which is an
+architecture choice this program should not make silently — and the row says so.
+
+**Still true:** live-model Definition of Done cannot be executed here.

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import extensionPackage from '../../package.json';
 import { buildDiagnosticReport } from '../core/diagnostic-report';
+import { VscodeSandboxProbe } from '../infrastructure/vscode-sandbox-probe';
 
 import type { BackendClient } from '../backend/backend-client';
 import type { FeedbackType } from '../backend/contracts';
@@ -11,6 +12,13 @@ interface FeedbackDependencies {
   readonly backend: () => BackendClient;
   readonly state: ExtensionState;
 }
+
+/**
+ * Probed once for the session. The answer cannot change while the process
+ * runs, and a bug report about a command that reached something it should not
+ * is unanswerable without it.
+ */
+const sandboxProbe = new VscodeSandboxProbe();
 
 const feedbackTypeLabels: Readonly<Record<'BUG_REPORT' | 'FEATURE_REQUEST' | 'OTHER', string>> = {
   BUG_REPORT: 'Bug report',
@@ -24,6 +32,7 @@ function reportFor(dependencies: FeedbackDependencies): string {
     extensionVersion: extensionPackage.version,
     vscodeVersion: vscode.version,
     platform: process.platform,
+    sandbox: sandboxProbe.guarantees(),
     locale: vscode.env.language,
     backendOrigin: snapshot.backendUrl,
     backendStatus: snapshot.backendStatus,

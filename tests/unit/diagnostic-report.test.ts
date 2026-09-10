@@ -6,11 +6,13 @@ import {
   MAX_DIAGNOSTIC_REPORT_CHARACTERS,
   type DiagnosticReportInput,
 } from '../../src/core/diagnostic-report';
+import { sandboxGuarantees } from '../../src/core/sandbox-capability';
 
 const input: DiagnosticReportInput = {
   extensionVersion: '0.89.0',
   vscodeVersion: '1.98.2',
   platform: 'win32',
+  sandbox: sandboxGuarantees('none'),
   locale: 'en',
   backendOrigin: 'https://claw.local',
   backendStatus: 'connected',
