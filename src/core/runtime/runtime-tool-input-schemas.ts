@@ -72,6 +72,7 @@ const subAgentTask = strict(
     budget: taskBudget,
     tools: texts,
     riskCeiling: { type: 'string', enum: ['R0', 'R1', 'R2', 'R3'] },
+    inherit: { type: 'string', enum: ['none', 'summary', 'findings'] },
     acceptanceChecks: texts,
     epochs,
   },

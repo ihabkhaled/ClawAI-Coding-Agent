@@ -79,6 +79,13 @@ export const subAgentTaskSchema = z
       .strict(),
     tools: tolerateEmptyObjectAsArray(z.array(z.string().min(2).max(80)).max(256)),
     riskCeiling: z.enum(['R0', 'R1', 'R2', 'R3']),
+    /**
+     * How much of the delegating run this task starts knowing. Defaults to
+     * `none`, which is exactly what every task received before inheritance
+     * existed: widening what a delegated agent sees is a scope change, and a
+     * scope change that happens by upgrading is one nobody approved.
+     */
+    inherit: z.enum(['none', 'summary', 'findings']).default('none'),
     acceptanceChecks: z.array(z.string().min(1).max(2_000)).min(1).max(200),
     epochs: z
       .object({

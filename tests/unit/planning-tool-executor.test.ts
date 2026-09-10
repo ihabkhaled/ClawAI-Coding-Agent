@@ -42,6 +42,7 @@ describe('PlanningToolExecutor', () => {
           },
           tools: ['workspace.files'],
           riskCeiling: 'R3',
+          inherit: 'none' as const,
           acceptanceChecks: ['Feature tests pass'],
           epochs,
         },

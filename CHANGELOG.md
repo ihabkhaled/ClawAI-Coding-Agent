@@ -2,6 +2,32 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.31.0
+
+Minor: sub-agents can inherit what the parent already knows (F008).
+
+- **A task may now declare `inherit`.** Sub-agents received a goal, a write set
+  and a worktree, and nothing about why they were asked. A reviewer would
+  re-report a finding the parent had already recorded; an implementer would
+  rediscover a decision the parent made an hour earlier and quietly make the
+  opposite one.
+- **Two modes, because they answer different needs.** `summary` says what the
+  parent is doing, what it has settled and which files it already changed, which
+  is what an implementer needs. `findings` adds what has already been reported,
+  which is what a reviewer needs and an implementer mostly does not.
+- **`none` is the default and is exactly the old behaviour.** Widening what a
+  delegated agent sees is a scope change, and a scope change that happens by
+  upgrading is one nobody approved.
+- **Redacted before it is bounded, never after.** Redaction shortens text, so
+  bounding first would cut at a position that shifts once secrets are removed,
+  and a secret could survive by sitting just past a boundary that later moved.
+- **Bounded to sixteen kilobytes and cut on a line boundary.** Inheritance is
+  meant to stop a child rediscovering what the parent knows, not to hand it the
+  parent's whole run: a child spending a quarter of its budget reading history
+  has been helped into failing.
+- Inherited context is placed before the goal, because a model reads the goal as
+  its instruction and anything after it competes with the instruction.
+
 ## 1.30.0
 
 Minor: a monitor tool the run can wait on (F012).

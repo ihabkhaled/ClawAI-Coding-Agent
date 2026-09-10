@@ -111,6 +111,7 @@ describe('FlagshipDeliveryService', () => {
           budget: { maxTokens: 1_000, maxToolCalls: 10, maxRuntimeMs: 10_000, maxRetries: 0 },
           tools: ['workspace.files'],
           riskCeiling: 'R3' as const,
+          inherit: 'none' as const,
           acceptanceChecks: ['Feature tests pass'],
           epochs: { account: 1, workspace: 2, target: 3, policy: 4 },
         },

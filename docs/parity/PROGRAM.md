@@ -2337,3 +2337,47 @@ monitor cannot watch a path the run may not read, and a file too large to hold
 is answered by digest rather than pulled into memory.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 71 — F008 sub-agent inheritance
+
+| Batch | Version | Status                                | Evidence                                                                                                    |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------------------------------------- |
+| 71    | 1.31.0  | Code and deterministic gates complete | `sub-agent-inheritance.ts`, `multi-agent-dag.ts` `inherit`, `runtime-sub-agent-executor.ts`. Tests: 10 new. |
+
+**A delegated agent knew what to do and nothing about why.** It received a goal,
+a write set and a worktree. The two failures that produces are specific: a
+reviewer re-reports a finding the parent already recorded, and an implementer
+rediscovers a decision the parent made an hour earlier and quietly makes the
+opposite one. Neither looks like an error. Both cost a whole sub-run.
+
+**Two modes rather than one switch, because they serve different roles.**
+`summary` carries the parent's goal, its settled decisions and the files it has
+already touched — what an implementer needs. `findings` adds what has already
+been reported, which is what a reviewer needs and what an implementer mostly
+does not. One mode carrying both would spend an implementer's budget on a list
+it will not act on.
+
+**`none` is the default and is byte-identical to the old behaviour.** Widening
+what a delegated agent sees is a scope change. A scope change that arrives by
+upgrading is one nobody approved.
+
+**Redacted before bounded, and the order is load-bearing.** Redaction shortens
+text. Bounding first would cut at a position that moves once secrets are
+removed, so a secret sitting just past the old boundary could survive into the
+child's prompt. A test asserts a bearer token in a parent decision does not
+reach the child.
+
+**Bounded to sixteen kilobytes, cut on a line boundary.** Roughly four thousand
+tokens is a real cost taken out of the budget the child needs for its own work,
+and a prompt truncated mid-sentence reads as though the parent stopped
+mid-thought — a model handed one tends to ask what came next instead of working.
+
+**Placed before the goal.** A model reads the goal as its instruction, and
+anything after it competes with the instruction. A child told what to do and
+then told the history tends to answer the history.
+
+**The parent context is read at launch, not captured once.** A child started
+later in the run sees the decisions the parent made in the meantime, which is
+the whole reason a graph runs in stages.
+
+**Still true:** live-model Definition of Done cannot be executed here.

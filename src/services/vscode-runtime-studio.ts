@@ -115,6 +115,7 @@ import type { ApprovalBroker } from '../core/approval-broker';
 import type { ExtensionState } from '../core/extension-state';
 import type { CapabilityManifest } from '../core/runtime/capability-manifest';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { ParentRunContext } from '../core/sub-agent-inheritance.types';
 import type { AdvisorPort } from '../infrastructure/advisor-tool-executor.types';
 import type { OutputLogger } from '../infrastructure/output-logger';
 
@@ -314,6 +315,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         policy: this.policy,
         stream: this.stream,
         transport: this.transport,
+        parentContext: () => this.parentRunContext(),
       },
       files: this.files,
       globalStorageUri: context.globalStorageUri,
@@ -492,6 +494,23 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
 
   async steer(message: string): Promise<void> {
     await steerRuntime(this.transport, this.active, this.activeRunId, this.epochs, message);
+  }
+
+  /**
+   * What a child that asked to inherit context gets to know.
+   *
+   * Read at launch rather than captured once, so a child started later in the
+   * run sees the decisions the parent made in the meantime. The goal comes from
+   * the input the run is executing, which is the only place it exists.
+   */
+  private parentRunContext(): ParentRunContext {
+    const run = this.state.snapshot.agentRun;
+    return {
+      goal: this.activeInput?.prompt ?? '',
+      decisions: run?.summary === undefined ? [] : [run.summary],
+      changedPaths: run?.files.map((file) => file.path) ?? [],
+      findings: this.state.snapshot.findings,
+    };
   }
 
   invalidateAccount(): void {

@@ -504,6 +504,7 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
       },
       tools: [...stageTools[stage]],
       riskCeiling: 'R3',
+      inherit: 'none' as const,
       acceptanceChecks:
         request.acceptanceChecks.length > 0
           ? request.acceptanceChecks
