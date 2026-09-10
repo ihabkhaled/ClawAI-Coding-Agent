@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.13.0
+
+Minor: open a conversation in a second window (F065).
+
+- **ClawAI: Open Conversation in New Window** opens the same folder in a new
+  VS Code window and reveals the conversation there. A webview panel cannot
+  move between windows, so nothing is moved — two windows on one folder is what
+  you actually want, the conversation beside a different set of files.
+- **The handoff expires after a minute.** A note left by a window that never
+  opened, or a cancelled folder prompt, must not hijack the next window you
+  open for something else.
+- **The note is cleared before the conversation opens**, not after, so a
+  failure cannot leave it behind for the window after that.
+- Refuses without a folder rather than opening an empty window, where a chat
+  could read nothing.
+
 ## 1.12.0
 
 Minor: manual conversation compaction (F041, partly).

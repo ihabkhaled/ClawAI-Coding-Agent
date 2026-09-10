@@ -26,6 +26,7 @@
   "command.undoLastEdit": "واگردانی آخرین ویرایش",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.openConversationInNewWindow": "باز کردن گفتگو در پنجره جدید",
   "command.compactConversation": "فشرده‌سازی گفتگو",
   "command.selectOutputStyle": "انتخاب سبک خروجی",
   "command.toggleFocusView": "تغییر نمای تمرکز",

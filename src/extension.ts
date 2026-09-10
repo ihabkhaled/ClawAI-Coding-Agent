@@ -20,6 +20,11 @@ import { ClawaiUriHandler } from './services/deep-link-handler';
 import { ExternalOutputGrantService } from './services/external-output-grant-service';
 import { GlobalContextService } from './services/global-context-service';
 import { MentionSuggestionService } from './services/mention-suggestion-service';
+import {
+  HANDOFF_KEY,
+  claimPendingWindowHandoff,
+  openConversationInNewWindow,
+} from './services/open-in-new-window-command';
 import { WorkspaceContextService } from './services/workspace-context-service';
 import { WorkspaceScopeService } from './services/workspace-scope-service';
 import { workspaceSkillCatalog } from './services/workspace-skill-catalog';
@@ -32,6 +37,8 @@ import { StatusBarController } from './views/status-bar-controller';
 import { ChatViewProvider } from './webview/chat-view-provider';
 
 import type { CapabilityManifest } from './core/runtime/capability-manifest';
+import type { WindowHandoff } from './core/window-handoff.types';
+import type { NewWindowDependencies } from './services/open-in-new-window.types';
 
 function registerCommands(
   context: vscode.ExtensionContext,
@@ -277,6 +284,22 @@ export function activate(context: vscode.ExtensionContext): void {
   const artifactsTree = new StateTreeProvider('artifacts', state);
   const statusBar = new StatusBarController(state);
   const setupVisibility = watchSetupCompletion(state);
+  const newWindowParts: NewWindowDependencies = {
+    activeThreadId: () => chatView.activeThreadId(),
+    workspaceFolder: () => vscode.workspace.workspaceFolders?.[0]?.uri,
+    readHandoff: () => context.globalState.get<WindowHandoff>(HANDOFF_KEY),
+    storeHandoff: async (handoff) => {
+      await context.globalState.update(HANDOFF_KEY, handoff);
+    },
+    openFolderInNewWindow: async (folder) => {
+      await vscode.commands.executeCommand('vscode.openFolder', folder, {
+        forceNewWindow: true,
+      });
+    },
+    openThread: (threadId) => coordinator.openChat(threadId).then(() => undefined),
+    now: Date.now,
+  };
+  void claimPendingWindowHandoff(newWindowParts);
   const notifications = new NotificationController(state, new VscodeUserNotifier());
 
   context.subscriptions.push(
@@ -337,6 +360,9 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
   context.subscriptions.push(
+    vscode.commands.registerCommand('clawAI.openConversationInNewWindow', () =>
+      openConversationInNewWindow(newWindowParts),
+    ),
     vscode.commands.registerCommand('clawAI.reopenClosedChat', async () => {
       const sessionId = await chatView.reopenClosedSession();
       if (sessionId === undefined) {

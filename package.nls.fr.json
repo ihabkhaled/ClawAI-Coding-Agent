@@ -26,6 +26,7 @@
   "command.undoLastEdit": "Annuler la dernière modification ClawAI",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.openConversationInNewWindow": "Ouvrir la conversation dans une nouvelle fenêtre",
   "command.compactConversation": "Compacter la conversation",
   "command.selectOutputStyle": "Choisir le style de réponse",
   "command.toggleFocusView": "Basculer la vue focalisée",

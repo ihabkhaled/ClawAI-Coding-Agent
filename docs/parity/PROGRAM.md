@@ -1614,3 +1614,34 @@ its job: the fix each time was to move a cohesive group out, never to shorten a
 line.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 53 — F065 open a conversation in a second window
+
+| Batch | Version | Status                                | Evidence                                                                      |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------- |
+| 53    | 1.13.0  | Code and deterministic gates complete | `src/core/window-handoff.ts`, `open-in-new-window-command.ts`. Tests: 15 new. |
+
+**The platform decided the design.** A webview panel cannot move between VS
+Code windows — there is no API for it and no way around it. So nothing moves:
+the folder opens in a new window and a note asks that window to reveal the
+conversation. Two windows on one folder is a supported arrangement, and it is
+what the user actually wants anyway — the conversation beside a different set
+of files, not the same panel relocated.
+
+**The note expires after a minute, and that is the whole safety argument.** A
+handoff is written, a window opens, that window claims it: seconds. Anything
+older came from a window that never opened, a crash, or a cancelled folder
+prompt. Honouring it would mean a conversation requested minutes ago hijacking
+the next window opened for something else entirely. A handoff dated in the
+future is refused too — that is a clock that moved, not a fresh request.
+
+**The note is cleared before the conversation opens, not after.** Clearing
+afterwards leaves it behind when opening fails, and the window after that
+inherits a request nobody made.
+
+**The row asked for a cross-window lock; it is not needed and the row now says
+so.** The conversation lives on the server, not in the window. Two windows
+reading the same thread is the same situation as two windows on one file, which
+VS Code has always allowed.
+
+**Still true:** live-model Definition of Done cannot be executed here.

@@ -26,6 +26,7 @@
   "command.undoLastEdit": "最後の ClawAI 編集を元に戻す",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.openConversationInNewWindow": "会話を新しいウィンドウで開く",
   "command.compactConversation": "会話を圧縮",
   "command.selectOutputStyle": "出力スタイルを選択",
   "command.toggleFocusView": "フォーカス表示の切り替え",
