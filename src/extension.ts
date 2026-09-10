@@ -22,6 +22,7 @@ import { GlobalContextService } from './services/global-context-service';
 import { MentionSuggestionService } from './services/mention-suggestion-service';
 import { WorkspaceContextService } from './services/workspace-context-service';
 import { WorkspaceScopeService } from './services/workspace-scope-service';
+import { workspaceSkillCatalog } from './services/workspace-skill-catalog';
 import { createClawIconPath } from './views/claw-icon-path';
 import { DiffPreviewProvider } from './views/diff-preview-provider';
 import { NotificationController } from './views/notification-controller';
@@ -203,7 +204,10 @@ export function activate(context: vscode.ExtensionContext): void {
     context,
     workspaceScope,
   );
-  const mentions = new MentionSuggestionService(new VscodeMentionIndex());
+  const mentions = new MentionSuggestionService(
+    new VscodeMentionIndex(),
+    workspaceSkillCatalog(context.globalStorageUri, workspaceScope),
+  );
   const chatView = new ChatViewProvider(context.extensionUri, state, {
     agent: (input) => coordinator.runAgent(input),
     cancel: (requestId) => coordinator.cancel(requestId),

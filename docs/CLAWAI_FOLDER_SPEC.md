@@ -35,7 +35,8 @@ autocomplete from the schemas the extension registers in
 - `architecture.md`: boundaries and dependency direction.
 - `memory.md`: durable, non-secret lessons.
 - `context/*`: product, API, data, and gate facts.
-- `skills/*`: stack-specific implementation guidance.
+- `skills/*`: stack-specific implementation guidance, and slash commands. A
+  file named `review.md` is invocable as `/review`; see below.
 - `prompts/*`: reusable review and planning instructions.
 - `ignore`: one glob per line; blank lines and `#` comments are ignored.
 - `policies/policy.json`: the project permission policy. See below.
@@ -45,6 +46,40 @@ A subdirectory may carry its own `.clawai/rules.md`, `architecture.md` and
 `memory.md`. Every directory from the workspace root down to the open file is
 searched, root first and nearest last, so guidance closer to the code speaks
 after the repository-wide guidance it narrows.
+
+## `skills/*.md` as slash commands
+
+Every `.md` file in `skills/` is a command. `review.md` is `/review`, typed at
+the start of a message. A `skills` directory in this VS Code profile’s global
+storage works the same way, and a project skill of the same name wins — a
+repository that ships a `review` skill means its own review.
+
+An optional header names it something other than the filename:
+
+```markdown
+---
+name: code-review
+description: Review a diff for correctness and security
+argument-hint: <path>
+---
+
+Review for correctness, security and missing tests.
+```
+
+The header is read with a three-field parser, not a YAML library: this is
+workspace content, and a full parser is a large attack surface for three
+fields. Anything it does not understand stays in the body rather than being
+guessed at, so a malformed header costs the header and not the skill.
+
+`takes everything typed after the command;`…`` take one
+whitespace-separated argument each. A placeholder nobody filled becomes empty
+rather than staying literal. A body with no placeholder at all gets the
+arguments appended, because a command that silently discarded what the user
+typed would look broken exactly when they bothered to type something.
+
+An unknown command is sent as ordinary text rather than refused: a message
+starting with a slash must stay sendable, and the user may have meant the
+words.
 
 ## `policies/policy.json`
 

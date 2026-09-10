@@ -2674,7 +2674,10 @@ function acceptMention(index) {
   const text = elements.prompt.value;
   const following = text.slice(mentionState.end);
   const separator = path.endsWith('/') || /^[\s"'`]/u.test(following) ? '' : ' ';
-  const inserted = `@${path}${separator}`;
+  // A command suggestion already carries its own leading slash; only a file
+  // path needs the mention marker put back in front of it.
+  const marker = path.startsWith('/') ? '' : '@';
+  const inserted = `${marker}${path}${separator}`;
   elements.prompt.value = `${text.slice(0, mentionState.start)}${inserted}${following}`;
   const caret = mentionState.start + inserted.length;
   elements.prompt.setSelectionRange(caret, caret);

@@ -2,6 +2,27 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.7.0
+
+Minor: skills are slash commands now (F077).
+
+- **Every `.clawai/skills/*.md` file is invocable.** `review.md` becomes
+  `/review`, typed at the start of a message. A `skills` directory in the VS
+  Code profile's global storage works the same way, and a project skill of the
+  same name wins.
+- **Type `/` in the composer** and the same list that completes `@` mentions
+  offers commands. Matching is by prefix, not subsequence: a command is a name
+  someone chose, and offering `deploy` for `dp` would put a destructive command
+  one Enter away from a typo.
+- **Arguments substitute.** `$ARGUMENTS` takes everything after the command,
+  `$1`…`$9` take one word each, and a body with no placeholder gets the
+  arguments appended rather than dropping them.
+- **An optional header** sets `name`, `description` and `argument-hint`, read
+  by a three-field parser rather than a YAML library — this is workspace
+  content, and a malformed header costs the header, not the skill.
+- **An unknown command is sent as ordinary text**, never refused: a message
+  beginning with a slash has to stay sendable.
+
 ## 1.6.0
 
 Minor: a translation ratchet, and the first twenty strings paid off.
