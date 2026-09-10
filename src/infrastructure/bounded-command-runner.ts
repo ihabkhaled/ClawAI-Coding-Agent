@@ -6,6 +6,8 @@ import spawn from 'cross-spawn';
 
 import { BoundedOutputBuffer } from '../core/bounded-output';
 import { commandSpecSchema, type CommandResult, type CommandSpec } from '../core/command-spec';
+import { inheritedEnvironment } from '../core/inherited-environment';
+import { INHERITED_ENVIRONMENT_KEYS } from '../core/inherited-environment.constants';
 import { redactText } from '../core/redaction';
 
 import { terminateProcess } from './process-terminator';
@@ -87,38 +89,11 @@ export function runBoundedCommand(
   });
 }
 
-// gh reads its auth state from %APPDATA%\GitHub CLI\hosts.yml; without APPDATA
-// every gh command fails with "You are not logged into any GitHub hosts". This was
-// proven by spawning `gh auth status` with the allowlist and adding one variable at
-// a time; APPDATA alone made it succeed. LOCALAPPDATA and the XDG_* directories are
-// included for the same class of config/data/cache location requirements, and none of
-// these variables carry credentials.
-export const inheritedEnvironmentKeys = [
-  'PATH',
-  'Path',
-  'SystemRoot',
-  'WINDIR',
-  'TEMP',
-  'TMP',
-  'HOME',
-  'USERPROFILE',
-  'APPDATA',
-  'LOCALAPPDATA',
-  'XDG_CONFIG_HOME',
-  'XDG_DATA_HOME',
-  'XDG_CACHE_HOME',
-  'LANG',
-  'LC_ALL',
-] as const;
+/** Re-exported from its canonical home so existing callers keep one import. */
+export const inheritedEnvironmentKeys = INHERITED_ENVIRONMENT_KEYS;
 
 function boundedEnvironment(additions: Readonly<Record<string, string>>): NodeJS.ProcessEnv {
-  const environment: NodeJS.ProcessEnv = {};
-  for (const key of inheritedEnvironmentKeys) {
-    const value = process.env[key];
-    if (value !== undefined) environment[key] = value;
-  }
-  for (const [key, value] of Object.entries(additions)) environment[key] = value;
-  return environment;
+  return inheritedEnvironment(process.env, additions);
 }
 
 export async function resolveExecutable(

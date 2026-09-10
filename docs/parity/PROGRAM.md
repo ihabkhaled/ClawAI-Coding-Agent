@@ -2927,3 +2927,42 @@ workspace.
 **Still open, and the row says so:** a configurable tool catalog, resuming a
 run, and machine-readable progress while it happens rather than one summary at
 the end.
+
+### Batch 85 — hardening what batch 84 shipped
+
+| Batch | Version | Status                                            | Evidence                                                                                            |
+| ----- | ------- | ------------------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 85    | 1.45.0  | Code, deterministic gates, and an adversarial run | `inherited-environment.ts`, `workspace-containment.ts`, `headless-command-policy.ts`. 22 new tests. |
+
+**Two real defects in code shipped one batch earlier**, both found by an
+automated security review of the diff rather than by any test written for it.
+
+**The runner handed its own credentials to the model's commands.** A spawned
+process inherited the whole environment, including the password used to sign in
+moments earlier. The extension's bounded runner had solved this years of commits
+ago with an environment built from nothing; the headless runner simply did not
+reuse it. The allowlist now lives in `src/core/` and both import it, which is
+where it should have been to begin with — a constant two callers need is not a
+private detail of one of them.
+
+**An allowlist rather than a denylist, for a reason worth stating.** The set of
+variables that carry a secret is unbounded and grows whenever someone adds one.
+Starting from nothing means a variable invented tomorrow is excluded without
+anyone remembering it exists.
+
+**A run nobody watches could spawn anything on PATH.** That is the machine, not
+a workspace. The default is node, npm and npx; widening happens in the
+invocation via `--allow-command`, where a person reviewing the job can see it. A
+name containing a path separator is refused, because otherwise `../../bin/sh`
+satisfies an entry for `sh` and the list is decorative.
+
+**Containment compared strings, and strings do not know about symbolic links.**
+A link inside the workspace pointing at the home directory passed a prefix check
+and then read or wrote wherever it pointed — and an agent that can create files
+can create that link. Containment is now decided on real paths, a write is
+checked against its nearest real ancestor because the file does not exist yet,
+and an existing link is refused rather than followed.
+
+**Proven, not assumed.** A live run was asked to fetch with `curl`. It was
+refused, fell back to printing its own environment from a permitted `node`
+process, and reported the planted secret as absent.

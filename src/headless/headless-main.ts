@@ -5,12 +5,15 @@ import path from 'node:path';
 import { argv, env, exit, stdout } from 'node:process';
 
 import { describeHeadlessOutcome, headlessExitCode } from '../core/headless-outcome';
+import { inheritedEnvironment } from '../core/inherited-environment';
+import { containedPath } from '../core/workspace-containment';
 
+import { allowedExecutables, isAllowedExecutable } from './headless-command-policy';
 import { runHeadlessSession } from './headless-session';
 import { HEADLESS_TOOLS } from './headless-tools';
 import { HeadlessTransport, canonicalJson, sha256 } from './headless-transport';
 
-import type { ToolRequestPayload } from './headless-main.types';
+import type { ToolLimits, ToolRequestPayload } from './headless-main.types';
 import type { HeadlessStreamEvent } from './headless-session.types';
 
 /**
@@ -59,10 +62,14 @@ export async function main(): Promise<number> {
   });
 
   const run = { ...started, threadId };
+  const limits: ToolLimits = {
+    workspace: options.workspace,
+    allowedExecutables: options.allowedExecutables,
+  };
   const report = await runHeadlessSession({
     events: () => transport.events(token, run),
     answerTool: async (event) => {
-      await transport.submitResult(token, run, epochs, resultFor(event, options.workspace));
+      await transport.submitResult(token, run, epochs, resultFor(event, limits));
     },
     now: () => Date.now(),
     deadlineMs: options.deadlineMs,
@@ -84,6 +91,7 @@ interface HeadlessOptions {
   readonly model: string;
   readonly deadlineMs: number;
   readonly json: boolean;
+  readonly allowedExecutables: readonly string[];
   readonly credentials: { email: string; password: string };
 }
 
@@ -117,8 +125,20 @@ function readOptions(): HeadlessOptions | undefined {
     model: env.CLAW_LIVE_MODEL ?? 'claude-haiku-4-5-20251001',
     deadlineMs: 300_000,
     json: argv.includes('--json'),
+    allowedExecutables: allowedExecutables(flags('--allow-command')),
     credentials: { email, password },
   };
+}
+
+/** Every value given for a repeatable flag, so widening is explicit and visible. */
+function flags(name: string): string[] {
+  const values: string[] = [];
+  for (const [index, entry] of argv.entries()) {
+    if (entry !== name) continue;
+    const value = argv[index + 1];
+    if (value !== undefined && !value.startsWith('--')) values.push(value);
+  }
+  return values;
 }
 
 function flag(name: string): string | undefined {
@@ -130,7 +150,7 @@ function flag(name: string): string | undefined {
 /** Runs one requested tool, separating what it produced from why it could not. */
 function attemptTool(
   payload: ToolRequestPayload,
-  workspace: string,
+  limits: ToolLimits,
 ): { structured?: unknown; failure?: unknown } {
   try {
     return {
@@ -138,7 +158,7 @@ function attemptTool(
         payload.toolName ?? '',
         payload.operation ?? '',
         payload.invocation?.arguments ?? {},
-        workspace,
+        limits,
       ),
     };
   } catch (error) {
@@ -154,12 +174,12 @@ function attemptTool(
 }
 
 /** Builds the result the backend verifies, including the receipt it hashes. */
-function resultFor(event: HeadlessStreamEvent, workspace: string): unknown {
+function resultFor(event: HeadlessStreamEvent, limits: ToolLimits): unknown {
   const payload = (event.payload ?? {}) as ToolRequestPayload;
   const invocationId = payload.invocationId ?? 'invocation.unknown';
   const args = payload.invocation?.arguments ?? {};
   const startedAt = new Date().toISOString();
-  const { structured, failure } = attemptTool(payload, workspace);
+  const { structured, failure } = attemptTool(payload, limits);
   const modelText = structured === undefined ? null : JSON.stringify(structured).slice(0, 2_000);
   const canonical = canonicalJson({
     error: failure ?? null,
@@ -194,10 +214,11 @@ function execute(
   toolName: string,
   operation: string,
   args: Record<string, unknown>,
-  workspace: string,
+  limits: ToolLimits,
 ): unknown {
-  if (toolName === 'workspace.command') return runCommandTool(args, workspace);
-  const target = inside(workspace, typeof args.path === 'string' ? args.path : '.');
+  const workspace = limits.workspace;
+  if (toolName === 'workspace.command') return runCommandTool(args, limits);
+  const target = containedPath(workspace, typeof args.path === 'string' ? args.path : '.');
   if (operation === 'list') return { entries: readdirSync(workspace) };
   if (operation === 'read') return { content: readFileSync(target, 'utf8') };
   if (operation === 'create') {
@@ -209,33 +230,28 @@ function execute(
 }
 
 /**
- * Refuses any path that would leave the workspace.
+ * Runs a bounded command, inside the allowlist and with a built environment.
  *
- * The model chooses these paths, and a headless run has nobody to notice that
- * one of them climbed out of the directory it was given.
+ * Two boundaries, and both matter for a run nobody is watching. The allowlist
+ * decides what may be spawned at all, because a run that chooses its own
+ * commands can choose any command on PATH. The environment is built from
+ * nothing rather than inherited, because the process running an agent is the
+ * one most likely to be holding a credential, and the command the model chose
+ * only has to print it.
  */
-function inside(workspace: string, relative: string): string {
-  const target = path.resolve(workspace, relative);
-  if (target !== workspace && !target.startsWith(workspace + path.sep)) {
-    throw new Error('Path escapes the workspace');
-  }
-  return target;
-}
-
-/**
- * Runs a bounded command and reports what it produced.
- *
- * The captured streams are read as nullable even though the type declarations
- * promise strings, because a spawn that fails or times out leaves them null and
- * the honest type is the one that matches what arrives.
- */
-function runCommandTool(args: Record<string, unknown>, workspace: string): unknown {
+function runCommandTool(args: Record<string, unknown>, limits: ToolLimits): unknown {
   const executable = typeof args.executable === 'string' ? args.executable : '';
+  if (!isAllowedExecutable(executable, limits.allowedExecutables)) {
+    throw new Error(
+      `Command ${executable} is not allowed. Allowed: ${limits.allowedExecutables.join(', ')}. Widen with --allow-command.`,
+    );
+  }
   const finished = spawnSync(executable, toStrings(args.arguments), {
-    cwd: workspace,
+    cwd: limits.workspace,
     encoding: 'utf8',
     timeout: 30_000,
     shell: false,
+    env: inheritedEnvironment(env),
   });
   return {
     exitCode: finished.status ?? -1,

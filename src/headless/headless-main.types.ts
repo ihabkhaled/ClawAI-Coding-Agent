@@ -5,3 +5,9 @@ export interface ToolRequestPayload {
   readonly toolName?: string;
   readonly invocation?: { readonly arguments?: Record<string, unknown> };
 }
+
+/** The boundaries a headless tool call must stay inside. */
+export interface ToolLimits {
+  readonly workspace: string;
+  readonly allowedExecutables: readonly string[];
+}
