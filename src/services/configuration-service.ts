@@ -57,6 +57,7 @@ export interface RuntimeConfiguration extends GlobalConfiguration {
   viewDensity: ViewDensity;
   outputStyle: OutputStyle;
   autoCompact: AutoCompactionMode;
+  browserOrigins: string[];
   /** Malformed entries are dropped as a group rather than half-applied. */
   hooks: readonly LifecycleHook[];
   backendCustomUrl?: string;
@@ -192,6 +193,7 @@ export class ConfigurationService {
       permissionMode: normalizePermissionMode(configuration.get<unknown>('permissionMode')),
       autosave: normalizeAutosavePolicy(configuration.get<unknown>('autosave')),
       autoCompact: normalizeAutoCompactionMode(configuration.get<unknown>('autoCompact')),
+      browserOrigins: configuration.get<string[]>('browserOrigins') ?? [],
     };
   }
 

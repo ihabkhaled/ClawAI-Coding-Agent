@@ -54,6 +54,7 @@
   "config.frontendEnvironment": "الواجهة",
   "config.frontendCustomUrl": "رابط واجهة مخصص",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
+  "config.browserOrigins": "أصول مواقع إضافية يمكن لأداة المتصفح فتحها دون سؤال، مثل خادم التطوير الخاص بك. أصل الخدمة الخلفية والواجهة مسموح بها دائمًا ولا يمكن إزالتها هنا.",
   "config.autoCompact": "ما الذي يحدث عندما تقترب المحادثة من الطول الأقصى: لا شيء، أو عرض تلخيصها، أو تلخيصها تلقائيًا.",
   "config.routingMode": "كيف تختار الخدمة الخلفية النموذج: تلقائيًا، أو باستراتيجية مسماة، أو نموذج تختاره بنفسك.",
   "config.agentMode": "Choose automatic execution or read-only planning.",

@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import * as vscode from 'vscode';
 
+import { browserAllowedOrigins } from '../core/browser-origins';
 import { flagshipHostIdentityHash } from '../core/flagship-delivery';
 import { browserToolDefinition } from '../infrastructure/browser-tool-executor';
 
@@ -63,7 +64,7 @@ export function runtimeBrowserScope(configuration: RuntimeConfiguration): Browse
     value === undefined ? [] : [new URL(value).origin],
   );
   return {
-    allowedOrigins: [...new Set(origins)],
+    allowedOrigins: browserAllowedOrigins(origins, configuration.browserOrigins),
     allowExternalNavigationWithApproval: true,
     allowDownloads: false,
     maxDownloadBytes: 104_857_600,

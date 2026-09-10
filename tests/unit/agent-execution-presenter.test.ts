@@ -20,6 +20,7 @@ const configuration: RuntimeConfiguration = {
   viewDensity: 'full' as const,
   outputStyle: 'default',
   autoCompact: 'prompt' as const,
+  browserOrigins: [],
   hooks: [],
   effortMode: 'ULTRA',
   speedMode: '1X',

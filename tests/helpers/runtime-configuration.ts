@@ -6,6 +6,7 @@ export function testRuntimeConfiguration(): RuntimeConfiguration {
     viewDensity: 'full' as const,
     outputStyle: 'default',
     autoCompact: 'prompt',
+    browserOrigins: [],
     hooks: [],
     effortMode: 'ULTRA',
     speedMode: '1X',
