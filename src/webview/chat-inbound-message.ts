@@ -52,6 +52,14 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
     threadId: z.string().min(1).max(200),
     tokens: z.number().int().min(0).max(100_000_000),
   }),
+  // The panel forwards the drag payload rather than resolving it: only the
+  // host knows the workspace root, and only the host owns the path policy that
+  // decides whether a dropped URI may be read at all.
+  z.object({
+    type: z.literal('dropUris'),
+    uriList: z.string().max(20_000),
+    shiftKey: z.boolean(),
+  }),
   z.object({ type: z.literal('newChat') }),
   z.object({ type: z.literal('openFolder') }),
   z.object({ type: z.literal('refreshModels') }),

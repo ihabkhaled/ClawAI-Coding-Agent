@@ -2560,3 +2560,49 @@ need a decision about shipping or requiring a helper binary, which is an
 architecture choice this program should not make silently — and the row says so.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 76 — F037 composer drop targets
+
+| Batch | Version | Status                                | Evidence                                                                      |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------- |
+| 76    | 1.36.0  | Code and deterministic gates complete | `attachment-drop.ts`, `drop-uris-command.ts`, `media/chat.js`. Tests: 13 new. |
+
+**The drop was never allowed, so it never arrived.** The composer accepted a
+drag only when it advertised `Files`, and a drag from the editor or the explorer
+advertises `text/uri-list`. Dragging a file from the file tree changed nothing —
+no error, no hint, no attachment — which reads as broken rather than absent.
+
+**Shift decides whether the file is read.** A plain drop mentions it, which
+pulls the contents into the next request. Shift inserts the path as text, which
+is what is wanted when the path is the subject: rename this file, why is this
+excluded. Assigning those the other way round would make the cheap gesture the
+expensive one, and the expensive one is the default people discover first.
+
+**The panel forwards, the host resolves.** Only the host knows the workspace
+root, and only the host owns the path policy. A panel that resolved its own
+drops would be the one place a path reaches a mention without passing the policy
+that decides whether it may be read.
+
+**Refused: outside the folder, and every scheme that is not a file.** An editor
+drag carries `untitled:` for unsaved buffers and `https:` for links, and a
+mention resolved from either reads nothing while looking like it worked. The
+prefix check requires a separator, so `project-other` is not inside `project` —
+a bug that string comparison invites and a test names.
+
+**A refusal is said out loud.** Dragging a file from outside the folder is a
+reasonable thing to try once, and silence leaves someone trying it twice.
+
+**The insertion uses the syntax that already exists.** A dropped file and a
+typed reference reach the same resolver; nothing here invents a second way to
+name a file.
+
+**The coordinator crossed its line ceiling**, so the two things the panel
+reports and the host resolves — the conversation's token total and a dropped
+file — moved into one module. Both exist for the same reason: the panel knows
+something the host cannot see, and the host owns something the panel must not
+decide.
+
+**Narrowed:** attachment reorder stays open, which is a webview interaction
+rather than a resolution rule.
+
+**Still true:** live-model Definition of Done cannot be executed here.

@@ -372,6 +372,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   private async handlePanelReport(request: ControlMessage): Promise<boolean> {
     if (request.type === 'conversationTokens') {
       await this.actions.conversationTokens(request.threadId, request.tokens);
+    } else if (request.type === 'dropUris') {
+      await this.actions.dropUris(request.uriList, request.shiftKey);
     } else if (request.type === 'openFolder') {
       await this.actions.openFolder();
     } else return false;

@@ -2,6 +2,31 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.36.0
+
+Minor: drop files from the editor or the explorer (F037, narrowed).
+
+- **Dropping a file from the file tree used to do nothing at all.** The composer
+  accepted only drags carrying real file data, and a drag from the editor or the
+  explorer carries references instead. The drop was never allowed, so it never
+  arrived — which reads as a broken feature rather than an absent one.
+- **Shift is the difference between naming a file and reading it.** A plain drop
+  mentions the file, which pulls its contents into the next request; Shift
+  inserts the path as text, which is what you want when the path is the subject
+  rather than the content. Getting that backwards would make the cheap gesture
+  the expensive one.
+- **The panel forwards the drag and the host resolves it.** Only the host knows
+  the workspace root, and only the host owns the policy deciding whether a
+  dropped path may be read at all.
+- **Everything outside the open folder is refused, and so is every scheme that
+  is not a file.** An editor drag can carry `untitled:` and `https:` URIs, and a
+  mention resolved from one of those reads nothing while looking like it worked.
+  A sibling folder sharing a name prefix is refused too.
+- A refusal is said out loud. Dragging a file from outside the folder is a
+  reasonable thing to try, and silence would leave someone dragging it again.
+- Mentions are written in the syntax the composer already parses, so a dropped
+  file and a typed reference reach the same place.
+
 ## 1.35.0
 
 Minor: the host says what isolation it can actually give (F051, narrowed).

@@ -2476,8 +2476,17 @@ elements.prompt.addEventListener('paste', (event) => {
   }
 });
 
+// A drag from the editor or the explorer carries references, not file data, so
+// it advertises `text/uri-list` rather than `Files`. Accepting only `Files` is
+// why dropping from the file tree used to do nothing at all: the drop was never
+// allowed, so it never arrived.
+function draggingWorkspaceFiles(transfer) {
+  const types = transfer?.types;
+  return types !== undefined && (types.includes('Files') || types.includes('text/uri-list'));
+}
+
 elements.form.addEventListener('dragover', (event) => {
-  if (event.dataTransfer?.types.includes('Files')) {
+  if (draggingWorkspaceFiles(event.dataTransfer)) {
     event.preventDefault();
     elements.form.classList.add('dragging-files');
   }
@@ -2495,7 +2504,17 @@ elements.form.addEventListener('drop', (event) => {
   if (files && files.length > 0) {
     event.preventDefault();
     addAttachmentFiles(files);
+    return;
   }
+  const uriList = event.dataTransfer?.getData('text/uri-list') ?? '';
+  if (uriList.length === 0) {
+    return;
+  }
+  event.preventDefault();
+  // Forwarded raw. Only the host knows the workspace root, and only the host
+  // owns the policy that decides whether a dropped path may be read at all.
+  // Shift asks for the path as text instead of a mention that reads the file.
+  vscode.postMessage({ type: 'dropUris', uriList, shiftKey: event.shiftKey === true });
 });
 
 elements.connectionForm.addEventListener('submit', (event) => {

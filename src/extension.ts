@@ -243,6 +243,7 @@ export function activate(context: vscode.ExtensionContext): void {
     agent: (input) => coordinator.runAgent(input),
     cancel: (requestId) => coordinator.cancel(requestId),
     conversationTokens: (threadId, tokens) => coordinator.conversationTokens(threadId, tokens),
+    dropUris: (uriList, shiftKey) => coordinator.dropUris(uriList, shiftKey),
     captureAdmission: (threadId) => coordinator.captureAdmission(threadId),
     compare: (input) => coordinator.compare(input),
     configureConnections: async (profile) => {

@@ -42,6 +42,8 @@ export interface ChatViewActions {
   openFolder(): Promise<void>;
   /** The panel's running token total for a conversation, which only it knows. */
   conversationTokens(threadId: string, tokens: number): Promise<void>;
+  /** Files dragged onto the composer from the editor or the explorer. */
+  dropUris(uriList: string, shiftKey: boolean): Promise<void>;
   openThread(input: SessionInput & { threadId: string }): Promise<void>;
   refreshModels(): Promise<void>;
   reviewChanges(previewId?: string): Promise<void>;
