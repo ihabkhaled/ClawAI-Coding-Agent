@@ -1,6 +1,5 @@
 import * as vscode from 'vscode';
 
-import { EMPTY_BOARD } from '../core/agent-board';
 import { WorkspaceMutationGate } from '../core/workspace-mutation-gate';
 import { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 import {
@@ -69,6 +68,7 @@ import { LocalObservabilityService } from './observability-service';
 import { ProcessSupervisorService } from './process-supervisor-service';
 import { ProjectPolicyService } from './project-policy-service';
 import { RunJournalService } from './run-journal-service';
+import { parentRunContext, RunScopedContext } from './run-scoped-context';
 import { RuntimeEventStreamService } from './runtime-event-stream-service';
 import {
   CoordinatedFlagshipSubAgentPort,
@@ -111,13 +111,11 @@ import type { TargetAwareToolRouter } from './target-aware-tool-router';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { BackendClient } from '../backend/backend-client';
 import type { WebResearchPort } from '../backend/research-client';
-import type { AgentBoard } from '../core/agent-board.types';
 import type { RUNTIME_EFFECT_APPROVAL_KIND } from '../core/approval-broker';
 import type { ApprovalBroker } from '../core/approval-broker';
 import type { ExtensionState } from '../core/extension-state';
 import type { CapabilityManifest } from '../core/runtime/capability-manifest';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
-import type { ParentRunContext } from '../core/sub-agent-inheritance.types';
 import type { AdvisorPort } from '../infrastructure/advisor-tool-executor.types';
 import type { OutputLogger } from '../infrastructure/output-logger';
 
@@ -317,13 +315,13 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         policy: this.policy,
         stream: this.stream,
         transport: this.transport,
-        parentContext: () => this.parentRunContext(),
-        board: {
-          read: () => this.agentBoard,
-          write: (next) => {
-            this.agentBoard = next;
-          },
-        },
+        parentContext: () =>
+          parentRunContext(
+            this.activeInput?.prompt ?? '',
+            this.state.snapshot,
+            this.state.snapshot.agentRun,
+          ),
+        board: this.runContext.boardPort(),
       },
       files: this.files,
       globalStorageUri: context.globalStorageUri,
@@ -383,7 +381,9 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
           state: this.state,
           journals: this.journals,
           activeRunId: () => this.activeRunId,
+          goal: () => this.runContext.goal(),
         }),
+        goal: this.runContext.goalPort(),
         intelligence,
         transactions: this.transactions,
         tasks: this.stores.tasks,
@@ -504,31 +504,8 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     await steerRuntime(this.transport, this.active, this.activeRunId, this.epochs, message);
   }
 
-  /**
-   * What a child that asked to inherit context gets to know.
-   *
-   * Read at launch rather than captured once, so a child started later in the
-   * run sees the decisions the parent made in the meantime. The goal comes from
-   * the input the run is executing, which is the only place it exists.
-   */
-  /**
-   * The note board the current graph shares.
-   *
-   * Cleared with the run-scoped stores, so a second graph never reads the first
-   * one's notes: a board is the record of one piece of work, and two mixed
-   * together make every note ambiguous about which run it belongs to.
-   */
-  private agentBoard: AgentBoard = EMPTY_BOARD;
-
-  private parentRunContext(): ParentRunContext {
-    const run = this.state.snapshot.agentRun;
-    return {
-      goal: this.activeInput?.prompt ?? '',
-      decisions: run?.summary === undefined ? [] : [run.summary],
-      changedPaths: run?.files.map((file) => file.path) ?? [],
-      findings: this.state.snapshot.findings,
-    };
-  }
+  /** The board and the goal this run accumulates, cleared together. */
+  private readonly runContext = new RunScopedContext();
 
   invalidateAccount(): void {
     this.epochs = nextAccountEpoch(this.epochs);
@@ -543,7 +520,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   invalidateWorkspace(): void {
     this.epochs = nextWorkspaceEpoch(this.epochs);
     forgetWorkspaceScopedState(this.transactions, this.stores);
-    this.agentBoard = EMPTY_BOARD;
+    this.runContext.clear();
     void this.cancel();
   }
 

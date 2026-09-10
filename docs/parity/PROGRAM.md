@@ -2430,3 +2430,46 @@ the shape that survives an agent finishing before its reader starts, which a
 message is not — and the row now says which half shipped.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 73 — F014 goal mode
+
+| Batch | Version | Status                                | Evidence                                                                                    |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 73    | 1.33.0  | Code and deterministic gates complete | `run-goal.ts`, `goal-tool-executor.ts`, `end-conversation-tool-executor.ts`. Tests: 21 new. |
+
+**The row's second half was the real gap.** `runtime.flagship` iterates to
+acceptance, and an ordinary run had no completion condition at all: it ended
+when the model decided it was finished, and "finished" was a sentence in a
+summary. Acceptance checks already existed; what they lacked was a lane that was
+not the flagship one.
+
+**Redeclaring over open checks is refused, and that rule carries the feature.**
+A model that could replace its own checks could clear every one of them by
+declaring a shorter list. Without that refusal, goal mode is a formality
+satisfied by rewriting the test rather than passing it.
+
+**A waiver needs a reason with a floor under it.** "n/a" would otherwise clear
+any check. The floor does not make a reason good — nothing here can — but it
+makes an empty one visible to whoever reads the record afterwards.
+
+**Abandoning is always allowed.** Refusing to let a run give up would trap it
+looping against a goal it has already decided it cannot meet, which is worse
+than an honest abandonment. The terminal record already distinguishes the two,
+so nothing is lost by permitting it.
+
+**Twelve checks, not fifty.** The point of acceptance checks is that a run can
+be held to them, which only works while a reader can hold all of them at once.
+Past about a dozen the list stops being a test and becomes a document nobody
+reads to the end.
+
+**A run that declares no goal is unaffected.** The gate is additive: no goal
+means no open checks means the same end behaviour as before. Goal mode that
+changed how ordinary runs finish would be a breaking change disguised as a
+feature.
+
+**The studio crossed its line ceiling again**, so the board, the goal and the
+parent-context builder moved into a `RunScopedContext` — one place that knows
+what a workspace change invalidates, rather than three fields that each have to
+be remembered when a fourth is added.
+
+**Still true:** live-model Definition of Done cannot be executed here.

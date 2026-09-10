@@ -14,6 +14,7 @@ import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { AdvisorPort } from '../infrastructure/advisor-tool-executor.types';
 import type { UserQuestionPort } from '../infrastructure/ask-user-tool-executor';
 import type { ConversationEndPort } from '../infrastructure/end-conversation-tool-executor';
+import type { RunGoalPort } from '../infrastructure/goal-tool-executor.types';
 import type { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
 import type { DeliveredArtifactSink } from '../infrastructure/vscode-filesystem-tool-executor';
 
@@ -45,6 +46,7 @@ export interface RuntimeStudioAnalysisTools {
   readonly journals: RunJournalService;
   readonly research: WebResearchPort;
   readonly advisor: AdvisorPort;
+  readonly goal: RunGoalPort;
   readonly files: VscodeFileTransactionAdapter;
 }
 

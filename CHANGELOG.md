@@ -2,6 +2,30 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.33.0
+
+Minor: goal mode for an ordinary run (F014, narrowed).
+
+- **`runtime.goal` states what a run is for and how anyone will know it
+  worked.** An ordinary run had no completion condition: it ended when the model
+  decided it was finished, and "finished" was a sentence in a summary rather
+  than anything a reader could check. The flagship lane has had acceptance
+  checks since it existed, behind five fixed strategies and ten fixed stages.
+  This is the same idea without them.
+- **`runtime.end` refuses to complete while a check is open**, and names which.
+  Abandoning is always allowed: refusing to let a run give up would trap it
+  against a goal it has already decided it cannot meet, and the terminal record
+  says which it was.
+- **Redeclaring over a goal with open checks is refused.** A model that could
+  replace its own checks could clear every one by declaring a shorter list,
+  which turns the mechanism into a formality it satisfies by rewriting the test.
+- **A waiver needs a real reason.** Without a floor, "n/a" clears any check. The
+  floor does not make a reason good; it makes an empty one visible.
+- **At most twelve checks.** Acceptance checks only work while a reader can hold
+  all of them in mind at once. Beyond about a dozen the list stops being a test
+  and becomes a document.
+- A run that declares no goal ends exactly as it did before.
+
 ## 1.32.0
 
 Minor: a shared note board for agents in a graph (F009, narrowed).
