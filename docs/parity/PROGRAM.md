@@ -2178,3 +2178,37 @@ re-collecting would change what the next message sends without saying so, which
 is a larger surprise than the one being fixed.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 67 — F089 Fast mode
+
+| Batch | Version | Status                                | Evidence                                                                       |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------ |
+| 67    | 1.27.0  | Code and deterministic gates complete | `fast-mode.ts`, `fast-mode-command.ts`, `clawAI.toggleFastMode`. Tests: 9 new. |
+
+**Batch 64 unblocked this three batches ago and the row did not know it.** F089
+said the backend low-latency profile was unreachable from the extension. It was,
+until `LOW_LATENCY` became one of the seven routing modes the panel offers. What
+remained was the control itself.
+
+**Two mechanisms, one control, and the documentation refuses to blur them.**
+`LOW_LATENCY` asks a server to pick a quick model. `2X` lets the extension issue
+eight workspace metadata lookups at a time instead of one. Nothing about those
+is the same thing. They sit behind one toggle because a person asking for a fast
+reply is not asking about either: they want the round trip shorter, and moving
+one lever buys half of it.
+
+**Neither lever spends correctness, which is the only reason this is one
+control.** If `2X` changed which files reached context, pairing it with a model
+choice under a speed label would be selling a quality tradeoff as a latency one.
+It does not — the file set, the byte budget, the inclusion order, approvals,
+writes and commands are all untouched — so the label is honest.
+
+**On means both, not either.** Reporting Fast mode on for a half-match would
+light the toggle for someone who chose low-latency routing deliberately, and
+switching it off would then change a setting they made on purpose.
+
+**It forgets what it restored.** A remembered pair left behind would resurface
+weeks later and put back a routing mode chosen for a task nobody remembers, which
+is worse than the fallback it would have used instead.
+
+**Still true:** live-model Definition of Done cannot be executed here.

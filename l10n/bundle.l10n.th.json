@@ -209,6 +209,8 @@
   "External output folder allowed. Every proposed write there still requires final approval.": "External output folder allowed. Every proposed write there still requires final approval.",
   "External output folders": "External output folders",
   "Failed": "Failed",
+  "Fast mode is off.": "โหมดเร็วปิดอยู่",
+  "Fast mode is on: the router prefers a quick model and context is gathered 2X.": "โหมดเร็วเปิดอยู่: ตัวจัดเส้นทางจะเลือกโมเดลที่เร็วและเก็บบริบทที่ 2X",
   "Fastest reply": "ตอบเร็วที่สุด",
   "Feature": "Feature",
   "Feature request": "Feature request",

@@ -209,6 +209,8 @@
   "External output folder allowed. Every proposed write there still requires final approval.": "External output folder allowed. Every proposed write there still requires final approval.",
   "External output folders": "External output folders",
   "Failed": "Failed",
+  "Fast mode is off.": "高速モードはオフです。",
+  "Fast mode is on: the router prefers a quick model and context is gathered 2X.": "高速モードがオンです: ルーターは速いモデルを優先し、コンテキストは 2X で収集されます。",
   "Fastest reply": "最速の応答",
   "Feature": "Feature",
   "Feature request": "Feature request",

@@ -31,6 +31,7 @@
   "command.askSideQuestion": "ถามคำถามแยกต่างหาก",
   "command.attachTerminalOutput": "แนบผลลัพธ์จากเทอร์มินัล",
   "command.openTerminal": "เปิดเทอร์มินัลการรัน",
+  "command.toggleFastMode": "สลับโหมดเร็ว",
   "command.groupConversation": "จัดกลุ่มการสนทนา",
   "command.openConversationInNewWindow": "เปิดการสนทนาในหน้าต่างใหม่",
   "command.compactConversation": "ย่อการสนทนา",

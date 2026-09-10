@@ -31,6 +31,7 @@
   "command.askSideQuestion": "提一个旁问",
   "command.attachTerminalOutput": "附加终端输出",
   "command.openTerminal": "打开运行终端",
+  "command.toggleFastMode": "切换快速模式",
   "command.groupConversation": "将对话分组",
   "command.openConversationInNewWindow": "在新窗口中打开对话",
   "command.compactConversation": "压缩对话",

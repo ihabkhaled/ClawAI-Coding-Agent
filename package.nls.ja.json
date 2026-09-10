@@ -31,6 +31,7 @@
   "command.askSideQuestion": "別の質問をする",
   "command.attachTerminalOutput": "ターミナル出力を添付",
   "command.openTerminal": "実行ターミナルを開く",
+  "command.toggleFastMode": "高速モードの切り替え",
   "command.groupConversation": "会話をグループ化",
   "command.openConversationInNewWindow": "会話を新しいウィンドウで開く",
   "command.compactConversation": "会話を圧縮",

@@ -209,6 +209,8 @@
   "External output folder allowed. Every proposed write there still requires final approval.": "External output folder allowed. Every proposed write there still requires final approval.",
   "External output folders": "External output folders",
   "Failed": "Failed",
+  "Fast mode is off.": "El modo rápido está desactivado.",
+  "Fast mode is on: the router prefers a quick model and context is gathered 2X.": "El modo rápido está activado: el enrutador prefiere un modelo rápido y el contexto se recopila a 2X.",
   "Fastest reply": "Respuesta más rápida",
   "Feature": "Feature",
   "Feature request": "Feature request",

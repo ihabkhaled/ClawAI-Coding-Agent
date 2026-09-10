@@ -31,6 +31,7 @@
   "command.askSideQuestion": "Задать отдельный вопрос",
   "command.attachTerminalOutput": "Прикрепить вывод терминала",
   "command.openTerminal": "Открыть терминал запусков",
+  "command.toggleFastMode": "Переключить быстрый режим",
   "command.groupConversation": "Сгруппировать беседу",
   "command.openConversationInNewWindow": "Открыть беседу в новом окне",
   "command.compactConversation": "Сжать беседу",

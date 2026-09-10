@@ -209,6 +209,8 @@
   "External output folder allowed. Every proposed write there still requires final approval.": "External output folder allowed. Every proposed write there still requires final approval.",
   "External output folders": "External output folders",
   "Failed": "Failed",
+  "Fast mode is off.": "快速模式已关闭。",
+  "Fast mode is on: the router prefers a quick model and context is gathered 2X.": "快速模式已开启：路由器优先选择快速模型，并以 2X 收集上下文。",
   "Fastest reply": "最快回复",
   "Feature": "Feature",
   "Feature request": "Feature request",

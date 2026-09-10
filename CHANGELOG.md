@@ -2,6 +2,31 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.27.0
+
+Minor: Fast mode (F089 complete).
+
+- **`ClawAI: Toggle Fast Mode`** asks for a quick reply on both levers that
+  exist: the backend router prefers a low-latency model, and the extension
+  gathers workspace context with eight metadata lookups in flight instead of
+  one.
+- **They are genuinely two different mechanisms and the docs say so.** One is a
+  model choice made on a server; the other is local syscall concurrency. They
+  belong behind one control because a person asking for a fast reply is not
+  asking about either mechanism — they want the whole round trip shorter, and
+  moving one lever buys half of it.
+- **Neither lever trades correctness.** The router still picks a capable model,
+  and `2X` changes only how many stats are in flight. The file set, the byte
+  budget, the inclusion order, approvals, writes and commands are untouched.
+- **The toggle reports on only when both levers are where it put them.** A
+  half-match would light it for someone who chose low-latency routing
+  themselves, and turning it off would then change a setting they did choose.
+- **It puts back exactly what it replaced, then forgets it.** A stale memory is
+  worse than none: turning Fast mode on next week and off again would restore a
+  routing mode chosen for a task nobody remembers.
+- This was unreachable until 1.24.0, which is when `LOW_LATENCY` stopped being a
+  backend-only mode.
+
 ## 1.26.0
 
 Minor: stale referenced ranges are marked (F033 complete).

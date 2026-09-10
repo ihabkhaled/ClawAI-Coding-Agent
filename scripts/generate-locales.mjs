@@ -4354,6 +4354,81 @@ const contextFreshnessTranslations = {
   },
 };
 
+const fastModeTranslations = {
+  ar: {
+    'Fast mode is off.': 'الوضع السريع متوقف.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'الوضع السريع مُفعّل: يفضّل الموجّه نموذجًا سريعًا ويُجمع السياق بسرعة 2X.',
+    'Toggle Fast Mode': 'تبديل الوضع السريع',
+  },
+  de: {
+    'Fast mode is off.': 'Schnellmodus ist aus.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'Schnellmodus ist an: Der Router bevorzugt ein schnelles Modell und der Kontext wird mit 2X erfasst.',
+    'Toggle Fast Mode': 'Schnellmodus umschalten',
+  },
+  es: {
+    'Fast mode is off.': 'El modo rápido está desactivado.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'El modo rápido está activado: el enrutador prefiere un modelo rápido y el contexto se recopila a 2X.',
+    'Toggle Fast Mode': 'Alternar modo rápido',
+  },
+  fa: {
+    'Fast mode is off.': 'حالت سریع خاموش است.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'حالت سریع روشن است: مسیریاب مدلی سریع را ترجیح می‌دهد و زمینه با سرعت 2X جمع‌آوری می‌شود.',
+    'Toggle Fast Mode': 'تغییر وضعیت حالت سریع',
+  },
+  fr: {
+    'Fast mode is off.': 'Le mode rapide est désactivé.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'Le mode rapide est activé : le routeur préfère un modèle rapide et le contexte est collecté en 2X.',
+    'Toggle Fast Mode': 'Basculer le mode rapide',
+  },
+  hi: {
+    'Fast mode is off.': 'फ़ास्ट मोड बंद है।',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'फ़ास्ट मोड चालू है: राउटर तेज़ मॉडल पसंद करता है और संदर्भ 2X पर एकत्र होता है।',
+    'Toggle Fast Mode': 'फ़ास्ट मोड टॉगल करें',
+  },
+  it: {
+    'Fast mode is off.': 'La modalità rapida è disattivata.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'La modalità rapida è attiva: il router preferisce un modello veloce e il contesto viene raccolto a 2X.',
+    'Toggle Fast Mode': 'Attiva/disattiva modalità rapida',
+  },
+  ja: {
+    'Fast mode is off.': '高速モードはオフです。',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      '高速モードがオンです: ルーターは速いモデルを優先し、コンテキストは 2X で収集されます。',
+    'Toggle Fast Mode': '高速モードの切り替え',
+  },
+  pt: {
+    'Fast mode is off.': 'O modo rápido está desativado.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'O modo rápido está ativado: o roteador prefere um modelo rápido e o contexto é coletado a 2X.',
+    'Toggle Fast Mode': 'Alternar modo rápido',
+  },
+  ru: {
+    'Fast mode is off.': 'Быстрый режим выключен.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'Быстрый режим включён: маршрутизатор предпочитает быструю модель, а контекст собирается на 2X.',
+    'Toggle Fast Mode': 'Переключить быстрый режим',
+  },
+  th: {
+    'Fast mode is off.': 'โหมดเร็วปิดอยู่',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'โหมดเร็วเปิดอยู่: ตัวจัดเส้นทางจะเลือกโมเดลที่เร็วและเก็บบริบทที่ 2X',
+    'Toggle Fast Mode': 'สลับโหมดเร็ว',
+  },
+  zh: {
+    'Fast mode is off.': '快速模式已关闭。',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      '快速模式已开启：路由器优先选择快速模型，并以 2X 收集上下文。',
+    'Toggle Fast Mode': '切换快速模式',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -4391,6 +4466,7 @@ function translate(locale, message) {
     routingStrategyTranslations[locale][message] ??
     autoCompactionTranslations[locale][message] ??
     contextFreshnessTranslations[locale][message] ??
+    fastModeTranslations[locale][message] ??
     message
   );
 }
