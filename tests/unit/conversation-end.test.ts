@@ -1,12 +1,14 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { conversationEndInputSchema, decideConversationEnd } from '../../src/core/conversation-end';
+import { declareGoal } from '../../src/core/run-goal';
 import {
   EndConversationToolExecutor,
   endConversationToolDefinition,
 } from '../../src/infrastructure/end-conversation-tool-executor';
 
 import type { ConversationEndInput, PendingInterruptions } from '../../src/core/conversation-end';
+import type { RunGoal } from '../../src/core/run-goal.types';
 import type { ToolInvocation } from '../../src/core/runtime/runtime-tool-contracts';
 
 const idle: PendingInterruptions = { approvalTitle: undefined, questionHeader: undefined };
@@ -29,12 +31,42 @@ function invocation(overrides: Partial<ToolInvocation> = {}): ToolInvocation {
   };
 }
 
-function port(pending: PendingInterruptions = idle) {
+function port(pending: PendingInterruptions = idle, goal?: RunGoal) {
   return {
     pending: () => pending,
+    goal: () => goal,
     finish: vi.fn<(input: ConversationEndInput) => Promise<void>>(async () => undefined),
   };
 }
+
+describe('runtime.end with a declared goal', () => {
+  it('refuses to complete while an acceptance check is open', async () => {
+    const goal = declareGoal(undefined, 'Fix the parser', ['tests pass']);
+    if (!goal.declared) throw new Error(goal.refusal);
+    const dependencies = port(idle, goal.goal);
+    const executor = new EndConversationToolExecutor(dependencies);
+
+    const output = await executor.execute(
+      invocation({ arguments: { reason: 'Done.', lifecycle: 'completed' } }),
+    );
+
+    expect(output.structured).toMatchObject({ ended: false });
+    expect(dependencies.finish).not.toHaveBeenCalled();
+  });
+
+  it('lets the run abandon, because refusing would trap it against its own goal', async () => {
+    const goal = declareGoal(undefined, 'Fix the parser', ['tests pass']);
+    if (!goal.declared) throw new Error(goal.refusal);
+    const dependencies = port(idle, goal.goal);
+    const executor = new EndConversationToolExecutor(dependencies);
+
+    const output = await executor.execute(
+      invocation({ arguments: { reason: 'Cannot finish this.', lifecycle: 'abandoned' } }),
+    );
+
+    expect(output.structured).toMatchObject({ ended: true, lifecycle: 'abandoned' });
+  });
+});
 
 describe('decideConversationEnd', () => {
   it('allows ending when nothing is waiting on the user', () => {

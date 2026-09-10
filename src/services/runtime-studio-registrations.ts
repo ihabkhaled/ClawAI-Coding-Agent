@@ -27,6 +27,7 @@ import {
   FlagshipToolExecutor,
   flagshipToolDefinition,
 } from '../infrastructure/flagship-tool-executor';
+import { GoalToolExecutor, goalToolDefinition } from '../infrastructure/goal-tool-executor';
 import {
   IntegrationToolExecutor,
   integrationToolDefinition,
@@ -97,6 +98,7 @@ export function analysisToolRegistrations(
 ): RuntimeToolRegistration[] {
   return [
     { definition: advisorToolDefinition, executor: new AdvisorToolExecutor(parts.advisor) },
+    { definition: goalToolDefinition, executor: new GoalToolExecutor(parts.goal) },
     {
       definition: monitorToolDefinition,
       executor: new MonitorToolExecutor(new VscodeMonitorPort(parts.files)),

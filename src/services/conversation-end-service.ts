@@ -1,10 +1,13 @@
 import type { RunJournalService } from './run-journal-service';
 import type { ConversationEndInput, PendingInterruptions } from '../core/conversation-end';
 import type { ExtensionState } from '../core/extension-state';
+import type { RunGoal } from '../core/run-goal.types';
 import type { ConversationEndPort } from '../infrastructure/end-conversation-tool-executor';
 
 interface ConversationEndCollaborators {
   readonly state: ExtensionState;
+  /** The run's declared acceptance checks, when it declared any. */
+  readonly goal: () => RunGoal | undefined;
   readonly journals: RunJournalService;
   readonly activeRunId: () => string | undefined;
 }
@@ -30,6 +33,7 @@ export function conversationEndPort(parts: ConversationEndCollaborators): Conver
       }
       return { approvalTitle: snapshot.approvalRequest?.title, questionHeader: undefined };
     },
+    goal: () => parts.goal(),
     finish: async (input: ConversationEndInput): Promise<void> => {
       const runId = parts.activeRunId();
       if (runId === undefined) return;
