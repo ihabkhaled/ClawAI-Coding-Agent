@@ -11,3 +11,8 @@ export interface MentionSuggestions {
   end: number;
   paths: string[];
 }
+
+/** The skills a slash command can name, narrowed to the one call the list makes. */
+export interface SkillListPort {
+  list(): Promise<readonly { name: string }[]>;
+}

@@ -1336,3 +1336,42 @@ from 326 to 309; three of the twenty stayed listed for exactly that reason.
 
 The remaining 309 are tracked work, not a footnote. They are visible, counted,
 and cannot grow.
+
+### Batch 46 — F077 skills become slash commands
+
+| Batch | Version | Status                                | Evidence                                                                                  |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 46    | 1.7.0   | Code and deterministic gates complete | `skill-definition.ts`, `slash-command.ts`, `skill-catalog-service.ts`. Tests: 45 + 2 e2e. |
+
+Skills existed as files nobody could invoke. A file is now the whole
+interface: drop `review.md` into `.clawai/skills` and `/review` works, which is
+what makes a command something a repository can ship in a pull request.
+
+**The header is parsed by hand, not by a YAML library.** Skill files are
+workspace content and a full parser is a large attack surface for three fields.
+Anything the parser does not understand stays in the body rather than being
+guessed at, so a malformed header costs the header and not the skill.
+
+**Completion matches by prefix, mentions match by subsequence.** That
+difference is deliberate. A path is something a user half-remembers, so `wcs`
+should find `workspace-context-service.ts`. A command is a name someone chose
+and typed on purpose, and offering `deploy` for `dp` would put a destructive
+command one Enter away from a typo.
+
+**One popup, two triggers.** The `/` list reuses the seam the @-mention work
+built rather than adding a second popup — two would be two places to fix the
+day either changed.
+
+**Expansion happens once, in the coordinator, before any transport.** Doing it
+deeper would mean every path that sends a prompt had to remember to, and one of
+them would forget.
+
+**An unknown command is sent as ordinary text.** Refusing it would make any
+message beginning with a slash unsendable, and the user may simply have meant
+the words.
+
+Two long-standing violations were cleared on the way: `runAgent` declared its
+input type inline, which `rules/12` prohibits, and `agent-coordinator.ts` was
+over its line ceiling again. Extracting `RunAgentInput` fixed both at once.
+
+**Still true:** live-model Definition of Done cannot be executed here.

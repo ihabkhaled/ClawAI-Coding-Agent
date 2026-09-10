@@ -9,7 +9,6 @@ import { totalAttachmentBytes } from '../core/chat-attachment';
 import { contextModeForCommand } from '../core/command-context';
 import { type ContextMode } from '../core/context-mode';
 import { GenerationThreadRegistry } from '../core/generation-thread-registry';
-import { type ResearchMode } from '../core/research-mode';
 import { type OutputLogger } from '../infrastructure/output-logger';
 import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-workspace-edit-adapter';
 import { type DiffPreviewProvider } from '../views/diff-preview-provider';
@@ -34,6 +33,7 @@ import {
   type CompareInput,
   type ExternalOutputGrantStore,
   type RequestAdmission,
+  type RunAgentInput,
 } from './agent-coordinator.types';
 import { conversationRefresher, refreshAgentData } from './agent-data-service';
 import { AgentExecutionPresenter } from './agent-execution-presenter';
@@ -56,12 +56,13 @@ import { RuntimeUiProjector } from './runtime-ui-projection';
 import { confirmSafeEdits } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
 import { SessionControlService } from './session-control-service';
+import { expandSkillPrompt } from './skill-expansion';
 import { VscodeRuntimeStudio } from './vscode-runtime-studio';
 import { type WorkflowKind } from './workflow-service';
+import { workspaceSkillCatalog } from './workspace-skill-catalog';
 
 import type { WorkspaceContextService } from './workspace-context-service';
 import type { WorkspaceScopeService } from './workspace-scope-service';
-import type { ChatAttachment } from '../core/chat-attachment';
 import type { ExtensionState } from '../core/extension-state';
 import type { SessionVault } from '../core/session-vault';
 import type { WorkspaceApprovalMemory } from '../core/workspace-approval-memory';
@@ -94,6 +95,9 @@ export class AgentCoordinator implements vscode.Disposable {
   private readonly workflowActions: AgentCoordinatorWorkflowActions;
   private view: ChatViewProvider | null = null;
 
+  /** Slash commands the workspace and this VS Code profile define. */
+  private readonly skills: ReturnType<typeof workspaceSkillCatalog>;
+
   constructor(
     readonly state: ExtensionState,
     private readonly sessionVault: SessionVault,
@@ -107,6 +111,7 @@ export class AgentCoordinator implements vscode.Disposable {
     workspaceScope: WorkspaceScopeService,
   ) {
     this.backend = createBackendClient(this.configuration.read(), this.sessionVault);
+    this.skills = workspaceSkillCatalog(extensionContext.globalStorageUri, workspaceScope);
     this.attachmentRequests = new AttachmentRequestService(
       () => this.backend,
       () => this.view,
@@ -380,19 +385,15 @@ export class AgentCoordinator implements vscode.Disposable {
     await this.promptExecutions.send(input);
   }
 
-  async runAgent(input: {
-    admission?: RequestAdmission;
-    attachments?: ChatAttachment[];
-    content: string;
-    contextMode: ContextMode;
-    modelKey?: string;
-    researchMode?: ResearchMode;
-    requestId?: string;
-    sessionId?: string;
-  }): Promise<void> {
+  async runAgent(input: RunAgentInput): Promise<void> {
     const requestId = input.requestId ?? randomUUID();
+    // Expanded once, here, before the prompt reaches any transport. Doing it
+    // deeper would mean every path that sends a prompt had to remember to,
+    // and one of them would forget.
+    const content = await expandSkillPrompt(this.skills, input.content);
     const queuedInput = await this.agentWorkflows.snapshot({
       ...input,
+      content,
       kind: 'generate',
     });
     const sessionId = await this.agentWorkflows.prepare(queuedInput, requestId);
