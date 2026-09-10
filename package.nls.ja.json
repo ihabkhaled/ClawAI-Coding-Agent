@@ -26,6 +26,8 @@
   "command.undoLastEdit": "最後の ClawAI 編集を元に戻す",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.createCheckpoint": "チェックポイントを作成",
+  "command.restoreCheckpoint": "チェックポイントを復元",
   "command.askSideQuestion": "別の質問をする",
   "command.attachTerminalOutput": "ターミナル出力を添付",
   "command.groupConversation": "会話をグループ化",

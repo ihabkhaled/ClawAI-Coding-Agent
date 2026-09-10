@@ -51,9 +51,9 @@ import { GenerationScheduler } from './generation-scheduler';
 import { ModelService } from './model-service';
 import { PromptExecutionService } from './prompt-execution-service';
 import { RequestAdmissionService } from './request-admission-service';
+import { runQueuedAgent } from './run-queued-agent';
 import { RuntimeProtocolService } from './runtime-protocol-service';
 import { RuntimeRecoveryLauncher } from './runtime-recovery-launcher';
-import { RuntimeUiProjector } from './runtime-ui-projection';
 import { confirmSafeEdits } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
 import { SessionControlService } from './session-control-service';
@@ -61,8 +61,10 @@ import { SideQuestionThread } from './side-question-thread';
 import { expandSkillPrompt } from './skill-expansion';
 import { VscodeRuntimeStudio } from './vscode-runtime-studio';
 import { type WorkflowKind } from './workflow-service';
+import { workspaceCheckpoints } from './workspace-checkpoints';
 import { workspaceCatalogs } from './workspace-skill-catalog';
 
+import type { CheckpointDependencies } from './checkpoint-command.types';
 import type { OutputStyleCatalog } from './output-style-catalog';
 import type { SkillCatalogService } from './skill-catalog-service';
 import type { WorkspaceContextService } from './workspace-context-service';
@@ -108,6 +110,9 @@ export class AgentCoordinator implements vscode.Disposable {
   /** One archived thread for questions that must not enter the conversation. */
   private readonly sideQuestions = new SideQuestionThread(() => this.backend);
 
+  /** Named snapshots of the files the agent has changed this session. */
+  private readonly checkpoints: CheckpointDependencies;
+
   constructor(
     readonly state: ExtensionState,
     private readonly sessionVault: SessionVault,
@@ -140,6 +145,7 @@ export class AgentCoordinator implements vscode.Disposable {
       () => this.backend,
       this.logger,
     );
+    this.checkpoints = workspaceCheckpoints(this.runtimeStudio, extensionContext.workspaceState);
     this.runtimeRecovery = new RuntimeRecoveryLauncher(
       this.state,
       this.runtimeStudio,
@@ -407,40 +413,12 @@ export class AgentCoordinator implements vscode.Disposable {
       requestId,
       'agent',
       input.content,
-      async (signal) => {
-        const requiresLegacyPayload =
-          (queuedInput.attachments?.length ?? 0) > 0 ||
-          (queuedInput.researchMode !== undefined && queuedInput.researchMode !== 'NONE');
-        if (
-          this.state.snapshot.runtime.protocolSelection.mode !== 'runtime-v2' ||
-          requiresLegacyPayload
-        ) {
-          return this.agentWorkflows.execute(queuedInput, signal, requestId);
-        }
-        const threadId = await this.agentWorkflows.runtimeThread(queuedInput, requestId);
-        const projector = new RuntimeUiProjector(() => this.view, this.logger, requestId);
-        await this.runtimeStudio.execute({
-          prompt: queuedInput.content,
-          threadId,
-          requestId,
-          ...(queuedInput.selection.provider === undefined
-            ? {}
-            : { provider: queuedInput.selection.provider }),
-          ...(queuedInput.selection.model === undefined
-            ? {}
-            : { model: queuedInput.selection.model }),
-          signal,
-          onEvent: (event) => {
-            projector.project(event);
-          },
-          onApproval: (phase, effect) => {
-            projector.approval(phase, effect);
-          },
-        });
-        // Only the non-throwing path settles here: a thrown failure is already
-        // reported, and cancelled, by the generation failure boundary.
-        await projector.settle();
-      },
+      (signal) =>
+        runQueuedAgent(
+          { workflows: this.agentWorkflows, studio: this.runtimeStudio, state: this.state },
+          { view: () => this.view, logger: this.logger },
+          { queuedInput, requestId, signal },
+        ),
       {
         concurrencyKey: agentConcurrencyKey(this.state, sessionId, queuedInput.admission.threadId),
         modelLabel: queuedInput.modelLabel,
@@ -482,6 +460,7 @@ export class AgentCoordinator implements vscode.Disposable {
     sessionControls: () => this.sessionControls,
     outputStyles: () => this.outputStyles,
     sideQuestions: () => this.sideQuestions,
+    checkpoints: () => this.checkpoints,
     summarize: () => (threadId, instruction) =>
       summarizeThread(
         this.backend,

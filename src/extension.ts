@@ -108,6 +108,8 @@ function registerCommands(
     ['clawAI.sendFeedback', () => coordinator.commands.sendFeedback()],
     ['clawAI.searchRunHistory', () => coordinator.commands.searchRunHistory()],
     ['clawAI.showUsage', () => coordinator.commands.showUsage()],
+    ['clawAI.createCheckpoint', () => coordinator.commands.createCheckpoint()],
+    ['clawAI.restoreCheckpoint', () => coordinator.commands.restoreCheckpoint()],
     ['clawAI.askSideQuestion', () => coordinator.commands.askSideQuestion()],
     ['clawAI.compactConversation', () => coordinator.commands.compactConversation()],
     ['clawAI.selectOutputStyle', () => coordinator.commands.selectOutputStyle()],

@@ -189,6 +189,18 @@ export class FileTransactionService {
     });
   }
 
+  /**
+   * Every file the agent has changed in this session, newest capture last.
+   *
+   * The applied stack is in application order, so a file changed three times
+   * appears three times and the last entry is the one on disk.
+   */
+  get touchedFiles(): { rootKey: string; path: string }[] {
+    return this.applied.flatMap((preview) =>
+      preview.touched.map((file) => ({ rootKey: file.rootKey, path: file.path })),
+    );
+  }
+
   /** How many applied transactions could still be undone. */
   get undoDepth(): number {
     return this.applied.length;

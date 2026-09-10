@@ -116,8 +116,8 @@ import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { OutputLogger } from '../infrastructure/output-logger';
 
 export class VscodeRuntimeStudio implements vscode.Disposable {
-  private readonly files: VscodeFileTransactionAdapter;
-  private readonly transactions: FileTransactionService;
+  readonly files: VscodeFileTransactionAdapter;
+  readonly transactions: FileTransactionService;
   private readonly processes = new ProcessSupervisorService();
   readonly transport: BackendRuntimeTransport;
   private readonly bindingStore: VscodeRuntimeBindingStore;

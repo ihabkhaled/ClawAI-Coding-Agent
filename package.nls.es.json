@@ -26,6 +26,8 @@
   "command.undoLastEdit": "Deshacer última edición de ClawAI",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.createCheckpoint": "Crear punto de control",
+  "command.restoreCheckpoint": "Restaurar punto de control",
   "command.askSideQuestion": "Hacer una pregunta aparte",
   "command.attachTerminalOutput": "Adjuntar salida del terminal",
   "command.groupConversation": "Agrupar conversación",

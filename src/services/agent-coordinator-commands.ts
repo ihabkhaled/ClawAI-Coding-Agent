@@ -4,6 +4,7 @@ import { toggleViewDensity } from '../core/view-density';
 
 import { pickModelKey } from './agent-coordinator-prompts';
 import { applyModelSelection } from './agent-coordinator-runtime';
+import { createCheckpoint, restoreCheckpoint } from './checkpoint-command';
 import { compactConversation } from './compact-conversation-command';
 import { searchRunHistory } from './search-run-history-command';
 import { selectOutputStyle } from './select-output-style-command';
@@ -15,6 +16,7 @@ import { archiveChat, browseArchivedChats, renameChat } from './thread-organizat
 import { exportTranscript } from './transcript-export-command';
 
 import type { AgentConnectionService } from './agent-connection-service';
+import type { CheckpointDependencies } from './checkpoint-command.types';
 import type { ClawaiInitializer } from './clawai-initializer';
 import type { ConfigurationService } from './configuration-service';
 import type { ConversationSessionService } from './conversation-session-service';
@@ -40,6 +42,8 @@ export interface CoordinatorCommands {
   selectOutputStyle(): Promise<void>;
   compactConversation(): Promise<void>;
   askSideQuestion(): Promise<void>;
+  createCheckpoint(): Promise<void>;
+  restoreCheckpoint(): Promise<void>;
   toggleFocusView(): Promise<void>;
   renameChat(): Promise<void>;
   archiveChat(): Promise<void>;
@@ -64,6 +68,7 @@ interface CommandCollaborators {
   readonly sessionControls: () => SessionControlService;
   readonly outputStyles: () => OutputStyleCatalog;
   readonly sideQuestions: () => SideQuestionThread;
+  readonly checkpoints: () => CheckpointDependencies;
   readonly summarize: () => (threadId: string, instruction: string) => Promise<string>;
   readonly startContinuation: () => (seed: string) => Promise<void>;
 }
@@ -93,6 +98,8 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
       exportTranscript({ conversations: parts.conversations(), state: parts.state() }),
     searchRunHistory: () => searchRunHistory({ journals: parts.journals() }),
     showUsage: () => showUsage({ state: parts.state() }),
+    createCheckpoint: () => createCheckpoint(parts.checkpoints()),
+    restoreCheckpoint: () => restoreCheckpoint(parts.checkpoints()),
     askSideQuestion: () =>
       askSideQuestion({
         scratchThreadId: () => parts.sideQuestions().id(),

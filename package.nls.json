@@ -26,6 +26,8 @@
   "command.undoLastEdit": "Undo Last ClawAI Edit",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.createCheckpoint": "Create Checkpoint",
+  "command.restoreCheckpoint": "Restore Checkpoint",
   "command.askSideQuestion": "Ask a Side Question",
   "command.attachTerminalOutput": "Attach Terminal Output",
   "command.groupConversation": "Group Conversation",

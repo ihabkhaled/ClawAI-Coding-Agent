@@ -26,6 +26,8 @@
   "command.undoLastEdit": "अंतिम ClawAI संपादन वापस लें",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.createCheckpoint": "चेकपॉइंट बनाएँ",
+  "command.restoreCheckpoint": "चेकपॉइंट पुनर्स्थापित करें",
   "command.askSideQuestion": "अलग से एक प्रश्न पूछें",
   "command.attachTerminalOutput": "टर्मिनल आउटपुट संलग्न करें",
   "command.groupConversation": "बातचीत समूहित करें",

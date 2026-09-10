@@ -1788,3 +1788,49 @@ transcript, which is the whole point. A document is also keepable, which an
 answer worth asking for often is.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 58 — F057 named checkpoints
+
+| Batch | Version | Status                                | Evidence                                                                           |
+| ----- | ------- | ------------------------------------- | ---------------------------------------------------------------------------------- |
+| 58    | 1.18.0  | Code and deterministic gates complete | `checkpoint.ts`, `checkpoint-store.ts`, `workspace-checkpoints.ts`. Tests: 16 new. |
+
+**Restoring goes through the ordinary transaction.** A restore that could not
+itself be undone would make the safety feature the most dangerous button in the
+extension — you would need a checkpoint before using the checkpoint. Going
+through `preview`/`apply` means a restore is reviewed, hash-checked and
+reversible like any other edit.
+
+**Only the files the agent touched.** A checkpoint of the whole workspace would
+be a backup tool, which this is not and must not become. The point is getting
+back to the moment before the agent went somewhere you did not want.
+
+**Bounded twice.** Ten checkpoints, four megabytes each: a checkpoint holds
+file contents, and an unbounded list of those is a workspace-sized leak in
+extension storage. A checkpoint too large to store is refused with a reason
+rather than silently truncated, because a truncated checkpoint is a promise it
+cannot keep.
+
+**A stored entry that no longer parses is dropped, not repaired.** A checkpoint
+is a promise to put files back exactly as they were. A half-read one cannot
+keep it, and restoring from it would be worse than not having it.
+
+**The audit row's claim about shared infrastructure was stale, and is now
+corrected.** It said F059 and F074 also wanted this store. F074 shipped in
+0.78.0 without it, and F059 is backend-blocked in a way no client store can
+fix. This store serves F057 alone, and the row says so.
+
+Conversation fork stays open for the same reason F059 does: there is no
+message-level fork on the server, so later turns cannot be dropped and
+continued from.
+
+**`runAgent`'s execution body moved to `run-queued-agent.ts`.** The coordinator
+has hit its line ceiling in five batches now; this was the largest thing in it
+that was not coordination, and moving it is the fix the ceiling has been asking
+for each time.
+
+**The ratchet earned its keep again.** Seven new strings shipped untranslated
+and `npm run check` refused the commit, naming each one. That is the second
+time in this program the control has caught something before CI did.
+
+**Still true:** live-model Definition of Done cannot be executed here.

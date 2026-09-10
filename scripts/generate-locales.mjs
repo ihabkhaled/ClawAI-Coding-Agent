@@ -3635,6 +3635,167 @@ const sideQuestionTranslations = {
   },
 };
 
+const checkpointTranslations = {
+  ar: {
+    'Create Checkpoint': 'إنشاء نقطة حفظ',
+    'Name this checkpoint': 'تسمية نقطة الحفظ',
+    'Restore Checkpoint': 'استعادة نقطة حفظ',
+    'Restore which checkpoint?': 'أي نقطة حفظ تريد استعادتها؟',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'لم يغيّر الوكيل أي ملفات بعد، لذا لا يوجد ما يُحفظ.',
+    'There are no checkpoints yet.': 'لا توجد نقاط حفظ بعد.',
+    'These changes are too large to checkpoint.': 'هذه التغييرات أكبر من أن تُحفظ كنقطة.',
+    '{0} files': '{0} ملفات',
+    '{0} files will be remembered as they are now.': 'سيتم تذكّر {0} ملفات كما هي الآن.',
+  },
+  de: {
+    'Create Checkpoint': 'Prüfpunkt erstellen',
+    'Name this checkpoint': 'Prüfpunkt benennen',
+    'Restore Checkpoint': 'Prüfpunkt wiederherstellen',
+    'Restore which checkpoint?': 'Welchen Prüfpunkt wiederherstellen?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'Der Agent hat noch keine Dateien geändert, es gibt also nichts zu sichern.',
+    'There are no checkpoints yet.': 'Es gibt noch keine Prüfpunkte.',
+    'These changes are too large to checkpoint.':
+      'Diese Änderungen sind zu groß für einen Prüfpunkt.',
+    '{0} files': '{0} Dateien',
+    '{0} files will be remembered as they are now.':
+      '{0} Dateien werden so gespeichert, wie sie jetzt sind.',
+  },
+  es: {
+    'Create Checkpoint': 'Crear punto de control',
+    'Name this checkpoint': 'Nombra este punto de control',
+    'Restore Checkpoint': 'Restaurar punto de control',
+    'Restore which checkpoint?': '¿Qué punto de control restaurar?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'El agente aún no ha cambiado ningún archivo, así que no hay nada que guardar.',
+    'There are no checkpoints yet.': 'Aún no hay puntos de control.',
+    'These changes are too large to checkpoint.':
+      'Estos cambios son demasiado grandes para un punto de control.',
+    '{0} files': '{0} archivos',
+    '{0} files will be remembered as they are now.':
+      'Se recordarán {0} archivos tal como están ahora.',
+  },
+  fa: {
+    'Create Checkpoint': 'ایجاد نقطه بازیابی',
+    'Name this checkpoint': 'نام این نقطه بازیابی',
+    'Restore Checkpoint': 'بازیابی نقطه بازیابی',
+    'Restore which checkpoint?': 'کدام نقطه بازیابی بازگردانده شود؟',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'عامل هنوز فایلی را تغییر نداده است، پس چیزی برای ذخیره وجود ندارد.',
+    'There are no checkpoints yet.': 'هنوز نقطه بازیابی وجود ندارد.',
+    'These changes are too large to checkpoint.':
+      'این تغییرات برای ایجاد نقطه بازیابی بیش از حد بزرگ‌اند.',
+    '{0} files': '{0} فایل',
+    '{0} files will be remembered as they are now.':
+      '{0} فایل به همین شکل کنونی به خاطر سپرده می‌شود.',
+  },
+  fr: {
+    'Create Checkpoint': 'Créer un point de restauration',
+    'Name this checkpoint': 'Nommer ce point de restauration',
+    'Restore Checkpoint': 'Restaurer un point de restauration',
+    'Restore which checkpoint?': 'Quel point de restauration restaurer ?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      "L'agent n'a encore modifié aucun fichier, il n'y a donc rien à enregistrer.",
+    'There are no checkpoints yet.': "Il n'y a pas encore de points de restauration.",
+    'These changes are too large to checkpoint.':
+      'Ces modifications sont trop volumineuses pour un point de restauration.',
+    '{0} files': '{0} fichiers',
+    '{0} files will be remembered as they are now.': '{0} fichiers seront mémorisés tels quels.',
+  },
+  hi: {
+    'Create Checkpoint': 'चेकपॉइंट बनाएँ',
+    'Name this checkpoint': 'इस चेकपॉइंट का नाम दें',
+    'Restore Checkpoint': 'चेकपॉइंट पुनर्स्थापित करें',
+    'Restore which checkpoint?': 'कौन सा चेकपॉइंट पुनर्स्थापित करें?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'एजेंट ने अभी तक कोई फ़ाइल नहीं बदली, इसलिए सहेजने को कुछ नहीं है।',
+    'There are no checkpoints yet.': 'अभी तक कोई चेकपॉइंट नहीं है।',
+    'These changes are too large to checkpoint.': 'ये परिवर्तन चेकपॉइंट के लिए बहुत बड़े हैं।',
+    '{0} files': '{0} फ़ाइलें',
+    '{0} files will be remembered as they are now.':
+      '{0} फ़ाइलें अभी की स्थिति में याद रखी जाएँगी।',
+  },
+  it: {
+    'Create Checkpoint': 'Crea punto di controllo',
+    'Name this checkpoint': 'Assegna un nome a questo punto',
+    'Restore Checkpoint': 'Ripristina punto di controllo',
+    'Restore which checkpoint?': 'Quale punto di controllo ripristinare?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      "L'agente non ha ancora modificato alcun file, quindi non c'è nulla da salvare.",
+    'There are no checkpoints yet.': 'Non ci sono ancora punti di controllo.',
+    'These changes are too large to checkpoint.':
+      'Queste modifiche sono troppo grandi per un punto di controllo.',
+    '{0} files': '{0} file',
+    '{0} files will be remembered as they are now.': '{0} file verranno ricordati come sono ora.',
+  },
+  ja: {
+    'Create Checkpoint': 'チェックポイントを作成',
+    'Name this checkpoint': 'このチェックポイントの名前',
+    'Restore Checkpoint': 'チェックポイントを復元',
+    'Restore which checkpoint?': 'どのチェックポイントを復元しますか？',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'エージェントはまだファイルを変更していないため、保存するものがありません。',
+    'There are no checkpoints yet.': 'まだチェックポイントがありません。',
+    'These changes are too large to checkpoint.':
+      'この変更はチェックポイントにするには大きすぎます。',
+    '{0} files': '{0} 件のファイル',
+    '{0} files will be remembered as they are now.': '{0} 件のファイルを現在の状態で記憶します。',
+  },
+  pt: {
+    'Create Checkpoint': 'Criar ponto de restauração',
+    'Name this checkpoint': 'Nomeie este ponto de restauração',
+    'Restore Checkpoint': 'Restaurar ponto de restauração',
+    'Restore which checkpoint?': 'Qual ponto de restauração restaurar?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'O agente ainda não alterou nenhum arquivo, então não há nada para salvar.',
+    'There are no checkpoints yet.': 'Ainda não há pontos de restauração.',
+    'These changes are too large to checkpoint.':
+      'Estas alterações são grandes demais para um ponto de restauração.',
+    '{0} files': '{0} arquivos',
+    '{0} files will be remembered as they are now.':
+      '{0} arquivos serão lembrados como estao agora.',
+  },
+  ru: {
+    'Create Checkpoint': 'Создать контрольную точку',
+    'Name this checkpoint': 'Назовите эту контрольную точку',
+    'Restore Checkpoint': 'Восстановить контрольную точку',
+    'Restore which checkpoint?': 'Какую контрольную точку восстановить?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'Агент ещё не изменил ни одного файла, сохранять нечего.',
+    'There are no checkpoints yet.': 'Контрольных точек пока нет.',
+    'These changes are too large to checkpoint.':
+      'Эти изменения слишком велики для контрольной точки.',
+    '{0} files': 'Файлов: {0}',
+    '{0} files will be remembered as they are now.': 'Файлов будет сохранено в текущем виде: {0}.',
+  },
+  th: {
+    'Create Checkpoint': 'สร้างจุดบันทึก',
+    'Name this checkpoint': 'ตั้งชื่อจุดบันทึกนี้',
+    'Restore Checkpoint': 'กู้คืนจุดบันทึก',
+    'Restore which checkpoint?': 'กู้คืนจุดบันทึกใด',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'เอเจนต์ยังไม่ได้แก้ไขไฟล์ใด จึงไม่มีอะไรให้บันทึก',
+    'There are no checkpoints yet.': 'ยังไม่มีจุดบันทึก',
+    'These changes are too large to checkpoint.':
+      'การเปลี่ยนแปลงเหล่านี้ใหญ่เกินกว่าจะสร้างจุดบันทึก',
+    '{0} files': '{0} ไฟล์',
+    '{0} files will be remembered as they are now.': 'จะจดจำไฟล์ {0} ไฟล์ตามสถานะปัจจุบัน',
+  },
+  zh: {
+    'Create Checkpoint': '创建检查点',
+    'Name this checkpoint': '为该检查点命名',
+    'Restore Checkpoint': '恢复检查点',
+    'Restore which checkpoint?': '恢复哪个检查点？',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      '智能体尚未修改任何文件，没有可保存的内容。',
+    'There are no checkpoints yet.': '目前还没有检查点。',
+    'These changes are too large to checkpoint.': '这些更改太大，无法创建检查点。',
+    '{0} files': '{0} 个文件',
+    '{0} files will be remembered as they are now.': '将按当前状态记住 {0} 个文件。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -3654,6 +3815,7 @@ function translate(locale, message) {
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
+    checkpointTranslations[locale][message] ??
     sideQuestionTranslations[locale][message] ??
     terminalTranslations[locale][message] ??
     threadGroupTranslations[locale][message] ??
