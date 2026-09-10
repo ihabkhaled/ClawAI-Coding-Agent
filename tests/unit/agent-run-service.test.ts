@@ -79,7 +79,7 @@ function textChat(content: string): AgentRunChatPort {
       return {
         threadId: 'thread-1',
         content,
-        tokens: { input: 1, output: 1, source: 'estimated' as const, total: 2 },
+        tokens: { input: 1, output: 1, cached: 0, source: 'estimated' as const, total: 2 },
       };
     }),
   };
@@ -116,7 +116,7 @@ describe('AgentRunService', () => {
     const chat: AgentRunChatPort = {
       send: vi.fn(async () => ({
         threadId: 'thread-1',
-        tokens: { input: 1, output: 1, source: 'estimated' as const, total: 2 },
+        tokens: { input: 1, output: 1, cached: 0, source: 'estimated' as const, total: 2 },
         content: JSON.stringify({
           summary: 'Create a JavaScript loop',
           files: [

@@ -2,6 +2,7 @@
   "{0} · {1} minutes so far": "{0} · bisher {1} Minuten",
   "{0} ({1}/{2})": "{0} ({1}/{2})",
   "{0} bytes in {1} ms": "{0} bytes in {1} ms",
+  "{0} cached ({1}%)": "{0} aus dem Cache ({1}%)",
   "{0} files": "{0} Dateien",
   "{0} files · {1}": "{0} Dateien · {1}",
   "{0} files · {1} bytes": "{0} files · {1} bytes",

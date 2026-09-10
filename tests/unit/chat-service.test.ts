@@ -87,6 +87,7 @@ describe('ChatService', () => {
       tokens: {
         input: 11,
         output: 7,
+        cached: 0,
         source: 'reported',
         total: 18,
       },

@@ -4630,6 +4630,45 @@ const telemetryTranslations = {
   },
 };
 
+const cachedTokenTranslations = {
+  ar: {
+    '{0} cached ({1}%)': '{0} من الذاكرة المؤقتة ({1}%)',
+  },
+  de: {
+    '{0} cached ({1}%)': '{0} aus dem Cache ({1}%)',
+  },
+  es: {
+    '{0} cached ({1}%)': '{0} en caché ({1}%)',
+  },
+  fa: {
+    '{0} cached ({1}%)': '{0} از حافظه پنهان ({1}%)',
+  },
+  fr: {
+    '{0} cached ({1}%)': '{0} en cache ({1}%)',
+  },
+  hi: {
+    '{0} cached ({1}%)': '{0} कैश से ({1}%)',
+  },
+  it: {
+    '{0} cached ({1}%)': '{0} dalla cache ({1}%)',
+  },
+  ja: {
+    '{0} cached ({1}%)': '{0} はキャッシュ ({1}%)',
+  },
+  pt: {
+    '{0} cached ({1}%)': '{0} em cache ({1}%)',
+  },
+  ru: {
+    '{0} cached ({1}%)': '{0} из кэша ({1}%)',
+  },
+  th: {
+    '{0} cached ({1}%)': '{0} จากแคช ({1}%)',
+  },
+  zh: {
+    '{0} cached ({1}%)': '{0} 来自缓存（{1}%）',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -4671,6 +4710,7 @@ function translate(locale, message) {
     browserOriginTranslations[locale][message] ??
     composerDropTranslations[locale][message] ??
     telemetryTranslations[locale][message] ??
+    cachedTokenTranslations[locale][message] ??
     message
   );
 }

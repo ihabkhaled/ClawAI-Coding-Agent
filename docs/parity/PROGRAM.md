@@ -2710,3 +2710,40 @@ nothing.
 shipped.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 79 — F093 cached-token accounting
+
+| Batch | Version | Status                                | Evidence                                                                 |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------ |
+| 79    | 1.39.0  | Code and deterministic gates complete | `token-telemetry.ts`, `chat-service.ts`, `media/chat.js`. Tests: 11 new. |
+
+**A field the backend has always sent and the client never read.**
+`cachedPromptTokens` has existed since prompt caching was billed. The extension
+read prompt, completion, reasoning and total, and skipped it — so a conversation
+served almost entirely from cache counted every cached token at full price, in
+the exact meter people use to decide when to compact.
+
+**Cached is a subset of input, and getting that wrong breaks something in both
+directions.** Counting cached tokens at full price makes a cheap conversation
+look expensive, which is the bug being fixed. Subtracting them from the total
+would make a conversation about to overflow look like it has room, which is a
+worse bug shipped in the name of fixing the first. Cheap is not the same as free
+of context, and the receipt now says both things separately.
+
+**The share belongs in the tooltip.** The label answers "how much of the window
+have I used", which cached tokens count toward in full. The tooltip answers
+"what did this cost", which is where the cache share means something.
+
+**A provider claiming more cached than prompt tokens is clamped rather than
+believed.** That combination is a report the model cannot represent, and taking
+it at face value would render a cache share above one hundred per cent.
+
+**An estimate never claims a cache hit**, because an estimate has observed
+nothing. The `source` field already separates measured from guessed, and a
+guessed cache hit would undermine the one number in the receipt that is known.
+
+**Narrowed:** requesting caching — `cache_control` breakpoints, a cache key and
+its privacy boundary — stays backend work, and the row says so. What shipped is
+the accounting, which was client-side and missing.
+
+**Still true:** live-model Definition of Done cannot be executed here.

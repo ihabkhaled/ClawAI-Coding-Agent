@@ -44,7 +44,7 @@ describe('AgentRunService malformed model repair', () => {
       .mockResolvedValueOnce({
         threadId: 'thread-1',
         content: JSON.stringify({ summary: 'No change needed', files: [], commands: [] }),
-        tokens: { input: 1, output: 1, source: 'estimated', total: 2 },
+        tokens: { input: 1, output: 1, cached: 0, source: 'estimated', total: 2 },
       });
     const events: Record<string, unknown>[] = [];
     const service = new AgentRunService(
@@ -136,7 +136,7 @@ describe('AgentRunService malformed model repair', () => {
       .fn<AgentRunChatPort['send']>()
       .mockResolvedValueOnce({
         threadId: 'thread-1',
-        tokens: { input: 1, output: 1, source: 'estimated', total: 2 },
+        tokens: { input: 1, output: 1, cached: 0, source: 'estimated', total: 2 },
         content: JSON.stringify({
           summary: 'Production-ready code',
           files: [
@@ -150,7 +150,7 @@ describe('AgentRunService malformed model repair', () => {
       })
       .mockResolvedValueOnce({
         threadId: 'thread-1',
-        tokens: { input: 1, output: 1, source: 'estimated', total: 2 },
+        tokens: { input: 1, output: 1, cached: 0, source: 'estimated', total: 2 },
         content: JSON.stringify({
           summary: 'Create the loop',
           files: [
@@ -230,7 +230,7 @@ describe('AgentRunService malformed model repair', () => {
     ).resolves.toMatchObject({
       status: 'applied',
       threadId: 'thread-1',
-      tokens: { input: 2, output: 2, source: 'estimated', total: 4 },
+      tokens: { input: 2, output: 2, cached: 0, source: 'estimated', total: 4 },
     });
     expect(send).toHaveBeenCalledTimes(2);
     expect(send.mock.calls[1]?.[0]).toMatchObject({

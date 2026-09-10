@@ -105,7 +105,7 @@ describe('AgentExecutionPresenter', () => {
             receipt: { excluded: [], included: ['src/a.ts'], totalBytes: 10, truncated: false },
           },
           status: 'planned' as const,
-          tokens: { input: 2, output: 3, source: 'reported' as const, total: 5 },
+          tokens: { input: 2, output: 3, cached: 0, source: 'reported' as const, total: 5 },
         };
       }),
     };
