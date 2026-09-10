@@ -2889,3 +2889,41 @@ change fit.
 authorize, implement, integrate and commit. That list is behaviour, not
 vocabulary, and opening it would break the lane rather than free the caller. The
 F014 row records this as a deliberate narrowing.
+
+### Batch 84 — F087 headless mode
+
+| Batch | Version | Status                                             | Evidence                                                                   |
+| ----- | ------- | -------------------------------------------------- | -------------------------------------------------------------------------- |
+| 84    | 1.44.0  | Code, deterministic gates, and a live headless run | `src/headless/`, `dist/headless.mjs`. 17 new tests. Live: exit 0, 3 calls. |
+
+**The row said "no non-interactive runner or exit-code contract". Both now
+exist.** `npm run headless -- --prompt "<task>"` signs in, runs, executes tools
+against one directory, and exits with a code a pipeline can branch on.
+
+**The interesting distinction is not success versus failure.** It is a task that
+ran and was wrong against a runner that never started. Returning 1 for both
+turns a missing credential into a failing test, and someone spends an afternoon
+debugging a task that never ran. Blocked, cancelled and exhausted get their own
+codes for the same reason: each has a different remedy.
+
+**A run that ends on nothing is failed.** Defaulting an unrecognised ending to
+success is how a broken stream reports green.
+
+**A deadline is exhaustion, not failure.** The work may be fine and larger than
+its allowance. Reporting it as failure is what makes people raise timeouts
+without reading them.
+
+**Three defects the first real run found**, none of which the unit tests could
+have: the budget omitted `maxRepairAttempts` and the backend refused the start;
+an unhandled throw bypassed the exit contract entirely and returned whatever
+Node chose; and the bundle was emitted as `.js` in a package with no module
+type, so every invocation printed a reparse warning. This is the argument for
+running the thing rather than testing around it.
+
+**The tool set is fixed on purpose.** A run nobody is watching should not widen
+its own reach, and every model-chosen path is refused if it leaves the
+workspace.
+
+**Still open, and the row says so:** a configurable tool catalog, resuming a
+run, and machine-readable progress while it happens rather than one summary at
+the end.
