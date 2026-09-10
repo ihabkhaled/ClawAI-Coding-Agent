@@ -2857,6 +2857,81 @@ const outputStyleTranslations = {
   },
 };
 
+const settingDescriptionTranslations = {
+  ar: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'أوامر تُشغَّل عند نقاط في التشغيل. تُضبط هنا وليس في `.clawai` عن قصد: الخطاف يشغل أمراً، وقراءته من محتوى مساحة العمل تجعل استنساخ مستودع كافياً لتنفيذ التعليمات البرمجية. الخطاف من نوع `before-tool` الموسوم بـ `blocking` وحده يمكنه إيقاف الاستدعاء؛ وكل ما عداه إرشادي.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'كيفية كتابة الإجابات: افتراضي، موجز، تفسيري، تعليمي، أو أسلوب تعرّفه مساحة العمل هذه.',
+  },
+  de: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'Befehle, die an Punkten eines Laufs ausgeführt werden. Absichtlich hier statt in `.clawai` konfiguriert: ein Hook fuehrt einen Befehl aus, und ihn aus Arbeitsbereichsinhalten zu lesen würde bedeuten, dass das Klonen eines Repositorys zum Ausfuehren von Code genügt. Nur ein als `blocking` markierter `before-tool`-Hook kann einen Aufruf stoppen; alles andere ist beratend.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Wie Antworten geschrieben werden: Standard, knapp, erklärend, Lernmodus oder ein von diesem Arbeitsbereich definierter Stil.',
+  },
+  es: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'Comandos que se ejecutan en puntos de una ejecución. Se configuran aquí y no en `.clawai` a propósito: un hook ejecuta un comando, y leerlo del contenido del espacio de trabajo haría que clonar un repositorio bastara para ejecutar código. Solo un hook `before-tool` marcado como `blocking` puede detener una llamada; todo lo demas es informativo.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Cómo se escriben las respuestas: predeterminado, conciso, explicativo, aprendizaje o un estilo que defina este espacio de trabajo.',
+  },
+  fa: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'فرمان‌هایی که در نقاطی از اجرا اجرا می‌شوند. عمداً به جای `.clawai` اینجا تنظیم می‌شوند: یک قلاب فرمان اجرا می‌کند و خواندن آن از محتوای فضای کاری یعنی کلون‌کردن یک مخزن برای اجرای کد کافی است. تنها قلاب `before-tool` با نشان `blocking` می‌تواند یک فراخوانی را متوقف کند؛ بقیه صرفاً اطلاع‌رسانی‌اند.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'نحوه نوشتن پاسخ‌ها: پیش‌فرض، مختصر، توضیحی، یادگیری، یا سبکی که این فضای کاری تعریف می‌کند.',
+  },
+  fr: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      "Commandes exécutées à certains moments d'une exécution. Configurees ici plutôt que dans `.clawai` à dessein : un hook exécute une commande, et le lire depuis le contenu de l'espace de travail signifierait que cloner un depot suffit à exécuter du code. Seul un hook `before-tool` marque `blocking` peut arrêter un appel ; tout le reste est consultatif.",
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Comment les réponses sont écrites : par défaut, concis, explicatif, apprentissage, ou un style défini par cet espace de travail.',
+  },
+  hi: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'रन के कुछ बिंदुओं पर चलने वाले कमांड। इन्हें `.clawai` के बजाय यहाँ जानबूझकर कॉन्फ़िगर किया जाता है: एक हुक कमांड चलाता है, और उसे वर्कस्पेस सामग्री से पढ़ने का अर्थ होगा कि रिपॉज़िटरी क्लोन करना ही कोड चलाने के लिए पर्याप्त है। केवल `blocking` चिह्नित `before-tool` हुक ही किसी कॉल को रोक सकता है; बाकी सब सलाहकारी है।',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'उत्तर कैसे लिखे जाते हैं: डिफ़ॉल्ट, संक्षिप्त, व्याख्यात्मक, सीखने वाला, या इस वर्कस्पेस द्वारा परिभाषित शैली।',
+  },
+  it: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      "Comandi eseguiti in punti di una esecuzione. Configurati qui e non in `.clawai` di propósito: un hook esegue un comando, e leggerlo dal contenuto dell'area di lavoro significherebbe che clonare un repository basta a eseguire codice. Solo un hook `before-tool` contrassegnato `blocking` può fermare una chiamata; tutto il resto è consultivo.",
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Come vengono scritte le risposte: predefinito, conciso, esplicativo, apprendimento o uno stile definito da questa area di lavoro.',
+  },
+  ja: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      '実行中の特定の時点で走らせるコマンド。`.clawai` ではなくここで設定するのは意図的です。フックはコマンドを実行するため、ワークスペースの内容から読み込むと、リポジトリを複製するだけでコードが実行できてしまいます。呼び出しを止められるのは `blocking` を付けた `before-tool` フックだけで、それ以外は助言的です。',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      '回答の書き方: 既定、簡潔、解説重視、学習向け、またはこのワークスペースが定義したスタイル。',
+  },
+  pt: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'Comandos executados em pontos de uma execução. Configurados aquí e não em `.clawai` de propósito: um hook executa um comando, e lê-lo do conteudo do espaço de trabalho faria com que clonar um repositorio bastasse para executar código. Apenas um hook `before-tool` marcado como `blocking` pode parar uma chamada; todo o resto è consultivo.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Como as respostas são escritas: padrão, conciso, explicativo, aprendizado ou um estilo definido por este espaço de trabalho.',
+  },
+  ru: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'Команды, запускаемые в определённых точках выполнения. Настраиваются здесь, а не в `.clawai`, намеренно: хук запускает команду, и чтение его из содержимого рабочей области означало бы, что клонирования репозитория достаточно для выполнения кода. Остановить вызов может только хук `before-tool` с пометкой `blocking`; всё остальное носит рекомендательный характер.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Как пишутся ответы: по умолчанию, кратко, с пояснениями, обучение или стиль, заданный этой рабочей областью.',
+  },
+  th: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'คำสั่งที่รัน ณ จุดต่าง ๆ ของการทำงาน ตั้งค่าที่นี่แทนที่จะเป็นใน `.clawai` โดยเจตนา เพราะฮุกจะรันคำสั่ง และการอ่านฮุกจากเนื้อหาในเวิร์กสเปซจะทำให้แค่โคลนรีโพก็รันโค้ดได้ มีเพียงฮุก `before-tool` ที่ทำเครื่องหมาย `blocking` เท่านั้นที่หยุดการเรียกได้ ส่วนที่เหลือเป็นเพียงคำแนะนำ',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'รูปแบบการเขียนคำตอบ: ค่าเริ่มต้น กระชับ อธิบายละเอียด เพื่อการเรียนรู้ หรือรูปแบบที่เวิร์กสเปซนี้กำหนด',
+  },
+  zh: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      '在运行的特定时刻执行的命令。特意配置在这里而不是 `.clawai`：钩子会执行命令，若从工作区内容读取，克隆一个仓库就足以执行代码。只有标记为 `blocking` 的 `before-tool` 钩子才能阻止调用，其余均为提示性质。',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      '答案的书写方式：默认、简洁、讲解式、教学式，或本工作区自定义的风格。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -2876,6 +2951,7 @@ function translate(locale, message) {
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
+    settingDescriptionTranslations[locale][message] ??
     outputStyleTranslations[locale][message] ??
     sharedTranslations[locale][message] ??
     coreSurfaceTranslations[locale][message] ??

@@ -87,6 +87,7 @@ const configuration: RuntimeConfiguration = {
   agentMode: 'AUTO',
   viewDensity: 'full' as const,
   outputStyle: 'default',
+  hooks: [],
   effortMode: 'ULTRA',
   speedMode: '1X',
   backendUrl: 'https://claw.local',

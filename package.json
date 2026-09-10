@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "1.8.0",
+  "version": "1.9.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -301,6 +301,46 @@
           "default": "AUTO",
           "scope": "resource",
           "description": "%config.agentMode%"
+        },
+        "clawAI.hooks": {
+          "type": "array",
+          "default": [],
+          "scope": "resource",
+          "markdownDescription": "%config.hooks%",
+          "items": {
+            "type": "object",
+            "required": [
+              "event",
+              "command"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "event": {
+                "type": "string",
+                "enum": [
+                  "run-start",
+                  "run-end",
+                  "before-tool",
+                  "after-tool"
+                ]
+              },
+              "command": {
+                "type": "string"
+              },
+              "arguments": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "toolGlob": {
+                "type": "string"
+              },
+              "blocking": {
+                "type": "boolean"
+              }
+            }
+          }
         },
         "clawAI.outputStyle": {
           "type": "string",

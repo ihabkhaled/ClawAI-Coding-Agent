@@ -98,6 +98,7 @@ import { ServerReadinessService } from './server-readiness-service';
 import { vscodeRuntimeExecutionDependencies } from './vscode-runtime-execution';
 import { recoverVscodeRuntime } from './vscode-runtime-recovery';
 import { WorkspaceIntelligenceService } from './workspace-intelligence-service';
+import { workspaceLifecycleHooks } from './workspace-lifecycle-hooks';
 
 import type { ExternalOutputGrantStore } from './agent-coordinator.types';
 import type { ConfigurationService } from './configuration-service';
@@ -120,6 +121,12 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   private readonly processes = new ProcessSupervisorService();
   readonly transport: BackendRuntimeTransport;
   private readonly bindingStore: VscodeRuntimeBindingStore;
+
+  /**
+   * Hooks come from VS Code settings, never from `.clawai`: a hook runs a
+   * command, and project configuration here may only ever tighten.
+   */
+  readonly hooks: ReturnType<typeof workspaceLifecycleHooks>;
 
   private readonly research: WebResearchPort;
   readonly stream: RuntimeEventStreamService;
@@ -157,6 +164,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     );
     this.bindingStore = new VscodeRuntimeBindingStore(context.workspaceState);
     this.research = backendWebResearch(backend);
+    this.hooks = workspaceLifecycleHooks(workspaceScope, this.configuration, logger);
     this.transport = new BackendRuntimeTransport(backend, this.bindingStore);
     this.stream = new RuntimeEventStreamService(this.transport);
     this.observability = new LocalObservabilityService(new VscodeObservabilitySink(logger));

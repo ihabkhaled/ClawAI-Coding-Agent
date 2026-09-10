@@ -1438,3 +1438,53 @@ user, and an instruction in one language modifying a prompt in another is two
 things the model has to reconcile. Only the picker labels are translated.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 49 — F078 lifecycle hooks
+
+| Batch | Version | Status                                | Evidence                                                                                  |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------------------- |
+| 49    | 1.9.0   | Code and deterministic gates complete | `lifecycle-hook.ts`, `lifecycle-hook-service.ts`, `vscode-hook-runner.ts`. Tests: 26 new. |
+
+**Where hooks are configured is the whole security design, and it decided the
+shape of the feature.** A hook runs a command. Reading hooks from `.clawai`
+would mean cloning a repository is enough to execute code on the machine that
+opened it. This extension already holds the opposite position everywhere else:
+project configuration may only tighten, which is why `policy.json` has no
+`allow` outcome. A hook is a widening, so it cannot come from there. VS Code
+settings are guarded by VS Code's own workspace-trust prompt — the mechanism
+that already exists for "this repository may run things" — so that is where
+they live, and the service refuses to run anything in an untrusted workspace.
+
+**Hooks run after the policy has allowed a call, never instead of it.** A hook
+is the user's preference; the policy is the rail. If a hook ran first it would
+become a way to reach something policy refused.
+
+**Only a blocking `before-tool` hook can stop anything.** After the fact there
+is nothing left to prevent, and a hook nobody marked blocking was never asking
+to be a gate. Everything else is advisory, so a broken hook costs a run some
+time rather than stopping it.
+
+**A timeout is silence, not refusal.** Treating a hung script as a block would
+let one wedged process halt every run on the machine — the failure mode that
+turns a convenience into an outage.
+
+The service reports the most notable outcome rather than a bare allow/deny,
+because a caller that only learned "allowed" could never tell the user their
+hook failed or hung, which is the case they most need to hear about.
+
+Two more inline-declaration violations cleared on the way: `runtime-run-service.ts`
+declared six interfaces in a logic file, which `rules/12` prohibits and which
+had pushed it over its line ceiling. Extracting them into
+`runtime-run-service.types.ts` fixed both, as `RunAgentInput` did in batch 46.
+The glob matcher that policy-v2 had kept private moved to `core/glob-match.ts`
+rather than being copied a third time.
+
+**Still true:** live-model Definition of Done cannot be executed here.
+
+**The ratchet grew a hole and it was found the honest way.** `l10n:verify`
+refused this batch because two setting descriptions fell through to English.
+The coverage test from batch 45 only read `l10n/bundle.*`; `package.nls.*`
+carries command titles and setting descriptions and was never checked, so
+`config.outputStyle` shipped untranslated in 1.8.0 and nobody noticed. The test
+now reads both bundles as one surface. A gate that covers most of a problem
+teaches you it is solved.
