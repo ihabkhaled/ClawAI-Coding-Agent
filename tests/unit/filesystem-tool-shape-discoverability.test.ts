@@ -84,6 +84,10 @@ describe('the filesystem catalog documents every kind it advertises', () => {
     expect(description).toMatch(/regex:true/i);
     expect(description).toMatch(/ignoreCase:true/i);
     expect(description).toMatch(/contextLines/i);
+    // A capability the description does not mention is a capability no model
+    // ever uses: the catalog reports a bare input shape and nothing else.
+    expect(description).toMatch(/multiline/i);
+    expect(description).toMatch(/fileTypes/i);
   });
 
   // A search now reports how much of the workspace it actually opened. Without
