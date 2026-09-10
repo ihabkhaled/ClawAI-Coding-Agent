@@ -343,12 +343,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   ): Promise<void> {
     if (await this.handleRuntimeControl(request)) return;
     if (await this.handleSessionControl(request)) return;
+    if (await this.handlePanelReport(request)) return;
     if (request.type === 'undo') {
       await this.actions.undo();
     } else if (request.type === 'newChat') {
       await this.reveal();
-    } else if (request.type === 'openFolder') {
-      await this.actions.openFolder();
     } else if (request.type === 'refreshModels') {
       await this.actions.refreshModels();
     } else if (request.type === 'reviewChanges') {
@@ -364,6 +363,19 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     } else {
       await this.handleSelectionControl(request);
     }
+  }
+
+  /**
+   * The messages the panel sends on its own, rather than because someone
+   * clicked. Grouped so the click dispatcher stays one readable chain.
+   */
+  private async handlePanelReport(request: ControlMessage): Promise<boolean> {
+    if (request.type === 'conversationTokens') {
+      await this.actions.conversationTokens(request.threadId, request.tokens);
+    } else if (request.type === 'openFolder') {
+      await this.actions.openFolder();
+    } else return false;
+    return true;
   }
 
   private async handleSessionControl(request: ControlMessage): Promise<boolean> {

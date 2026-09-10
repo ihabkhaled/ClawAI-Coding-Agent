@@ -27,15 +27,17 @@ export async function compactConversation(
     );
     return;
   }
-  const confirmed = await vscode.window.showInformationMessage(
-    vscode.l10n.t('Summarize this conversation and continue in a new one?'),
-    {
-      modal: true,
-      detail: vscode.l10n.t('The original conversation is kept and stays in your history.'),
-    },
-    vscode.l10n.t('Summarize and continue'),
-  );
-  if (confirmed === undefined) return;
+  if (dependencies.unattended !== true) {
+    const confirmed = await vscode.window.showInformationMessage(
+      vscode.l10n.t('Summarize this conversation and continue in a new one?'),
+      {
+        modal: true,
+        detail: vscode.l10n.t('The original conversation is kept and stays in your history.'),
+      },
+      vscode.l10n.t('Summarize and continue'),
+    );
+    if (confirmed === undefined) return;
+  }
   const summary = await vscode.window.withProgress(
     { location: vscode.ProgressLocation.Notification, title: vscode.l10n.t('Summarizing…') },
     async () => dependencies.summarize(threadId, COMPACTION_INSTRUCTION),

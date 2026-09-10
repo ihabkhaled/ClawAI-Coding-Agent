@@ -6,4 +6,9 @@ export interface CompactConversationDependencies {
   readonly summarize: (threadId: string, instruction: string) => Promise<string>;
   /** Opens a new conversation seeded with the summary. */
   readonly startContinuation: (seed: string) => Promise<void>;
+  /**
+   * Skips the confirmation. Only the automatic mode passes this, and only
+   * because the user already answered the question once, in a setting.
+   */
+  readonly unattended?: boolean;
 }

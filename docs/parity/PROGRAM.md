@@ -2095,3 +2095,44 @@ would have removed models people legitimately use for chat, so the fix reports
 the limitation at the moment it matters instead of hiding the model.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 65 — F041 automatic compaction
+
+| Batch | Version | Status                                | Evidence                                                                                    |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------- |
+| 65    | 1.25.0  | Code and deterministic gates complete | `compaction-trigger.ts`, `auto-compaction-service.ts`, `clawAI.autoCompact`. Tests: 19 new. |
+
+**A measurement with no caller is not a feature.** `shouldCompact` shipped in
+1.12.0, was tested, and was never asked. The row said so plainly, and this batch
+is the caller.
+
+**Measuring and acting are separate decisions, because three things make acting
+wrong when the measurement is right.** A run in flight: compaction continues the
+conversation in a NEW thread, so starting one while a run writes into the old
+thread splits the record and half the answer lands where nobody will look again.
+Having already raised it: the conversation stays nearly full until something is
+done, and a state subscription fires on every change, so asking each time asks
+dozens of times about the same conversation. And the user's setting, which is
+checked first so `off` beats every other reason to act.
+
+**The panel owns the number; the host owns the meaning.** A conversation's
+running token total is known only to the panel, so the panel sends it. The
+capacity deliberately does not travel with it: it is a reading of the catalog
+and the routing mode, both host-owned, and a number the host can derive is one
+it should not accept from a webview.
+
+**Per conversation, not per window.** Two open panels are two conversations, and
+one filling up says nothing about the other. The raised flag clears when usage
+falls back, which is what makes a second offer possible without making it
+constant.
+
+**The automatic mode reuses the manual command and only skips its question.** A
+compaction that behaved differently when the extension started it would be a
+second feature wearing the first one's name, and the difference would surface as
+a bug report about the one nobody changed.
+
+**Defaults to offering.** `automatic` is available and is not the default,
+because summarizing a conversation without being asked is the kind of help that
+costs trust the first time it guesses wrong.
+
+**Still true:** live-model Definition of Done cannot be executed here.

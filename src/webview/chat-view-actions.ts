@@ -40,6 +40,8 @@ export interface ChatViewActions {
   mentionSuggestions(text: string, caretIndex: number): Promise<MentionSuggestions>;
   logout(): Promise<void>;
   openFolder(): Promise<void>;
+  /** The panel's running token total for a conversation, which only it knows. */
+  conversationTokens(threadId: string, tokens: number): Promise<void>;
   openThread(input: SessionInput & { threadId: string }): Promise<void>;
   refreshModels(): Promise<void>;
   reviewChanges(previewId?: string): Promise<void>;

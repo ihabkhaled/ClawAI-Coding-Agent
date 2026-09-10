@@ -53,6 +53,7 @@
   "config.frontendEnvironment": "Frontend",
   "config.frontendCustomUrl": "URL frontend personnalisée",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
+  "config.autoCompact": "Que faire lorsqu’une conversation devient trop longue pour continuer : rien, proposer de la résumer, ou la résumer automatiquement.",
   "config.routingMode": "Comment le backend choisit un modèle : automatiquement, selon une stratégie nommée, ou celui que vous choisissez.",
   "config.agentMode": "Choose automatic execution or read-only planning.",
   "config.speedMode": "How many workspace metadata lookups run at once while building context. Byte reads stay serial; approvals, writes, commands and the included file set are never affected.",

@@ -53,6 +53,7 @@
   "config.frontendEnvironment": "ฟรอนต์เอนด์",
   "config.frontendCustomUrl": "URL ฟรอนต์เอนด์ที่กำหนดเอง",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
+  "config.autoCompact": "จะทำอย่างไรเมื่อการสนทนายาวเกินกว่าจะดำเนินต่อ: ไม่ทำอะไร เสนอให้สรุป หรือสรุปโดยอัตโนมัติ",
   "config.routingMode": "วิธีที่แบ็กเอนด์เลือกโมเดล: อัตโนมัติ กลยุทธ์ที่ระบุชื่อ หรือโมเดลที่คุณเลือกเอง",
   "config.agentMode": "Choose automatic execution or read-only planning.",
   "config.speedMode": "How many workspace metadata lookups run at once while building context. Byte reads stay serial; approvals, writes, commands and the included file set are never affected.",

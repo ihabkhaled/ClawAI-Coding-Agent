@@ -214,6 +214,25 @@ export function buildModelCatalog(
   return entries;
 }
 
+/**
+ * The context window the next request will use, or nothing when unknown.
+ *
+ * A router-selected mode has no single answer, because the router chooses per
+ * request, and a model may report no window at all. Both return null rather
+ * than a guess: every consumer of this number is deciding whether to throw away
+ * conversation detail, and doing that on an invented capacity is worse than
+ * letting the server drop the oldest messages for a measured reason.
+ */
+export function selectedModelCapacity(
+  routingMode: RoutingMode,
+  selectedModel: string,
+  catalog: readonly ModelCatalogEntry[],
+): number | null {
+  if (isRouterSelectedMode(routingMode)) return null;
+  const capacity = catalog.find((model) => model.key === selectedModel)?.contextTokens ?? null;
+  return capacity !== null && capacity > 0 ? capacity : null;
+}
+
 export function resolveModelSelection(
   routingMode: RoutingMode,
   selectedModel: string,

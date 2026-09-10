@@ -53,6 +53,7 @@
   "config.frontendEnvironment": "Choose the local, cloud, or custom ClawAI frontend used for browser authorization.",
   "config.frontendCustomUrl": "Custom ClawAI frontend URL used when the frontend environment is Custom.",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
+  "config.autoCompact": "What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.",
   "config.routingMode": "How the backend picks a model: automatic, a named strategy, or one you select yourself.",
   "config.agentMode": "Choose automatic execution or read-only planning.",
   "config.speedMode": "How many workspace metadata lookups run at once while building context. Byte reads stay serial; approvals, writes, commands and the included file set are never affected.",
