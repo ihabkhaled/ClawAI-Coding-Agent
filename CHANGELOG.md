@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.18.0
+
+Minor: named checkpoints (F057).
+
+- **ClawAI: Create Checkpoint** remembers the current contents of every file
+  the agent has changed this session, under a name you choose.
+- **ClawAI: Restore Checkpoint** puts them back — through the ordinary file
+  transaction, so the restore is previewed, approved and itself undoable. A
+  restore that could not be undone would make the safety feature the most
+  dangerous button in the extension.
+- **Only files the agent touched.** A checkpoint of the whole workspace would
+  be a backup tool, which this is not and should not become.
+- **Ten checkpoints are kept**, oldest dropped first, because a checkpoint
+  holds file contents and an unbounded list of them is a workspace-sized leak.
+- **An entry that no longer parses is dropped, not repaired.** A checkpoint is
+  a promise to put files back exactly as they were; a half-read one cannot keep
+  that promise.
+
 ## 1.17.0
 
 Minor: side questions (F042).

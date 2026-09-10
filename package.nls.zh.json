@@ -26,6 +26,8 @@
   "command.undoLastEdit": "撤销上次 ClawAI 编辑",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.createCheckpoint": "创建检查点",
+  "command.restoreCheckpoint": "恢复检查点",
   "command.askSideQuestion": "提一个旁问",
   "command.attachTerminalOutput": "附加终端输出",
   "command.groupConversation": "将对话分组",

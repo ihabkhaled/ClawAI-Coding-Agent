@@ -26,6 +26,8 @@
   "command.undoLastEdit": "واگردانی آخرین ویرایش",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.createCheckpoint": "ایجاد نقطه بازیابی",
+  "command.restoreCheckpoint": "بازیابی نقطه بازیابی",
   "command.askSideQuestion": "پرسیدن سوال جانبی",
   "command.attachTerminalOutput": "پیوست خروجی ترمینال",
   "command.groupConversation": "گروه‌بندی گفتگو",

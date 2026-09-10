@@ -26,6 +26,8 @@
   "command.undoLastEdit": "التراجع عن آخر تعديل",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.createCheckpoint": "إنشاء نقطة حفظ",
+  "command.restoreCheckpoint": "استعادة نقطة حفظ",
   "command.askSideQuestion": "طرح سؤال جانبي",
   "command.attachTerminalOutput": "إرفاق مخرجات الطرفية",
   "command.groupConversation": "تجميع المحادثة",

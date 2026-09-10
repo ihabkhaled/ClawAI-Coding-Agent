@@ -26,6 +26,8 @@
   "command.undoLastEdit": "เลิกทำการแก้ไขล่าสุด",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.createCheckpoint": "สร้างจุดบันทึก",
+  "command.restoreCheckpoint": "กู้คืนจุดบันทึก",
   "command.askSideQuestion": "ถามคำถามแยกต่างหาก",
   "command.attachTerminalOutput": "แนบผลลัพธ์จากเทอร์มินัล",
   "command.groupConversation": "จัดกลุ่มการสนทนา",
