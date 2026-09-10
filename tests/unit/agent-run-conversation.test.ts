@@ -10,6 +10,8 @@ const configuration: RuntimeConfiguration = {
   outputStyle: 'default',
   autoCompact: 'prompt' as const,
   browserOrigins: [],
+  telemetryEndpoint: '',
+  telemetryHeaders: {},
   hooks: [],
   effortMode: 'ULTRA',
   speedMode: '1X',

@@ -54,6 +54,8 @@
   "config.frontendEnvironment": "Frontend",
   "config.frontendCustomUrl": "Benutzerdefinierte Frontend-URL",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
+  "config.telemetryEndpoint": "OTLP-Traces-Endpunkt, an den Lauf-Spans gesendet werden, etwa Ihr eigener Collector. Leer bedeutet, dass nichts gesendet wird. Muss HTTPS sein, sofern er nicht auf diesem Rechner läuft.",
+  "config.telemetryHeaders": "Header, die bei jedem Telemetrie-Export gesendet werden, etwa ein Autorisierungsheader, den Ihr Collector verlangt.",
   "config.browserOrigins": "Zusätzliche Website-Origins, die das Browser-Tool ohne Nachfrage öffnen darf, etwa Ihr eigener Entwicklungsserver. Die Backend- und Frontend-Origins sind immer erlaubt und lassen sich hier nicht entfernen.",
   "config.autoCompact": "Was geschehen soll, wenn eine Unterhaltung fast zu lang zum Fortsetzen ist: nichts, eine Zusammenfassung anbieten oder automatisch zusammenfassen.",
   "config.routingMode": "Wie das Backend ein Modell wählt: automatisch, nach benannter Strategie oder von Ihnen selbst gewählt.",

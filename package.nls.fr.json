@@ -54,6 +54,8 @@
   "config.frontendEnvironment": "Frontend",
   "config.frontendCustomUrl": "URL frontend personnalisée",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
+  "config.telemetryEndpoint": "Point de terminaison OTLP où envoyer les spans d’exécution, par exemple votre propre collecteur. Vide signifie qu’aucune donnée n’est envoyée. Doit être HTTPS sauf s’il est sur cette machine.",
+  "config.telemetryHeaders": "En-têtes envoyés avec chaque export de télémétrie, par exemple l’en-tête d’autorisation exigé par votre collecteur.",
   "config.browserOrigins": "Origines de sites supplémentaires que l’outil de navigation peut ouvrir sans demander, comme votre propre serveur de développement. Les origines backend et frontend sont toujours autorisées et ne peuvent pas être retirées ici.",
   "config.autoCompact": "Que faire lorsqu’une conversation devient trop longue pour continuer : rien, proposer de la résumer, ou la résumer automatiquement.",
   "config.routingMode": "Comment le backend choisit un modèle : automatiquement, selon une stratégie nommée, ou celui que vous choisissez.",

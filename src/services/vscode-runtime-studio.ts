@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import extensionPackage from '../../package.json';
 import { WorkspaceMutationGate } from '../core/workspace-mutation-gate';
 import { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 import {
@@ -65,6 +66,7 @@ import { FlagshipDeliveryService } from './flagship-delivery-service';
 import { GitAgentService } from './git-agent-service';
 import { IntegrationCoordinatorService } from './integration-coordinator-service';
 import { LocalObservabilityService } from './observability-service';
+import { otlpSink } from './otlp-sink-factory';
 import { ProcessSupervisorService } from './process-supervisor-service';
 import { ProjectPolicyService } from './project-policy-service';
 import { RunJournalService } from './run-journal-service';
@@ -173,7 +175,12 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     this.hooks = workspaceLifecycleHooks(workspaceScope, this.configuration, logger);
     this.transport = new BackendRuntimeTransport(backend, this.bindingStore);
     this.stream = new RuntimeEventStreamService(this.transport);
-    this.observability = new LocalObservabilityService(new VscodeObservabilitySink(logger));
+    // Off unless an endpoint is configured, and the configuration is the
+    // approval: telemetry that turns itself on is the thing people rightly
+    // object to, so there is no default endpoint to opt out of.
+    const remote = otlpSink(this.configuration.read(), logger, extensionPackage.version);
+    this.observability = new LocalObservabilityService(new VscodeObservabilitySink(logger), remote);
+    if (remote !== undefined) this.observability.setRemoteExport(true, true);
     this.targets = new ExecutionTargetRegistry({
       cancelTarget: async () => this.cancel(),
       cleanupOwnedProcesses: () => {

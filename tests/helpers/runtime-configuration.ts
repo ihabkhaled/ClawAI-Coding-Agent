@@ -7,6 +7,8 @@ export function testRuntimeConfiguration(): RuntimeConfiguration {
     outputStyle: 'default',
     autoCompact: 'prompt',
     browserOrigins: [],
+    telemetryEndpoint: '',
+    telemetryHeaders: {},
     hooks: [],
     effortMode: 'ULTRA',
     speedMode: '1X',

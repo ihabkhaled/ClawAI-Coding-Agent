@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "1.37.0",
+  "version": "1.38.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -341,6 +341,21 @@
           "default": "AUTO",
           "scope": "resource",
           "description": "%config.routingMode%"
+        },
+        "clawAI.telemetryEndpoint": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "%config.telemetryEndpoint%"
+        },
+        "clawAI.telemetryHeaders": {
+          "type": "object",
+          "default": {},
+          "scope": "machine",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "%config.telemetryHeaders%"
         },
         "clawAI.browserOrigins": {
           "type": "array",

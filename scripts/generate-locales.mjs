@@ -4555,6 +4555,81 @@ const composerDropTranslations = {
   },
 };
 
+const telemetryTranslations = {
+  ar: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'الترويسات المرسلة مع كل تصدير للقياسات، مثل ترويسة التفويض التي يطلبها مجمّعك.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'نقطة نهاية OTLP لإرسال مقاطع التتبع إليها، مثل مجمّعك الخاص. الفراغ يعني عدم إرسال أي شيء. يجب أن تكون HTTPS ما لم تكن على هذا الجهاز.',
+  },
+  de: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'Header, die bei jedem Telemetrie-Export gesendet werden, etwa ein Autorisierungsheader, den Ihr Collector verlangt.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'OTLP-Traces-Endpunkt, an den Lauf-Spans gesendet werden, etwa Ihr eigener Collector. Leer bedeutet, dass nichts gesendet wird. Muss HTTPS sein, sofern er nicht auf diesem Rechner läuft.',
+  },
+  es: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'Cabeceras enviadas con cada exportación de telemetría, como la cabecera de autorización que requiera tu colector.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'Endpoint de trazas OTLP al que enviar los spans de ejecución, como tu propio colector. Vacío significa que no se envía nada. Debe ser HTTPS salvo que esté en esta máquina.',
+  },
+  fa: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'هدرهایی که با هر ارسال تله‌متری فرستاده می‌شوند، مانند هدر مجوزی که جمع‌کننده شما نیاز دارد.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'نقطه پایانی OTLP برای ارسال اسپن‌های اجرا، مانند جمع‌کننده خودتان. خالی یعنی چیزی ارسال نمی‌شود. باید HTTPS باشد مگر روی همین دستگاه باشد.',
+  },
+  fr: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'En-têtes envoyés avec chaque export de télémétrie, par exemple l’en-tête d’autorisation exigé par votre collecteur.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'Point de terminaison OTLP où envoyer les spans d’exécution, par exemple votre propre collecteur. Vide signifie qu’aucune donnée n’est envoyée. Doit être HTTPS sauf s’il est sur cette machine.',
+  },
+  hi: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'प्रत्येक टेलीमेट्री निर्यात के साथ भेजे जाने वाले हेडर, जैसे आपके कलेक्टर के लिए आवश्यक प्राधिकरण हेडर।',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'रन स्पैन भेजने के लिए OTLP ट्रेस एंडपॉइंट, जैसे आपका अपना कलेक्टर। खाली का अर्थ है कुछ नहीं भेजा जाता। इस मशीन पर न होने पर HTTPS होना चाहिए।',
+  },
+  it: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'Intestazioni inviate con ogni esportazione di telemetria, ad esempio l’intestazione di autorizzazione richiesta dal tuo collector.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'Endpoint OTLP a cui inviare gli span delle esecuzioni, ad esempio il tuo collector. Vuoto significa che non viene inviato nulla. Deve essere HTTPS a meno che non sia su questa macchina.',
+  },
+  ja: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      '各テレメトリー送信に付与するヘッダー（コレクターが必要とする認可ヘッダーなど）。',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      '実行スパンの送信先となる OTLP トレースエンドポイント（自分のコレクターなど）。空の場合は何も送信されません。このマシン上でない限り HTTPS が必要です。',
+  },
+  pt: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'Cabeçalhos enviados a cada exportação de telemetria, como o cabeçalho de autorização exigido pelo seu coletor.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'Endpoint de traces OTLP para onde enviar os spans de execução, como o seu próprio coletor. Vazio significa que nada é enviado. Precisa ser HTTPS a menos que esteja nesta máquina.',
+  },
+  ru: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'Заголовки, отправляемые с каждой выгрузкой телеметрии, например заголовок авторизации, который требует ваш коллектор.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'Конечная точка трасс OTLP, куда отправлять спаны запусков, например ваш собственный коллектор. Пусто — ничего не отправляется. Требуется HTTPS, если только это не текущая машина.',
+  },
+  th: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'เฮดเดอร์ที่ส่งไปพร้อมการส่งออกเทเลเมทรีทุกครั้ง เช่น เฮดเดอร์การอนุญาตที่คอลเลกเตอร์ของคุณต้องการ',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'ปลายทาง OTLP traces สำหรับส่งสแปนของการรัน เช่น คอลเลกเตอร์ของคุณเอง หากว่างจะไม่ส่งอะไรเลย ต้องเป็น HTTPS เว้นแต่จะอยู่บนเครื่องนี้',
+  },
+  zh: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      '每次遥测导出时发送的请求头，例如采集器所需的授权头。',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      '发送运行跨度的 OTLP traces 端点，例如你自己的采集器。留空表示不发送任何内容。除非在本机，否则必须使用 HTTPS。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -4595,6 +4670,7 @@ function translate(locale, message) {
     fastModeTranslations[locale][message] ??
     browserOriginTranslations[locale][message] ??
     composerDropTranslations[locale][message] ??
+    telemetryTranslations[locale][message] ??
     message
   );
 }
