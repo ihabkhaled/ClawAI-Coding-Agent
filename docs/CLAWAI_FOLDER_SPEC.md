@@ -81,6 +81,18 @@ An unknown command is sent as ordinary text rather than refused: a message
 starting with a slash must stay sendable, and the user may have meant the
 words.
 
+## `output-styles/*.md`
+
+The same shape as `skills/`, one directory over. Each file names a response
+style; `house.md` becomes a style called `house`, selectable with **ClawAI:
+Select Output Style**, and a file with a `name:` header can call itself
+something else. A project style replaces a built-in of the same name, so a
+repository can redefine what `concise` means here.
+
+The body is prepended to the prompt as an instruction to the model, so it is
+written in the language the prompts are written in — the built-in styles stay
+English for that reason, and only their labels in the picker are translated.
+
 ## `policies/policy.json`
 
 Every field narrows what the agent may do; none widens it.

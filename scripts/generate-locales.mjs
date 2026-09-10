@@ -2746,6 +2746,117 @@ const coreSurfaceTranslations = {
   },
 };
 
+const outputStyleTranslations = {
+  ar: {
+    Concise: 'موجز',
+    Default: 'افتراضي',
+    'Defined by this project': 'معرف بواسطة هذا المشروع',
+    Explanatory: 'تفسيري',
+    'How should answers be written?': 'كيف ينبغي كتابة الإجابات؟',
+    Learning: 'تعليمي',
+    'Select Output Style': 'اختيار أسلوب الإخراج',
+  },
+  de: {
+    Concise: 'Knapp',
+    Default: 'Standard',
+    'Defined by this project': 'Von diesem Projekt definiert',
+    Explanatory: 'Erklärend',
+    'How should answers be written?': 'Wie sollen Antworten geschrieben werden?',
+    Learning: 'Lernmodus',
+    'Select Output Style': 'Ausgabestil wählen',
+  },
+  es: {
+    Concise: 'Conciso',
+    Default: 'Predeterminado',
+    'Defined by this project': 'Definido por este proyecto',
+    Explanatory: 'Explicativo',
+    'How should answers be written?': '¿Cómo deben escribirse las respuestas?',
+    Learning: 'Aprendizaje',
+    'Select Output Style': 'Seleccionar estilo de respuesta',
+  },
+  fa: {
+    Concise: 'مختصر',
+    Default: 'پیش‌فرض',
+    'Defined by this project': 'تعریف‌شده توسط این پروژه',
+    Explanatory: 'توضیحی',
+    'How should answers be written?': 'پاسخ‌ها چگونه نوشته شوند؟',
+    Learning: 'یادگیری',
+    'Select Output Style': 'انتخاب سبک خروجی',
+  },
+  fr: {
+    Concise: 'Concis',
+    Default: 'Par défaut',
+    'Defined by this project': 'Défini par ce projet',
+    Explanatory: 'Explicatif',
+    'How should answers be written?': 'Comment les réponses doivent-elles être écrites ?',
+    Learning: 'Apprentissage',
+    'Select Output Style': 'Choisir le style de réponse',
+  },
+  hi: {
+    Concise: 'संक्षिप्त',
+    Default: 'डिफ़ॉल्ट',
+    'Defined by this project': 'इस प्रोजेक्ट द्वारा परिभाषित',
+    Explanatory: 'व्याख्यात्मक',
+    'How should answers be written?': 'उत्तर कैसे लिखे जाएँ?',
+    Learning: 'सीखने वाला',
+    'Select Output Style': 'आउटपुट शैली चुनें',
+  },
+  it: {
+    Concise: 'Conciso',
+    Default: 'Predefinito',
+    'Defined by this project': 'Definito da questo progetto',
+    Explanatory: 'Esplicativo',
+    'How should answers be written?': 'Come devono essere scritte le risposte?',
+    Learning: 'Apprendimento',
+    'Select Output Style': 'Seleziona stile di risposta',
+  },
+  ja: {
+    Concise: '簡潔',
+    Default: '既定',
+    'Defined by this project': 'このプロジェクトで定義',
+    Explanatory: '解説重視',
+    'How should answers be written?': '回答の書き方は？',
+    Learning: '学習向け',
+    'Select Output Style': '出力スタイルを選択',
+  },
+  pt: {
+    Concise: 'Conciso',
+    Default: 'Padrão',
+    'Defined by this project': 'Definido por este projeto',
+    Explanatory: 'Explicativo',
+    'How should answers be written?': 'Como as respostas devem ser escritas?',
+    Learning: 'Aprendizado',
+    'Select Output Style': 'Selecionar estilo de resposta',
+  },
+  ru: {
+    Concise: 'Кратко',
+    Default: 'По умолчанию',
+    'Defined by this project': 'Определено этим проектом',
+    Explanatory: 'С пояснениями',
+    'How should answers be written?': 'Как писать ответы?',
+    Learning: 'Обучение',
+    'Select Output Style': 'Выбрать стиль ответа',
+  },
+  th: {
+    Concise: 'กระชับ',
+    Default: 'ค่าเริ่มต้น',
+    'Defined by this project': 'กำหนดโดยโปรเจกต์นี้',
+    Explanatory: 'อธิบายละเอียด',
+    'How should answers be written?': 'ควรเขียนคำตอบอย่างไร',
+    Learning: 'เพื่อการเรียนรู้',
+    'Select Output Style': 'เลือกรูปแบบคำตอบ',
+  },
+  zh: {
+    Concise: '简洁',
+    Default: '默认',
+    'Defined by this project': '由本项目定义',
+    Explanatory: '讲解式',
+    'How should answers be written?': '答案应该怎么写？',
+    Learning: '教学式',
+    'Select Output Style': '选择输出风格',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -2765,6 +2876,7 @@ function translate(locale, message) {
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
+    outputStyleTranslations[locale][message] ??
     sharedTranslations[locale][message] ??
     coreSurfaceTranslations[locale][message] ??
     message

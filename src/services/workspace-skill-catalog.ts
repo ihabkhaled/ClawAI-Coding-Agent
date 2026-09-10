@@ -1,5 +1,6 @@
 import { VscodeSkillSource } from '../infrastructure/vscode-skill-source';
 
+import { OutputStyleCatalog } from './output-style-catalog';
 import { SkillCatalogService } from './skill-catalog-service';
 
 import type { WorkspaceScopeService } from './workspace-scope-service';
@@ -21,6 +22,29 @@ export function workspaceSkillCatalog(
       workspaceScope.refresh().selectedFolderKey === undefined
         ? undefined
         : workspaceScope.selectedFolder().uri,
+    ),
+  );
+}
+
+/**
+ * The output styles for the folder the agent is pointed at.
+ *
+ * Same directory shape as skills, one level over: `.clawai/output-styles`
+ * rather than `.clawai/skills`. Both are folders of Markdown with an optional
+ * header, so both are read by one source with the directory as a parameter.
+ */
+export function workspaceOutputStyles(
+  globalStorageUri: vscode.Uri,
+  workspaceScope: WorkspaceScopeService,
+): OutputStyleCatalog {
+  return new OutputStyleCatalog(
+    new VscodeSkillSource(
+      globalStorageUri,
+      () =>
+        workspaceScope.refresh().selectedFolderKey === undefined
+          ? undefined
+          : workspaceScope.selectedFolder().uri,
+      'output-styles',
     ),
   );
 }

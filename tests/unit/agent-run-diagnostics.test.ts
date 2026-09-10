@@ -12,6 +12,7 @@ import type {
 const configuration = {
   agentMode: 'AUTO' as const,
   viewDensity: 'full' as const,
+  outputStyle: 'default',
   effortMode: 'ULTRA' as const,
   speedMode: '1X' as const,
   backendUrl: 'https://claw.local',

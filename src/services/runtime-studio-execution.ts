@@ -1,8 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
-import { applyAgentModeToPrompt, resumeAgentMode } from '../core/agent-mode';
+import { resumeAgentMode } from '../core/agent-mode';
 import { effortBudget } from '../core/effort-mode';
 import { flagshipAdmission, withFlagshipRequirement } from '../core/flagship-admission';
+import { outputStylePreamble } from '../core/output-style';
+import { composePrompt } from '../core/prompt-composition';
 import { isRuntimeRunEnded } from '../core/runtime/runtime-event-reducer';
 
 import { RuntimeJournalTracker } from './runtime-journal-tracker';
@@ -104,6 +106,7 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
   // under a long run.
   const effortMode = dependencies.configuration().effortMode;
   const agentMode = dependencies.configuration().agentMode;
+  const stylePreamble = outputStylePreamble(dependencies.configuration().outputStyle);
   const runtimeBudget = effortBudget(effortMode);
   const traceId = input.requestId;
   const spanId = `span:${randomUUID()}`;
@@ -150,7 +153,7 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
       // journal's goal stays the raw request. Resuming re-applies the mode it
       // restores; a goal that already carried the instruction would collect a
       // second copy of it on every resume.
-      prompt: applyAgentModeToPrompt(agentMode, input.prompt),
+      prompt: composePrompt({ agentMode, stylePreamble, content: input.prompt }),
       manifestHash: dependencies.hash(manifest),
       toolCatalogHash: dependencies.hash(definitions),
       provider: input.provider ?? 'AUTO',
@@ -272,10 +275,11 @@ export async function recoverRuntimeStudio(
       turnId: capsule.start.turnId,
       clientRequestId: capsule.start.clientRequestId,
       idempotencyKey: capsule.start.idempotencyKey,
-      prompt: applyAgentModeToPrompt(
-        resumeAgentMode(journal.agentMode, dependencies.configuration().agentMode),
-        journal.goal,
-      ),
+      prompt: composePrompt({
+        agentMode: resumeAgentMode(journal.agentMode, dependencies.configuration().agentMode),
+        stylePreamble: outputStylePreamble(dependencies.configuration().outputStyle),
+        content: journal.goal,
+      }),
       manifestHash: capsule.start.manifestHash,
       toolCatalogHash: capsule.start.toolCatalogHash,
       provider: capsule.start.provider,

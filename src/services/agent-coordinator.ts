@@ -59,8 +59,9 @@ import { SessionControlService } from './session-control-service';
 import { expandSkillPrompt } from './skill-expansion';
 import { VscodeRuntimeStudio } from './vscode-runtime-studio';
 import { type WorkflowKind } from './workflow-service';
-import { workspaceSkillCatalog } from './workspace-skill-catalog';
+import { workspaceOutputStyles, workspaceSkillCatalog } from './workspace-skill-catalog';
 
+import type { OutputStyleCatalog } from './output-style-catalog';
 import type { WorkspaceContextService } from './workspace-context-service';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { ExtensionState } from '../core/extension-state';
@@ -98,6 +99,9 @@ export class AgentCoordinator implements vscode.Disposable {
   /** Slash commands the workspace and this VS Code profile define. */
   private readonly skills: ReturnType<typeof workspaceSkillCatalog>;
 
+  /** Response styles the workspace and this VS Code profile define. */
+  private readonly outputStyles: OutputStyleCatalog;
+
   constructor(
     readonly state: ExtensionState,
     private readonly sessionVault: SessionVault,
@@ -112,6 +116,7 @@ export class AgentCoordinator implements vscode.Disposable {
   ) {
     this.backend = createBackendClient(this.configuration.read(), this.sessionVault);
     this.skills = workspaceSkillCatalog(extensionContext.globalStorageUri, workspaceScope);
+    this.outputStyles = workspaceOutputStyles(extensionContext.globalStorageUri, workspaceScope);
     this.attachmentRequests = new AttachmentRequestService(
       () => this.backend,
       () => this.view,
@@ -489,6 +494,7 @@ export class AgentCoordinator implements vscode.Disposable {
     backend: () => this.backend,
     refreshHistory: () => this.refreshConversations(),
     sessionControls: () => this.sessionControls,
+    outputStyles: () => this.outputStyles,
   });
 
   private readonly refreshConversations = conversationRefresher(() => ({

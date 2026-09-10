@@ -43,15 +43,16 @@ export class VscodeSkillSource implements SkillSourcePort {
   constructor(
     private readonly globalStorageUri: vscode.Uri,
     private readonly projectFolder: () => vscode.Uri | undefined,
+    private readonly directoryName = 'skills',
   ) {}
 
   async global(): Promise<readonly SkillFile[]> {
-    return readDirectory(vscode.Uri.joinPath(this.globalStorageUri, 'skills'));
+    return readDirectory(vscode.Uri.joinPath(this.globalStorageUri, this.directoryName));
   }
 
   async project(): Promise<readonly SkillFile[]> {
     const folder = this.projectFolder();
     if (folder === undefined) return [];
-    return readDirectory(vscode.Uri.joinPath(folder, '.clawai', 'skills'));
+    return readDirectory(vscode.Uri.joinPath(folder, '.clawai', this.directoryName));
   }
 }

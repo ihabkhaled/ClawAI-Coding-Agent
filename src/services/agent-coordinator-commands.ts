@@ -5,6 +5,7 @@ import { toggleViewDensity } from '../core/view-density';
 import { pickModelKey } from './agent-coordinator-prompts';
 import { applyModelSelection } from './agent-coordinator-runtime';
 import { searchRunHistory } from './search-run-history-command';
+import { selectOutputStyle } from './select-output-style-command';
 import { sendFeedback } from './send-feedback-command';
 import { showSessionRecap } from './session-recap-command';
 import { showUsage } from './show-usage-command';
@@ -16,6 +17,7 @@ import type { ClawaiInitializer } from './clawai-initializer';
 import type { ConfigurationService } from './configuration-service';
 import type { ConversationSessionService } from './conversation-session-service';
 import type { FindingsService } from './findings-service';
+import type { OutputStyleCatalog } from './output-style-catalog';
 import type { RunJournalService } from './run-journal-service';
 import type { SafeEditService } from './safe-edit-service';
 import type { SessionControlService } from './session-control-service';
@@ -32,6 +34,7 @@ export interface CoordinatorCommands {
   searchRunHistory(): Promise<void>;
   showUsage(): Promise<void>;
   showSessionRecap(): Promise<void>;
+  selectOutputStyle(): Promise<void>;
   toggleFocusView(): Promise<void>;
   renameChat(): Promise<void>;
   archiveChat(): Promise<void>;
@@ -54,6 +57,7 @@ interface CommandCollaborators {
   readonly backend: () => BackendClient;
   readonly refreshHistory: () => Promise<void>;
   readonly sessionControls: () => SessionControlService;
+  readonly outputStyles: () => OutputStyleCatalog;
 }
 
 /**
@@ -81,6 +85,11 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
       exportTranscript({ conversations: parts.conversations(), state: parts.state() }),
     searchRunHistory: () => searchRunHistory({ journals: parts.journals() }),
     showUsage: () => showUsage({ state: parts.state() }),
+    selectOutputStyle: () =>
+      selectOutputStyle({
+        styles: parts.outputStyles(),
+        configuration: parts.configuration(),
+      }),
     toggleFocusView: () =>
       parts
         .sessionControls()
