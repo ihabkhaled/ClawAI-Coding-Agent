@@ -2748,7 +2748,6 @@ const coreSurfaceTranslations = {
 
 function translate(locale, message) {
   return (
-    coreSurfaceTranslations[locale][message] ??
     statusLineTranslations[locale][message] ??
     turnNavigationTranslations[locale][message] ??
     onboardingTranslations[locale][message] ??
@@ -2767,6 +2766,7 @@ function translate(locale, message) {
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
     sharedTranslations[locale][message] ??
+    coreSurfaceTranslations[locale][message] ??
     message
   );
 }
