@@ -2,6 +2,37 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.45.0
+
+Minor: the headless runner stops handing its own secrets to the model's commands.
+
+- **A spawned command inherited the whole environment, including the
+  credentials the runner had just used to sign in.** The process running an
+  agent is the one most likely to be holding a token, and a command the model
+  chose only had to print it. Commands now get an environment built from
+  nothing, using the same allowlist the extension's own runner has always used.
+- **An allowlist, not a denylist.** The set of variables that carry a secret is
+  unbounded and grows every time someone adds one, so a variable invented
+  tomorrow is excluded without anyone remembering to list it.
+- **A headless run may only spawn commands it was allowed to.** It defaulted to
+  anything on PATH, which for a run nobody is watching is the whole machine.
+  Node, npm and npx are the default; `--allow-command <name>` widens it in the
+  invocation, where the decision is visible.
+- **A name carrying a path separator is refused**, because allowing
+  `../../bin/sh` to satisfy an entry for `sh` would make the allowlist
+  decorative. Matching ignores case and a Windows executable extension, so the
+  same invocation is not permitted on one platform and refused on another.
+- **Path containment now resolves symbolic links.** Comparing resolved strings
+  collapses `..` and knows nothing about links, so a link inside the workspace
+  pointing at the home directory passed the check and then read or wrote
+  wherever it pointed. An agent that can create files can create that link.
+- **A write is checked against the real parent directory**, which is the only
+  way to catch it when the file itself does not exist yet, and an existing
+  symbolic link is refused rather than followed.
+- Verified against the live backend: a run asked to fetch with `curl` was
+  refused, fell back to printing its own environment from a permitted process,
+  and reported the planted secret as absent.
+
 ## 1.44.0
 
 Minor: headless mode, with an exit-code contract (F087, narrowed).
