@@ -3330,6 +3330,138 @@ const newWindowTranslations = {
   },
 };
 
+const threadGroupTranslations = {
+  ar: {
+    'A short label you will recognise in the sidebar.':
+      'تسمية قصيرة ستتعرف عليها في الشريط الجانبي.',
+    'Group Conversation': 'تجميع المحادثة',
+    'Name the group': 'تسمية المجموعة',
+    'New group…': 'مجموعة جديدة…',
+    'No group': 'بدون مجموعة',
+    'There are no conversations to group.': 'لا توجد محادثات لتجميعها.',
+    'Which conversation?': 'أي محادثة؟',
+    'Which group?': 'أي مجموعة؟',
+  },
+  de: {
+    'A short label you will recognise in the sidebar.':
+      'Eine kurze Bezeichnung, die Sie in der Seitenleiste wiedererkennen.',
+    'Group Conversation': 'Unterhaltung gruppieren',
+    'Name the group': 'Gruppe benennen',
+    'New group…': 'Neue Gruppe…',
+    'No group': 'Keine Gruppe',
+    'There are no conversations to group.': 'Es gibt keine Unterhaltungen zum Gruppieren.',
+    'Which conversation?': 'Welche Unterhaltung?',
+    'Which group?': 'Welche Gruppe?',
+  },
+  es: {
+    'A short label you will recognise in the sidebar.':
+      'Una etiqueta corta que reconocerás en la barra lateral.',
+    'Group Conversation': 'Agrupar conversación',
+    'Name the group': 'Nombra el grupo',
+    'New group…': 'Grupo nuevo…',
+    'No group': 'Sin grupo',
+    'There are no conversations to group.': 'No hay conversaciones para agrupar.',
+    'Which conversation?': '¿Qué conversación?',
+    'Which group?': '¿Qué grupo?',
+  },
+  fa: {
+    'A short label you will recognise in the sidebar.':
+      'برچسبی کوتاه که در نوار کناری آن را بشناسید.',
+    'Group Conversation': 'گروه‌بندی گفتگو',
+    'Name the group': 'نام گروه',
+    'New group…': 'گروه جدید…',
+    'No group': 'بدون گروه',
+    'There are no conversations to group.': 'گفتگویی برای گروه‌بندی وجود ندارد.',
+    'Which conversation?': 'کدام گفتگو؟',
+    'Which group?': 'کدام گروه؟',
+  },
+  fr: {
+    'A short label you will recognise in the sidebar.':
+      'Une courte étiquette que vous reconnaîtrez dans la barre latérale.',
+    'Group Conversation': 'Grouper la conversation',
+    'Name the group': 'Nommer le groupe',
+    'New group…': 'Nouveau groupe…',
+    'No group': 'Aucun groupe',
+    'There are no conversations to group.': 'Aucune conversation à grouper.',
+    'Which conversation?': 'Quelle conversation ?',
+    'Which group?': 'Quel groupe ?',
+  },
+  hi: {
+    'A short label you will recognise in the sidebar.':
+      'एक छोटा लेबल जिसे आप साइडबार में पहचान लेंगे।',
+    'Group Conversation': 'बातचीत समूहित करें',
+    'Name the group': 'समूह का नाम दें',
+    'New group…': 'नया समूह…',
+    'No group': 'कोई समूह नहीं',
+    'There are no conversations to group.': 'समूहित करने के लिए कोई बातचीत नहीं है।',
+    'Which conversation?': 'कौन सी बातचीत?',
+    'Which group?': 'कौन सा समूह?',
+  },
+  it: {
+    'A short label you will recognise in the sidebar.':
+      'Una breve etichetta che riconoscerai nella barra laterale.',
+    'Group Conversation': 'Raggruppa la conversazione',
+    'Name the group': 'Assegna un nome al gruppo',
+    'New group…': 'Nuovo gruppo…',
+    'No group': 'Nessun gruppo',
+    'There are no conversations to group.': 'Non ci sono conversazioni da raggruppare.',
+    'Which conversation?': 'Quale conversazione?',
+    'Which group?': 'Quale gruppo?',
+  },
+  ja: {
+    'A short label you will recognise in the sidebar.': 'サイドバーで見分けられる短いラベル。',
+    'Group Conversation': '会話をグループ化',
+    'Name the group': 'グループ名',
+    'New group…': '新しいグループ…',
+    'No group': 'グループなし',
+    'There are no conversations to group.': 'グループ化できる会話はありません。',
+    'Which conversation?': 'どの会話ですか？',
+    'Which group?': 'どのグループですか？',
+  },
+  pt: {
+    'A short label you will recognise in the sidebar.':
+      'Um rótulo curto que você reconhecerá na barra lateral.',
+    'Group Conversation': 'Agrupar conversa',
+    'Name the group': 'Nomeie o grupo',
+    'New group…': 'Novo grupo…',
+    'No group': 'Sem grupo',
+    'There are no conversations to group.': 'Não há conversas para agrupar.',
+    'Which conversation?': 'Qual conversa?',
+    'Which group?': 'Qual grupo?',
+  },
+  ru: {
+    'A short label you will recognise in the sidebar.':
+      'Короткая метка, которую вы узнаете на боковой панели.',
+    'Group Conversation': 'Сгруппировать беседу',
+    'Name the group': 'Назовите группу',
+    'New group…': 'Новая группа…',
+    'No group': 'Без группы',
+    'There are no conversations to group.': 'Нет бесед для группировки.',
+    'Which conversation?': 'Какая беседа?',
+    'Which group?': 'Какая группа?',
+  },
+  th: {
+    'A short label you will recognise in the sidebar.': 'ป้ายสั้น ๆ ที่คุณจะจำได้ในแถบด้านข้าง',
+    'Group Conversation': 'จัดกลุ่มการสนทนา',
+    'Name the group': 'ตั้งชื่อกลุ่ม',
+    'New group…': 'กลุ่มใหม่…',
+    'No group': 'ไม่มีกลุ่ม',
+    'There are no conversations to group.': 'ไม่มีการสนทนาให้จัดกลุ่ม',
+    'Which conversation?': 'การสนทนาใด',
+    'Which group?': 'กลุ่มใด',
+  },
+  zh: {
+    'A short label you will recognise in the sidebar.': '你在侧栏中能认出的简短标签。',
+    'Group Conversation': '将对话分组',
+    'Name the group': '为分组命名',
+    'New group…': '新建分组…',
+    'No group': '不分组',
+    'There are no conversations to group.': '没有可分组的对话。',
+    'Which conversation?': '哪个对话？',
+    'Which group?': '哪个分组？',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -3349,6 +3481,7 @@ function translate(locale, message) {
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
+    threadGroupTranslations[locale][message] ??
     newWindowTranslations[locale][message] ??
     compactionTranslations[locale][message] ??
     contextWarningTranslations[locale][message] ??
