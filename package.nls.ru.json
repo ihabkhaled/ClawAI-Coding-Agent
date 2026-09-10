@@ -30,6 +30,7 @@
   "command.restoreCheckpoint": "Восстановить контрольную точку",
   "command.askSideQuestion": "Задать отдельный вопрос",
   "command.attachTerminalOutput": "Прикрепить вывод терминала",
+  "command.openTerminal": "Открыть терминал запусков",
   "command.groupConversation": "Сгруппировать беседу",
   "command.openConversationInNewWindow": "Открыть беседу в новом окне",
   "command.compactConversation": "Сжать беседу",

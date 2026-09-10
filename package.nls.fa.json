@@ -30,6 +30,7 @@
   "command.restoreCheckpoint": "بازیابی نقطه بازیابی",
   "command.askSideQuestion": "پرسیدن سوال جانبی",
   "command.attachTerminalOutput": "پیوست خروجی ترمینال",
+  "command.openTerminal": "باز کردن پایانه اجرا",
   "command.groupConversation": "گروه‌بندی گفتگو",
   "command.openConversationInNewWindow": "باز کردن گفتگو در پنجره جدید",
   "command.compactConversation": "فشرده‌سازی گفتگو",

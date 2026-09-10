@@ -8,6 +8,7 @@ import { ExternalOutputGrantStore } from './core/external-output-grants';
 import { createRuntimeSnapshot } from './core/runtime/runtime-event-reducer';
 import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
+import { openAgentTerminal } from './infrastructure/agent-terminal';
 import { OutputLogger } from './infrastructure/output-logger';
 import { VscodeMentionIndex } from './infrastructure/vscode-mention-index';
 import { probeRuntimeHost } from './infrastructure/vscode-runtime-host-probe';
@@ -389,6 +390,21 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('clawAI.openConversationInNewWindow', () =>
       openConversationInNewWindow(newWindowParts),
+    ),
+    vscode.commands.registerCommand('clawAI.openTerminal', () =>
+      openAgentTerminal(
+        {
+          runAgent: (input) => coordinator.runAgent(input),
+          cancel: (requestId) => coordinator.cancel(requestId),
+        },
+        {
+          subscribe: (listener) =>
+            state.subscribe((snapshot) => {
+              listener(snapshot.agentRuns);
+            }),
+          currentRuns: () => state.snapshot.agentRuns,
+        },
+      ),
     ),
     vscode.commands.registerCommand('clawAI.reopenClosedChat', async () => {
       const sessionId = await chatView.reopenClosedSession();

@@ -3859,6 +3859,117 @@ const reasoningVisibilityTranslations = {
   },
 };
 
+const runTerminalTranslations = {
+  ar: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'هناك تشغيل جارٍ بالفعل. اضغط Ctrl+C لإيقافه أولاً.',
+    'ClawAI run failed.': 'فشل تشغيل ClawAI.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'طرفية تشغيل ClawAI. اكتب طلبك ثم اضغط Enter. Ctrl+C يوقف التشغيل.',
+    'Open Run Terminal': 'فتح طرفية التشغيل',
+    'Run stopped.': 'تم إيقاف التشغيل.',
+  },
+  de: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Es läuft bereits ein Durchlauf. Drücken Sie zuerst Strg+C, um ihn zu stoppen.',
+    'ClawAI run failed.': 'ClawAI-Durchlauf fehlgeschlagen.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'ClawAI-Ausführungsterminal. Geben Sie eine Anfrage ein und drücken Sie die Eingabetaste. Strg+C stoppt einen Durchlauf.',
+    'Open Run Terminal': 'Ausführungsterminal öffnen',
+    'Run stopped.': 'Durchlauf gestoppt.',
+  },
+  es: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Ya hay una ejecución en curso. Pulsa Ctrl+C para detenerla primero.',
+    'ClawAI run failed.': 'La ejecución de ClawAI ha fallado.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'Terminal de ejecución de ClawAI. Escribe una petición y pulsa Intro. Ctrl+C detiene una ejecución.',
+    'Open Run Terminal': 'Abrir terminal de ejecución',
+    'Run stopped.': 'Ejecución detenida.',
+  },
+  fa: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'یک اجرا در حال انجام است. ابتدا با Ctrl+C آن را متوقف کنید.',
+    'ClawAI run failed.': 'اجرای ClawAI ناموفق بود.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'پایانه اجرای ClawAI. درخواست خود را بنویسید و Enter را بزنید. Ctrl+C اجرا را متوقف می‌کند.',
+    'Open Run Terminal': 'باز کردن پایانه اجرا',
+    'Run stopped.': 'اجرا متوقف شد.',
+  },
+  fr: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Une exécution est déjà en cours. Appuyez d’abord sur Ctrl+C pour l’arrêter.',
+    'ClawAI run failed.': 'L’exécution ClawAI a échoué.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'Terminal d’exécution ClawAI. Saisissez une demande et appuyez sur Entrée. Ctrl+C arrête une exécution.',
+    'Open Run Terminal': 'Ouvrir le terminal d’exécution',
+    'Run stopped.': 'Exécution arrêtée.',
+  },
+  hi: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'एक रन पहले से चल रहा है। पहले उसे रोकने के लिए Ctrl+C दबाएँ।',
+    'ClawAI run failed.': 'ClawAI रन विफल रहा।',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'ClawAI रन टर्मिनल। अनुरोध लिखें और Enter दबाएँ। Ctrl+C रन रोक देता है।',
+    'Open Run Terminal': 'रन टर्मिनल खोलें',
+    'Run stopped.': 'रन रोक दिया गया।',
+  },
+  it: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Un’esecuzione è già in corso. Premi prima Ctrl+C per interromperla.',
+    'ClawAI run failed.': 'Esecuzione ClawAI non riuscita.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'Terminale di esecuzione ClawAI. Scrivi una richiesta e premi Invio. Ctrl+C interrompe un’esecuzione.',
+    'Open Run Terminal': 'Apri terminale di esecuzione',
+    'Run stopped.': 'Esecuzione interrotta.',
+  },
+  ja: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      '実行中のランがあります。まず Ctrl+C で停止してください。',
+    'ClawAI run failed.': 'ClawAI の実行に失敗しました。',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'ClawAI 実行ターミナル。要求を入力して Enter を押してください。Ctrl+C で実行を停止します。',
+    'Open Run Terminal': '実行ターミナルを開く',
+    'Run stopped.': '実行を停止しました。',
+  },
+  pt: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Já há uma execução em andamento. Pressione Ctrl+C para pará-la primeiro.',
+    'ClawAI run failed.': 'A execução do ClawAI falhou.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'Terminal de execução do ClawAI. Escreva um pedido e pressione Enter. Ctrl+C interrompe uma execução.',
+    'Open Run Terminal': 'Abrir terminal de execução',
+    'Run stopped.': 'Execução interrompida.',
+  },
+  ru: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Запуск уже выполняется. Сначала остановите его клавишами Ctrl+C.',
+    'ClawAI run failed.': 'Запуск ClawAI не удался.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'Терминал запусков ClawAI. Введите запрос и нажмите Enter. Ctrl+C останавливает запуск.',
+    'Open Run Terminal': 'Открыть терминал запусков',
+    'Run stopped.': 'Запуск остановлен.',
+  },
+  th: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'มีการรันอยู่แล้ว กด Ctrl+C เพื่อหยุดก่อน',
+    'ClawAI run failed.': 'การรัน ClawAI ล้มเหลว',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'เทอร์มินัลการรันของ ClawAI พิมพ์คำขอแล้วกด Enter กด Ctrl+C เพื่อหยุดการรัน',
+    'Open Run Terminal': 'เปิดเทอร์มินัลการรัน',
+    'Run stopped.': 'หยุดการรันแล้ว',
+  },
+  zh: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      '已有运行在进行中。请先按 Ctrl+C 停止。',
+    'ClawAI run failed.': 'ClawAI 运行失败。',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'ClawAI 运行终端。输入请求后按 Enter。按 Ctrl+C 停止运行。',
+    'Open Run Terminal': '打开运行终端',
+    'Run stopped.': '运行已停止。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -3891,6 +4002,7 @@ function translate(locale, message) {
     sharedTranslations[locale][message] ??
     coreSurfaceTranslations[locale][message] ??
     reasoningVisibilityTranslations[locale][message] ??
+    runTerminalTranslations[locale][message] ??
     message
   );
 }
