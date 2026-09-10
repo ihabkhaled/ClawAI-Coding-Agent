@@ -193,58 +193,72 @@ Runs the same assertions against what a user actually installs, which catches
 what `.vscodeignore` dropped and whether `dist/` was rebuilt. **Passed on
 1.40.0, exit 0.** This lane is now mandatory per batch.
 
-### Lane 4 — the gap. Read this twice.
+### Lane 4 — live, against a real backend and a real model
 
-**The coding agent has never been run end to end in this program.** Not once
-across twenty-one batches. Everything above proves the code is correct, the
-artifact is well-formed, and the extension activates. **None of it proves the
-agent can read a file, write a change, run a command, research, and finish a
-task.** That is the stated goal, and it is the one thing not yet demonstrated.
+```bash
+CLAW_LIVE_EMAIL=... CLAW_LIVE_PASSWORD=... npm run check:live
+```
 
-What is known about why:
+Signs in through the VS Code authorization without a browser, starts a runtime
+run, executes the tools the model asks for against a temporary workspace, and
+then runs the produced program in a separate process to check its output.
 
-- The backend stack **is running**. `docker ps` shows auth, chat, connector,
-  routing, memory, audit, file and health healthy. Payment, ollama, llamacpp,
-  research, workspace, image, agent and file-generation are unhealthy.
-- `https://claw.local/api/v1/health` returns `degraded`.
-- Sign-in is a PKCE browser flow: `/auth/vscode/authorize/init` then
-  `/exchange`, requiring `callbackUri`, `state`, `codeChallenge`, `clientName`
-  and **a human clicking approve in a browser**. It cannot be completed
-  headlessly. `/api/v1/auth/signin` is 404 — do not go looking for it.
-- Known runtime blockers are recorded in project memory: headless runs stall on
-  an unclicked in-panel Approve, and on any dev-service restart; the capability
-  manifest is trust-gated.
+**Passed at 1.42.0**: four tool calls (read, create, create, run), `run.completed`,
+and the written program printed `Hello, Claw!`. Exit 0.
 
-**The first thing the next agent should do is close this gap**, ahead of any new
-feature. See section 7.
+This is the only lane that proves the product does what it is for. It is not in
+`npm run check`, because it needs a running stack, real credentials and a paid
+model call.
 
----
+**What it still does not prove.** It drives the same HTTP contract the extension
+drives, but it supplies its own tool implementations. The extension's own
+executors — the file transaction adapter, the bounded command runner, the git
+tools, the approval flow — are covered by unit tests and by nothing live. A
+future batch should seed a session into an extension host and drive the real
+executors.
 
-## 7. The end-to-end validation the program still owes
+### What was believed and was wrong
 
-Ask the user to sign in once through the browser, then run this, in order,
-against a scratch workspace — not the repo:
+For twenty-one batches this document's predecessors said a human had to approve
+sign-in in a browser. That was never true: `authorize/approve` is an ordinary
+authenticated API call. The actual blocker was `claw-agent-service` crash-looping
+on a stale image whose baked-in TypeScript config predated a host change, which
+made the runtime endpoint answer 502. Rebuilding that one service fixed it.
 
-1. **Read** — ask the agent to summarize an existing file. Proves file reads,
-   root resolution and the capability manifest.
-2. **Write** — ask it to create a small module with a test. Proves file writes,
-   the transaction adapter and the approval path.
-3. **Update** — ask it to change that module and keep the test green. Proves
-   patch application and re-reads.
-4. **Run** — ask it to run the test itself. Proves the bounded command runner
-   and terminal output parsing.
-5. **Research** — ask it something needing a web or workspace search. Proves the
-   search and browse tools.
-6. **Finish** — ask it to stage and commit. Proves the git tool, the staged
-   secret scan and the staged-diff approval.
-7. **Sub-agent** — ask it to delegate one step. Proves inheritance, redaction
-   and the integrator restriction.
+If the live check starts failing, check that container first:
+
+```bash
+docker ps --format "{{.Names}}	{{.Status}}" | grep agent-service
+docker logs --tail 30 claw-agent-service
+./scripts/claw.sh --dev service:rebuild agent-service   # from the backend repo root
+```
+
+Note the compose service key is `agent-service`; `claw-agent-service` is the
+container name and compose will reject it.
+
+## 7. The end-to-end validation, and what is left of it
+
+Steps 1 to 4 and 6 below are covered by `npm run check:live` as of 1.42.0. The
+rest are not yet, and each is a batch:
+
+1. **Read** — covered. The model reads a file before deciding anything.
+2. **Write** — covered. Two files created in one run.
+3. **Update** — covered by the correction step: the run re-reads and fixes when
+   the output is wrong.
+4. **Run** — covered. The model runs `node check.js` and reads the result.
+5. **Research** — **not covered.** Needs the search and browse tools in the
+   catalog and a task that requires them.
+6. **Finish** — covered only as a program that runs. **Not covered:** staging and
+   committing through the git tool, the staged secret scan and the staged-diff
+   approval.
+7. **Sub-agent** — **not covered.** Needs a delegated step to prove inheritance,
+   redaction and the integrator restriction.
+8. **The extension's own executors** — **not covered.** The live check supplies
+   its own tool implementations, so the file transaction adapter, the bounded
+   command runner and the approval flow are proven by unit tests alone.
 
 Record each result in `PROGRAM.md`. A step that fails is a finding, not a
-setback — it is the first real evidence the program has produced about the goal.
-
-Also worth building: a **regression script** that replays steps 1 through 6 and
-diffs the outcome, so every future batch can prove the agent still codes.
+setback.
 
 ---
 

@@ -2820,3 +2820,36 @@ crash-looping on a stale image whose baked-in `tsconfig.json` still said
 of returning 502. Headless sign-in also proved possible: `authorize/approve` is
 an ordinary authenticated call, so the browser step is not a human gate. The
 handover's Lane 4 is now reachable.
+
+### Batch 82 — the live agent check
+
+| Batch | Version | Status                                    | Evidence                                                                    |
+| ----- | ------- | ----------------------------------------- | --------------------------------------------------------------------------- |
+| 82    | 1.42.0  | Code, deterministic gates and a live PASS | `scripts/live-agent-check.mjs`, `npm run check:live`. 4 tool calls, exit 0. |
+
+**The program's central omission, closed.** Twenty-two batches shipped with
+every gate green and the agent never once run. This batch ran it, and it worked:
+the model read `README.md`, wrote `greet.js`, wrote `check.js`, ran
+`node check.js`, and the run completed. An independent process then executed the
+result and read `Hello, Claw!` from its output.
+
+**The blocker was never the browser.** `authorize/approve` is an ordinary
+authenticated call. The browser page in the product is a client for it, not a
+gate in front of it — which is what makes an automated live check possible at
+all, and which had been reported as a hard human step for twenty-one batches.
+
+**The real blocker was a stale image.** `claw-agent-service` was crash-looping on
+a build whose baked-in `tsconfig.json` still said `moduleResolution: Node16`,
+while the host had moved to `bundler`. The host build passed and the container
+could not compile, so `/agent/runtime/protocol` answered 502. Rebuilding that one
+service made it healthy.
+
+**Two hash forms, and picking the wrong one is a 500 with no detail.** The tool
+catalog and manifest hash a plain serialization, matching the extension's
+`hashRuntimeValue`. The tool-result receipt hashes the canonical form, in which
+keys are sorted and an empty array is written as an empty object. Both are now
+recorded beside the code that needs them.
+
+**The assertion deliberately trusts nothing.** Receipts, stream events and the
+model's own DONE are all things a broken run could produce. The check runs the
+program that was written and reads what it prints.
