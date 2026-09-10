@@ -31,6 +31,7 @@
   "command.askSideQuestion": "Poser une question à part",
   "command.attachTerminalOutput": "Joindre la sortie du terminal",
   "command.openTerminal": "Ouvrir le terminal d’exécution",
+  "command.toggleFastMode": "Basculer le mode rapide",
   "command.groupConversation": "Grouper la conversation",
   "command.openConversationInNewWindow": "Ouvrir la conversation dans une nouvelle fenêtre",
   "command.compactConversation": "Compacter la conversation",

@@ -31,6 +31,7 @@
   "command.askSideQuestion": "अलग से एक प्रश्न पूछें",
   "command.attachTerminalOutput": "टर्मिनल आउटपुट संलग्न करें",
   "command.openTerminal": "रन टर्मिनल खोलें",
+  "command.toggleFastMode": "फ़ास्ट मोड टॉगल करें",
   "command.groupConversation": "बातचीत समूहित करें",
   "command.openConversationInNewWindow": "बातचीत नई विंडो में खोलें",
   "command.compactConversation": "बातचीत संक्षिप्त करें",

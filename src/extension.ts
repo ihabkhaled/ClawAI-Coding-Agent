@@ -23,6 +23,7 @@ import { ConfigurationService } from './services/configuration-service';
 import { ContextFreshnessTracker } from './services/context-freshness-tracker';
 import { ClawaiUriHandler } from './services/deep-link-handler';
 import { ExternalOutputGrantService } from './services/external-output-grant-service';
+import { toggleFastMode } from './services/fast-mode-command';
 import { GlobalContextService } from './services/global-context-service';
 import { groupConversation } from './services/group-conversation-command';
 import { MentionSuggestionService } from './services/mention-suggestion-service';
@@ -44,6 +45,7 @@ import { StateTreeProvider } from './views/state-tree-provider';
 import { StatusBarController } from './views/status-bar-controller';
 import { ChatViewProvider } from './webview/chat-view-provider';
 
+import type { FastModeSettings } from './core/fast-mode.types';
 import type { CapabilityManifest } from './core/runtime/capability-manifest';
 import type { WindowHandoff } from './core/window-handoff.types';
 import type { NewWindowDependencies } from './services/open-in-new-window.types';
@@ -147,6 +149,15 @@ function registerChatParticipant(
   participant.iconPath = createClawIconPath(context.extensionUri);
   context.subscriptions.push(participant);
 }
+
+/**
+ * Where the pair Fast mode replaced is kept.
+ *
+ * Workspace state rather than a setting: it is not something to configure,
+ * it is what the toggle has to put back, and a user editing it by hand would
+ * only be able to break the undo.
+ */
+const FAST_MODE_MEMORY_KEY = 'clawAI.fastMode.previous';
 
 export function activate(context: vscode.ExtensionContext): void {
   const connectionConfiguration = new ConfigurationService();
@@ -418,6 +429,28 @@ export function activate(context: vscode.ExtensionContext): void {
     ),
     vscode.commands.registerCommand('clawAI.openConversationInNewWindow', () =>
       openConversationInNewWindow(newWindowParts),
+    ),
+    vscode.commands.registerCommand('clawAI.toggleFastMode', () =>
+      toggleFastMode({
+        current: () => ({
+          routingMode: state.snapshot.routingMode,
+          speedMode: state.snapshot.speedMode,
+        }),
+        apply: async (settings) => {
+          await connectionConfiguration.selectRoutingMode(settings.routingMode);
+          await connectionConfiguration.selectSpeedMode(settings.speedMode);
+          const updated = connectionConfiguration.read();
+          state.update({
+            routingMode: updated.routingMode,
+            selectedModel: updated.selectedModel,
+            speedMode: updated.speedMode,
+          });
+        },
+        remembered: () => context.workspaceState.get<FastModeSettings>(FAST_MODE_MEMORY_KEY),
+        remember: async (settings) => {
+          await context.workspaceState.update(FAST_MODE_MEMORY_KEY, settings);
+        },
+      }),
     ),
     vscode.commands.registerCommand('clawAI.openTerminal', () =>
       openAgentTerminal(
