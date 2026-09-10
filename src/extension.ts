@@ -19,12 +19,14 @@ import { ConfigurationService } from './services/configuration-service';
 import { ClawaiUriHandler } from './services/deep-link-handler';
 import { ExternalOutputGrantService } from './services/external-output-grant-service';
 import { GlobalContextService } from './services/global-context-service';
+import { groupConversation } from './services/group-conversation-command';
 import { MentionSuggestionService } from './services/mention-suggestion-service';
 import {
   HANDOFF_KEY,
   claimPendingWindowHandoff,
   openConversationInNewWindow,
 } from './services/open-in-new-window-command';
+import { ThreadGroupStore } from './services/thread-group-store';
 import { WorkspaceContextService } from './services/workspace-context-service';
 import { WorkspaceScopeService } from './services/workspace-scope-service';
 import { workspaceSkillCatalog } from './services/workspace-skill-catalog';
@@ -278,7 +280,8 @@ export function activate(context: vscode.ExtensionContext): void {
   const setupTree = new StateTreeProvider('setup', state);
   const modelTree = new StateTreeProvider('model', state);
   const contextTree = new StateTreeProvider('context', state);
-  const historyTree = new StateTreeProvider('history', state);
+  const threadGroups = new ThreadGroupStore(context.workspaceState);
+  const historyTree = new StateTreeProvider('history', state, () => threadGroups.read());
   const findingsTree = new StateTreeProvider('findings', state);
   const tasksTree = new StateTreeProvider('tasks', state);
   const artifactsTree = new StateTreeProvider('artifacts', state);
@@ -360,6 +363,16 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
   context.subscriptions.push(
+    vscode.commands.registerCommand('clawAI.groupConversation', () =>
+      groupConversation({
+        threads: () => state.snapshot.history,
+        assignments: () => threadGroups.read(),
+        save: async (assignments) => {
+          await threadGroups.write(assignments);
+          historyTree.refresh();
+        },
+      }),
+    ),
     vscode.commands.registerCommand('clawAI.openConversationInNewWindow', () =>
       openConversationInNewWindow(newWindowParts),
     ),

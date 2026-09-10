@@ -1645,3 +1645,37 @@ reading the same thread is the same situation as two windows on one file, which
 VS Code has always allowed.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 54 — F062 conversation groups
+
+| Batch | Version | Status                                | Evidence                                                                             |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------ |
+| 54    | 1.14.0  | Code and deterministic gates complete | `thread-group.ts`, `thread-group-store.ts`, `state-tree-provider.ts`. Tests: 19 new. |
+
+**Client-side by necessity and by choice.** The backend sweep established that
+`ChatThread` has no grouping column and `GET /chat-threads` no group filter —
+this is one of the rows where the contract genuinely does not exist. So groups
+live in workspace storage, and the row says plainly that they are per-machine.
+A client-side grouping that presented itself as shared would be a lie the first
+time the user opened the same account somewhere else, and a lie about where
+data lives is the kind users find out about at the worst moment.
+
+**Groups sort alphabetically, not by recency.** A group's position should not
+move because somebody replied in it. A list that reorders itself is a list you
+have to re-read every time you look at it, which defeats the point of filing
+anything.
+
+**Expanded by default.** A group somebody made is a group they want to see
+into; collapsing it would hide the thing they just filed and make the feature
+look like it did nothing.
+
+**One question, not two commands.** Filing, creating and removing are the same
+question — "which group is this in" — whose answer includes "none". Splitting
+removal into its own command would make taking something out feel like a
+different kind of act than moving it.
+
+Assignments for conversations that no longer exist are dropped on every write.
+Nothing else prunes them, and a deleted conversation should not keep a group
+alive in the picker.
+
+**Still true:** live-model Definition of Done cannot be executed here.

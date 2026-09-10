@@ -1,11 +1,14 @@
 import * as vscode from 'vscode';
 
 import { nextOnboardingStep, onboardingChecklist } from '../core/onboarding-checklist';
+import { groupedThreads } from '../core/thread-group';
 
+import type { ChatThread } from '../backend/contracts';
 import type { AgentTaskStatus } from '../core/agent-tasks';
 import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
 import type { FindingSeverity } from '../core/findings';
 import type { OnboardingStepId } from '../core/onboarding-checklist.types';
+import type { ThreadGroupAssignments } from '../core/thread-group.types';
 
 export type TreeKind =
   'artifacts' | 'context' | 'findings' | 'history' | 'model' | 'setup' | 'tasks';
@@ -135,24 +138,44 @@ function setupItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
   });
 }
 
-function historyItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
+function threadItem(thread: ChatThread): vscode.TreeItem {
+  const title = thread.title?.trim();
+  const item = new vscode.TreeItem(
+    title === undefined || title.length === 0 ? vscode.l10n.t('Untitled conversation') : title,
+  );
+  item.description = thread._count === undefined ? '' : String(thread._count.messages);
+  item.iconPath = new vscode.ThemeIcon('comment-discussion');
+  item.command = {
+    command: 'clawAI.openChat',
+    title: vscode.l10n.t('Open conversation'),
+    arguments: [thread.id],
+  };
+  return item;
+}
+
+/**
+ * The history list, with groups as folders.
+ *
+ * Groups are expanded by default. A group somebody made is a group they want
+ * to see into; collapsing it by default would hide the thing they just filed
+ * and make the feature look like it did nothing.
+ */
+function historyItems(
+  snapshot: ExtensionSnapshot,
+  assignments: ThreadGroupAssignments,
+): vscode.TreeItem[] {
   if (snapshot.history.length === 0) {
     return [new vscode.TreeItem(vscode.l10n.t('No recent conversations'))];
   }
-  return snapshot.history.map((thread) => {
-    const title = thread.title?.trim();
-    const item = new vscode.TreeItem(
-      title === undefined || title.length === 0 ? vscode.l10n.t('Untitled conversation') : title,
-    );
-    item.description = thread._count === undefined ? '' : String(thread._count.messages);
-    item.iconPath = new vscode.ThemeIcon('comment-discussion');
-    item.command = {
-      command: 'clawAI.openChat',
-      title: vscode.l10n.t('Open conversation'),
-      arguments: [thread.id],
-    };
+  const grouped = groupedThreads(snapshot.history, assignments);
+  const groups = grouped.groups.map((group) => {
+    const item = new vscode.TreeItem(group.name, vscode.TreeItemCollapsibleState.Expanded);
+    item.iconPath = new vscode.ThemeIcon('folder');
+    item.description = String(group.threads.length);
+    item.contextValue = 'clawAI.threadGroup';
     return item;
   });
+  return [...groups, ...grouped.ungrouped.map(threadItem)];
 }
 
 const severityIcons: Readonly<Record<FindingSeverity, string>> = {
@@ -226,17 +249,34 @@ export class StateTreeProvider
   constructor(
     private readonly kind: TreeKind,
     private readonly state: ExtensionState,
+    /** Read at render time so filing a conversation shows up without a reload. */
+    private readonly groups?: () => ThreadGroupAssignments,
   ) {
     this.unsubscribe = state.subscribe(() => {
       this.changeEmitter.fire(undefined);
     });
   }
 
+  /** Redraws when something outside the snapshot changed, such as a group. */
+  refresh(): void {
+    this.changeEmitter.fire(undefined);
+  }
+
   getTreeItem(element: vscode.TreeItem): vscode.TreeItem {
     return element;
   }
 
-  getChildren(): vscode.TreeItem[] {
+  /** The conversations filed into one group, in the order the list shows them. */
+  private groupChildren(element: vscode.TreeItem): vscode.TreeItem[] {
+    const name = typeof element.label === 'string' ? element.label : '';
+    const grouped = groupedThreads(this.state.snapshot.history, this.groups?.() ?? {});
+    const members = grouped.groups.find((group) => group.name === name)?.threads ?? [];
+    return members.map(threadItem);
+  }
+
+  getChildren(element?: vscode.TreeItem): vscode.TreeItem[] {
+    // A group's children are its conversations; everything else is flat.
+    if (element?.contextValue === 'clawAI.threadGroup') return this.groupChildren(element);
     if (this.kind === 'model') {
       return modelItems(this.state.snapshot);
     }
@@ -255,7 +295,7 @@ export class StateTreeProvider
     if (this.kind === 'artifacts') {
       return artifactItems(this.state.snapshot);
     }
-    return historyItems(this.state.snapshot);
+    return historyItems(this.state.snapshot, this.groups?.() ?? {});
   }
 
   dispose(): void {

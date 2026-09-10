@@ -2,6 +2,23 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.14.0
+
+Minor: conversation groups (F062).
+
+- **ClawAI: Group Conversation** files a conversation into a group, creates a
+  new group, or takes it out of one — all from the same question, because
+  "which group is this in" has an answer that includes none.
+- **The history view shows groups as folders**, expanded by default: a group
+  somebody made is a group they want to see into.
+- **Groups sort alphabetically, not by recency**, so a group does not move
+  because somebody replied in it. A list that reorders itself is a list you
+  have to re-read.
+- **Assignments are stored on this machine**, workspace-scoped. The server has
+  no notion of a group, and inventing one client-side that looked shared would
+  be a lie the first time you opened the same account elsewhere.
+- Assignments for deleted conversations are pruned on every write.
+
 ## 1.13.0
 
 Minor: open a conversation in a second window (F065).
