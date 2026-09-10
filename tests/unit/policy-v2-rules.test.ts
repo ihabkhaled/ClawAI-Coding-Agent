@@ -257,3 +257,63 @@ describe('evaluatePolicyV2 with an organization policy', () => {
     ).toMatchObject({ outcome: 'deny', code: 'PROJECT_POLICY_NARROWED' });
   });
 });
+
+describe('domain rules', () => {
+  function webRequest(domains: string[] = ['docs.example.dev']) {
+    return request({
+      effect: 'read',
+      subject: { tool: 'workspace.web', operation: 'fetch', paths: [], domains },
+    });
+  }
+
+  it('denies a host the project refuses', () => {
+    const decision = evaluatePolicyV2(
+      webRequest(),
+      projectPolicySchema.parse({
+        rules: [{ domainGlob: 'docs.example.dev', outcome: 'deny', reason: 'no docs' }],
+      }),
+    );
+
+    expect(decision).toMatchObject({ outcome: 'deny', code: 'PROJECT_RULE_DENIED' });
+  });
+
+  it('matches a host glob', () => {
+    const decision = evaluatePolicyV2(
+      webRequest(),
+      projectPolicySchema.parse({
+        rules: [{ domainGlob: '*.example.dev', outcome: 'deny', reason: 'no example' }],
+      }),
+    );
+
+    expect(decision).toMatchObject({ outcome: 'deny' });
+  });
+
+  it('leaves a host no rule names alone', () => {
+    const decision = evaluatePolicyV2(
+      webRequest(),
+      projectPolicySchema.parse({
+        rules: [{ domainGlob: 'evil.test', outcome: 'deny', reason: 'no' }],
+      }),
+    );
+
+    expect(decision).not.toMatchObject({ code: 'PROJECT_RULE_DENIED' });
+  });
+
+  it('never matches a call that names no host at all', () => {
+    const decision = evaluatePolicyV2(
+      request(),
+      projectPolicySchema.parse({
+        rules: [{ domainGlob: '*', outcome: 'deny', reason: 'no network' }],
+      }),
+    );
+
+    expect(decision).not.toMatchObject({ code: 'PROJECT_RULE_DENIED' });
+  });
+
+  it('accepts a rule that names only a domain', () => {
+    expect(
+      policyRuleSchema.safeParse({ domainGlob: 'example.dev', outcome: 'deny', reason: 'no' })
+        .success,
+    ).toBe(true);
+  });
+});

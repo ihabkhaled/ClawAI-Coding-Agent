@@ -24,44 +24,92 @@
     "policyRule": {
       "type": "object",
       "additionalProperties": false,
-      "description": "Matches on at least one of tool, operation, pathGlob or commandGlob.",
+      "description": "Matches on at least one of tool, operation, pathGlob, commandGlob or domainGlob.",
       "properties": {
-        "tool": { "type": "string", "minLength": 1, "maxLength": 80 },
-        "operation": { "type": "string", "minLength": 1, "maxLength": 80 },
-        "pathGlob": { "type": "string", "minLength": 1, "maxLength": 1000 },
-        "commandGlob": { "type": "string", "minLength": 1, "maxLength": 1000 },
-        "outcome": { "enum": ["ask", "deny"] },
-        "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "pathGlob": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "commandGlob": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "outcome": {
+          "enum": ["ask", "deny"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "domainGlob": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253
+        }
       },
       "required": ["outcome", "reason"],
       "anyOf": [
-        { "required": ["tool"] },
-        { "required": ["operation"] },
-        { "required": ["pathGlob"] },
-        { "required": ["commandGlob"] }
+        {
+          "required": ["tool"]
+        },
+        {
+          "required": ["operation"]
+        },
+        {
+          "required": ["pathGlob"]
+        },
+        {
+          "required": ["commandGlob"]
+        },
+        {
+          "required": ["domainGlob"]
+        }
       ]
     }
   },
   "properties": {
     "deniedEffects": {
       "type": "array",
-      "items": { "$ref": "#/definitions/effectKind" },
+      "items": {
+        "$ref": "#/definitions/effectKind"
+      },
       "maxItems": 8,
       "default": []
     },
     "maximumRisk": {
-      "allOf": [{ "$ref": "#/definitions/riskClass" }],
+      "allOf": [
+        {
+          "$ref": "#/definitions/riskClass"
+        }
+      ],
       "default": "R4"
     },
     "requireApproval": {
       "type": "array",
-      "items": { "$ref": "#/definitions/effectKind" },
+      "items": {
+        "$ref": "#/definitions/effectKind"
+      },
       "maxItems": 8,
       "default": []
     },
     "rules": {
       "type": "array",
-      "items": { "$ref": "#/definitions/policyRule" },
+      "items": {
+        "$ref": "#/definitions/policyRule"
+      },
       "maxItems": 200,
       "default": []
     }

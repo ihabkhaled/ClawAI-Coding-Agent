@@ -49,6 +49,14 @@ export const policySubjectSchema = z
     paths: z.array(z.string().max(4_096)).max(200).default([]),
     /** The executable and its arguments, joined, for command rules to match. */
     command: z.string().max(8_192).optional(),
+    /**
+     * Hosts the call names, for domain rules to match.
+     *
+     * Hosts, not URLs. A rule about where a request may go is about the
+     * site, and matching a whole URL would let a path fragment satisfy a
+     * rule that was meant to be about the origin.
+     */
+    domains: z.array(z.string().max(253)).max(50).default([]),
   })
   .strict();
 
@@ -88,6 +96,7 @@ export const policyRuleSchema = z
     operation: z.string().min(1).max(80).optional(),
     pathGlob: z.string().min(1).max(1_000).optional(),
     commandGlob: z.string().min(1).max(1_000).optional(),
+    domainGlob: z.string().min(1).max(253).optional(),
     outcome: z.enum(['ask', 'deny']),
     reason: z.string().min(1).max(500),
   })
@@ -97,8 +106,9 @@ export const policyRuleSchema = z
       rule.tool !== undefined ||
       rule.operation !== undefined ||
       rule.pathGlob !== undefined ||
-      rule.commandGlob !== undefined,
-    'A policy rule must match on at least one of tool, operation, pathGlob or commandGlob',
+      rule.commandGlob !== undefined ||
+      rule.domainGlob !== undefined,
+    'A policy rule must match on at least one of tool, operation, pathGlob, commandGlob or domainGlob',
   );
 
 export const projectPolicySchema = z
@@ -182,6 +192,15 @@ function ruleMatches(rule: PolicyRule, subject: PolicySubject): boolean {
   if (
     rule.commandGlob !== undefined &&
     (subject.command === undefined || !globMatches(rule.commandGlob, subject.command))
+  ) {
+    return false;
+  }
+  // A domain rule that names a host no call touched does not match. A call
+  // with no hosts at all can therefore never satisfy one, which is right: a
+  // rule about where requests may go says nothing about a file read.
+  if (
+    rule.domainGlob !== undefined &&
+    !subject.domains.some((domain) => globMatches(rule.domainGlob ?? '', domain))
   ) {
     return false;
   }

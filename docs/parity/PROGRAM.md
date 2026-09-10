@@ -1834,3 +1834,36 @@ and `npm run check` refused the commit, naming each one. That is the second
 time in this program the control has caught something before CI did.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 59 — F053 domain rules
+
+| Batch | Version | Status                                | Evidence                                                                   |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------- |
+| 59    | 1.19.0  | Code and deterministic gates complete | `policy-v2.ts` `domainGlob`, `runtime-policy-v2-adapter.ts`. Tests: 5 new. |
+
+**This closes a loop the program opened itself.** The F049 row, written in
+0.75.0, said domain rules were not covered because they "wait on a network tool
+to have domains". Batch 41 gave the agent one. A note left in an audit row
+about what a future feature would unblock turned out to be worth keeping.
+
+**It matches the host, not the URL, and that is the security decision.** A rule
+about where a request may go is about the site. Matching a whole URL would let
+`https://evil.test/#docs.trusted.test` satisfy a rule written for
+`docs.trusted.test` — a reader sees the trusted name, the request goes
+somewhere else. The host comes from the URL parser rather than a pattern, so
+there is no place for that trick to hide.
+
+**A call that names no host can never match a domain rule.** A rule about
+network access says nothing about a file read, and a `domainGlob: "*"` rule
+that accidentally denied every tool call would be a policy file that bricks the
+extension.
+
+**What is still open is open for a reason, and the row now says which.**
+Repository and command trust lists are _allow_-shaped: they say "these are
+fine". Project policy has no allow outcome by design — the file lives in the
+workspace, and a repository that could grant itself permissions by being cloned
+is the threat the whole design avoids. Trust lists therefore belong in the
+organization policy, which is fetched with the account and not written by the
+repository.
+
+**Still true:** live-model Definition of Done cannot be executed here.

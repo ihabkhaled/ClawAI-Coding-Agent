@@ -105,16 +105,21 @@ Every field narrows what the agent may do; none widens it.
   "rules": [
     { "pathGlob": "infra/*", "outcome": "ask", "reason": "infra changes are reviewed" },
     { "commandGlob": "git push*", "outcome": "deny", "reason": "pushes are manual here" },
-    { "tool": "workspace.database", "outcome": "deny", "reason": "no database access" }
+    { "tool": "workspace.database", "outcome": "deny", "reason": "no database access" },
+    { "domainGlob": "*.internal", "outcome": "deny", "reason": "never fetch internal hosts" }
   ]
 }
 ```
 
-A rule matches on any of `tool`, `operation`, `pathGlob` and `commandGlob`, and
+A rule matches on any of `tool`, `operation`, `pathGlob`, `commandGlob` and
+`domainGlob`, and
 must name at least one — a rule that matches nothing in particular matches
 everything, which is never what the author meant. `pathGlob` is tested against
 the paths a call actually names, and `commandGlob` against the executable and
-its arguments joined. Patterns are `*` globs, not regular expressions.
+its arguments joined. `domainGlob` is tested against the _host_ a call names,
+not the whole URL: a rule about where a request may go is about the site, and
+matching a URL would let a path fragment satisfy a rule meant to be about the
+origin. A call that names no host can never match a domain rule. Patterns are `*` globs, not regular expressions.
 
 Two properties are deliberate and worth relying on:
 
