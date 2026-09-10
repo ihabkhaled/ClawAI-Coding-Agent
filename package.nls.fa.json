@@ -26,6 +26,7 @@
   "command.undoLastEdit": "واگردانی آخرین ویرایش",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.attachTerminalOutput": "پیوست خروجی ترمینال",
   "command.groupConversation": "گروه‌بندی گفتگو",
   "command.openConversationInNewWindow": "باز کردن گفتگو در پنجره جدید",
   "command.compactConversation": "فشرده‌سازی گفتگو",

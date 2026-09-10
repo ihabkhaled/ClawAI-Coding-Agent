@@ -1679,3 +1679,41 @@ Nothing else prunes them, and a deleted conversation should not keep a group
 alive in the picker.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 55 — F035 terminal references, and a redaction hole
+
+| Batch | Version | Status                                | Evidence                                                                              |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------- |
+| 55    | 1.15.0  | Code and deterministic gates complete | `terminal-reference.ts`, `vscode-terminal-capture.ts`, `redaction.ts`. Tests: 17 new. |
+
+**The platform shaped this one too.** VS Code exposes terminal contents only as
+a stream while a command runs. There is no API for reading the buffer
+afterwards, and there should not be — a terminal is not the extension's to
+read. So output is captured as it happens, which means only commands that
+started after the extension activated can be referenced. That limit is stated
+to the user rather than hidden behind an empty attachment.
+
+Only the most recent command per terminal is kept. A scrollback of every
+command in every terminal is a memory leak wearing a feature's clothes, and the
+command people mean is nearly always the last one.
+
+**It lands in the composer, not in a message.** Attaching output is the user
+gathering evidence, not asking a question. Sending it for them would decide
+what the question was.
+
+**A security hole was found by writing a test that should have passed.** The
+test asserted that `GITHUB_TOKEN=ghp_…` gets redacted. It did not. `\b` does
+not sit between an underscore and a letter, so the assignment pattern matched
+`token=` but never `GITHUB_TOKEN=` — and that shape is how secrets appear in
+almost every shell. This was not a terminal problem: the same `redactText` runs
+over logs, diagnostic reports and feedback submissions, so underscore-prefixed
+secret names had been passing through everywhere, for as long as the pattern
+has existed.
+
+The fix accepts an underscore as a boundary and allows an underscore-joined
+tail, so `AWS_SECRET_ACCESS_KEY=` matches too. The tail must start with an
+underscore, which keeps `SECRETARY_NAME=Alice` untouched — over-redaction makes
+a log useless in order to protect nothing, and that failure mode is only one
+step better than the original.
+
+**Still true:** live-model Definition of Done cannot be executed here.

@@ -12,9 +12,11 @@ import { OutputLogger } from './infrastructure/output-logger';
 import { VscodeMentionIndex } from './infrastructure/vscode-mention-index';
 import { probeRuntimeHost } from './infrastructure/vscode-runtime-host-probe';
 import { buildRuntimeCapabilityManifest } from './infrastructure/vscode-runtime-target-adapter';
+import { VscodeTerminalTracker } from './infrastructure/vscode-terminal-capture';
 import { VscodeUserNotifier } from './infrastructure/vscode-user-notifier';
 import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-edit-adapter';
 import { AgentCoordinator } from './services/agent-coordinator';
+import { attachTerminalOutput } from './services/attach-terminal-command';
 import { ConfigurationService } from './services/configuration-service';
 import { ClawaiUriHandler } from './services/deep-link-handler';
 import { ExternalOutputGrantService } from './services/external-output-grant-service';
@@ -281,6 +283,7 @@ export function activate(context: vscode.ExtensionContext): void {
   const modelTree = new StateTreeProvider('model', state);
   const contextTree = new StateTreeProvider('context', state);
   const threadGroups = new ThreadGroupStore(context.workspaceState);
+  const terminals = new VscodeTerminalTracker();
   const historyTree = new StateTreeProvider('history', state, () => threadGroups.read());
   const findingsTree = new StateTreeProvider('findings', state);
   const tasksTree = new StateTreeProvider('tasks', state);
@@ -363,6 +366,14 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
   );
   context.subscriptions.push(
+    terminals,
+    vscode.commands.registerCommand('clawAI.attachTerminalOutput', () =>
+      attachTerminalOutput({
+        terminals: () => vscode.window.terminals,
+        capture: (terminal) => terminals.capture(terminal),
+        insert: (block) => chatView.appendToComposer(block),
+      }),
+    ),
     vscode.commands.registerCommand('clawAI.groupConversation', () =>
       groupConversation({
         threads: () => state.snapshot.history,

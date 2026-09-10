@@ -26,6 +26,7 @@
   "command.undoLastEdit": "التراجع عن آخر تعديل",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.attachTerminalOutput": "إرفاق مخرجات الطرفية",
   "command.groupConversation": "تجميع المحادثة",
   "command.openConversationInNewWindow": "فتح المحادثة في نافذة جديدة",
   "command.compactConversation": "ضغط المحادثة",

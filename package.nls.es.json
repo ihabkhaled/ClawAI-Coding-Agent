@@ -26,6 +26,7 @@
   "command.undoLastEdit": "Deshacer última edición de ClawAI",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.attachTerminalOutput": "Adjuntar salida del terminal",
   "command.groupConversation": "Agrupar conversación",
   "command.openConversationInNewWindow": "Abrir la conversación en una ventana nueva",
   "command.compactConversation": "Compactar conversación",

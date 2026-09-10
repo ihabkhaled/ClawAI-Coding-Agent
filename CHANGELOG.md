@@ -2,6 +2,28 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.15.0
+
+Minor: reference a terminal you are already using (F035), and a redaction fix.
+
+- **ClawAI: Attach Terminal Output** puts the last command from a terminal, and
+  what it printed, into the composer — tagged as terminal output, not pasted as
+  prose. A build log that happens to contain "ignore previous instructions" is
+  still a build log.
+- **It goes into the composer, not into a message.** Attaching output is
+  gathering evidence, not asking a question; sending it for you would decide
+  what the question was.
+- **The end of the output is kept, not the start.** A build that scrolled for
+  two thousand lines is being referenced because of how it ended.
+- **Only commands VS Code saw start can be read.** Shell integration is the
+  only supported way to read a terminal, so a terminal without it is named and
+  said to be unreadable rather than attached empty.
+- **Security fix: `GITHUB_TOKEN=…` was not being redacted anywhere.** A word
+  boundary does not sit between an underscore and a letter, so every
+  underscore-prefixed secret name slipped through — in logs, diagnostics and
+  feedback reports, not only terminals. Underscore-joined names now match, and
+  `SECRETARY_NAME=Alice` still does not.
+
 ## 1.14.0
 
 Minor: conversation groups (F062).

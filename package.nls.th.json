@@ -26,6 +26,7 @@
   "command.undoLastEdit": "เลิกทำการแก้ไขล่าสุด",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.attachTerminalOutput": "แนบผลลัพธ์จากเทอร์มินัล",
   "command.groupConversation": "จัดกลุ่มการสนทนา",
   "command.openConversationInNewWindow": "เปิดการสนทนาในหน้าต่างใหม่",
   "command.compactConversation": "ย่อการสนทนา",
