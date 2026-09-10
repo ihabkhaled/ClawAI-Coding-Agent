@@ -1583,6 +1583,46 @@ pre {
   overflow-wrap: anywhere;
 }
 
+/*
+ * The reasoning row spans the whole item because a disclosure needs the width
+ * its open state will use; the three-column grid the other activity rows share
+ * would pin the summary to the middle track and leave the explanation ragged.
+ */
+.activity-item-reasoning {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.reasoning-disclosure {
+  min-width: 0;
+  padding-inline-start: var(--sp-3);
+  border-inline-start: 1px solid color-mix(in srgb, var(--claw-accent) 30%, var(--claw-border));
+}
+
+.reasoning-summary {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: var(--sp-2);
+  cursor: pointer;
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.reasoning-summary small {
+  color: var(--claw-muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.reasoning-disclosure p {
+  margin-block: var(--sp-1) 0;
+  color: var(--claw-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 .activity-token {
   margin-block-start: 1px;
   color: var(--claw-muted);

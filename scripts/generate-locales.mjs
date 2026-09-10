@@ -3796,6 +3796,69 @@ const checkpointTranslations = {
   },
 };
 
+const reasoningVisibilityTranslations = {
+  ar: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'يعرض ClawAI مقدار تفكير النموذج، لا محتوى ذلك التفكير.',
+    '{0} steps · {1} tokens': '{0} خطوات · {1} رمز',
+  },
+  de: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI meldet, wie viel das Modell nachgedacht hat, niemals worüber.',
+    '{0} steps · {1} tokens': '{0} Schritte · {1} Token',
+  },
+  es: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI informa cuánto pensó el modelo, nunca qué pensó.',
+    '{0} steps · {1} tokens': '{0} pasos · {1} tokens',
+  },
+  fa: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI فقط میزان تفکر مدل را گزارش می‌کند، نه محتوای آن را.',
+    '{0} steps · {1} tokens': '{0} گام · {1} توکن',
+  },
+  fr: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI indique combien le modèle a réfléchi, jamais à quoi.',
+    '{0} steps · {1} tokens': '{0} étapes · {1} jetons',
+  },
+  hi: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI बताता है कि मॉडल ने कितना सोचा, यह कभी नहीं कि उसने क्या सोचा।',
+    '{0} steps · {1} tokens': '{0} चरण · {1} टोकन',
+  },
+  it: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI riporta quanto ha ragionato il modello, mai che cosa ha pensato.',
+    '{0} steps · {1} tokens': '{0} passaggi · {1} token',
+  },
+  ja: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI はモデルがどれだけ考えたかだけを示し、何を考えたかは示しません。',
+    '{0} steps · {1} tokens': '{0} ステップ · {1} トークン',
+  },
+  pt: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'O ClawAI informa quanto o modelo pensou, nunca o que ele pensou.',
+    '{0} steps · {1} tokens': '{0} etapas · {1} tokens',
+  },
+  ru: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI сообщает, сколько модель размышляла, но никогда — о чём.',
+    '{0} steps · {1} tokens': '{0} шагов · {1} токенов',
+  },
+  th: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI รายงานว่าโมเดลคิดมากเพียงใด ไม่เคยรายงานว่าคิดอะไร',
+    '{0} steps · {1} tokens': '{0} ขั้นตอน · {1} โทเค็น',
+  },
+  zh: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI 只报告模型思考了多少，绝不报告它思考了什么。',
+    '{0} steps · {1} tokens': '{0} 步 · {1} 个词元',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -3827,6 +3890,7 @@ function translate(locale, message) {
     outputStyleTranslations[locale][message] ??
     sharedTranslations[locale][message] ??
     coreSurfaceTranslations[locale][message] ??
+    reasoningVisibilityTranslations[locale][message] ??
     message
   );
 }

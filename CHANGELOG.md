@@ -2,6 +2,29 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.20.0
+
+Minor: the model's private reasoning stays on the host (F043, narrowed).
+
+- **A reasoning delta is stripped before it leaves the extension host.** Every
+  stream event goes through one door on its way to the panel, and that door now
+  drops the chain-of-thought text and forwards only its size. The panel has
+  always shown a token count and nothing else, but the text itself still crossed
+  the boundary and sat in the webview's message queue, where anything inspecting
+  the webview could read it. Counting in the panel was a convention; dropping the
+  text on the host is an invariant.
+- **Three field names, not one.** `delta` is what the backend sends today;
+  `content` and `reasoning` are the shapes the same event takes on providers that
+  report a whole reasoning block, so a future backend that starts forwarding one
+  cannot slip past the guard.
+- **The reasoning row is a disclosure, not a line.** Extended thinking can run
+  for minutes, and a flat list item that only grows a number gives no way to tell
+  a long think from a stalled request. The summary carries the step count and the
+  size; opening it says why there is no text to read.
+- An event that arrives without a usable size still counts as a step. The model
+  demonstrably thought, and reporting nothing would be a worse answer than
+  reporting a step worth zero tokens.
+
 ## 1.19.0
 
 Minor: domain rules in the project policy (F053, narrowed).
