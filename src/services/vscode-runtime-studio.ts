@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { EMPTY_BOARD } from '../core/agent-board';
 import { WorkspaceMutationGate } from '../core/workspace-mutation-gate';
 import { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 import {
@@ -110,6 +111,7 @@ import type { TargetAwareToolRouter } from './target-aware-tool-router';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { BackendClient } from '../backend/backend-client';
 import type { WebResearchPort } from '../backend/research-client';
+import type { AgentBoard } from '../core/agent-board.types';
 import type { RUNTIME_EFFECT_APPROVAL_KIND } from '../core/approval-broker';
 import type { ApprovalBroker } from '../core/approval-broker';
 import type { ExtensionState } from '../core/extension-state';
@@ -316,6 +318,12 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         stream: this.stream,
         transport: this.transport,
         parentContext: () => this.parentRunContext(),
+        board: {
+          read: () => this.agentBoard,
+          write: (next) => {
+            this.agentBoard = next;
+          },
+        },
       },
       files: this.files,
       globalStorageUri: context.globalStorageUri,
@@ -503,6 +511,15 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
    * run sees the decisions the parent made in the meantime. The goal comes from
    * the input the run is executing, which is the only place it exists.
    */
+  /**
+   * The note board the current graph shares.
+   *
+   * Cleared with the run-scoped stores, so a second graph never reads the first
+   * one's notes: a board is the record of one piece of work, and two mixed
+   * together make every note ambiguous about which run it belongs to.
+   */
+  private agentBoard: AgentBoard = EMPTY_BOARD;
+
   private parentRunContext(): ParentRunContext {
     const run = this.state.snapshot.agentRun;
     return {
@@ -526,6 +543,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   invalidateWorkspace(): void {
     this.epochs = nextWorkspaceEpoch(this.epochs);
     forgetWorkspaceScopedState(this.transactions, this.stores);
+    this.agentBoard = EMPTY_BOARD;
     void this.cancel();
   }
 

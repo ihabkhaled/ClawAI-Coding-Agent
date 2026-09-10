@@ -2,6 +2,34 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.32.0
+
+Minor: a shared note board for agents in a graph (F009, narrowed).
+
+- **`runtime.board` lets agents in one graph tell each other things.** Steering
+  was parent to child only: a coordinator could tell an agent something, and an
+  agent could tell nobody. Two agents editing adjacent code could not warn each
+  other, and the only way one learned what another found was for both to finish
+  and the parent to read both reports.
+- **The caller's identity comes from the task being run, never from the
+  arguments.** An agent that could name itself could post as another, and a
+  warning attributed to the security reviewer carries weight the poster did not
+  earn.
+- **A per-agent quota, not just a total.** One chatty explorer posting two
+  hundred notes would push every other agent's work off the board, and the
+  agents that lost their notes would have no way to tell.
+- **A refusal names the limit that stopped it.** "Your quota is full" and "the
+  board is full" call for different responses, and an agent told only "no" will
+  retry the same note.
+- **Reading leaves out your own notes** and takes a sequence you have already
+  seen, so checking the board repeatedly costs almost nothing and never spends
+  context on what you wrote.
+- Notes are redacted on the way in, since an agent quoting a config file is the
+  ordinary case. A duplicate is refused rather than appended: two agents
+  reaching the same conclusion is worth knowing once.
+- The board is per graph and is cleared with the run-scoped stores, so a second
+  graph never reads the first one's notes.
+
 ## 1.31.0
 
 Minor: sub-agents can inherit what the parent already knows (F008).
