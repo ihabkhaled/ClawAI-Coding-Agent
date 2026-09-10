@@ -75,10 +75,15 @@ import {
 import { VscodeMonitorPort } from '../infrastructure/vscode-monitor-port';
 import { VscodeNotebookReader } from '../infrastructure/vscode-notebook-reader';
 import { VscodeUserNotifier } from '../infrastructure/vscode-user-notifier';
+import { VscodeWorkflowStore } from '../infrastructure/vscode-workflow-store';
 import {
   WebResearchToolExecutor,
   webResearchToolDefinition,
 } from '../infrastructure/web-research-tool-executor';
+import {
+  WorkflowStoreToolExecutor,
+  workflowStoreToolDefinition,
+} from '../infrastructure/workflow-store-tool-executor';
 
 import type {
   RuntimeStudioAdvancedTools,
@@ -99,6 +104,13 @@ export function analysisToolRegistrations(
   return [
     { definition: advisorToolDefinition, executor: new AdvisorToolExecutor(parts.advisor) },
     { definition: goalToolDefinition, executor: new GoalToolExecutor(parts.goal) },
+    {
+      definition: workflowStoreToolDefinition,
+      executor: new WorkflowStoreToolExecutor(
+        new VscodeWorkflowStore(parts.files),
+        parts.currentEpochs,
+      ),
+    },
     {
       definition: monitorToolDefinition,
       executor: new MonitorToolExecutor(new VscodeMonitorPort(parts.files)),

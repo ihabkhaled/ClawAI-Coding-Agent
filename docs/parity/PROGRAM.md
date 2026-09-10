@@ -2473,3 +2473,47 @@ what a workspace change invalidates, rather than three fields that each have to
 be remembered when a fourth is added.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 74 — F011 saved agent workflows
+
+| Batch | Version | Status                                | Evidence                                                                                          |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 74    | 1.34.0  | Code and deterministic gates complete | `saved-workflow.ts`, `workflow-store-tool-executor.ts`, `vscode-workflow-store.ts`. Tests: 9 new. |
+
+**The templates were never the workflow.** Seven prompt templates behind a
+command are seven things this repository decided, and none of them describes the
+work a particular project actually repeats. A graph the model built and a person
+watched succeed is a better workflow than any template — and until now there was
+no way to keep one.
+
+**Epochs are the reason loading is not just reading the file back.** An epoch
+names the generation of account, workspace, target and policy a call was
+authorised against. A saved graph carries the epochs that were current when it
+was written, and replaying those would run today's work against an authorisation
+nobody re-granted — the check passes because the number matches. Every task is
+re-stamped with the current epochs on load, and a test asserts it.
+
+**The stored file carries zeroed epochs.** A file with real ones would look like
+an authorisation record, and someone reading it would reasonably believe it was.
+
+**The file name is a slug and the name is not.** A workflow name is written by a
+model. A name containing `..` is a path traversal wearing a label, and the slug
+keeps letters, digits and dashes — enough to find the file, not enough to leave
+the folder.
+
+**Read is validation, not deserialisation.** A workflow lives in the workspace,
+where anyone can edit it. A graph that skipped its schema because it came from
+disk would be the one path into the runtime that never checked its input. One
+malformed file is skipped rather than failing the whole listing, so a bad
+workflow cannot hide the good ones.
+
+**In the repository, not in extension storage.** A workflow describes how this
+project is worked on, so it should travel with the code it was written against
+and reach the next person who clones it.
+
+**Narrowed:** the row also wants the planning tool to persist a graph. That tool
+is at its description budget, and adding four operations to it would push the
+guidance a model actually reads past the cap. A separate tool says the same
+thing without spending someone else's words.
+
+**Still true:** live-model Definition of Done cannot be executed here.

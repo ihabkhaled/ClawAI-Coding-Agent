@@ -2,6 +2,33 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.34.0
+
+Minor: agent graphs can be saved and re-run (F011, narrowed).
+
+- **`runtime.workflows` saves an agent-built graph to `.clawai/workflows` and
+  loads it back.** Workflows were seven prompt templates behind a command:
+  fixed, written by this repository, and unable to describe the work anyone
+  actually did twice. A graph the model built and a person watched succeed is a
+  better workflow than any template, and until now it could not be kept.
+- **Loading refreshes the epochs; it never replays the stored ones.** An epoch
+  names the generation of account, workspace, target and policy a call was
+  authorised against. Replaying a saved epoch would run today's work against an
+  authorisation nobody re-granted, and the check would pass because the number
+  matches. A saved workflow is a shape to re-run, never a permission to reuse.
+- **The stored file carries zeroed epochs**, so it does not look like an
+  authorisation record to anyone reading it.
+- **The file name is a slug, not the name.** A workflow name is written by a
+  model, and a name containing `..` is a path traversal wearing a label.
+- **Every file is parsed through the schema on read.** A workflow lives in the
+  workspace where anyone can edit it, and a graph that skipped validation
+  because it came from disk would be the one path into the runtime that never
+  checked its input. A malformed file is skipped rather than failing the
+  listing.
+- They live in the repository rather than extension storage, because a workflow
+  describes how this project is worked on and should travel with the code it was
+  written against.
+
 ## 1.33.0
 
 Minor: goal mode for an ordinary run (F014, narrowed).
