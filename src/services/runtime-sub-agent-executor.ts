@@ -5,6 +5,10 @@ import { findingsSchema, type Finding } from '../core/findings';
 import { subAgentGraphSchema } from '../core/multi-agent-dag';
 import { resolveSubAgentDefinition } from '../core/sub-agent-definitions';
 import { buildInheritedContext } from '../core/sub-agent-inheritance';
+import {
+  AgentBoardToolExecutor,
+  agentBoardToolDefinition,
+} from '../infrastructure/agent-board-tool-executor';
 
 import { RuntimeRunService } from './runtime-run-service';
 
@@ -17,6 +21,7 @@ import type {
 } from './runtime-tool-dispatcher';
 import type { SubAgentExecutionPort } from './sub-agent-coordinator-service';
 import type { BackendClient } from '../backend/backend-client';
+import type { AgentBoard } from '../core/agent-board.types';
 import type { SubAgentGraph, SubAgentOutcome, SubAgentTask } from '../core/multi-agent-dag';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -40,6 +45,12 @@ export interface RuntimeSubAgentDependencies {
    * decisions the parent made in the meantime.
    */
   readonly parentContext: () => ParentRunContext;
+  /**
+   * The note board this graph shares. One store per coordinator run, because
+   * two unrelated graphs reading each other's notes makes every note ambiguous
+   * about which run it belongs to.
+   */
+  readonly board: { read: () => AgentBoard; write: (board: AgentBoard) => void };
 }
 
 interface SubAgentTelemetry {
@@ -127,7 +138,23 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       ...(selection.model === 'AUTO' ? {} : { preferredModel: selection.model }),
     });
     const telemetry = this.telemetry();
-    const scopedExecutor = new ScopedSubAgentExecutor(task, this.dependencies.executor, telemetry);
+    // The board is answered inside the scope rather than by the parent router,
+    // because the caller's identity has to come from the task being run. An
+    // agent that could name itself could post as another, and a warning
+    // attributed to the security reviewer carries weight it did not earn.
+    const board = new AgentBoardToolExecutor({
+      read: () => this.dependencies.board.read(),
+      write: (next) => {
+        this.dependencies.board.write(next);
+      },
+      callerTaskId: () => task.taskId,
+    });
+    const scopedExecutor = new ScopedSubAgentExecutor(
+      task,
+      this.dependencies.executor,
+      telemetry,
+      board,
+    );
     const runtime = new RuntimeRunService({
       clock: { now: Date.now },
       currentEpochs: this.dependencies.currentEpochs,
@@ -208,14 +235,23 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
 
   private allowedDefinitions(task: SubAgentTask): readonly ToolDefinition[] {
     const allowed = new Set(task.tools);
-    return this.dependencies
-      .definitions()
-      .filter(
-        (definition) =>
-          allowed.has(definition.name) &&
-          !/(?:elevat|publish)/iu.test(definition.name) &&
-          !['runtime.agents', 'runtime.integration', 'runtime.flagship'].includes(definition.name),
-      );
+    // The board is not in the parent's catalogue: it only means anything inside
+    // a graph, and offering it to a run with no siblings would be a tool whose
+    // reads are always empty.
+    const board = allowed.has(agentBoardToolDefinition.name) ? [agentBoardToolDefinition] : [];
+    return [
+      ...board,
+      ...this.dependencies
+        .definitions()
+        .filter(
+          (definition) =>
+            allowed.has(definition.name) &&
+            !/(?:elevat|publish)/iu.test(definition.name) &&
+            !['runtime.agents', 'runtime.integration', 'runtime.flagship'].includes(
+              definition.name,
+            ),
+        ),
+    ];
   }
 
   private modelSelection(task: SubAgentTask): {
@@ -289,6 +325,7 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
     private readonly task: SubAgentTask,
     private readonly delegate: RuntimeToolExecutorPort,
     private readonly telemetry: SubAgentTelemetry,
+    private readonly board?: RuntimeToolExecutorPort,
   ) {}
 
   async execute(
@@ -296,6 +333,11 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
     signal?: AbortSignal,
   ): Promise<RuntimeToolExecutionOutput> {
     if (!this.task.tools.includes(invocation.toolName)) throw new Error('Sub-agent tool is denied');
+    // Answered here, before the delegate, because the parent's router has no
+    // way to know which task is calling.
+    if (invocation.toolName === agentBoardToolDefinition.name && this.board !== undefined) {
+      return this.board.execute(invocation, signal);
+    }
     if (/(?:push|publish|elevat)/iu.test(`${invocation.toolName}.${invocation.operation}`)) {
       throw new Error('Sub-agents cannot push, publish, or elevate');
     }

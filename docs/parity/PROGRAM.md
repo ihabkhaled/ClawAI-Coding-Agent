@@ -2381,3 +2381,52 @@ later in the run sees the decisions the parent made in the meantime, which is
 the whole reason a graph runs in stages.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 72 — F009 shared agent board
+
+| Batch | Version | Status                                | Evidence                                                                                          |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------------- |
+| 72    | 1.32.0  | Code and deterministic gates complete | `agent-board.ts`, `agent-board-tool-executor.ts`, `runtime-sub-agent-executor.ts`. Tests: 11 new. |
+
+**Steering pointed one way and the row said so.** A coordinator could tell an
+agent something. An agent could tell nobody. Two agents editing adjacent code
+could not warn each other, and the only way one learned what another found was
+for both to finish and the parent to read both reports — by which point the
+duplicated work is already paid for.
+
+**Identity comes from the task, never from the arguments, and that is the
+security decision.** An agent that could name itself could post as another. A
+warning attributed to the security reviewer carries weight the poster did not
+earn, and the whole value of a board is that a reader can act on what it says
+without re-deriving it. The board is answered inside the sub-agent scope for
+exactly this reason: that is the only place the caller's identity is known
+rather than claimed.
+
+**A per-agent quota, not only a total.** A single total is the failure this
+exists to avoid: one chatty explorer posting two hundred notes pushes every
+other agent's work off the board, and the agents that lost their notes have no
+way to tell that happened.
+
+**A refusal names its limit.** "Your quota is full" means post less. "The board
+is full" means the run has produced more notes than anyone will read. An agent
+told only "no" retries the same note.
+
+**Reading excludes your own notes and resumes from a sequence.** A board carries
+what you did not know; handing an agent its own writing back spends context on
+the one thing it is certain of. Resuming from a sequence makes checking the
+board repeatedly nearly free, which is what makes it usable mid-task.
+
+**Redacted in, deduplicated in.** An agent quoting a config file is the ordinary
+case, not the exception. Two agents reaching the same conclusion is common and
+worth knowing once; the second copy costs every later reader and tells them
+nothing.
+
+**Per graph, cleared with the run-scoped stores.** A board is the record of one
+piece of work. Two mixed together make every note ambiguous about which run it
+belongs to.
+
+**Narrowed:** the row also asks for direct agent-to-agent messaging. A board is
+the shape that survives an agent finishing before its reader starts, which a
+message is not — and the row now says which half shipped.
+
+**Still true:** live-model Definition of Done cannot be executed here.
