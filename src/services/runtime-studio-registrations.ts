@@ -36,6 +36,10 @@ import {
   intelligenceToolDefinition,
 } from '../infrastructure/intelligence-tool-executor';
 import {
+  MonitorToolExecutor,
+  monitorToolDefinition,
+} from '../infrastructure/monitor-tool-executor';
+import {
   NotebookToolExecutor,
   notebookToolDefinition,
 } from '../infrastructure/notebook-tool-executor';
@@ -67,6 +71,7 @@ import {
   VscodeFilesystemToolExecutor,
   workspaceFilesystemToolDefinition,
 } from '../infrastructure/vscode-filesystem-tool-executor';
+import { VscodeMonitorPort } from '../infrastructure/vscode-monitor-port';
 import { VscodeNotebookReader } from '../infrastructure/vscode-notebook-reader';
 import { VscodeUserNotifier } from '../infrastructure/vscode-user-notifier';
 import {
@@ -92,6 +97,10 @@ export function analysisToolRegistrations(
 ): RuntimeToolRegistration[] {
   return [
     { definition: advisorToolDefinition, executor: new AdvisorToolExecutor(parts.advisor) },
+    {
+      definition: monitorToolDefinition,
+      executor: new MonitorToolExecutor(new VscodeMonitorPort(parts.files)),
+    },
     { definition: askUserToolDefinition, executor: new AskUserToolExecutor(parts.questions) },
     {
       definition: endConversationToolDefinition,

@@ -2295,3 +2295,45 @@ stays open. It is a webview and attachment-pipeline change, not a policy one,
 and pairing them would put two unrelated risks in one batch.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 70 — F012 monitor tool
+
+| Batch | Version | Status                                | Evidence                                                                                     |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 70    | 1.30.0  | Code and deterministic gates complete | `monitor-condition.ts`, `monitor-tool-executor.ts`, `vscode-monitor-port.ts`. Tests: 16 new. |
+
+**The row said nothing watches anything, and that was exactly right.** A run
+that started a build could read the output file immediately and find it absent,
+or spend model turns re-reading it. Both spend the budget answering the same
+question, and neither is waiting.
+
+**Bounded twice, because the budget that exists cannot stop this.** Run budgets
+count model turns and tool calls; a single tool call that waits forever passes
+every one of them. The caller's timeout is capped by a ceiling the caller cannot
+raise, and the abort signal ends the wait immediately.
+
+**A timeout returns rather than throwing, and that distinction is the point.**
+"The condition held" and "time ran out" are different facts about the world. A
+timeout surfaced as an error teaches the model that a slow build is a broken
+one, which is the wrong lesson and an expensive one.
+
+**Backoff, not an interval.** The two things worth waiting for have opposite
+shapes: a file a command is about to write appears in under a second, and a test
+suite takes minutes. A fixed quarter second serves the first and wastes two
+thousand four hundred looks on the second. Doubling to a five-second ceiling
+serves both, and a test asserts the whole maximum wait stays under two hundred
+looks.
+
+**`changed` is measured against the baseline, not the previous look.** A file
+written twice between polls has still changed. Comparing consecutive
+observations would report no change for the case most worth catching.
+
+**A bad pattern is refused before the wait starts.** Throwing from inside the
+loop would surface the mistake minutes after it was made, attached to a run that
+looks like it failed for another reason.
+
+**Reads go through the same root resolution every other tool uses**, so a
+monitor cannot watch a path the run may not read, and a file too large to hold
+is answered by digest rather than pulled into memory.
+
+**Still true:** live-model Definition of Done cannot be executed here.
