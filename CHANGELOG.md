@@ -2,6 +2,34 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.38.0
+
+Minor: run spans can reach an OTLP collector (F108, narrowed).
+
+- **`setRemoteExport` finally has a caller.** It has existed since remote
+  telemetry was designed and had none: spans terminated in the VS Code output
+  channel. `clawAI.telemetryEndpoint` is the sink it was waiting for.
+- **Configuring an endpoint is the approval.** There is no default collector to
+  opt out of, because telemetry that turns itself on is the thing people rightly
+  object to. Empty means nothing leaves the machine.
+- **HTTPS everywhere except loopback**, and that exception is the point rather
+  than a hole: a collector on the developer's own machine has no certificate,
+  and one anywhere else is reached across a network that will read a plaintext
+  bearer token out of the headers. Credentials in the URL are refused outright.
+- **Span attributes are redacted before export.** Spans carry tool arguments,
+  paths and command lines, which is exactly where a secret ends up. A sink that
+  writes to an output channel and one that posts to a vendor have different
+  stakes, so the redaction lives at the boundary that leaves the machine.
+- **A collector being down never fails a run.** Failures are swallowed after one
+  log line, the queue drops its oldest spans past a small cap so an outage
+  cannot become a memory leak, and every export is bounded by a timeout.
+- **Written by hand, not by adding the OpenTelemetry SDK.** The JSON encoding is
+  a published, stable shape; the SDK would bring a tracer, a context manager and
+  an async-hooks dependency into a host that already has its own span model.
+- Metrics are not exported, and the code says so rather than emitting spans
+  shaped like metrics. A dashboard that looks right and counts nothing is worse
+  than an empty one.
+
 ## 1.37.0
 
 Minor: read what security scanners produce (F106, narrowed).

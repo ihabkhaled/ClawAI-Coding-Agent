@@ -15,6 +15,8 @@ const configuration = {
   outputStyle: 'default',
   autoCompact: 'prompt' as const,
   browserOrigins: [],
+  telemetryEndpoint: '',
+  telemetryHeaders: {},
   hooks: [],
   effortMode: 'ULTRA' as const,
   speedMode: '1X' as const,

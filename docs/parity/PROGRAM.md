@@ -2653,3 +2653,60 @@ the same line become one entry rather than two competing ones.
 Both need either a shipped database or a network call, and the row says so.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 78 — F108 OTLP span export
+
+| Batch | Version | Status                                | Evidence                                                                               |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------------------- |
+| 78    | 1.38.0  | Code and deterministic gates complete | `otlp-export.ts`, `otlp-observability-sink.ts`, `otlp-sink-factory.ts`. Tests: 18 new. |
+
+**A seam with no implementation on the other side.** `setRemoteExport` was
+designed, tested and never called: the row said so, and it was right. Spans
+terminated in the output channel, which means the tracing model was real and its
+destination was not.
+
+**Configuring an endpoint is the approval, and there is nothing to opt out of.**
+No default collector, no telemetry on by default, no consent dialog to click
+past. Telemetry that turns itself on is the thing people are right to object to,
+and the absence of a default is a stronger promise than a setting that defaults
+to off.
+
+**HTTPS everywhere except loopback, and the exception is the point.** A
+collector on the developer's own machine is the ordinary setup and has no
+certificate. A collector anywhere else is reached across a network that will
+happily read a plaintext bearer token out of the headers, so plain `http:` to a
+remote host is refused rather than warned about.
+
+**Redaction happens at the boundary that leaves the machine.** Spans carry tool
+arguments, paths and command lines, which is exactly the material a secret ends
+up in. A sink writing to an output channel and a sink posting to a vendor have
+different stakes, so the redaction belongs to the exporter rather than the
+emitter. A test asserts a bearer token in a span attribute does not reach the
+wire.
+
+**A collector being down must never fail a run.** Three rules make that true:
+failures are swallowed after one log line, the queue drops its oldest spans past
+a small cap so an outage cannot become an extension-host memory leak, and every
+export carries a timeout so a collector that accepts a connection and never
+answers cannot hold a promise for the life of the window. Dropping the oldest
+rather than the newest is deliberate, because during an outage the recent spans
+are the ones describing what is happening now.
+
+**Batched on size and on time, not either alone.** A size-only trigger holds the
+last few spans of a run forever, so a failure that produced nine spans is never
+exported; a time-only trigger sends a request per span during a busy run.
+
+**Written by hand rather than by adding the SDK.** The OTLP/HTTP JSON encoding
+is a published, stable shape. The alternative brings a tracer, a context manager
+and an async-hooks dependency into an extension host that already has its own
+span model, to gain a serializer.
+
+**Metrics are not exported, and the code says so.** A metrics payload is a
+different OTLP shape with its own aggregation-temporality rules, and emitting
+spans shaped like metrics would produce a dashboard that looks right and counts
+nothing.
+
+**Narrowed:** metrics and team analytics stay open, and the row says which half
+shipped.
+
+**Still true:** live-model Definition of Done cannot be executed here.

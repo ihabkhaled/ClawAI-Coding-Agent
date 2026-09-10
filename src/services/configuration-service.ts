@@ -58,6 +58,8 @@ export interface RuntimeConfiguration extends GlobalConfiguration {
   outputStyle: OutputStyle;
   autoCompact: AutoCompactionMode;
   browserOrigins: string[];
+  telemetryEndpoint: string;
+  telemetryHeaders: Record<string, string>;
   /** Malformed entries are dropped as a group rather than half-applied. */
   hooks: readonly LifecycleHook[];
   backendCustomUrl?: string;
@@ -95,6 +97,22 @@ function numberSetting(
   fallback: number,
 ): number {
   return configuration.get<number>(key) ?? fallback;
+}
+
+/**
+ * Where run spans are sent, when anywhere.
+ *
+ * Read as a pair because they are one decision: an endpoint with no headers is
+ * common, headers with no endpoint mean nothing, and splitting them across the
+ * reader would let one be updated without the other.
+ */
+function telemetrySettings(
+  configuration: vscode.WorkspaceConfiguration,
+): Pick<RuntimeConfiguration, 'telemetryEndpoint' | 'telemetryHeaders'> {
+  return {
+    telemetryEndpoint: configuration.get<string>('telemetryEndpoint') ?? '',
+    telemetryHeaders: configuration.get<Record<string, string>>('telemetryHeaders') ?? {},
+  };
 }
 
 export class ConfigurationService {
@@ -194,6 +212,7 @@ export class ConfigurationService {
       autosave: normalizeAutosavePolicy(configuration.get<unknown>('autosave')),
       autoCompact: normalizeAutoCompactionMode(configuration.get<unknown>('autoCompact')),
       browserOrigins: configuration.get<string[]>('browserOrigins') ?? [],
+      ...telemetrySettings(configuration),
     };
   }
 
