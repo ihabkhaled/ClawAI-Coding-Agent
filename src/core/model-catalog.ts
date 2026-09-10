@@ -1,3 +1,5 @@
+import { isRouterSelectedMode } from './configuration';
+
 import type { RoutingMode } from './configuration';
 
 /** The tag Ollama gives a model it serves from its cloud rather than this host. */
@@ -217,7 +219,10 @@ export function resolveModelSelection(
   selectedModel: string,
   catalog: ModelCatalogEntry[],
 ): ResolvedModelSelection {
-  if (routingMode === 'AUTO') {
+  // Six of the seven modes let the router choose, so only the manual one has
+  // a model key to resolve. Comparing against 'AUTO' here would send five modes
+  // looking for a model they never set.
+  if (isRouterSelectedMode(routingMode)) {
     return { routingMode };
   }
 

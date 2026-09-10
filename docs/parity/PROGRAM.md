@@ -2054,3 +2054,44 @@ arguments are documented inside it: the catalog reports a bare input shape, so a
 capability the description omits is one no model ever uses.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 64 — F088 routing strategies and tool capability
+
+| Batch | Version | Status                                | Evidence                                                                                     |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------------------------- |
+| 64    | 1.24.0  | Code and deterministic gates complete | `configuration.ts` `ROUTING_MODES`, `model-tools.ts`, `chat-public-state.ts`. Tests: 11 new. |
+
+**Nothing was built here that the backend did not already have.** Seven routing
+strategies have existed in `RoutingMode` for as long as the routing service has.
+The extension exposed two. The other five were not missing features; they were
+capability the client hid, and the workaround — pick a model by hand and keep
+picking — is the manual mode wearing a different hat.
+
+**`mode === 'AUTO'` was the real defect.** It was correct while there were two
+modes and became silently wrong the moment there were seven, in a direction
+nothing reports: a cost-saver run treated as manual goes looking for a model key
+that mode never sets. Every such site now asks `isRouterSelectedMode`, which is
+a question that stays true as modes are added.
+
+**Switching to a strategy clears the stored model.** A stale key means the next
+change reads a model nobody chose under that strategy. A local-only run that
+resumes a cloud model is precisely the surprise the mode was picked to avoid.
+
+**The second half of the row was a flag nobody read.** `supportsTools` has come
+from four different backend shapes into the catalog since the catalog existed,
+and no code consulted it. An agent run on a model that cannot call tools is not
+slower: it reads nothing, writes nothing, and spends its entire budget writing
+prose about work it never did. The panel now says so.
+
+**Only an explicit false warns.** A model the catalog has not caught up with is
+assumed capable, for the same reason vision is: absence of a flag is not
+evidence of absence, and a warning on every run that was going to work is a
+warning people learn to ignore. A router-selected mode never warns, because the
+router has not chosen yet.
+
+**Narrowed, honestly.** The audit called the connector gap a missing
+execution-capability check. Dropping tool-less connector models from the catalog
+would have removed models people legitimately use for chat, so the fix reports
+the limitation at the moment it matters instead of hiding the model.
+
+**Still true:** live-model Definition of Done cannot be executed here.

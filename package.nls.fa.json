@@ -53,7 +53,7 @@
   "config.frontendEnvironment": "فرانت‌اند",
   "config.frontendCustomUrl": "نشانی سفارشی فرانت‌اند",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
-  "config.routingMode": "Use automatic backend routing or a manually selected model.",
+  "config.routingMode": "روش انتخاب مدل توسط بک‌اند: خودکار، یک راهبرد نام‌گذاری‌شده، یا مدلی که خودتان انتخاب می‌کنید.",
   "config.agentMode": "Choose automatic execution or read-only planning.",
   "config.speedMode": "How many workspace metadata lookups run at once while building context. Byte reads stay serial; approvals, writes, commands and the included file set are never affected.",
   "config.effortMode": "How much a run may spend: model turns, tool calls, wall clock and output size. Ultra is the default and matches the fixed budget used before effort modes existed.",

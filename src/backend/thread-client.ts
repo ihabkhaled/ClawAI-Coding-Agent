@@ -6,6 +6,7 @@ import {
   type ChatThread,
 } from './contracts';
 
+import type { RoutingMode } from '../core/configuration';
 import type { z } from 'zod';
 
 type PatchRequester = <T>(
@@ -55,7 +56,7 @@ type PostRequester = <T>(
 /** What a new thread is opened with. */
 export interface ThreadCreateInput {
   title?: string;
-  routingMode: 'AUTO' | 'MANUAL_MODEL';
+  routingMode: RoutingMode;
   preferredProvider?: string;
   preferredModel?: string;
 }

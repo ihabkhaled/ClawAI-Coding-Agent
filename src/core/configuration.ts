@@ -17,7 +17,31 @@ export interface ConnectionProfile {
   frontendCustomUrl: string;
 }
 
-const routingModeSchema = z.enum(['AUTO', 'MANUAL_MODEL']);
+/**
+ * The routing strategies the backend actually offers.
+ *
+ * The extension exposed two of these seven for as long as it has existed, and
+ * the other five were never missing from the backend — they were unreachable
+ * from here. A user who wanted local-only or cost-conscious routing had to
+ * pick a model by hand and keep picking, which is the manual mode wearing a
+ * different hat.
+ *
+ * Only `MANUAL_MODEL` names a model. Every other value hands the choice to the
+ * router, which is why the code asks whether a mode is router-selected rather
+ * than whether it equals `AUTO`: a check written against one router mode is a
+ * check that silently excludes the other five.
+ */
+export const ROUTING_MODES = [
+  'AUTO',
+  'MANUAL_MODEL',
+  'LOCAL_ONLY',
+  'PRIVACY_FIRST',
+  'LOW_LATENCY',
+  'HIGH_REASONING',
+  'COST_SAVER',
+] as const;
+
+const routingModeSchema = z.enum(ROUTING_MODES);
 const storedRoutingModeSchema = z.preprocess(
   (value) => (value === 'MANUAL' ? 'MANUAL_MODEL' : value),
   routingModeSchema,
@@ -52,6 +76,28 @@ export interface GlobalConfiguration {
 
 export function normalizeRoutingMode(value: unknown): RoutingMode {
   return storedRoutingModeSchema.parse(value);
+}
+
+/**
+ * Whether the router picks the model for this mode.
+ *
+ * Six of the seven modes answer yes. Writing `mode === 'AUTO'` at a call site
+ * is the bug this exists to prevent: it was correct while there were two modes
+ * and silently wrong the moment there were seven, in a direction nothing would
+ * report — a cost-saver run treated as manual looks for a model key that mode
+ * never sets.
+ */
+export function isRouterSelectedMode(mode: RoutingMode): boolean {
+  return mode !== 'MANUAL_MODEL';
+}
+
+/**
+ * Whether a string the panel sent is a routing strategy rather than a model
+ * key. Both arrive in the same field because the user is answering one
+ * question: how should the next request be routed.
+ */
+export function isRoutingModeName(value: string): value is RoutingMode {
+  return (ROUTING_MODES as readonly string[]).includes(value);
 }
 
 export function normalizeBackendUrl(value: string): string {

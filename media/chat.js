@@ -120,6 +120,7 @@ let currentState = {
   busy: false,
   connected: false,
   modelWarnings: [],
+  modelRunsTools: true,
   models: [],
   permissionMode: 'ASK',
   routingMode: 'AUTO',
@@ -399,7 +400,9 @@ function tokenChip(receipt, className = '') {
  */
 function activeContextCapacity() {
   const modelKey = activeModelValue();
-  if (modelKey === 'AUTO' || modelKey === '') return null;
+  // A strategy has no single window: the router chooses per request, so there is
+  // no denominator the meter could honestly show.
+  if (isRoutingStrategy(modelKey) || modelKey === '') return null;
   const entry = (currentState.models ?? []).find((model) => model.key === modelKey);
   const capacity = entry?.contextTokens ?? null;
   return typeof capacity === 'number' && capacity > 0 ? capacity : null;
@@ -1017,16 +1020,47 @@ function renderHistory(history) {
   elements.historySelect.value = selectedThreadId;
 }
 
+// The backend has always offered seven routing strategies; the panel offered
+// one of them. A user who wanted local-only or cost-conscious routing had to
+// pick a model by hand and keep picking, which is the manual mode in disguise.
+// Only MANUAL_MODEL names a model, so every other value belongs in this list.
+const ROUTING_STRATEGIES = [
+  'AUTO',
+  'LOCAL_ONLY',
+  'PRIVACY_FIRST',
+  'LOW_LATENCY',
+  'HIGH_REASONING',
+  'COST_SAVER',
+];
+
+function routingStrategyLabel(mode) {
+  const strategyLabels = {
+    AUTO: labels.automaticRouting,
+    LOCAL_ONLY: labels.routeLocalOnly,
+    PRIVACY_FIRST: labels.routePrivacyFirst,
+    LOW_LATENCY: labels.routeLowLatency,
+    HIGH_REASONING: labels.routeHighReasoning,
+    COST_SAVER: labels.routeCostSaver,
+  };
+  return strategyLabels[mode] ?? mode;
+}
+
+function isRoutingStrategy(value) {
+  return ROUTING_STRATEGIES.includes(value);
+}
+
 function activeModelValue() {
   if (pendingModel !== null) {
     return pendingModel;
   }
-  return currentState.routingMode === 'AUTO' ? 'AUTO' : currentState.selectedModel;
+  return currentState.routingMode === 'MANUAL_MODEL'
+    ? currentState.selectedModel
+    : currentState.routingMode;
 }
 
 function modelLabel(modelKey) {
-  if (modelKey === 'AUTO') {
-    return labels.automaticRouting;
+  if (isRoutingStrategy(modelKey)) {
+    return routingStrategyLabel(modelKey);
   }
   return currentState.models.find((model) => model.key === modelKey)?.displayName ?? modelKey;
 }
@@ -1051,10 +1085,15 @@ function renderModels(models) {
     groups.set(groupName, group);
   }
   elements.modelSelect.replaceChildren();
-  const auto = document.createElement('option');
-  auto.value = 'AUTO';
-  auto.textContent = labels.automaticRouting;
-  elements.modelSelect.append(auto);
+  const strategies = document.createElement('optgroup');
+  strategies.label = labels.routing;
+  for (const mode of ROUTING_STRATEGIES) {
+    const option = document.createElement('option');
+    option.value = mode;
+    option.textContent = routingStrategyLabel(mode);
+    strategies.append(option);
+  }
+  elements.modelSelect.append(strategies);
   for (const [groupName, groupModels] of groups) {
     const group = document.createElement('optgroup');
     group.label = groupName;
@@ -1536,7 +1575,11 @@ function backendStatusLabel(status) {
 }
 
 function reconcilePending(state) {
-  if (pendingModel === 'AUTO' && state.routingMode === 'AUTO' && state.selectedModel.length === 0) {
+  if (
+    pendingModel === state.routingMode &&
+    state.routingMode !== 'MANUAL_MODEL' &&
+    state.selectedModel.length === 0
+  ) {
     pendingModel = null;
   } else if (
     pendingModel !== null &&
@@ -1739,10 +1782,12 @@ function renderState(state) {
   elements.backendLabel.textContent = backendStatusLabel(state.backendStatus);
   elements.backendDot.dataset.status = state.backendStatus;
   elements.routeMode.textContent =
-    state.routingMode === 'AUTO' ? labels.routeAutomatic : labels.routeSelected;
+    state.routingMode === 'MANUAL_MODEL' ? labels.routeSelected : labels.routeAutomatic;
   const active = state.models.find((model) => model.key === state.selectedModel);
   const routeModelLabel =
-    state.routingMode === 'AUTO' ? 'AUTO' : (active?.displayName ?? state.selectedModel);
+    state.routingMode === 'MANUAL_MODEL'
+      ? (active?.displayName ?? state.selectedModel)
+      : routingStrategyLabel(state.routingMode);
   elements.routeModel.textContent = routeModelLabel;
   describeText(elements.routeToggle, `${routeModelLabel} · ${elements.routeMode.textContent}`);
   elements.activeModeBadge.textContent =
@@ -1782,7 +1827,15 @@ function renderState(state) {
   endModelRefreshFeedback();
   renderModels(state.models);
   renderHistory(state.history);
-  renderWarnings(state.modelWarnings ?? []);
+  // A model that cannot call a tool cannot run the agent at all, so the warning
+  // belongs beside the ones about providers that failed to load. It is the same
+  // dismissible footnote, because it is a limitation to know about rather than
+  // an error to act on.
+  renderWarnings(
+    state.modelRunsTools === false
+      ? [...(state.modelWarnings ?? []), labels.modelCannotCallTools]
+      : (state.modelWarnings ?? []),
+  );
   renderWorkspace(state.workspaceReadiness, state.workspaceScope);
   renderRunDeck(state.generationQueue, state.agentRuns);
   renderRuntimeTimeline(state.runtime);

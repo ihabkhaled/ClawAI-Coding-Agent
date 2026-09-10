@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import type { RoutingMode } from '../core/configuration';
 import type { ResearchMode } from '../core/research-mode';
 import type {
   RunBudget,
@@ -63,7 +64,7 @@ export interface MessageRequest {
   threadId: string;
   content: string;
   clientIntent?: string;
-  routingMode: 'AUTO' | 'MANUAL_MODEL';
+  routingMode: RoutingMode;
   provider?: string;
   model?: string;
   modelDisplayName?: string;
