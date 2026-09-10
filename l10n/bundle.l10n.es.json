@@ -79,7 +79,7 @@
   "Automatic routing": "Enrutamiento automatico",
   "Autonomous Scoped": "Autonomous Scoped",
   "Autonomous Scoped mode can apply approved low-risk effects inside the current workspace. Elevation, production, destructive, publication, Workspace Trust, secret exclusions, path boundaries, and stale-state checks remain protected.": "Autonomous Scoped mode can apply approved low-risk effects inside the current workspace. Elevation, production, destructive, publication, Workspace Trust, secret exclusions, path boundaries, and stale-state checks remain protected.",
-  "Backend": "Backend",
+  "Backend": "Servidor",
   "Blocked by: {0}.": "Blocked by: {0}.",
   "Browser authorization and app links": "Autorización del navegador y enlaces de la aplicación",
   "Browser-based sign in": "Browser-based sign in",

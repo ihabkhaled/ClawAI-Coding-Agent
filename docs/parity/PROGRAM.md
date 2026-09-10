@@ -1375,3 +1375,30 @@ input type inline, which `rules/12` prohibits, and `agent-coordinator.ts` was
 over its line ceiling again. Extracting `RunAgentInput` fixed both at once.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 47 — the localization gate that batch 45 needed
+
+| Batch | Version | Status                                | Evidence                                                    |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------- |
+| 47    | 1.7.1   | Code and deterministic gates complete | `scripts/generate-locales.mjs` lookup order, `l10n:verify`. |
+
+Batches 45 and 46 went red on CI. Two mistakes, both mine, both instructive.
+
+**The new translation block was consulted first.** Its job was to fill gaps,
+but placing it at the head of the lookup chain let it override translations
+that already existed: Chinese `view.chat` became 对话 instead of 聊天, Thai
+แชท instead of แชต. A gap-filler belongs at the end of the chain, where it can
+only add. It is there now.
+
+**The regenerated `package.nls.*.json` files were never staged.** The commit
+used explicit paths — correct policy — and `l10n/` was listed while
+`package.nls.*.json` was not, even though one generator writes both.
+
+The second mistake is the one worth fixing structurally. `npm run check` did
+not verify localization freshness; that lived only in CI, and this program had
+already been bitten by it once, in batch 20. Knowing about a gap did not stop
+it recurring, because knowing is not a control. `l10n:verify` now runs inside
+`check`, so the gate before every commit checks exactly what CI checks.
+
+The lesson is the general one: when a gate exists in CI but not locally, the
+local gate is the one that decides how many red builds you ship.

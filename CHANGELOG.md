@@ -2,6 +2,20 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.7.1
+
+Patch: the translation block fills gaps instead of overriding, and `npm run
+check` now verifies generated localization.
+
+- **1.6.0's new translations were consulted first** and silently replaced
+  existing ones — Chinese `view.chat` went from 聊天 to 对话 and Thai from แชต to
+  แชท. A block whose job is to fill gaps is now consulted last, so it can only
+  add.
+- **The regenerated `package.nls.*.json` files were left uncommitted**, which
+  CI caught and `npm run check` could not: freshness was a CI-only step.
+  `l10n:verify` is now part of `check`, so the gate that runs before every
+  commit checks the same thing CI does.
+
 ## 1.7.0
 
 Minor: skills are slash commands now (F077).
