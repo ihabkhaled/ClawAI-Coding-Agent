@@ -87,8 +87,26 @@ const pathBearingArgumentsSchema = z
       .optional(),
     executable: z.string().min(1).max(4_096).optional(),
     arguments: z.array(z.string().max(32_768)).max(1_000).optional(),
+    url: z.string().min(1).max(4_096).optional(),
   })
   .loose();
+
+/**
+ * The hosts a call names, for domain rules to match against.
+ *
+ * Parsed with the URL parser rather than a pattern, so `https://evil.test/#a.trusted.test`
+ * yields `evil.test` and not the host someone hoped a reader would see. A URL
+ * that does not parse contributes nothing: the tool's own guard is what
+ * rejects it, and inventing a host here would be inventing a policy subject.
+ */
+function subjectDomains(parsed: z.infer<typeof pathBearingArgumentsSchema>): string[] {
+  if (parsed.url === undefined) return [];
+  try {
+    return [new URL(parsed.url).hostname.toLowerCase()];
+  } catch {
+    return [];
+  }
+}
 
 function subjectPaths(parsed: z.infer<typeof pathBearingArgumentsSchema>): string[] {
   const paths = new Set<string>();
@@ -112,7 +130,7 @@ function subjectPaths(parsed: z.infer<typeof pathBearingArgumentsSchema>): strin
 function policySubject(invocation: ToolInvocation): PolicySubject {
   const parsed = pathBearingArgumentsSchema.safeParse(invocation.arguments);
   const base = { tool: invocation.toolName, operation: invocation.operation };
-  if (!parsed.success) return { ...base, paths: [] };
+  if (!parsed.success) return { ...base, paths: [], domains: [] };
   const command =
     parsed.data.executable === undefined
       ? undefined
@@ -120,6 +138,7 @@ function policySubject(invocation: ToolInvocation): PolicySubject {
   return {
     ...base,
     paths: subjectPaths(parsed.data),
+    domains: subjectDomains(parsed.data),
     ...(command === undefined ? {} : { command }),
   };
 }

@@ -2,6 +2,23 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.19.0
+
+Minor: domain rules in the project policy (F053, narrowed).
+
+- **`domainGlob` joins `pathGlob` and `commandGlob`** in
+  `.clawai/policies/policy.json`, so a repository can refuse or gate the hosts
+  the agent may reach.
+- **It matches the host, not the URL.** A rule about where a request may go is
+  about the site; matching a whole URL would let a path fragment satisfy a rule
+  meant to be about the origin. `https://evil.test/#docs.trusted.test` yields
+  `evil.test`, because the host comes from the URL parser rather than a
+  pattern.
+- **A call that names no host can never match a domain rule** — a rule about
+  network access says nothing about a file read.
+- Still tighten-only, like every project rule: there is no `allow` outcome, so
+  a cloned repository can only refuse work, never grant itself permission.
+
 ## 1.18.0
 
 Minor: named checkpoints (F057).
