@@ -1,5 +1,7 @@
 import { redactText } from './redaction';
 
+import type { SandboxGuarantees } from './sandbox-capability.types';
+
 /** Everything the report is allowed to know. Nothing else reaches it. */
 export interface DiagnosticReportInput {
   readonly extensionVersion: string;
@@ -17,6 +19,12 @@ export interface DiagnosticReportInput {
   readonly workspaceTrusted: boolean;
   readonly lastError: string | undefined;
   readonly recentRunIds: readonly string[];
+  /**
+   * What isolation this host can give a command. Reported because a bug about
+   * a command that reached something it should not is unanswerable without it,
+   * and because saying "none" out loud is the honest half of the feature.
+   */
+  readonly sandbox: SandboxGuarantees;
 }
 
 export const MAX_DIAGNOSTIC_REPORT_CHARACTERS = 20_000;
@@ -74,6 +82,14 @@ export function buildDiagnosticReport(input: DiagnosticReportInput): string {
     line('Agent mode', input.agentMode),
     line('Workspace open', input.workspaceOpen ? 'yes' : 'no'),
     line('Workspace trusted', input.workspaceTrusted ? 'yes' : 'no'),
+    '',
+    '### Command isolation',
+    '',
+    line('Sandbox', input.sandbox.kind),
+    line('Filesystem jail', input.sandbox.filesystemJail ? 'yes' : 'no'),
+    line('Network isolation', input.sandbox.networkIsolation ? 'yes' : 'no'),
+    line('Process containment', input.sandbox.processContainment ? 'yes' : 'no'),
+    input.sandbox.summary,
     '',
     '### Recent runs',
     '',

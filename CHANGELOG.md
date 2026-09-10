@@ -2,6 +2,28 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.35.0
+
+Minor: the host says what isolation it can actually give (F051, narrowed).
+
+- **A sandbox capability probe, reported in the diagnostic report.** The
+  extension bounds commands — no shell, no chaining, capped output and wall
+  clock — but bounding is not isolation, and nothing said so.
+- **Saying "none" out loud is the honest half of the feature.** A run that
+  reported "sandboxed" on a host with no sandbox would be lying in the one place
+  a reader is deciding whether to approve something.
+- **Each guarantee is stated separately**, not rolled into one boolean. A jail
+  that isolates the filesystem and not the network is a different promise from
+  one that does both, and a caller told only "yes" cannot tell which they got.
+- **Windows job objects are named rather than counted as a sandbox.** They
+  contain a command and its children and do not jail the filesystem or block the
+  network, so "contained but not jailed" is what the report says.
+- **A helper on PATH is evidence, not proof.** A container can have `bwrap` and
+  lack the capabilities to use it, so the probe reports what a host has a
+  mechanism for and leaves the caller to probe before relying on it.
+- Probed once per session, because the answer cannot change while the process
+  runs and a probe per command would cost more than the isolation saves.
+
 ## 1.34.0
 
 Minor: agent graphs can be saved and re-run (F011, narrowed).
