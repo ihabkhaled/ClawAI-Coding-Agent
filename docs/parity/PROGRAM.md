@@ -1968,3 +1968,43 @@ the terminal: streaming it would mean a second event sink through
 reports the run and the final summary, which is what a run log is for.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 62 — F102 attention queue
+
+| Batch | Version | Status                                | Evidence                                                                                            |
+| ----- | ------- | ------------------------------------- | --------------------------------------------------------------------------------------------------- |
+| 62    | 1.22.0  | Code and deterministic gates complete | `agent-attention.ts`, `attention-items.ts`, `attention-view.ts`, `clawAI.attention`. Tests: 10 new. |
+
+**This closes a blocker the program has been carrying in memory, not in code.**
+The known failure was that a headless run stalls on an in-panel Approve nobody
+clicked. The approval was never lost; it was simply invisible to a reader
+looking at a source file, and an unattended run could sit blocked for as long as
+nobody thought to open the panel. A list plus an activity-bar badge is what
+turns that from a thing you have to remember into a thing you are told.
+
+**Ordering is the feature.** An approval or a question has stopped a run and
+nothing will restart it on its own. A failed run has already happened and cannot
+get worse. A queued run is waiting its turn, which costs nothing. Any other
+order buries the only entry that is actually expensive.
+
+**The badge counts less than the list, on purpose.** Queued and long-running
+work appears in the list because a reader wants to see it; it is kept out of the
+badge because a badge lit through every ordinary busy period is a badge nobody
+reads. The list answers "what is going on"; the badge answers "do I need to
+stop what I am doing".
+
+**Slow is listed, not flagged.** Five minutes of reading a large monorepo is
+work. The audit's own history has a run dying of a budget that was too small,
+so treating duration as failure would be the same mistake in a different place.
+What the reader actually cannot tell, having walked away, is a long run from a
+dead one — and a row that says how many minutes so far answers exactly that.
+
+**Every row opens the panel.** An attention list whose rows do not act on the
+thing they name is a second place to read the same bad news.
+
+**Narrowed, and the row says how.** F102 also asks for ownership, filtering,
+bulk actions, and cloud and device sessions in the same view. Ownership and
+remote sessions need the fleet contract that F013 and F095 are blocked on; the
+attention queue is the half that needed nothing and was worth the most.
+
+**Still true:** live-model Definition of Done cannot be executed here.

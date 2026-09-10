@@ -2,6 +2,28 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.22.0
+
+Minor: a Needs You view with a badge (F102, narrowed).
+
+- **A run that stalls on an unclicked approval now says so outside the panel.**
+  The approval lives in the chat panel, so a reader looking at a source file got
+  no signal at all, and an unattended run could sit blocked indefinitely. The
+  new view lists what is waiting, and the activity-bar badge is the part that
+  reaches someone who is not looking at ClawAI.
+- **Ordered by what it costs to leave alone.** An approval or a question has
+  stopped a run and nothing will restart it; a failed run has already happened;
+  a queued run is merely waiting its turn. Listing them in any other order
+  buries the one that costs something.
+- **The badge counts only what has actually stopped.** Queued and long-running
+  work appears in the list but not in the badge, because a badge lit through
+  every ordinary busy period says nothing.
+- **A long-running run is listed, not flagged.** Five minutes of reading a large
+  repository is work, not a failure. The point is that a reader who walked away
+  cannot otherwise tell that apart from a run that will never finish.
+- Every row opens the panel, because an attention list whose rows do not act on
+  what they name is a second place to read the same bad news.
+
 ## 1.21.0
 
 Minor: a run terminal (F069, narrowed).

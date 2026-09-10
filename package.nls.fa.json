@@ -72,6 +72,7 @@
   "view.context": "زمینه",
   "view.history": "تاریخچه",
   "view.artifacts": "Delivered Files",
+  "view.attention": "به شما نیاز دارد",
   "view.findings": "Findings",
   "view.tasks": "Tasks",
   "welcome.model": "Choose AUTO routing or a model exposed by your ClawAI backend.",

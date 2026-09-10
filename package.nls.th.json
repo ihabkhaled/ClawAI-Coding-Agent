@@ -72,6 +72,7 @@
   "view.context": "บริบท",
   "view.history": "ประวัติ",
   "view.artifacts": "Delivered Files",
+  "view.attention": "ต้องการคุณ",
   "view.findings": "Findings",
   "view.tasks": "Tasks",
   "welcome.model": "Choose AUTO routing or a model exposed by your ClawAI backend.",
