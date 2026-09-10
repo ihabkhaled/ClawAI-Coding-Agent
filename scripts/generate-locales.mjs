@@ -4429,6 +4429,57 @@ const fastModeTranslations = {
   },
 };
 
+const browserOriginTranslations = {
+  ar: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'أصول مواقع إضافية يمكن لأداة المتصفح فتحها دون سؤال، مثل خادم التطوير الخاص بك. أصل الخدمة الخلفية والواجهة مسموح بها دائمًا ولا يمكن إزالتها هنا.',
+  },
+  de: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Zusätzliche Website-Origins, die das Browser-Tool ohne Nachfrage öffnen darf, etwa Ihr eigener Entwicklungsserver. Die Backend- und Frontend-Origins sind immer erlaubt und lassen sich hier nicht entfernen.',
+  },
+  es: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Orígenes de sitios adicionales que la herramienta de navegador puede abrir sin preguntar, como tu propio servidor de desarrollo. Los orígenes del backend y del frontend siempre están permitidos y no pueden quitarse aquí.',
+  },
+  fa: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'مبدأهای سایت اضافی که ابزار مرورگر می‌تواند بدون پرسش باز کند، مانند سرور توسعه خودتان. مبدأ بک‌اند و فرانت‌اند همیشه مجاز است و از اینجا حذف نمی‌شود.',
+  },
+  fr: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Origines de sites supplémentaires que l’outil de navigation peut ouvrir sans demander, comme votre propre serveur de développement. Les origines backend et frontend sont toujours autorisées et ne peuvent pas être retirées ici.',
+  },
+  hi: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'अतिरिक्त साइट ऑरिजिन जिन्हें ब्राउज़र टूल बिना पूछे खोल सकता है, जैसे आपका अपना डेवलपमेंट सर्वर। बैकएंड और फ़्रंटएंड ऑरिजिन हमेशा अनुमत हैं और यहाँ से हटाए नहीं जा सकते।',
+  },
+  it: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Origini di siti aggiuntive che lo strumento browser può aprire senza chiedere, come il tuo server di sviluppo. Le origini di backend e frontend sono sempre consentite e non possono essere rimosse qui.',
+  },
+  ja: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'ブラウザーツールが確認なしに開いてよい追加のサイトオリジン（自分の開発サーバーなど）。バックエンドとフロントエンドのオリジンは常に許可され、ここでは削除できません。',
+  },
+  pt: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Origens de sites adicionais que a ferramenta de navegador pode abrir sem perguntar, como o seu próprio servidor de desenvolvimento. As origens do backend e do frontend são sempre permitidas e não podem ser removidas aqui.',
+  },
+  ru: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Дополнительные источники сайтов, которые инструмент браузера может открывать без запроса, например ваш собственный сервер разработки. Источники бэкенда и фронтенда разрешены всегда и здесь не удаляются.',
+  },
+  th: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'ออริจินของเว็บไซต์เพิ่มเติมที่เครื่องมือเบราว์เซอร์เปิดได้โดยไม่ต้องถาม เช่น เซิร์ฟเวอร์สำหรับพัฒนาของคุณเอง ออริจินของแบ็กเอนด์และฟรอนต์เอนด์ได้รับอนุญาตเสมอและลบที่นี่ไม่ได้',
+  },
+  zh: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      '浏览器工具无需询问即可打开的额外站点来源，例如你自己的开发服务器。后端和前端来源始终被允许，且无法在此移除。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -4467,6 +4518,7 @@ function translate(locale, message) {
     autoCompactionTranslations[locale][message] ??
     contextFreshnessTranslations[locale][message] ??
     fastModeTranslations[locale][message] ??
+    browserOriginTranslations[locale][message] ??
     message
   );
 }

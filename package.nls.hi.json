@@ -54,6 +54,7 @@
   "config.frontendEnvironment": "फ्रंटएंड",
   "config.frontendCustomUrl": "कस्टम फ्रंटएंड URL",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
+  "config.browserOrigins": "अतिरिक्त साइट ऑरिजिन जिन्हें ब्राउज़र टूल बिना पूछे खोल सकता है, जैसे आपका अपना डेवलपमेंट सर्वर। बैकएंड और फ़्रंटएंड ऑरिजिन हमेशा अनुमत हैं और यहाँ से हटाए नहीं जा सकते।",
   "config.autoCompact": "जब बातचीत जारी रखने के लिए लगभग बहुत लंबी हो जाए तो क्या करें: कुछ नहीं, सारांश बनाने का प्रस्ताव दें, या स्वतः सारांश बनाएँ।",
   "config.routingMode": "बैकएंड मॉडल कैसे चुनता है: स्वचालित रूप से, किसी नामित रणनीति से, या आपके द्वारा चुना गया।",
   "config.agentMode": "Choose automatic execution or read-only planning.",

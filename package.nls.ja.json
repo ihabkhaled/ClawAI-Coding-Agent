@@ -54,6 +54,7 @@
   "config.frontendEnvironment": "フロントエンド",
   "config.frontendCustomUrl": "カスタムフロントエンド URL",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
+  "config.browserOrigins": "ブラウザーツールが確認なしに開いてよい追加のサイトオリジン（自分の開発サーバーなど）。バックエンドとフロントエンドのオリジンは常に許可され、ここでは削除できません。",
   "config.autoCompact": "会話が続けるには長くなりすぎそうなときの動作: 何もしない、要約を提案する、または自動的に要約する。",
   "config.routingMode": "バックエンドがモデルを選ぶ方法: 自動、名前付き戦略、または自分で選択。",
   "config.agentMode": "Choose automatic execution or read-only planning.",

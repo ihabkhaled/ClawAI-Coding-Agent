@@ -2258,3 +2258,40 @@ is weighed belongs to the model that asked for it, not to a merge rule the
 extension imposes.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 69 — F036 configurable browser origins
+
+| Batch | Version | Status                                | Evidence                                                                                   |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------------------ |
+| 69    | 1.29.0  | Code and deterministic gates complete | `browser-origins.ts`, `runtime-studio-helpers.ts`, `clawAI.browserOrigins`. Tests: 10 new. |
+
+**The allow list covered nothing anyone wanted to look at.** It held the backend
+and frontend origins this extension signs in to. A developer's own dev server,
+their staging site and the documentation they are reading were all external, and
+each visit cost an approval prompt — which is exactly the shape of permission a
+person learns to click through without reading.
+
+**Loopback is allowed here and refused two files away, and the difference is who
+chose the address.** `workspace.web` follows a URL the model picked, so a
+loopback URL there is the textbook way to reach a metadata service nobody meant
+to expose; batch 41 refuses it for that reason. This list is typed by the user
+into their own settings, naming a server they are running. Refusing
+`http://localhost:3000` here would refuse the main reason the setting exists.
+Two rules that look contradictory are the same rule applied to different trust.
+
+**Credentials in a URL are refused rather than stored.** A password in a
+settings file is a password in a backup, a screen share and a bug report.
+
+**Configuration may only add.** The built-in origins are not removable, because
+a workspace file that could subtract the backend origin would be a workspace
+file that breaks sign in.
+
+**Reduced to origins, and forgiving of a bad line.** A path or query cannot
+smuggle in more than a site, and one unparseable entry is skipped rather than
+discarding the list a person wrote.
+
+**Narrowed:** the row's other half — attaching browser state to the composer —
+stays open. It is a webview and attachment-pipeline change, not a policy one,
+and pairing them would put two unrelated risks in one batch.
+
+**Still true:** live-model Definition of Done cannot be executed here.

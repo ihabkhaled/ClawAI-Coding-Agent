@@ -54,6 +54,7 @@
   "config.frontendEnvironment": "Frontend",
   "config.frontendCustomUrl": "URL de frontend personalizada",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
+  "config.browserOrigins": "Origens de sites adicionais que a ferramenta de navegador pode abrir sem perguntar, como o seu próprio servidor de desenvolvimento. As origens do backend e do frontend são sempre permitidas e não podem ser removidas aqui.",
   "config.autoCompact": "O que fazer quando uma conversa fica quase longa demais para continuar: nada, oferecer resumi-la ou resumi-la automaticamente.",
   "config.routingMode": "Como o backend escolhe um modelo: automaticamente, por uma estratégia nomeada ou um que você escolha.",
   "config.agentMode": "Choose automatic execution or read-only planning.",

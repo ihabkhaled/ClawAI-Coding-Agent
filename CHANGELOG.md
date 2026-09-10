@@ -2,6 +2,29 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.29.0
+
+Minor: the browser tool can be pointed at your own sites (F036, narrowed).
+
+- **`clawAI.browserOrigins` adds site origins the browser may open without
+  asking.** The allow list was the backend and frontend this extension signs in
+  to, and nothing else — not your dev server, not your staging site, not the
+  documentation you are working from. Each of those was reachable only by
+  approving an external navigation one prompt at a time, which is the shape of a
+  permission people click through without reading.
+- **Loopback and private addresses are allowed here, and refused by the web
+  tool.** The difference is who chose the address. `workspace.web` follows URLs
+  a model picked, so a loopback URL there is the classic way to reach a metadata
+  service nobody meant to expose. This list is written by the user, naming a
+  server they are running.
+- **A URL carrying credentials is refused.** A password in a settings file is a
+  password in a backup, a screen share and a bug report.
+- **The built-in origins cannot be removed by configuration**, only added to. A
+  setting that could subtract the backend origin would let a workspace file
+  break sign in.
+- Entries are reduced to origins, so a path or a query cannot smuggle in more
+  than a site, and a bad entry is skipped rather than failing the whole list.
+
 ## 1.28.0
 
 Minor: an advisor model (F090, narrowed).

@@ -54,6 +54,7 @@
   "config.frontendEnvironment": "فرانت‌اند",
   "config.frontendCustomUrl": "نشانی سفارشی فرانت‌اند",
   "config.requestTimeoutMs": "Maximum duration for a backend request in milliseconds.",
+  "config.browserOrigins": "مبدأهای سایت اضافی که ابزار مرورگر می‌تواند بدون پرسش باز کند، مانند سرور توسعه خودتان. مبدأ بک‌اند و فرانت‌اند همیشه مجاز است و از اینجا حذف نمی‌شود.",
   "config.autoCompact": "وقتی گفتگو تقریباً برای ادامه بیش از حد طولانی شد چه کند: هیچ کاری، پیشنهاد خلاصه‌سازی، یا خلاصه‌سازی خودکار.",
   "config.routingMode": "روش انتخاب مدل توسط بک‌اند: خودکار، یک راهبرد نام‌گذاری‌شده، یا مدلی که خودتان انتخاب می‌کنید.",
   "config.agentMode": "Choose automatic execution or read-only planning.",

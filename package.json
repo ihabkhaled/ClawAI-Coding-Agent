@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "1.28.0",
+  "version": "1.29.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -341,6 +341,15 @@
           "default": "AUTO",
           "scope": "resource",
           "description": "%config.routingMode%"
+        },
+        "clawAI.browserOrigins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "resource",
+          "description": "%config.browserOrigins%"
         },
         "clawAI.autoCompact": {
           "type": "string",
