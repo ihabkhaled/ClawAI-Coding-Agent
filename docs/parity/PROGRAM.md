@@ -2853,3 +2853,39 @@ recorded beside the code that needs them.
 **The assertion deliberately trusts nothing.** Receipts, stream events and the
 model's own DONE are all things a broken run could produce. The check runs the
 program that was written and reads what it prints.
+
+### Batch 83 — F014 open flagship strategy
+
+| Batch | Version | Status                                | Evidence                                                                         |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------------- |
+| 83    | 1.43.0  | Code and deterministic gates complete | `flagship-strategy.ts`, `flagship-delivery.ts`, `runtime-tool-input-schemas.ts`. |
+
+**A closed list of five labels, enforced by a validator, branching nothing.**
+`strategy` reaches exactly one place: the delivery's identity hash. A delivery
+whose approach was a security hardening or a data migration was refused, not
+because the lane could not run it, but because this repository had named five
+things and not that one.
+
+**Suggestions, not limits.** The five are still recognizable through
+`isSuggestedFlagshipStrategy`, so a report can group familiar work, without the
+distinction being a refusal.
+
+**A slug because it is hashed.** Free text would let two identical deliveries
+differ by a capital letter and produce two identities, which is the collision the
+hash exists to prevent.
+
+**Both schemas, or neither.** The hand-authored JSON schema is `strict()`;
+leaving the enum in it would have refused the very names the validator now
+accepts, with no error the model could act on.
+
+**The catalog refused a `pattern`, and it was right to.** Its keyword allowlist
+exists so a tool definition cannot cost an unpredictable amount to check, and a
+regular expression is the one keyword with no bound. The rule is stated in the
+schema's description, which is what the model reads, and enforced by the
+validator, which is what actually decides. The check was not widened to make the
+change fit.
+
+**The ten stages stay closed on purpose.** The stage adapter branches on
+authorize, implement, integrate and commit. That list is behaviour, not
+vocabulary, and opening it would break the lane rather than free the caller. The
+F014 row records this as a deliberate narrowing.

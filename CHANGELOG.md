@@ -2,6 +2,30 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.43.0
+
+Minor: a flagship delivery names its own strategy (F014, narrowed).
+
+- **Five strategy names were a validator, and they constrained nothing but the
+  caller's vocabulary.** Nothing branched on the value. It is carried into the
+  delivery's identity hash and shown in reports, and that is all it has ever
+  done — so a security hardening or a data migration was refused for a field
+  that is a label.
+- **The five survive as suggestions.** `isSuggestedFlagshipStrategy` still tells
+  a familiar strategy from a new one, for grouping a report, without that
+  distinction being a refusal.
+- **It is a slug, not free text, because it is hashed.** Free text would let two
+  identical deliveries differ by a capital letter or a trailing space and
+  produce different identities, which is the collision the hash exists to
+  prevent. Case and surrounding space are normalized; leading, trailing and
+  doubled hyphens are refused.
+- **The hand-authored JSON schema was widened with it.** It is `strict()`, so
+  leaving the enum there would have refused the exact names the validator now
+  accepts, and the model would never have learned why.
+- **The ten stages stay closed, deliberately.** Several of them are load-bearing
+  in the stage adapter, which branches on authorize, implement, integrate and
+  commit. Opening that list would not free the caller, it would break the lane.
+
 ## 1.42.0
 
 Minor: a live check that proves the agent can actually code.

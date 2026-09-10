@@ -26,6 +26,21 @@ function strict(
 }
 
 const identifier = { type: 'string', minLength: 2, maxLength: 200 } as const;
+// Mirrors flagshipStrategySchema. A closed enum here would refuse the very
+// strategy names the validator now accepts, and the model would never learn why.
+//
+// The slug rule is stated rather than expressed as `pattern`, which this
+// catalog does not permit: a pattern is an unbounded regular expression, and
+// every bound in these schemas exists so a tool definition cannot cost an
+// unpredictable amount to check. The description is what the model reads, and
+// the validator is what enforces it.
+const flagshipStrategy = {
+  type: 'string',
+  minLength: 3,
+  maxLength: 60,
+  description:
+    'Lowercase slug naming the approach, such as cross-stack-feature or security-hardening. Letters and digits with single hyphens between them.',
+} as const;
 const shortText = { type: 'string', minLength: 1, maxLength: 2_000 } as const;
 const epochs = strict({ account: integer, workspace: integer, target: integer, policy: integer }, [
   'account',
@@ -136,16 +151,7 @@ const flagshipRequest = strict(
     deliveryId: identifier,
     runId: identifier,
     goal: text,
-    strategy: {
-      type: 'string',
-      enum: [
-        'cross-stack-feature',
-        'incident-fix',
-        'architecture-refactor',
-        'mobile-web-backend',
-        'prompt-pack-audit',
-      ],
-    },
+    strategy: flagshipStrategy,
     repositories: texts,
     writeSet: texts,
     acceptanceChecks: texts,
