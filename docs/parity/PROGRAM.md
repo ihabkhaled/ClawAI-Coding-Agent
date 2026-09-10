@@ -2212,3 +2212,49 @@ weeks later and put back a routing mode chosen for a task nobody remembers, whic
 is worse than the fallback it would have used instead.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 68 — F090 advisor model
+
+| Batch | Version | Status                                | Evidence                                                                       |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------ |
+| 68    | 1.28.0  | Code and deterministic gates complete | `advisor.ts`, `advisor-tool-executor.ts`, `backend-advisor.ts`. Tests: 13 new. |
+
+**Delegation is not consultation, and the row was right that only one existed.**
+A sub-agent can be given work. Nothing could ask, mid-run, whether a conclusion
+holds — without handing over the task, the workspace, or the decision.
+
+**The advisor is never the running model, and that is the whole feature.**
+Asking the same model the same question in the same conversation is not a second
+opinion. It is the same opinion restated with more confidence, and a run that
+counts it as corroboration is worse off than one that never asked.
+
+**Preference order encodes what makes advice useful.** Tool-capable first,
+because such a model has seen the shape of the work. Remote over local, because
+the local model is usually the small one and a smaller second opinion tends to
+agree rather than to check. Context window last, since advice is only as good as
+how much of the question fits.
+
+**The advisor has no tools, no root key and no sight of the conversation.** The
+worst a bad advisor can do is give bad advice, which the run may reject. A
+consultant handed the workspace would be a second agent nobody scoped, running
+under an approval nobody gave.
+
+**Advice carries its provenance and says it is not binding.** A second opinion
+whose source is not recorded cannot be weighed later, and one that reads like a
+verdict gets followed for the wrong reason.
+
+**One reachable model reports, it does not fail.** That is a fact about the
+account, not a fault in the call, and failing there would fail a run for asking
+a reasonable question.
+
+**A thread per consultation.** Reusing one advisor thread would let one
+question's answer colour the next, and sending into the run's own conversation
+would put a second model's words into the transcript the user reads as their
+agent's.
+
+**Narrowed:** the pack also asks for an advice merge step in the main loop. What
+ships is the consult point and the provenance it produces; deciding how advice
+is weighed belongs to the model that asked for it, not to a merge rule the
+extension imposes.
+
+**Still true:** live-model Definition of Done cannot be executed here.

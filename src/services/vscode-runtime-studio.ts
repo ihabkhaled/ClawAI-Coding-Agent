@@ -15,7 +15,6 @@ import {
   databaseToolDefinition,
 } from '../infrastructure/database-tool-executor';
 import { DeterministicEvidenceArchive } from '../infrastructure/deterministic-evidence-archive';
-import { VscodeElevationVerificationAdapter } from '../infrastructure/elevation-tool-executor';
 import {
   VscodeFlagshipCheckpointReconciler,
   VscodeFlagshipCheckpointStore,
@@ -25,7 +24,6 @@ import {
   RuntimeIntegrationGitAdapter,
   RuntimeIntegrationQualityAdapter,
 } from '../infrastructure/integration-tool-executor';
-import { PackagedNativeElevationAdapter } from '../infrastructure/native-elevation-adapter';
 import { PlaywrightBrowserDriver } from '../infrastructure/playwright-browser-driver';
 import {
   QualityToolExecutor,
@@ -48,6 +46,7 @@ import { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-bind
 import { VscodeWorkspaceDiagnostics } from '../infrastructure/vscode-workspace-diagnostics';
 import { VscodeWorkspaceSymbols } from '../infrastructure/vscode-workspace-symbols';
 
+import { backendAdvisor } from './backend-advisor';
 import { backendWebResearch } from './backend-web-research';
 import { BrowserControllerService } from './browser-controller-service';
 import { ContainerEngineService } from './container-engine-service';
@@ -59,7 +58,6 @@ import {
   SqlCliDatabaseAdapter,
 } from './database-workbench-service';
 import { DevelopmentServiceManager } from './development-service-manager';
-import { ElevationBrokerService } from './elevation-broker-service';
 import { EvidenceBundleService } from './evidence-bundle-service';
 import { ExecutionTargetRegistry } from './execution-target-registry';
 import { FileTransactionService } from './file-transaction-service';
@@ -76,6 +74,7 @@ import {
   RuntimeFlagshipStageAdapter,
 } from './runtime-flagship-stage-adapter';
 import { RuntimePolicyV2Adapter } from './runtime-policy-v2-adapter';
+import { elevationBroker } from './runtime-studio-elevation';
 import { executeRuntimeStudio } from './runtime-studio-execution';
 import {
   approveRuntimeEffect,
@@ -85,6 +84,9 @@ import {
   runtimeFingerprint,
   runtimeFlagshipHostIdentityHash,
   steerRuntime,
+  forgetWorkspaceScopedState,
+  nextAccountEpoch,
+  nextWorkspaceEpoch,
 } from './runtime-studio-helpers';
 import {
   advancedToolRegistrations,
@@ -113,6 +115,7 @@ import type { ApprovalBroker } from '../core/approval-broker';
 import type { ExtensionState } from '../core/extension-state';
 import type { CapabilityManifest } from '../core/runtime/capability-manifest';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { AdvisorPort } from '../infrastructure/advisor-tool-executor.types';
 import type { OutputLogger } from '../infrastructure/output-logger';
 
 export class VscodeRuntimeStudio implements vscode.Disposable {
@@ -129,6 +132,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   readonly hooks: ReturnType<typeof workspaceLifecycleHooks>;
 
   private readonly research: WebResearchPort;
+  private readonly advisor: AdvisorPort;
   readonly stream: RuntimeEventStreamService;
   readonly router: RuntimeToolRouter;
   private readonly targets: ExecutionTargetRegistry;
@@ -164,6 +168,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     );
     this.bindingStore = new VscodeRuntimeBindingStore(context.workspaceState);
     this.research = backendWebResearch(backend);
+    this.advisor = backendAdvisor(backend, this.state);
     this.hooks = workspaceLifecycleHooks(workspaceScope, this.configuration, logger);
     this.transport = new BackendRuntimeTransport(backend, this.bindingStore);
     this.stream = new RuntimeEventStreamService(this.transport);
@@ -345,32 +350,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
           ),
       ),
     );
-    const elevation = new ElevationBrokerService(
-      new PackagedNativeElevationAdapter(
-        vscode.Uri.joinPath(context.extensionUri, 'resources', 'elevation-helper.mjs').fsPath,
-      ),
-      {
-        confirm: (recipe, signal) =>
-          approvals.request(
-            {
-              kind: 'runtimeEffect',
-              title: vscode.l10n.t('Approve administrator operation'),
-              message: recipe.explanation,
-              effect: {
-                purpose: recipe.recipeId,
-                target: `${recipe.command.executable} ${recipe.command.arguments.join(' ')}`,
-                risk: 'R4',
-                sideEffects: [
-                  vscode.l10n.t('Your operating system will show native administrator consent.'),
-                ],
-                reversibility: 'irreversible',
-              },
-            },
-            signal,
-          ),
-      },
-      new VscodeElevationVerificationAdapter(),
-    );
+    const elevation = elevationBroker(context.extensionUri, approvals);
     const registrations = [
       ...workspaceToolRegistrations({
         files: this.files,
@@ -399,6 +379,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         tasks: this.stores.tasks,
         journals: this.journals,
         research: this.research,
+        advisor: this.advisor,
         files: this.files,
       }),
       ...advancedToolRegistrations({
@@ -434,21 +415,28 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     if (this.active !== undefined) return false;
     const manifest = this.state.snapshot.runtime.capabilityManifest;
     if (manifest === undefined) return false;
-    return recoverVscodeRuntime(
-      {
-        bindings: this.bindingStore,
-        journals: this.journals,
-        logger: this.logger,
-        fingerprint: (signal) => this.fingerprint(signal),
-        setEpochs: (epochs) => {
-          this.epochs = epochs;
-        },
-        execution: (recoveryInput, recoveryManifest) =>
-          vscodeRuntimeExecutionDependencies(this, recoveryInput, recoveryManifest),
+    return recoverVscodeRuntime(this.recoveryDependencies(), input, manifest);
+  }
+
+  /**
+   * What recovery needs from the studio.
+   *
+   * Assembled in one place because every field is a different way of reaching
+   * back into this object, and a run being resumed must see the same journal,
+   * the same bindings and the same epochs as one being started.
+   */
+  private recoveryDependencies(): Parameters<typeof recoverVscodeRuntime>[0] {
+    return {
+      bindings: this.bindingStore,
+      journals: this.journals,
+      logger: this.logger,
+      fingerprint: (signal) => this.fingerprint(signal),
+      setEpochs: (epochs) => {
+        this.epochs = epochs;
       },
-      input,
-      manifest,
-    );
+      execution: (recoveryInput, recoveryManifest) =>
+        vscodeRuntimeExecutionDependencies(this, recoveryInput, recoveryManifest),
+    };
   }
 
   routeTargets(runtimeManifest: CapabilityManifest): TargetAwareToolRouter {
@@ -507,7 +495,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   }
 
   invalidateAccount(): void {
-    this.epochs = { ...this.epochs, account: this.epochs.account + 1 };
+    this.epochs = nextAccountEpoch(this.epochs);
     void this.cancel();
   }
 
@@ -517,12 +505,8 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   }
 
   invalidateWorkspace(): void {
-    this.epochs = { ...this.epochs, workspace: this.epochs.workspace + 1 };
-    // An undo entry restores bytes into the workspace it was captured from.
-    // Replaying one after a folder change would write a stale file into a tree
-    // that never had it.
-    this.transactions.forgetUndoHistory();
-    this.stores.clear();
+    this.epochs = nextWorkspaceEpoch(this.epochs);
+    forgetWorkspaceScopedState(this.transactions, this.stores);
     void this.cancel();
   }
 

@@ -189,6 +189,7 @@ const elevationRecipe = strict(
 );
 
 export const runtimeToolInputSchemas = {
+  advisor: strict({ question: text, context: text }, ['question']),
   agents: strict({ graph: subAgentGraph }, ['graph']),
   ask: strict(
     {

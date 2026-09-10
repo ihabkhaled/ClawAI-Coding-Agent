@@ -2,6 +2,33 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.28.0
+
+Minor: an advisor model (F090, narrowed).
+
+- **`runtime.advisor` asks a different model one question.** Delegation already
+  existed: a sub-agent can be given work. What did not exist was consultation —
+  asking mid-run whether a conclusion holds, without handing over the task or
+  the workspace.
+- **It is never the model already running.** Asking the same model the same
+  question in the same conversation is not a second opinion; it is the same
+  opinion restated with more confidence, and a run that treats that as
+  corroboration is worse off than one that never asked.
+- **The advisor gets the question and the asker's own summary, and nothing
+  else.** No tools, no root key, no sight of the conversation. The worst a bad
+  advisor can do is give bad advice, which the run is free to reject. A
+  consultant with the workspace would be a second agent nobody scoped.
+- **Advice is labelled as advice.** The reply carries the advisor's name and
+  `binding: false`, because a second opinion whose source is not recorded cannot
+  be weighed later, and one that reads like a verdict gets followed for the
+  wrong reason.
+- **One model on the account is reported, not failed.** That is a fact about the
+  account rather than a fault in the call, and a run that failed here would be
+  failing for asking a reasonable question.
+- Each consultation gets its own thread, so one question's answer cannot colour
+  the next and no second model's words land in the transcript the user is
+  reading as their own agent's.
+
 ## 1.27.0
 
 Minor: Fast mode (F089 complete).
