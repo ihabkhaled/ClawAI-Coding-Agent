@@ -2,6 +2,31 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.41.0
+
+Minor: a command that refuses to stop no longer hangs the run (defect found under F001).
+
+- **Termination was a request the runner assumed was obeyed.** It sent `SIGTERM`
+  once and then waited for a `close` event. A test runner that traps the signal
+  to print its summary, or a process wedged in an uninterruptible read, never
+  emits one — so the run stopped mid-task with no error, no output and nothing
+  to report.
+- **POSIX now escalates.** `SIGTERM`, a grace period, then `SIGKILL`, which
+  cannot be trapped. The grace is long enough for a runner to flush and a build
+  to clean up its temporary directory.
+- **Windows takes the tree.** It has no graceful signal, so a grace period there
+  would be theatre; what it lacked was the children. `TerminateProcess` killed
+  the wrapper and left the actual work running, still holding the port or the
+  lock the next command needed.
+- **Every step is scheduled up front**, not armed by the failure of the one
+  before it. The case that hangs produces no event to react to, so a design that
+  waits for one cannot recover from it.
+- **The receipt says whether a process had to be killed.** A command that
+  ignored termination usually leaves something behind, and the next command is
+  the one that trips over it.
+- A `taskkill` that fails because the process already exited is ignored rather
+  than turned into a spurious command failure.
+
 ## 1.40.0
 
 Minor: git can say whether a branch could open a pull request (F103, narrowed).

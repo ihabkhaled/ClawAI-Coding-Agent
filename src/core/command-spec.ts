@@ -66,6 +66,8 @@ export interface CommandResult {
   readonly timedOut: boolean;
   readonly cancelled: boolean;
   readonly truncated: boolean;
+  /** Whether the process had to be killed rather than asked to stop. */
+  readonly forciblyTerminated: boolean;
 }
 
 export const commandRecipeSchema = z

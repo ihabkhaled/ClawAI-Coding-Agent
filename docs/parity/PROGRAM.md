@@ -2784,3 +2784,39 @@ PARTIAL and the row names which half shipped.
 **Still true:** live-model Definition of Done cannot be executed here. The agent
 itself has not been run end to end in this program — see the handover for what
 that costs and what would close it.
+
+### Batch 81 — command termination escalation (defect found under F001)
+
+| Batch | Version | Status                                | Evidence                                                                                       |
+| ----- | ------- | ------------------------------------- | ---------------------------------------------------------------------------------------------- |
+| 81    | 1.41.0  | Code and deterministic gates complete | `process-termination.ts`, `process-terminator.ts`, `bounded-command-runner.ts`. Tests: 11 new. |
+
+**Not an F001 closure.** F001's stated gap is incremental streaming and
+background execution, and neither shipped here. This is a defect the audit walk
+surfaced, fixed on its own terms, and the F001 row still says PARTIAL.
+
+**Asking a process to stop is not the same as it stopping.** The runner sent
+`SIGTERM` once and waited for a `close` event. A process that traps the signal
+never emits one, so the run stopped with no exit, no error and no output — the
+failure mode that looks like the agent simply gave up.
+
+**Two platforms, two genuinely different answers.** POSIX has a real graceful
+signal and gets an escalation to `SIGKILL`. Windows has none, so a grace period
+there would be theatre; what it needed was `taskkill /T`, because
+`TerminateProcess` kills the wrapper and orphans the work.
+
+**Every step is scheduled from the start of termination.** The hanging case
+produces nothing to react to, so a chain where each step is armed by the
+previous one's failure never advances.
+
+**The receipt reports a forced kill**, because a process that ignored
+termination tends to leave a lock, a port or a half-written file for the next
+command to trip over.
+
+**Unblocked during this batch, outside the extension:** `claw-agent-service` was
+crash-looping on a stale image whose baked-in `tsconfig.json` still said
+`moduleResolution: Node16`. Rebuilding that one service brought it healthy, and
+`/agent/runtime/protocol` now negotiates 2.0 with `toolExecution: true` instead
+of returning 502. Headless sign-in also proved possible: `authorize/approve` is
+an ordinary authenticated call, so the browser step is not a human gate. The
+handover's Lane 4 is now reachable.
