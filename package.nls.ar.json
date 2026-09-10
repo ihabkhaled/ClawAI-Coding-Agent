@@ -26,6 +26,7 @@
   "command.undoLastEdit": "التراجع عن آخر تعديل",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.compactConversation": "ضغط المحادثة",
   "command.selectOutputStyle": "اختيار أسلوب الإخراج",
   "command.toggleFocusView": "تبديل وضع التركيز",
   "command.renameChat": "إعادة تسمية المحادثة",

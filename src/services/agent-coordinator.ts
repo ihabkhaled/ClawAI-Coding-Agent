@@ -6,7 +6,6 @@ import { type BackendClient } from '../backend/backend-client';
 import { AccountEpoch } from '../core/account-epoch';
 import { ApprovalBroker } from '../core/approval-broker';
 import { totalAttachmentBytes } from '../core/chat-attachment';
-import { contextModeForCommand } from '../core/command-context';
 import { type ContextMode } from '../core/context-mode';
 import { GenerationThreadRegistry } from '../core/generation-thread-registry';
 import { selectedModelAcceptsImages } from '../core/model-vision';
@@ -20,7 +19,6 @@ import { collectAgentContext } from './agent-context-service';
 import { AgentCoordinatorBoundaries } from './agent-coordinator-boundaries';
 import { coordinatorCommands } from './agent-coordinator-commands';
 import { coordinatorInterruptions } from './agent-coordinator-interruptions';
-import { pickCompareInput } from './agent-coordinator-prompts';
 import {
   agentConcurrencyKey,
   cancelCoordinator,
@@ -45,7 +43,9 @@ import { BrowserAuthorizationService } from './browser-authorization-service';
 import { ChatParticipantService } from './chat-participant-service';
 import { ChatService } from './chat-service';
 import { ClawaiInitializer } from './clawai-initializer';
+import { compareModels } from './compare-models-command';
 import { ConfigurationService } from './configuration-service';
+import { continueInNewConversation, summarizeThread } from './conversation-compaction';
 import { ConversationSessionService } from './conversation-session-service';
 import { GenerationScheduler } from './generation-scheduler';
 import { ModelService } from './model-service';
@@ -381,17 +381,11 @@ export class AgentCoordinator implements vscode.Disposable {
     this.conversations.openChat(threadId);
 
   async openThread(input: { sessionId: string; threadId: string }): Promise<void> {
-    if (!this.state.snapshot.connected) {
-      return;
-    }
-    await this.connection.run(async () => {
-      await this.conversations.loadThread(input.sessionId, input.threadId);
-    });
+    if (!this.state.snapshot.connected) return;
+    await this.connection.run(() => this.conversations.loadThread(input.sessionId, input.threadId));
   }
 
-  async send(input: ChatPromptInput): Promise<void> {
-    await this.promptExecutions.send(input);
-  }
+  send = (input: ChatPromptInput): Promise<void> => this.promptExecutions.send(input);
 
   async runAgent(input: RunAgentInput): Promise<void> {
     const requestId = input.requestId ?? randomUUID();
@@ -453,25 +447,12 @@ export class AgentCoordinator implements vscode.Disposable {
 
   compare = (input: CompareInput): Promise<void> => this.promptExecutions.compare(input);
 
-  async compareModels(judgeEnabled = false): Promise<void> {
-    const input = await pickCompareInput(this.state.snapshot.models, judgeEnabled);
-    if (input === null) {
-      return;
-    }
-    const admission = this.captureAdmission();
-    const sessionId = await this.openChat();
-    await this.compare({
-      admission,
-      content: input.content,
-      contextMode: contextModeForCommand(
-        judgeEnabled ? 'clawAI.judgeResponses' : 'clawAI.compareModels',
-      ),
-      modelKeys: input.modelKeys,
+  compareModels = (judgeEnabled = false): Promise<void> =>
+    compareModels(
+      { state: this.state, captureAdmission: () => this.captureAdmission() },
+      { openChat: () => this.openChat(), compare: (input) => this.compare(input) },
       judgeEnabled,
-      requestId: randomUUID(),
-      ...(sessionId === undefined ? {} : { sessionId }),
-    });
-  }
+    );
 
   ask = (contextMode: ContextMode): Promise<void> => this.workflowActions.ask(contextMode);
 
@@ -496,6 +477,20 @@ export class AgentCoordinator implements vscode.Disposable {
     refreshHistory: () => this.refreshConversations(),
     sessionControls: () => this.sessionControls,
     outputStyles: () => this.outputStyles,
+    summarize: () => (threadId, instruction) =>
+      summarizeThread(
+        this.backend,
+        this.configuration.read(),
+        this.state.snapshot.models,
+        threadId,
+        instruction,
+      ),
+    startContinuation: () => (seed) =>
+      continueInNewConversation(
+        (input) => this.runAgent(input),
+        () => this.openChat(),
+        seed,
+      ),
   });
 
   private readonly refreshConversations = conversationRefresher(() => ({

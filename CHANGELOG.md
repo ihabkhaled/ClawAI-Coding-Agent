@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.12.0
+
+Minor: manual conversation compaction (F041, partly).
+
+- **ClawAI: Compact Conversation** asks the conversation's own model to
+  summarize it, then continues in a new conversation seeded with that summary.
+- **Nothing is destroyed.** The original thread keeps every word and stays in
+  your history. Compaction that rewrote what it compacted would be a feature
+  people are afraid to use.
+- **The summary is asked for in the thread being summarized**, by the model
+  that was already there. A different model would be summarizing a
+  conversation it never saw; a hidden side thread would conceal what was
+  written on your behalf.
+- **The summary asks for decisions, not prose** — goal, decisions and why, work
+  done, work outstanding, open questions, files and paths. A summary optimised
+  for reading loses exactly what the next turn needs.
+- An empty summary changes nothing and says so.
+
 ## 1.11.0
 
 Minor: a reserved response budget and a truncation warning before you send

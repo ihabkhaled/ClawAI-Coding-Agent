@@ -3101,6 +3101,150 @@ const contextWarningTranslations = {
   },
 };
 
+const compactionTranslations = {
+  ar: {
+    'Compact Conversation': 'ضغط المحادثة',
+    'Open a conversation before compacting it.': 'افتح محادثة قبل ضغطها.',
+    'Summarize and continue': 'التلخيص والمتابعة',
+    'Summarize this conversation and continue in a new one?':
+      'تلخيص هذه المحادثة والمتابعة في محادثة جديدة؟',
+    'Summarizing…': 'جارٍ التلخيص…',
+    'The original conversation is kept and stays in your history.':
+      'تُحفظ المحادثة الأصلية وتبقى في سجلك.',
+    'The summary came back empty, so nothing was changed.': 'عاد الملخص فارغاً، لذا لم يتغير شيء.',
+  },
+  de: {
+    'Compact Conversation': 'Unterhaltung verdichten',
+    'Open a conversation before compacting it.':
+      'Öffnen Sie eine Unterhaltung, bevor Sie sie verdichten.',
+    'Summarize and continue': 'Zusammenfassen und fortsetzen',
+    'Summarize this conversation and continue in a new one?':
+      'Diese Unterhaltung zusammenfassen und in einer neuen fortsetzen?',
+    'Summarizing…': 'Wird zusammengefasst…',
+    'The original conversation is kept and stays in your history.':
+      'Die ursprüngliche Unterhaltung bleibt erhalten und in Ihrem Verlauf.',
+    'The summary came back empty, so nothing was changed.':
+      'Die Zusammenfassung kam leer zurück, daher wurde nichts geändert.',
+  },
+  es: {
+    'Compact Conversation': 'Compactar conversación',
+    'Open a conversation before compacting it.': 'Abre una conversación antes de compactarla.',
+    'Summarize and continue': 'Resumir y continuar',
+    'Summarize this conversation and continue in a new one?':
+      '¿Resumir esta conversación y continuar en una nueva?',
+    'Summarizing…': 'Resumiendo…',
+    'The original conversation is kept and stays in your history.':
+      'La conversación original se conserva y permanece en tu historial.',
+    'The summary came back empty, so nothing was changed.':
+      'El resumen llegó vacío, así que no se cambió nada.',
+  },
+  fa: {
+    'Compact Conversation': 'فشرده‌سازی گفتگو',
+    'Open a conversation before compacting it.': 'پیش از فشرده‌سازی، یک گفتگو باز کنید.',
+    'Summarize and continue': 'خلاصه‌سازی و ادامه',
+    'Summarize this conversation and continue in a new one?':
+      'این گفتگو خلاصه شود و در گفتگوی جدیدی ادامه یابد؟',
+    'Summarizing…': 'در حال خلاصه‌سازی…',
+    'The original conversation is kept and stays in your history.':
+      'گفتگوی اصلی نگه داشته می‌شود و در تاریخچه می‌ماند.',
+    'The summary came back empty, so nothing was changed.':
+      'خلاصه خالی بازگشت، بنابراین چیزی تغییر نکرد.',
+  },
+  fr: {
+    'Compact Conversation': 'Compacter la conversation',
+    'Open a conversation before compacting it.': 'Ouvrez une conversation avant de la compacter.',
+    'Summarize and continue': 'Résumer et continuer',
+    'Summarize this conversation and continue in a new one?':
+      'Résumer cette conversation et continuer dans une nouvelle ?',
+    'Summarizing…': 'Résumé en cours…',
+    'The original conversation is kept and stays in your history.':
+      "La conversation d'origine est conservée et reste dans votre historique.",
+    'The summary came back empty, so nothing was changed.':
+      "Le résumé est revenu vide, rien n'a donc été changé.",
+  },
+  hi: {
+    'Compact Conversation': 'बातचीत संक्षिप्त करें',
+    'Open a conversation before compacting it.': 'संक्षिप्त करने से पहले कोई बातचीत खोलें।',
+    'Summarize and continue': 'सारांश बनाकर जारी रखें',
+    'Summarize this conversation and continue in a new one?':
+      'इस बातचीत का सारांश बनाकर नई बातचीत में जारी रखें?',
+    'Summarizing…': 'सारांश बन रहा है…',
+    'The original conversation is kept and stays in your history.':
+      'मूल बातचीत सुरक्षित रहती है और आपके इतिहास में बनी रहती है।',
+    'The summary came back empty, so nothing was changed.': 'सारांश खाली आया, इसलिए कुछ नहीं बदला।',
+  },
+  it: {
+    'Compact Conversation': 'Compatta la conversazione',
+    'Open a conversation before compacting it.': 'Apri una conversazione prima di compattarla.',
+    'Summarize and continue': 'Riassumi e continua',
+    'Summarize this conversation and continue in a new one?':
+      'Riassumere questa conversazione e continuare in una nuova?',
+    'Summarizing…': 'Riassunto in corso…',
+    'The original conversation is kept and stays in your history.':
+      'La conversazione originale viene conservata e resta nella cronologia.',
+    'The summary came back empty, so nothing was changed.':
+      'Il riassunto è tornato vuoto, quindi nulla è stato cambiato.',
+  },
+  ja: {
+    'Compact Conversation': '会話を圧縮',
+    'Open a conversation before compacting it.': '圧縮する前に会話を開いてください。',
+    'Summarize and continue': '要約して続ける',
+    'Summarize this conversation and continue in a new one?':
+      'この会話を要約して新しい会話で続けますか？',
+    'Summarizing…': '要約しています…',
+    'The original conversation is kept and stays in your history.':
+      '元の会話はそのまま履歴に残ります。',
+    'The summary came back empty, so nothing was changed.':
+      '要約が空で返ってきたため、何も変更していません。',
+  },
+  pt: {
+    'Compact Conversation': 'Compactar conversa',
+    'Open a conversation before compacting it.': 'Abra uma conversa antes de compactá-la.',
+    'Summarize and continue': 'Resumir e continuar',
+    'Summarize this conversation and continue in a new one?':
+      'Resumir esta conversa e continuar em uma nova?',
+    'Summarizing…': 'Resumindo…',
+    'The original conversation is kept and stays in your history.':
+      'A conversa original é mantida e permanece no seu histórico.',
+    'The summary came back empty, so nothing was changed.':
+      'O resumo voltou vazio, então nada foi alterado.',
+  },
+  ru: {
+    'Compact Conversation': 'Сжать беседу',
+    'Open a conversation before compacting it.': 'Откройте беседу, прежде чем сжимать её.',
+    'Summarize and continue': 'Подвести итог и продолжить',
+    'Summarize this conversation and continue in a new one?':
+      'Подвести итог беседы и продолжить в новой?',
+    'Summarizing…': 'Подведение итога…',
+    'The original conversation is kept and stays in your history.':
+      'Исходная беседа сохраняется и остаётся в истории.',
+    'The summary came back empty, so nothing was changed.':
+      'Итог вернулся пустым, поэтому ничего не изменилось.',
+  },
+  th: {
+    'Compact Conversation': 'ย่อการสนทนา',
+    'Open a conversation before compacting it.': 'เปิดการสนทนาก่อนย่อ',
+    'Summarize and continue': 'สรุปแล้วดำเนินต่อ',
+    'Summarize this conversation and continue in a new one?':
+      'สรุปการสนทนานี้แล้วดำเนินต่อในการสนทนาใหม่หรือไม่',
+    'Summarizing…': 'กำลังสรุป…',
+    'The original conversation is kept and stays in your history.':
+      'การสนทนาเดิมจะถูกเก็บไว้ในประวัติ',
+    'The summary came back empty, so nothing was changed.':
+      'ได้สรุปเป็นค่าว่าง จึงไม่มีการเปลี่ยนแปลง',
+  },
+  zh: {
+    'Compact Conversation': '压缩对话',
+    'Open a conversation before compacting it.': '请先打开一个对话再压缩。',
+    'Summarize and continue': '总结并继续',
+    'Summarize this conversation and continue in a new one?': '总结这段对话并在新对话中继续？',
+    'Summarizing…': '正在总结…',
+    'The original conversation is kept and stays in your history.':
+      '原对话会保留并留在历史记录中。',
+    'The summary came back empty, so nothing was changed.': '总结返回为空，因此未做任何更改。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -3120,6 +3264,7 @@ function translate(locale, message) {
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
+    compactionTranslations[locale][message] ??
     contextWarningTranslations[locale][message] ??
     attachmentTranslations[locale][message] ??
     settingDescriptionTranslations[locale][message] ??
