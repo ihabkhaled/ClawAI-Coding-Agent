@@ -2,6 +2,38 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.40.0
+
+Minor: git can say whether a branch could open a pull request (F103, narrowed).
+
+- **Twenty-five git operations shipped and none of them was about a pull
+  request.** An agent asked to open one found out what was wrong by trying: it
+  pushed, failed, and spent model turns learning that the repository had no
+  remote or that it was sitting on the base branch. Every one of those facts was
+  already in git.
+- **`pr-readiness` answers instead of running.** It is the one git operation that
+  asks a question about the repository rather than changing or printing it, so
+  the receipt carries an assessment alongside the usual before and after hashes.
+- **Blockers come back ordered, not as a set.** They are not independent. Adding
+  a remote is pointless while you are on the base branch, and pushing is
+  pointless while there is nothing to push. A caller handed five problems fixes
+  them in the wrong order; a caller handed the first one fixes the thing that
+  unblocks the rest.
+- **Being behind the base is a warning, not a blocker.** A behind branch still
+  merges, and refusing it would refuse most real pull requests.
+- **A failed read is the absence of the thing, not an error.** Counting commits
+  against a base that does not exist locally fails, and the honest reading is
+  "nothing is ahead of a base I cannot see" rather than a git error handed to the
+  model to interpret.
+- **A ready branch says so.** Returning an empty summary for the healthy case
+  would make the answer the caller most wants indistinguishable from a check that
+  never ran.
+- **Classified as a read everywhere it is classified.** It carries R0 risk and
+  sub-agents may call it, because it mutates nothing.
+- **Narrowed:** creating the pull request is a GitHub API call that lives in
+  workspace-service, and PR-to-session resumption exists nowhere. The audit row
+  stays PARTIAL and says which half shipped.
+
 ## 1.39.0
 
 Minor: cached prompt tokens are counted as cached (F093, narrowed).

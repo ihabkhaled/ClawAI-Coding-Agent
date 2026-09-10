@@ -2747,3 +2747,40 @@ its privacy boundary — stays backend work, and the row says so. What shipped i
 the accounting, which was client-side and missing.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 80 — F103 pull-request readiness
+
+| Batch | Version | Status                                | Evidence                                                                                |
+| ----- | ------- | ------------------------------------- | --------------------------------------------------------------------------------------- |
+| 80    | 1.40.0  | Code and deterministic gates complete | `pull-request-readiness.ts`, `git-agent-service.ts`, `git-operation.ts`. Tests: 15 new. |
+
+**The knowledge git already had, that nobody asked it for.** Whether a branch
+could open a pull request is five cheap reads: does a remote exist, are we off
+the base, is anything ahead, is the tree clean, has it been pushed. None of the
+twenty-five shipped git operations asked, so the agent discovered each one by
+failing at it.
+
+**Ordered blockers, because they are not independent.** Adding a remote is
+pointless while you are on the base branch. A caller handed all five at once
+fixes them in the wrong order.
+
+**Behind is a warning, not a blocker.** A behind branch still merges. Treating
+it as disqualifying would refuse most real pull requests.
+
+**A failed read means absence, not error.** Counting against a base that is not
+present locally fails; the caller is told nothing is ahead of a base that cannot
+be seen, rather than being handed git's error text.
+
+**Three ripples the enum change created, all closed in this batch.** The
+hand-authored JSON schema is `strict()`, so `baseBranch` had to be added there or
+the model could never send it. The policy adapter would have classified a
+read-only operation as an R3 local mutation. The sub-agent executor would have
+refused it as a git mutation reserved for the integrator.
+
+**Narrowed:** creating the pull request is a GitHub API call in
+workspace-service, and PR-to-session resumption exists nowhere. F103 stays
+PARTIAL and the row names which half shipped.
+
+**Still true:** live-model Definition of Done cannot be executed here. The agent
+itself has not been run end to end in this program — see the handover for what
+that costs and what would close it.

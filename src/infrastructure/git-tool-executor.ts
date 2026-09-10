@@ -24,6 +24,7 @@ export const gitToolDefinition: ToolDefinition = {
     'conflicts',
     'submodules',
     'topology',
+    'pr-readiness',
     'create-branch',
     'create-worktree',
     'remove-worktree',

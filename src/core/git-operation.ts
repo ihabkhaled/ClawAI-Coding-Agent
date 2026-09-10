@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
 
+import type { PullRequestFacts, PullRequestReadiness } from './pull-request-readiness.types';
+
 const safeRef = z
   .string()
   .min(1)
@@ -30,9 +32,12 @@ export const gitOperationSchema = z.discriminatedUnion('operation', [
         'conflicts',
         'submodules',
         'topology',
+        'pr-readiness',
       ]),
       path: safePath.optional(),
       ref: safeRef.optional(),
+      /** The branch a pull request would target. Defaults to the repository head. */
+      baseBranch: safeRef.optional(),
     })
     .strict(),
   z
@@ -147,4 +152,6 @@ export interface GitReceipt {
   readonly stagedDiffHash?: string;
   readonly pushedRef?: string;
   readonly output: string;
+  /** Present only for `pr-readiness`, which answers a question rather than running a command. */
+  readonly pullRequest?: PullRequestReadiness & { readonly facts: PullRequestFacts };
 }
