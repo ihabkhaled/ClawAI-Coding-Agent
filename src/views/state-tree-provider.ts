@@ -7,6 +7,8 @@ import { attentionItems } from './attention-items';
 
 import type { ChatThread } from '../backend/contracts';
 import type { AgentTaskStatus } from '../core/agent-tasks';
+import type { ContextInclusion } from '../core/context-collector';
+import type { ContextFreshness } from '../core/context-freshness.types';
 import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
 import type { FindingSeverity } from '../core/findings';
 import type { OnboardingStepId } from '../core/onboarding-checklist.types';
@@ -57,7 +59,40 @@ function modelItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
   ];
 }
 
-function contextItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
+/**
+ * A collected row, marked if what it names has moved on since it was read.
+ *
+ * A ranged reference is a snapshot. Once the file is saved the same line
+ * numbers point at different code, and a receipt that still reads as current is
+ * the quiet kind of wrong: nothing errors, and the conversation looks like it
+ * is about code the model never saw.
+ */
+function inclusionItem(
+  entry: ContextInclusion,
+  freshness: (key: string) => ContextFreshness,
+): vscode.TreeItem {
+  const label =
+    entry.startLine === undefined
+      ? entry.path
+      : `${entry.path}:${String(entry.startLine)}-${String(entry.endLine)}`;
+  const item = new vscode.TreeItem(label);
+  const state = freshness(label);
+  if (state === 'changed') {
+    item.description = vscode.l10n.t('changed since it was read');
+    item.iconPath = new vscode.ThemeIcon('warning');
+  } else if (state === 'gone') {
+    item.description = vscode.l10n.t('no longer there');
+    item.iconPath = new vscode.ThemeIcon('error');
+  } else {
+    item.iconPath = new vscode.ThemeIcon('file-code');
+  }
+  return item;
+}
+
+function contextItems(
+  snapshot: ExtensionSnapshot,
+  freshness: (key: string) => ContextFreshness,
+): vscode.TreeItem[] {
   const receipt = snapshot.contextReceipt;
   if (receipt === undefined) {
     return [new vscode.TreeItem(vscode.l10n.t('No context collected yet'))];
@@ -68,15 +103,7 @@ function contextItems(snapshot: ExtensionSnapshot): vscode.TreeItem[] {
   summary.iconPath = new vscode.ThemeIcon('list-selection');
   return [
     summary,
-    ...receipt.included.map((entry) => {
-      const label =
-        entry.startLine === undefined
-          ? entry.path
-          : `${entry.path}:${String(entry.startLine)}-${String(entry.endLine)}`;
-      const item = new vscode.TreeItem(label);
-      item.iconPath = new vscode.ThemeIcon('file-code');
-      return item;
-    }),
+    ...receipt.included.map((entry) => inclusionItem(entry, freshness)),
     ...receipt.excluded.slice(0, 20).map((entry) => {
       const item = new vscode.TreeItem(entry.path);
       item.description = entry.reason;
@@ -253,6 +280,8 @@ export class StateTreeProvider
     private readonly state: ExtensionState,
     /** Read at render time so filing a conversation shows up without a reload. */
     private readonly groups?: () => ThreadGroupAssignments,
+    /** Read at render time so a save marks the row without a reload. */
+    private readonly freshness?: (key: string) => ContextFreshness,
   ) {
     this.unsubscribe = state.subscribe(() => {
       this.changeEmitter.fire(undefined);
@@ -283,7 +312,7 @@ export class StateTreeProvider
       return modelItems(this.state.snapshot);
     }
     if (this.kind === 'context') {
-      return contextItems(this.state.snapshot);
+      return contextItems(this.state.snapshot, (key) => this.freshness?.(key) ?? 'fresh');
     }
     if (this.kind === 'findings') {
       return findingItems(this.state.snapshot);

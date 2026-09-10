@@ -2136,3 +2136,45 @@ because summarizing a conversation without being asked is the kind of help that
 costs trust the first time it guesses wrong.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 66 — F033 stale referenced ranges
+
+| Batch | Version | Status                                | Evidence                                                                                                 |
+| ----- | ------- | ------------------------------------- | -------------------------------------------------------------------------------------------------------- |
+| 66    | 1.26.0  | Code and deterministic gates complete | `context-freshness.ts`, `context-freshness-tracker.ts`, `vscode-context-range-reader.ts`. Tests: 16 new. |
+
+**The row's other half turned out to be the interesting one.** F033's first gap
+was the autocomplete affordance, and F032 closed that in 0.98.0. What was left
+reads like a nicety and is not: a ranged reference is a snapshot, and once the
+file moves the same line numbers point at different code. Nothing errors. The
+receipt still lists the range, the transcript still reads as though it were
+about the current file, and the model is credited with having seen something it
+never did.
+
+**The digest covers the range, not the file.** Hashing the whole file would call
+a reference stale for an edit thirty lines away from it, and a warning that
+fires for unrelated edits is one people turn off.
+
+**On save, and only for files the receipt names.** A save is the only moment the
+answer can change and the moment a person is looking, so the mark lands while
+they still remember the edit. A workspace-wide save must not re-read a receipt
+that has nothing to do with it.
+
+**Changed and gone are different answers because they need different ones.** A
+changed range can be re-collected by sending again. A deleted one cannot, and
+telling someone to refresh a file that no longer exists wastes their time.
+
+**A receipt without a digest is fresh, not stale.** The alternative makes every
+receipt taken before this batch look wrong at once, which teaches the reader to
+ignore the mark on the day it ships.
+
+**Read through the editor, not the disk.** `openTextDocument` sees unsaved
+buffer content too, which is the right answer: an edit sitting in an editor is
+already a difference the reader can see, and reporting it fresh until they save
+would be reporting on the wrong file.
+
+**Nothing re-collects on its own.** The view reports and stops there. Silently
+re-collecting would change what the next message sends without saying so, which
+is a larger surprise than the one being fixed.
+
+**Still true:** live-model Definition of Done cannot be executed here.
