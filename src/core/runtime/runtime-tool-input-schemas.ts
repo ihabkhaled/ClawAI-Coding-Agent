@@ -350,6 +350,13 @@ export const runtimeToolInputSchemas = {
     'message',
   ]),
   planning: strict({ plan: opaque, output: opaque, document: text, revision: text }),
+  notebook: strict({
+    rootKey: text,
+    path: text,
+    index: integer,
+    source: text,
+    cellType: text,
+  }),
   process: strict({
     executablePath: text,
     arguments: texts,

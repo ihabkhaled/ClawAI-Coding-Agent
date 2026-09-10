@@ -1717,3 +1717,44 @@ a log useless in order to protect nothing, and that failure mode is only one
 step better than the original.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 56 — F018 cell-granular notebook editing
+
+| Batch | Version | Status                                | Evidence                                                            |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------- |
+| 56    | 1.16.0  | Code and deterministic gates complete | `notebook-document.ts`, `notebook-tool-executor.ts`. Tests: 22 new. |
+
+**The whole feature is one property: nothing unknown may be lost.** An
+`.ipynb` carries outputs, execution counts, per-cell metadata, kernelspec and
+widget state. Parsing that into a narrow shape and writing it back is precisely
+how a notebook gets destroyed by a tool that meant well, and it is what the
+audit row described. Every schema here is loose, and the round trip is asserted
+byte-for-byte in a test.
+
+**The file is written back the way it was found.** Indentation is detected and
+reused, and a cell whose source was stored as an array of lines stays an array.
+A notebook reformatted from two spaces to four is a diff nobody asked for and a
+merge conflict for everyone else on the branch.
+
+**Changing a cell's code clears its outputs.** An output that no longer
+corresponds to the code above it is worse than no output — it is a wrong
+answer with a timestamp.
+
+**An index outside the notebook is refused rather than clamped.** Clamping
+turns "edit cell 12" in a nine-cell notebook into a silent edit of cell nine,
+which is the kind of help nobody wants from a tool holding their file.
+
+**Deviation from the reuse note.** It pointed at `file-transaction.ts` and its
+operation kinds, implying a new notebook kind. None was needed: an `.ipynb` is
+JSON, so a text update carries a cell edit exactly — and going through the
+existing transaction means notebook edits get the same preview, approval, hash
+check and undo as every other edit, instead of a second and weaker path.
+
+**Not `openNotebookDocument`.** The editor's notebook model drops fields it has
+no representation for, which is exactly the structure this exists to preserve.
+The file on disk is the only complete copy.
+
+F019 (kernel execution) remains open and still depends on this, as ordering
+constraint said: cell targeting first, then execution.
+
+**Still true:** live-model Definition of Done cannot be executed here.

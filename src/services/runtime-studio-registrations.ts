@@ -32,6 +32,10 @@ import {
   intelligenceToolDefinition,
 } from '../infrastructure/intelligence-tool-executor';
 import {
+  NotebookToolExecutor,
+  notebookToolDefinition,
+} from '../infrastructure/notebook-tool-executor';
+import {
   NotifyUserToolExecutor,
   notifyUserToolDefinition,
 } from '../infrastructure/notify-user-tool-executor';
@@ -59,6 +63,7 @@ import {
   VscodeFilesystemToolExecutor,
   workspaceFilesystemToolDefinition,
 } from '../infrastructure/vscode-filesystem-tool-executor';
+import { VscodeNotebookReader } from '../infrastructure/vscode-notebook-reader';
 import { VscodeUserNotifier } from '../infrastructure/vscode-user-notifier';
 import {
   WebResearchToolExecutor,
@@ -102,6 +107,13 @@ export function analysisToolRegistrations(
     {
       definition: runJournalToolDefinition,
       executor: new RunJournalToolExecutor(parts.journals),
+    },
+    {
+      definition: notebookToolDefinition,
+      executor: new NotebookToolExecutor(
+        parts.transactions,
+        new VscodeNotebookReader((key) => parts.files.workspaceRootUri(key)),
+      ),
     },
     {
       definition: webResearchToolDefinition,

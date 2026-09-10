@@ -43,6 +43,7 @@ export interface RuntimeStudioAnalysisTools {
   readonly tasks: AgentTaskService;
   readonly journals: RunJournalService;
   readonly research: WebResearchPort;
+  readonly files: VscodeFileTransactionAdapter;
 }
 
 export type RuntimeApprovalPhase = 'waiting' | 'approved' | 'rejected';
