@@ -26,6 +26,7 @@
   "command.undoLastEdit": "撤销上次 ClawAI 编辑",
   "command.exportTranscript": "Export Transcript",
   "command.showSessionRecap": "Session Recap",
+  "command.openConversationInNewWindow": "在新窗口中打开对话",
   "command.compactConversation": "压缩对话",
   "command.selectOutputStyle": "选择输出风格",
   "command.toggleFocusView": "切换专注视图",

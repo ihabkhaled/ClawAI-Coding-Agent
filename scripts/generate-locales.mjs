@@ -3245,6 +3245,91 @@ const compactionTranslations = {
   },
 };
 
+const newWindowTranslations = {
+  ar: {
+    'Open Conversation in New Window': 'فتح المحادثة في نافذة جديدة',
+    'Open a conversation before moving it to a new window.':
+      'افتح محادثة قبل نقلها إلى نافذة جديدة.',
+    'Open a folder before opening a conversation in a new window.':
+      'افتح مجلداً قبل فتح محادثة في نافذة جديدة.',
+  },
+  de: {
+    'Open Conversation in New Window': 'Unterhaltung in neuem Fenster öffnen',
+    'Open a conversation before moving it to a new window.':
+      'Öffnen Sie eine Unterhaltung, bevor Sie sie in ein neues Fenster verschieben.',
+    'Open a folder before opening a conversation in a new window.':
+      'Öffnen Sie einen Ordner, bevor Sie eine Unterhaltung in einem neuen Fenster öffnen.',
+  },
+  es: {
+    'Open Conversation in New Window': 'Abrir la conversación en una ventana nueva',
+    'Open a conversation before moving it to a new window.':
+      'Abre una conversación antes de moverla a una ventana nueva.',
+    'Open a folder before opening a conversation in a new window.':
+      'Abre una carpeta antes de abrir una conversación en una ventana nueva.',
+  },
+  fa: {
+    'Open Conversation in New Window': 'باز کردن گفتگو در پنجره جدید',
+    'Open a conversation before moving it to a new window.':
+      'پیش از انتقال به پنجره جدید، یک گفتگو باز کنید.',
+    'Open a folder before opening a conversation in a new window.':
+      'پیش از باز کردن گفتگو در پنجره جدید، یک پوشه باز کنید.',
+  },
+  fr: {
+    'Open Conversation in New Window': 'Ouvrir la conversation dans une nouvelle fenêtre',
+    'Open a conversation before moving it to a new window.':
+      'Ouvrez une conversation avant de la déplacer dans une nouvelle fenêtre.',
+    'Open a folder before opening a conversation in a new window.':
+      "Ouvrez un dossier avant d'ouvrir une conversation dans une nouvelle fenêtre.",
+  },
+  hi: {
+    'Open Conversation in New Window': 'बातचीत नई विंडो में खोलें',
+    'Open a conversation before moving it to a new window.':
+      'नई विंडो में ले जाने से पहले कोई बातचीत खोलें।',
+    'Open a folder before opening a conversation in a new window.':
+      'नई विंडो में बातचीत खोलने से पहले कोई फ़ोल्डर खोलें।',
+  },
+  it: {
+    'Open Conversation in New Window': 'Apri la conversazione in una nuova finestra',
+    'Open a conversation before moving it to a new window.':
+      'Apri una conversazione prima di spostarla in una nuova finestra.',
+    'Open a folder before opening a conversation in a new window.':
+      'Apri una cartella prima di aprire una conversazione in una nuova finestra.',
+  },
+  ja: {
+    'Open Conversation in New Window': '会話を新しいウィンドウで開く',
+    'Open a conversation before moving it to a new window.':
+      '新しいウィンドウに移す前に会話を開いてください。',
+    'Open a folder before opening a conversation in a new window.':
+      '新しいウィンドウで会話を開く前にフォルダーを開いてください。',
+  },
+  pt: {
+    'Open Conversation in New Window': 'Abrir conversa em nova janela',
+    'Open a conversation before moving it to a new window.':
+      'Abra uma conversa antes de movê-la para uma nova janela.',
+    'Open a folder before opening a conversation in a new window.':
+      'Abra uma pasta antes de abrir uma conversa em uma nova janela.',
+  },
+  ru: {
+    'Open Conversation in New Window': 'Открыть беседу в новом окне',
+    'Open a conversation before moving it to a new window.':
+      'Откройте беседу, прежде чем переносить её в новое окно.',
+    'Open a folder before opening a conversation in a new window.':
+      'Откройте папку, прежде чем открывать беседу в новом окне.',
+  },
+  th: {
+    'Open Conversation in New Window': 'เปิดการสนทนาในหน้าต่างใหม่',
+    'Open a conversation before moving it to a new window.': 'เปิดการสนทนาก่อนย้ายไปหน้าต่างใหม่',
+    'Open a folder before opening a conversation in a new window.':
+      'เปิดโฟลเดอร์ก่อนเปิดการสนทนาในหน้าต่างใหม่',
+  },
+  zh: {
+    'Open Conversation in New Window': '在新窗口中打开对话',
+    'Open a conversation before moving it to a new window.': '请先打开一个对话再移动到新窗口。',
+    'Open a folder before opening a conversation in a new window.':
+      '在新窗口中打开对话前请先打开一个文件夹。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -3264,6 +3349,7 @@ function translate(locale, message) {
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
+    newWindowTranslations[locale][message] ??
     compactionTranslations[locale][message] ??
     contextWarningTranslations[locale][message] ??
     attachmentTranslations[locale][message] ??
