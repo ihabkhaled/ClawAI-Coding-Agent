@@ -2,6 +2,36 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.44.0
+
+Minor: headless mode, with an exit-code contract (F087, narrowed).
+
+- **`npm run headless -- --prompt "<task>"` runs the agent with no host and no
+  prompts.** It signs in, starts a run, executes the tools the model asks for
+  against one directory, and stops when the run stops.
+- **The exit code is the contract, and the important distinction is not success
+  versus failure.** It is "the agent did the work and the work was wrong" versus
+  "the agent never got to try". A runner that returns 1 for both turns a missing
+  credential into a failing test.
+- **Six codes, each with its own remedy:** 0 completed, 1 failed, 2 unusable,
+  3 blocked, 4 cancelled, 5 exhausted. Blocked, cancelled and exhausted are
+  deliberately not 1, because collapsing them loses the only information the
+  pipeline had.
+- **A run that ends on no terminal event is failed, never completed.** A run
+  whose ending nobody recognised did not demonstrably succeed, and defaulting to
+  success is how a broken stream reports green.
+- **A run that ran out of time is exhausted, not failed.** The work may be fine
+  and simply larger than the allowance, and reporting it as failure is what
+  makes people raise timeouts blindly instead of reading them.
+- **The tool set is fixed and scoped to one directory.** A run nobody is
+  watching should not be able to widen its own reach, and every path the model
+  chooses is refused if it would leave the workspace.
+- **It never imports the editor.** The runner is bundled separately from the
+  extension so shipping one cannot quietly make the other depend on a host.
+- **Still open:** a configurable tool catalog, resuming a previous run, and
+  streaming progress in a machine-readable form as it happens rather than one
+  summary at the end.
+
 ## 1.43.0
 
 Minor: a flagship delivery names its own strategy (F014, narrowed).

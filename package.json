@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "1.43.0",
+  "version": "1.44.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -762,7 +762,8 @@
     "check": "npm run format:check && npm run l10n:verify && npm run lint && npm run typecheck && npm run scan:paths && npm run coverage:scope && npm test && npm run build && npm run package:audit",
     "scan:paths": "node scripts/scan-absolute-paths.mjs",
     "prepublishOnly": "npm run check",
-    "check:live": "node scripts/live-agent-check.mjs"
+    "check:live": "node scripts/live-agent-check.mjs",
+    "headless": "node dist/headless.mjs"
   },
   "dependencies": {
     "@homebridge/node-pty-prebuilt-multiarch": "^0.14.1",
