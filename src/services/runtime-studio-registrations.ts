@@ -1,4 +1,8 @@
 import {
+  AdvisorToolExecutor,
+  advisorToolDefinition,
+} from '../infrastructure/advisor-tool-executor';
+import {
   AskUserToolExecutor,
   askUserToolDefinition,
 } from '../infrastructure/ask-user-tool-executor';
@@ -87,6 +91,7 @@ export function analysisToolRegistrations(
   parts: RuntimeStudioAnalysisTools,
 ): RuntimeToolRegistration[] {
   return [
+    { definition: advisorToolDefinition, executor: new AdvisorToolExecutor(parts.advisor) },
     { definition: askUserToolDefinition, executor: new AskUserToolExecutor(parts.questions) },
     {
       definition: endConversationToolDefinition,
