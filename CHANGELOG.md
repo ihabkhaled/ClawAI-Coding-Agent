@@ -2,6 +2,33 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.42.0
+
+Minor: a live check that proves the agent can actually code.
+
+- **Every existing lane proved the code was correct and the extension
+  activated. None proved the product works.** Eighty-one batches shipped
+  without the agent ever being run, because signing in was believed to need a
+  human in a browser.
+- **It does not.** The VS Code authorization's approve step is an ordinary
+  authenticated call; the browser page is a client for it, not a gate in front
+  of it. `npm run check:live` completes the whole flow without a browser.
+- **The scenario is a real task, not a single tool call.** Read a file, write
+  two, run the result, and correct it if the output is wrong. A model that can
+  make exactly one call looks fine in a one-step test and cannot build anything.
+- **The assertion trusts nothing the run reported.** It executes the produced
+  program in a separate process and reads its output. Receipts, stream events
+  and the model's own claim of success are all evidence the run could fabricate.
+- **Credentials come from the environment and the workspace is a temporary
+  directory** that is removed unless `--keep` is passed. Nothing is written to
+  the repository and no credential is committed.
+- **Not part of `npm run check`.** It needs a running stack, real credentials and
+  a paid model call, none of which belong in a deterministic gate.
+- Two hash forms exist and using the wrong one is a 500 with no detail: the tool
+  catalog and manifest hash a plain serialization, while the tool-result receipt
+  hashes the canonical form, in which an empty array is written as an empty
+  object. Both are now written down where the next caller will look.
+
 ## 1.41.0
 
 Minor: a command that refuses to stop no longer hangs the run (defect found under F001).
