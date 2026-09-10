@@ -381,6 +381,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-estimated="${translated('estimated')}"
     data-tokens="${translated('tokens')}"
     data-token-detail="${translated('Input {0} · Output {1}')}"
+    data-token-cached="${translated('{0} cached ({1}%)')}"
     data-timed-out="${translated('Timed out')}"
     data-warning-llamacpp="${translated('Local llama.cpp models could not be loaded. Refresh to retry.')}"
     data-warning-ollama="${translated('Local Ollama models could not be loaded. Refresh to retry.')}"

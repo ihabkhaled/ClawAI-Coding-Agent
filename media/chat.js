@@ -381,10 +381,23 @@ function translatedTemplate(template, ...values) {
   );
 }
 
+// The cache share belongs in the tooltip rather than the label. It changes what
+// a request cost and not how much of the window it used, and the label is read
+// as a capacity number.
+function tokenTooltip(receipt) {
+  const detail = translatedTemplate(labels.tokenDetail, receipt.input, receipt.output);
+  const cached = Number(receipt.cached ?? 0);
+  if (cached <= 0 || receipt.input <= 0) {
+    return detail;
+  }
+  const share = Math.round((cached / receipt.input) * 100);
+  return `${detail} · ${translatedTemplate(labels.tokenCached, cached, share)}`;
+}
+
 function tokenChip(receipt, className = '') {
   const chip = textElement('span', `token-chip ${className}`.trim(), tokenLabel(receipt));
   chip.dataset.source = receipt.source;
-  chip.title = translatedTemplate(labels.tokenDetail, receipt.input, receipt.output);
+  chip.title = tokenTooltip(receipt);
   return chip;
 }
 

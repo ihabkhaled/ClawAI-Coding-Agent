@@ -2,6 +2,29 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.39.0
+
+Minor: cached prompt tokens are counted as cached (F093, narrowed).
+
+- **The backend has reported `cachedPromptTokens` since prompt caching was
+  billed, and nothing here read it.** A conversation served almost entirely from
+  cache counted every cached token at full price, in the meter people use to
+  decide when to compact.
+- **Cached is a subset of input, never an addition to it**, and the distinction
+  is load-bearing in both directions. Cached tokens cost a fraction of fresh
+  ones, so counting them at full price makes a cheap conversation look
+  expensive. They still occupy the context window, so subtracting them from the
+  total would make a conversation about to overflow look like it has room. Cheap
+  is not the same as free of context.
+- **The share appears in the tooltip, not the label.** It says what a request
+  cost, not how much of the window it used, and the label is read as a capacity
+  number.
+- **A provider claiming more cached tokens than prompt tokens is clamped.** That
+  is a report this cannot represent, and believing it would show a cache share
+  above one hundred per cent.
+- An estimate never claims a cache hit, because an estimate cannot have observed
+  one.
+
 ## 1.38.0
 
 Minor: run spans can reach an OTLP collector (F108, narrowed).
