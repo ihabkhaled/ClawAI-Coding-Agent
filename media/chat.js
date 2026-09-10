@@ -545,19 +545,48 @@ function appendActivity(requestId, key, title, description = '', tokens = 0) {
   item.scrollIntoView({ block: 'end', behavior: 'auto' });
 }
 
-function updateActivityTokens(requestId, key, tokens) {
-  const streamState = streamStates.get(requestId);
-  const item = streamState?.activityItems.get(key);
-  if (!item) {
+/**
+ * The reasoning row is a disclosure, not a line.
+ *
+ * Extended thinking can run for minutes, and a flat list item that only grows a
+ * token count gives no way to tell a long think from a stalled request. The
+ * summary carries the size and the step count; opening it explains why there is
+ * no text to read, which is a deliberate product answer rather than a missing
+ * feature.
+ */
+function appendReasoningActivity(requestId, streamState) {
+  const list = activityLists.get(requestId);
+  if (!list) {
     return;
   }
-  let counter = item.querySelector('.activity-token');
-  if (!counter) {
-    counter = textElement('span', 'activity-token token-chip token-chip-compact', '');
-    item.append(counter);
+  let item = streamState.activityItems.get('reasoning');
+  if (!item) {
+    item = document.createElement('li');
+    item.className = 'activity-item activity-item-reasoning';
+    streamState.activityKeys.add('reasoning');
+    streamState.activityItems.set('reasoning', item);
+    const details = document.createElement('details');
+    details.className = 'reasoning-disclosure';
+    const summary = document.createElement('summary');
+    summary.className = 'reasoning-summary';
+    summary.append(textElement('strong', '', labels.reasoning));
+    summary.append(textElement('small', 'reasoning-progress', ''));
+    details.append(summary);
+    details.append(textElement('p', 'reasoning-detail', labels.reasoningProgress));
+    details.append(textElement('p', 'reasoning-private', labels.reasoningPrivate));
+    item.append(details);
+    list.hidden = false;
+    list.append(item);
   }
-  counter.textContent = `${tokens} ${labels.tokens} · ${labels.estimated}`;
-  counter.title = translatedTemplate(labels.tokenDetail, tokens, 0);
+  const progress = item.querySelector('.reasoning-progress');
+  if (progress) {
+    progress.textContent = translatedTemplate(
+      labels.reasoningSteps,
+      streamState.reasoningSegments,
+      streamState.reasoningTokens,
+    );
+  }
+  item.scrollIntoView({ block: 'end', behavior: 'auto' });
 }
 
 function textElement(tag, className, text) {
@@ -2292,6 +2321,7 @@ function submitPrompt(retryInput) {
     provider: '',
     submittedModelLabel,
     reasoningTokens: 0,
+    reasoningSegments: 0,
   });
   setRequestTokens(requestId, {
     input: promptTokens,
@@ -2922,20 +2952,22 @@ function reconcileStreamUsage(requestId, stream) {
 }
 
 function appendStreamActivity(requestId, stream) {
-  if (stream.type === 'REASONING_DELTA' && typeof stream.delta === 'string') {
+  if (stream.type === 'REASONING_DELTA') {
     const streamState = streamStates.get(requestId);
     if (!streamState) {
       return;
     }
-    streamState.reasoningTokens += estimateTokens(stream.delta);
-    appendActivity(
-      requestId,
-      'reasoning',
-      labels.reasoning,
-      labels.reasoningProgress,
-      streamState.reasoningTokens,
-    );
-    updateActivityTokens(requestId, 'reasoning', streamState.reasoningTokens);
+    // The host strips the chain of thought and sends its size instead, so this
+    // no longer measures a string it should never have been given. An event
+    // without a usable count still counts as a step: the model demonstrably
+    // thought, and showing nothing would be the bigger lie.
+    const deltaTokens =
+      typeof stream.deltaTokens === 'number' && Number.isFinite(stream.deltaTokens)
+        ? Math.max(0, Math.round(stream.deltaTokens))
+        : 0;
+    streamState.reasoningTokens += deltaTokens;
+    streamState.reasoningSegments += 1;
+    appendReasoningActivity(requestId, streamState);
     return;
   }
   if (

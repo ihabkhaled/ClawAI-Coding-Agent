@@ -28,6 +28,10 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('Current model');
     expect(html).toContain('Context used');
     expect(html).toContain('Agent behavior');
+    expect(html).toContain('data-reasoning-steps="{0} steps · {1} tokens"');
+    expect(html).toContain(
+      'data-reasoning-private="ClawAI reports how much the model thought, never what it thought."',
+    );
     expect(html).not.toContain('<dt>Plan</dt>');
     expect(html).toContain('id="runDeck"');
     expect(html).toContain('id="runDeckCount"');

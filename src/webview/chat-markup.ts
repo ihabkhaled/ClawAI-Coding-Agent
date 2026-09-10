@@ -364,6 +364,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-recent-conversations="${translated('Recent conversations')}"
     data-reasoning="${translated('Reasoning')}"
     data-reasoning-progress="${translated('Working through the request')}"
+    data-reasoning-steps="${translated('{0} steps · {1} tokens')}"
+    data-reasoning-private="${translated('ClawAI reports how much the model thought, never what it thought.')}"
     data-request-accepted="${translated('Request accepted')}"
     data-preparing-run="${translated('ClawAI is preparing the run.')}"
     data-waiting-turn="${translated('Waiting for the active run to finish.')}"

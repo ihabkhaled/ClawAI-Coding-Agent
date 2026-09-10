@@ -8,6 +8,7 @@ import {
   deriveConversationSubject,
 } from '../core/chat-session';
 import { rememberClosedSession, takeClosedSession } from '../core/closed-session-stack';
+import { redactReasoningEvent } from '../core/reasoning-visibility';
 
 import { publicHistoryMessage } from './chat-history-message';
 import {
@@ -153,11 +154,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     });
   }
 
+  /**
+   * The one door every stream event goes through on its way to the panel, and
+   * therefore the only place where a model's private reasoning can be dropped
+   * once instead of by convention in four producers.
+   */
   async postEvent(event: Record<string, unknown>, requestId?: string): Promise<void> {
     await this.postForRequest(
       {
         type: 'streamEvent',
-        event,
+        event: redactReasoningEvent(event),
         ...(requestId === undefined ? {} : { requestId }),
       },
       requestId,

@@ -1867,3 +1867,50 @@ organization policy, which is fetched with the account and not written by the
 repository.
 
 **Still true:** live-model Definition of Done cannot be executed here.
+
+### Batch 60 — F043 extended thinking controls
+
+| Batch | Version | Status                                | Evidence                                                                                        |
+| ----- | ------- | ------------------------------------- | ----------------------------------------------------------------------------------------------- |
+| 60    | 1.20.0  | Code and deterministic gates complete | `reasoning-visibility.ts`, `chat-view-provider.ts` `postEvent`, `media/chat.js`. Tests: 11 new. |
+
+**The audit called this a UI gap and it was a leak.** The row said the reasoning
+line was flat rather than collapsible. It was, but the reason the row existed at
+all — "without leaking private chain-of-thought" — was not satisfied either: the
+panel computed a token count from `stream.delta`, which means the host had
+already posted the model's private reasoning, in full, across the webview
+boundary. Nothing rendered it. It was still there, in the message queue, in
+anything that inspects a webview.
+
+**One door, not four.** Four services call `postEvent`. Asking each of them to
+remember to strip reasoning is how the fifth one forgets. `postEvent` is the
+single place every stream event passes through on its way to the panel, so the
+guard lives there and the producers do not need to know it exists. Every
+non-reasoning event is returned by identity, so the chokepoint costs nothing.
+
+**Three field names for one event.** `delta` is what the backend sends today.
+`content` and `reasoning` are the shapes the same event takes on providers that
+report a finished reasoning block instead of a stream. Guarding only the field
+that exists today is how the guard is bypassed by a backend change nobody
+connected to this file.
+
+**The panel stopped measuring a string it should never have had.** It now reads
+the size the host computed. That is not a refactor: it is what makes the
+redaction observable rather than a silent behaviour change, because a panel that
+still needed the text would break loudly.
+
+**The disclosure answers a question the count could not.** Extended thinking can
+run for minutes. A line whose only motion is a rising number cannot distinguish
+a long think from a stalled request, so the row became a `<details>` carrying
+the step count and the size, and its open state says why there is no text to
+read. That is a product answer, not a missing feature.
+
+**Narrowed, and the row says how.** The pack also asks for effort options gated
+on the model's declared reasoning capability. No such field exists: the catalog
+carries `supportsStreaming`, `supportsTools`, `supportsVision` and
+`supportsStructuredOutput`, and the backend has no reasoning capability to
+report. Inventing a client-side guess would disable effort levels on models that
+support them. The gating half stays open against a backend field; the row names
+it rather than claiming the feature whole.
+
+**Still true:** live-model Definition of Done cannot be executed here.
