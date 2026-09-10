@@ -2932,6 +2932,103 @@ const settingDescriptionTranslations = {
   },
 };
 
+const attachmentTranslations = {
+  ar: {
+    '{0} was not sent: the image is too large to read.': 'لم يُرسل {0}: الصورة أكبر من أن تُقرأ.',
+    '{0} was not sent: the selected model cannot read images.':
+      'لم يُرسل {0}: النموذج المحدد لا يمكنه قراءة الصور.',
+    '{0} was not sent: this message already carries enough images.':
+      'لم يُرسل {0}: هذه الرسالة تحمل صوراً كافية بالفعل.',
+  },
+  de: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} wurde nicht gesendet: das Bild ist zu groß zum Lesen.',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} wurde nicht gesendet: das gewählte Modell kann keine Bilder lesen.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} wurde nicht gesendet: diese Nachricht enthält bereits genug Bilder.',
+  },
+  es: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} no se envió: la imagen es demasiado grande para leerla.',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} no se envió: el modelo seleccionado no puede leer imágenes.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} no se envió: este mensaje ya lleva suficientes imágenes.',
+  },
+  fa: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} ارسال نشد: تصویر برای خواندن بیش از حد بزرگ است.',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} ارسال نشد: مدل انتخاب‌شده نمی‌تواند تصویر بخواند.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} ارسال نشد: این پیام هم‌اکنون تصاویر کافی دارد.',
+  },
+  fr: {
+    '{0} was not sent: the image is too large to read.':
+      "{0} n'a pas été envoyé : l'image est trop grande pour être lue.",
+    '{0} was not sent: the selected model cannot read images.':
+      "{0} n'a pas été envoyé : le modèle sélectionné ne peut pas lire les images.",
+    '{0} was not sent: this message already carries enough images.':
+      "{0} n'a pas été envoyé : ce message contient déjà assez d'images.",
+  },
+  hi: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} नहीं भेजा गया: छवि पढ़ने के लिए बहुत बड़ी है।',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} नहीं भेजा गया: चयनित मॉडल छवियाँ नहीं पढ़ सकता।',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} नहीं भेजा गया: इस संदेश में पहले से पर्याप्त छवियाँ हैं।',
+  },
+  it: {
+    '{0} was not sent: the image is too large to read.':
+      "{0} non è stato inviato: l'immagine è troppo grande da leggere.",
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} non è stato inviato: il modello selezionato non può leggere immagini.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} non è stato inviato: questo messaggio contiene già abbastanza immagini.',
+  },
+  ja: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} は送信されませんでした。画像が大きすぎて読めません。',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} は送信されませんでした。選択中のモデルは画像を読めません。',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} は送信されませんでした。このメッセージには既に十分な画像があります。',
+  },
+  pt: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} não foi enviado: a imagem é grande demais para ser lida.',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} não foi enviado: o modelo selecionado não consegue ler imagens.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} não foi enviado: esta mensagem já carrega imagens suficientes.',
+  },
+  ru: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} не отправлен: изображение слишком большое.',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} не отправлен: выбранная модель не читает изображения.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} не отправлен: в этом сообщении уже достаточно изображений.',
+  },
+  th: {
+    '{0} was not sent: the image is too large to read.':
+      'ไม่ได้ส่ง {0} เพราะรูปภาพใหญ่เกินกว่าจะอ่านได้',
+    '{0} was not sent: the selected model cannot read images.':
+      'ไม่ได้ส่ง {0} เพราะโมเดลที่เลือกอ่านรูปภาพไม่ได้',
+    '{0} was not sent: this message already carries enough images.':
+      'ไม่ได้ส่ง {0} เพราะข้อความนี้มีรูปภาพมากพอแล้ว',
+  },
+  zh: {
+    '{0} was not sent: the image is too large to read.': '未发送 {0}：图像过大，无法读取。',
+    '{0} was not sent: the selected model cannot read images.':
+      '未发送 {0}：所选模型无法读取图像。',
+    '{0} was not sent: this message already carries enough images.':
+      '未发送 {0}：这条消息已经包含足够多的图像。',
+  },
+};
+
 function translate(locale, message) {
   return (
     statusLineTranslations[locale][message] ??
@@ -2951,6 +3048,7 @@ function translate(locale, message) {
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
+    attachmentTranslations[locale][message] ??
     settingDescriptionTranslations[locale][message] ??
     outputStyleTranslations[locale][message] ??
     sharedTranslations[locale][message] ??

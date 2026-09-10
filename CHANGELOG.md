@@ -2,6 +2,25 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.10.0
+
+Minor: images are stripped, gated and budgeted before they are sent (F039).
+
+- **EXIF is removed from JPEGs and text chunks from PNGs**, on this machine,
+  before upload. A screenshot is usually harmless; a phone photo carries GPS
+  coordinates, a device serial and a timestamp, and attaching one would send
+  all three to a model provider. Nobody means to do that, so it is not an
+  option — it just happens.
+- **Segment surgery, not re-encoding.** The scan data is copied through
+  untouched, so the picture is byte-for-byte what you attached minus the parts
+  that describe you.
+- **A model that cannot see is not sent an image.** The attachment is dropped
+  with a reason rather than the request failing at the provider.
+- **Images are budgeted per request**, and the one that would overrun is the
+  one refused — not the ones before it.
+- **One unusable attachment costs you that attachment**, never the message you
+  were writing.
+
 ## 1.9.0
 
 Minor: lifecycle hooks (F078).

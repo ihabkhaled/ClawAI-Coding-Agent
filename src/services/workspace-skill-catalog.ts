@@ -48,3 +48,20 @@ export function workspaceOutputStyles(
     ),
   );
 }
+
+/**
+ * Both file-backed catalogs for the folder the agent is pointed at.
+ *
+ * Returned together because they are built from the same two inputs and are
+ * always wanted together; two call sites doing the same thing is two places to
+ * forget the folder can change.
+ */
+export function workspaceCatalogs(
+  globalStorageUri: vscode.Uri,
+  workspaceScope: WorkspaceScopeService,
+): { skills: SkillCatalogService; outputStyles: OutputStyleCatalog } {
+  return {
+    skills: workspaceSkillCatalog(globalStorageUri, workspaceScope),
+    outputStyles: workspaceOutputStyles(globalStorageUri, workspaceScope),
+  };
+}

@@ -54,7 +54,12 @@ async function authenticatedClient(fetcher: typeof fetch) {
       backendUrl: BACKEND_URL,
       fetcher,
       sessionVault: vault,
-      timeoutMs: 1_000,
+      // Generous on purpose. These tests are about session semantics — which
+      // token wins when a refresh and a logout race — not about how fast a
+      // mocked fetch resolves. A one-second budget made them fail under a
+      // loaded full-suite run and pass in isolation, which is a test measuring
+      // the machine rather than the code.
+      timeoutMs: 30_000,
     }),
     storage,
     vault,
@@ -113,9 +118,12 @@ describe('BackendClient session lifecycle', () => {
     const { client, vault } = await authenticatedClient(fetcher);
 
     const loggingOut = client.logout();
-    await vi.waitFor(() => {
-      expect(completeLogout).toBeTypeOf('function');
-    });
+    await vi.waitFor(
+      () => {
+        expect(completeLogout).toBeTypeOf('function');
+      },
+      { timeout: 15_000 },
+    );
     await vault.save(BACKEND_URL, rotatedTokens);
     completeLogout?.(new Response(null, { status: 204 }));
     await loggingOut;
@@ -142,9 +150,12 @@ describe('BackendClient session lifecycle', () => {
     });
     const { client, vault } = await authenticatedClient(fetcher);
     const profileRequest = client.getProfile();
-    await vi.waitFor(() => {
-      expect(completeRefresh).toBeTypeOf('function');
-    });
+    await vi.waitFor(
+      () => {
+        expect(completeRefresh).toBeTypeOf('function');
+      },
+      { timeout: 15_000 },
+    );
 
     await client.logout();
     completeRefresh?.(Response.json({ tokens: rotatedTokens }));
@@ -179,9 +190,12 @@ describe('BackendClient session lifecycle', () => {
       timeoutMs: 1_000,
     });
     const profileRequest = oldClient.getProfile();
-    await vi.waitFor(() => {
-      expect(completeRefresh).toBeTypeOf('function');
-    });
+    await vi.waitFor(
+      () => {
+        expect(completeRefresh).toBeTypeOf('function');
+      },
+      { timeout: 15_000 },
+    );
 
     await replacementClient.logout();
     completeRefresh?.(Response.json({ tokens: rotatedTokens }));
