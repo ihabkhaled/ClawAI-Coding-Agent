@@ -1,5 +1,4 @@
 import { spawnSync } from 'node:child_process';
-import { randomUUID } from 'node:crypto';
 import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { argv, env, exit, stdout } from 'node:process';
@@ -7,14 +6,12 @@ import { argv, env, exit, stdout } from 'node:process';
 import { describeHeadlessOutcome, headlessExitCode } from '../core/headless-outcome';
 import { inheritedEnvironment } from '../core/inherited-environment';
 import { containedPath } from '../core/workspace-containment';
+import { runAgent } from '../sdk/agent-sdk';
 
 import { allowedExecutables, isAllowedExecutable } from './headless-command-policy';
-import { runHeadlessSession } from './headless-session';
 import { HEADLESS_TOOLS } from './headless-tools';
-import { HeadlessTransport, canonicalJson, sha256 } from './headless-transport';
 
-import type { ToolLimits, ToolRequestPayload } from './headless-main.types';
-import type { HeadlessStreamEvent } from './headless-session.types';
+import type { ToolLimits } from './headless-main.types';
 
 /**
  * The non-interactive entry point.
@@ -34,51 +31,30 @@ export async function main(): Promise<number> {
   const options = readOptions();
   if (options === undefined) return headlessExitCode('unusable');
 
-  const transport = new HeadlessTransport(options.backendUrl);
-  const token = await transport.signIn(options.credentials);
-  const threadId = await transport.createThread(token, 'Headless run');
-  const epochs = { account: 1, workspace: 1, target: 1, policy: 1 };
-  const started = await transport.startRun(token, {
-    schemaVersion: '2.0',
-    threadId,
-    clientRequestId: `request.${randomUUID()}`,
-    idempotencyKey: `idem.${randomUUID()}`,
-    prompt: options.prompt,
-    manifestHash: sha256(JSON.stringify({ targets: ['target:workspace'] })),
-    toolCatalogHash: sha256(JSON.stringify(HEADLESS_TOOLS)),
-    toolDefinitions: HEADLESS_TOOLS,
-    provider: options.provider,
-    model: options.model,
-    epochs,
-    budget: {
-      maxModelTurns: 20,
-      maxToolCalls: 40,
-      maxToolRounds: 20,
-      maxRepairAttempts: 1,
-      maxRuntimeMs: options.deadlineMs,
-      maxOutputBytes: 1_048_576,
-      maxToolResultBytes: 262_144,
-    },
-  });
-
-  const run = { ...started, threadId };
   const limits: ToolLimits = {
     workspace: options.workspace,
     allowedExecutables: options.allowedExecutables,
   };
-  const report = await runHeadlessSession({
-    events: () => transport.events(token, run),
-    answerTool: async (event) => {
-      await transport.submitResult(token, run, epochs, resultFor(event, limits));
+  const report = await runAgent({
+    prompt: options.prompt,
+    toolkit: {
+      definitions: HEADLESS_TOOLS,
+      execute: (call) => execute(call.toolName, call.operation, { ...call.arguments }, limits),
     },
-    now: () => Date.now(),
+    credentials: options.credentials,
+    backendUrl: options.backendUrl,
+    provider: options.provider,
+    model: options.model,
+    title: 'Headless run',
     deadlineMs: options.deadlineMs,
   });
 
   stdout.write(
     options.json
-      ? `${JSON.stringify({ ...report, runId: run.runId, workspace: options.workspace })}\n`
-      : `${describeHeadlessOutcome(report.outcome)} ${String(report.toolCalls)} tool call(s).\n`,
+      ? `${JSON.stringify({ ...report, workspace: options.workspace })}
+`
+      : `${describeHeadlessOutcome(report.outcome)} ${String(report.toolCalls)} tool call(s).
+`,
   );
   return headlessExitCode(report.outcome);
 }
@@ -145,69 +121,6 @@ function flag(name: string): string | undefined {
   const index = argv.indexOf(name);
   if (index === -1) return undefined;
   return argv[index + 1];
-}
-
-/** Runs one requested tool, separating what it produced from why it could not. */
-function attemptTool(
-  payload: ToolRequestPayload,
-  limits: ToolLimits,
-): { structured?: unknown; failure?: unknown } {
-  try {
-    return {
-      structured: execute(
-        payload.toolName ?? '',
-        payload.operation ?? '',
-        payload.invocation?.arguments ?? {},
-        limits,
-      ),
-    };
-  } catch (error) {
-    return {
-      failure: {
-        code: 'TOOL_FAILED',
-        message: (error instanceof Error ? error.message : 'Tool failed').slice(0, 400),
-        retryable: false,
-        redactionApplied: false,
-      },
-    };
-  }
-}
-
-/** Builds the result the backend verifies, including the receipt it hashes. */
-function resultFor(event: HeadlessStreamEvent, limits: ToolLimits): unknown {
-  const payload = (event.payload ?? {}) as ToolRequestPayload;
-  const invocationId = payload.invocationId ?? 'invocation.unknown';
-  const args = payload.invocation?.arguments ?? {};
-  const startedAt = new Date().toISOString();
-  const { structured, failure } = attemptTool(payload, limits);
-  const modelText = structured === undefined ? null : JSON.stringify(structured).slice(0, 2_000);
-  const canonical = canonicalJson({
-    error: failure ?? null,
-    modelText,
-    structured: structured ?? null,
-  });
-  return {
-    schemaVersion: '2.0',
-    invocationId,
-    status: failure === undefined ? 'succeeded' : 'failed',
-    ...(structured === undefined ? {} : { structured }),
-    ...(modelText === null ? {} : { modelText }),
-    ...(failure === undefined ? {} : { error: failure }),
-    receipt: {
-      schemaVersion: '2.0',
-      receiptId: `receipt.${randomUUID()}`,
-      invocationId,
-      argumentHash: sha256(canonicalJson(args)),
-      resultHash: sha256(canonical),
-      startedAt,
-      completedAt: startedAt,
-      durationMs: 0,
-      outputBytes: Buffer.byteLength(canonical, 'utf8'),
-      truncated: false,
-      redactionApplied: false,
-    },
-    continuation: { action: 'continue', nextTurnId: `turn.${randomUUID()}` },
-  };
 }
 
 function execute(

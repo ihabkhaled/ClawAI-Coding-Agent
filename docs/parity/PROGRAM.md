@@ -2966,3 +2966,43 @@ and an existing link is refused rather than followed.
 **Proven, not assumed.** A live run was asked to fetch with `curl`. It was
 refused, fell back to printing its own environment from a permitted `node`
 process, and reported the planted secret as absent.
+
+### Batch 86 — F086 agent SDK
+
+| Batch | Version | Status                                             | Evidence                                                                |
+| ----- | ------- | -------------------------------------------------- | ----------------------------------------------------------------------- |
+| 86    | 1.46.0  | Code, deterministic gates, and an outside consumer | `src/sdk/`, `dist/sdk.mjs`. 9 new tests. Consumer run: 2 calls, exit 0. |
+
+**The row said `package.json` exposed no library entry and there was no
+host-free SDK over the Runtime V2 contracts.** Batches 84 and 85 had already
+built most of one without calling it that; this batch drew the boundary and
+tested it from outside.
+
+**The caller supplies the tools, and that is the whole boundary.** Fixing a tool
+set inside the library would serve only the application it was extracted from.
+`runAgent` takes a toolkit — definitions for the model, and a function to run
+what it calls.
+
+**It earns its existence on three details nobody should rediscover.** The
+authorization looks like it needs a browser and does not. Two different hash
+forms are verified, and swapping them is a server error with no detail. The
+receipt must hash a canonical serialization of exactly `{error, modelText,
+structured}`, or every result is rejected without explanation.
+
+**A throwing toolkit fails one call, not the run.** The model can read a failure
+and try something else. An exception escaping the loop only tells an operator
+that something went wrong somewhere.
+
+**The headless runner was rebuilt on it.** A library nothing uses is a
+description of a library, and keeping two implementations of the same loop is
+how they drift.
+
+**Proven from outside the repository.** A consumer script imported the built
+bundle, supplied its own file toolkit, and asked the agent to read a
+specification and implement it. The agent wrote the module and it returned the
+right answer.
+
+**Still open:** the SDK is published as a bundle rather than a package. There is
+no `exports` entry in `package.json`, deliberately — VS Code resolves the
+extension through `main`, and adding an export map is a packaging change that
+deserves its own batch rather than riding along with this one.
