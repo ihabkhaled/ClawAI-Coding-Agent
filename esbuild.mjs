@@ -31,6 +31,21 @@ const headlessOptions = {
   target: 'node20',
 };
 
+// The SDK is a library, not a program: no entry side effects, and bundled so a
+// caller gets one file rather than a source tree that depends on this repo's
+// build settings.
+const sdkOptions = {
+  bundle: true,
+  entryPoints: ['src/sdk/index.ts'],
+  format: 'esm',
+  logLevel: 'info',
+  minify: false,
+  outfile: 'dist/sdk.mjs',
+  platform: 'node',
+  sourcemap: true,
+  target: 'node20',
+};
+
 async function copyNativeRuntime() {
   await copyFile('node_modules/playwright-core/browsers.json', 'browsers.json');
   await rm('dist/prebuilds', { recursive: true, force: true });
@@ -48,5 +63,6 @@ if (watch) {
 } else {
   await build(options);
   await build(headlessOptions);
+  await build(sdkOptions);
   await copyNativeRuntime();
 }

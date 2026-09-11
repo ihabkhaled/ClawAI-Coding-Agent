@@ -2,6 +2,33 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.46.0
+
+Minor: an agent SDK, so a third caller does not rebuild the hard parts (F086).
+
+- **`dist/sdk.mjs` exposes `runAgent`**, the same library the extension and the
+  headless runner are built on. It signs in, starts a run, executes the tools
+  the model asks for, and returns an outcome.
+- **The caller supplies the tools.** That is the boundary that makes it an SDK
+  rather than an export. A library that fixed its own tool set would serve only
+  the application it was extracted from, and the next application's tools are
+  always different.
+- **It exists because three things are easy to get subtly wrong.** The
+  authorization looks like it needs a browser and does not. Two different hash
+  forms are verified and swapping them is a server error with no detail. The
+  receipt must hash a canonical serialization of exactly one wrapper shape, or
+  every tool result is rejected without explanation.
+- **A toolkit that throws produces a failed result, not a failed run.** The
+  model can read a failure and try something else; an exception out of the loop
+  only tells the operator that something went wrong somewhere.
+- **The transport is injectable**, so a caller can test their toolkit with no
+  backend, no model and no bill.
+- **The headless runner was rebuilt on it** rather than left as a parallel
+  implementation. A library nothing uses is a description of a library.
+- Verified by a consumer outside this repository: it supplied its own file
+  toolkit, the agent read a specification, wrote the module it described, and
+  the module returned the right answer.
+
 ## 1.45.0
 
 Minor: the headless runner stops handing its own secrets to the model's commands.
