@@ -45,7 +45,8 @@ export class AuthorizationCancelledError extends Error {
 const AUTHORIZATION_TIMEOUT_MS = 2 * 60 * 1_000;
 
 const defaultCallbackFactory: AuthorizationCallbackFactory = {
-  open: (state) => LoopbackAuthorizationServer.open(state),
+  open: (state) =>
+    LoopbackAuthorizationServer.open(state, undefined, (message) => vscode.l10n.t(message)),
 };
 
 export class BrowserAuthorizationService implements vscode.Disposable {

@@ -30,7 +30,12 @@ describe('LoopbackAuthorizationServer', () => {
       expect(response.status).toBe(200);
       const body = await response.text();
       expect(body).toContain('Connected to ClawAI');
-      expect(body).toContain('close automatically');
+      expect(body).toContain('You can safely close this tab');
+      expect(body).toContain('Your browser kept this tab open');
+      expect(body).not.toContain('close automatically');
+      expect(body).not.toContain('authorization-code');
+      expect(response.headers.get('content-security-policy')).toMatch(/script-src 'nonce-/u);
+      expect(response.headers.get('content-security-policy')).not.toContain('unsafe-inline');
     } finally {
       server.dispose();
     }

@@ -2,6 +2,8 @@ import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'n
 import { join, relative } from 'node:path';
 import { cwd, stdout } from 'node:process';
 
+import { authorizationPageTranslations } from './authorization-page-translations.mjs';
+
 const root = cwd();
 const localeNames = {
   ar: 'العربية',
@@ -4671,6 +4673,7 @@ const cachedTokenTranslations = {
 
 function translate(locale, message) {
   return (
+    authorizationPageTranslations[locale][message] ??
     statusLineTranslations[locale][message] ??
     turnNavigationTranslations[locale][message] ??
     onboardingTranslations[locale][message] ??

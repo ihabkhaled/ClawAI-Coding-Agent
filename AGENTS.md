@@ -1,4 +1,4 @@
-# ClawAI Coding Agent — agent entrypoint
+# ClawAI Coding Agent â€” agent entrypoint
 
 This repository contains the standalone VS Code extension embedded in the
 ClawAI monorepo as `apps/claw-coding-agent`.
@@ -15,7 +15,13 @@ and the obvious repair breaks `npm run build`.
 
 Read and apply `skills/version-every-change/SKILL.md` for every publishable
 change. Every push to `main` must carry a new SemVer version, matching changelog
-entry, rebuilt VSIX in `builds/`, and GitHub release asset.
+entry, rebuilt VSIX in `builds/`, and GitHub release asset. Delivery releases
+advance the second SemVer component even after `1.99.0`; use third-component
+patches only for explicit compatible patch releases.
+
+Read `docs/RULES.md` and apply
+`skills/verify-coding-agent-readiness/SKILL.md` whenever a change affects agent
+execution, recovery, provider behavior, or a coding-capability claim.
 
 ## Required gates
 
