@@ -11,7 +11,7 @@ in the ClawAI platform.
 
 ## Runtime foundation
 
-Version 1.46.0 delivers the model-neutral Runtime Protocol V2 studio. Bounded
+Version 1.47.0 delivers the model-neutral Runtime Protocol V2 studio. Bounded
 workspace, command, process, Git, container, database, quality, browser,
 planning, service, journal, and evidence capabilities share one ordered,
 policy-controlled execution loop. An unavailable or incompatible additive
@@ -29,7 +29,7 @@ endpoint keeps the supported V1 chat and reviewed edit workflow active.
 - Paste, drop, or pick screenshots, images, videos, documents, and source files
   into the composer. Attachments stay visibly bound to the request that owns
   them and upload only when that queued request starts. A file whose name looks
-  like it stores credentials — `.env`, `id_rsa`, `passwords.csv` — is refused by
+  like it stores credentials â€” `.env`, `id_rsa`, `passwords.csv` â€” is refused by
   name, the same way context collection and every tool refuse it.
 - Recall submitted prompts with Arrow Up and move forward again with Arrow Down.
 - Switch between Auto execution and read-only Plan mode.
@@ -155,7 +155,7 @@ layout.
 | `clawAI.backendEnvironment`  | machine   | `LOCAL` (`LOCAL`, `CLOUD`, `CUSTOM`)    |
 | `clawAI.frontendEnvironment` | machine   | `LOCAL` (`LOCAL`, `CLOUD`, `CUSTOM`)    |
 | `clawAI.requestTimeoutMs`    | machine   | `60000`                                 |
-| `clawAI.effortMode`          | resource  | `ULTRA` (`LOW`…`ULTRA`)                 |
+| `clawAI.effortMode`          | resource  | `ULTRA` (`LOW`â€¦`ULTRA`)               |
 | `clawAI.speedMode`           | resource  | `1X` (`1X`, `1.5X`, `2X`)               |
 | `clawAI.routingMode`         | workspace | `AUTO`                                  |
 | `clawAI.agentMode`           | workspace | `AUTO`                                  |
@@ -188,7 +188,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `1.46.0` is current and implements the extension surface from the ClawAI
+Version `1.47.0` is current and implements the extension surface from the ClawAI
 VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 

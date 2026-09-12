@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.47.0
+
+Minor: the browser sign-in callback now gives a safe, working return path when
+browsers refuse to close an externally opened tab.
+
+- The callback removes the OAuth code and state from the displayed URL after
+  validation, retains its nonce-only CSP, and no longer promises an automatic
+  tab close the browser may reject.
+- **Open Chat** uses the existing navigation-only VS Code URI and cannot inject
+  a prompt, command, approval, session credential, or arbitrary payload.
+- The close action works for script-opened popups; ordinary tabs show an honest
+  Ctrl+W/tab-close fallback when the browser blocks `window.close()`.
+- All 13 extension runtime locale bundles include the callback strings.
+- Release rules now require second-component delivery bumps beyond `1.99.0`,
+  while third-component releases remain available for explicit compatible fixes.
+
 ## 1.46.0
 
 Minor: an agent SDK, so a third caller does not rebuild the hard parts (F086).
@@ -97,7 +113,7 @@ Minor: a flagship delivery names its own strategy (F014, narrowed).
 - **Five strategy names were a validator, and they constrained nothing but the
   caller's vocabulary.** Nothing branched on the value. It is carried into the
   delivery's identity hash and shown in reports, and that is all it has ever
-  done — so a security hardening or a data migration was refused for a field
+  done â€” so a security hardening or a data migration was refused for a field
   that is a label.
 - **The five survive as suggestions.** `isSuggestedFlagshipStrategy` still tells
   a familiar strategy from a new one, for grouping a report, without that
@@ -148,7 +164,7 @@ Minor: a command that refuses to stop no longer hangs the run (defect found unde
 - **Termination was a request the runner assumed was obeyed.** It sent `SIGTERM`
   once and then waited for a `close` event. A test runner that traps the signal
   to print its summary, or a process wedged in an uninterruptible read, never
-  emits one — so the run stopped mid-task with no error, no output and nothing
+  emits one â€” so the run stopped mid-task with no error, no output and nothing
   to report.
 - **POSIX now escalates.** `SIGTERM`, a grace period, then `SIGKILL`, which
   cannot be trapped. The grace is long enough for a runner to flush and a build
@@ -284,7 +300,7 @@ Minor: drop files from the editor or the explorer (F037, narrowed).
 - **Dropping a file from the file tree used to do nothing at all.** The composer
   accepted only drags carrying real file data, and a drag from the editor or the
   explorer carries references instead. The drop was never allowed, so it never
-  arrived — which reads as a broken feature rather than an absent one.
+  arrived â€” which reads as a broken feature rather than an absent one.
 - **Shift is the difference between naming a file and reading it.** A plain drop
   mentions the file, which pulls its contents into the next request; Shift
   inserts the path as text, which is what you want when the path is the subject
@@ -307,8 +323,8 @@ Minor: drop files from the editor or the explorer (F037, narrowed).
 Minor: the host says what isolation it can actually give (F051, narrowed).
 
 - **A sandbox capability probe, reported in the diagnostic report.** The
-  extension bounds commands — no shell, no chaining, capped output and wall
-  clock — but bounding is not isolation, and nothing said so.
+  extension bounds commands â€” no shell, no chaining, capped output and wall
+  clock â€” but bounding is not isolation, and nothing said so.
 - **Saying "none" out loud is the honest half of the feature.** A run that
   reported "sandboxed" on a host with no sandbox would be lying in the one place
   a reader is deciding whether to approve something.
@@ -461,7 +477,7 @@ Minor: the browser tool can be pointed at your own sites (F036, narrowed).
 
 - **`clawAI.browserOrigins` adds site origins the browser may open without
   asking.** The allow list was the backend and frontend this extension signs in
-  to, and nothing else — not your dev server, not your staging site, not the
+  to, and nothing else â€” not your dev server, not your staging site, not the
   documentation you are working from. Each of those was reachable only by
   approving an external navigation one prompt at a time, which is the shape of a
   permission people click through without reading.
@@ -483,7 +499,7 @@ Minor: the browser tool can be pointed at your own sites (F036, narrowed).
 Minor: an advisor model (F090, narrowed).
 
 - **`runtime.advisor` asks a different model one question.** Delegation already
-  existed: a sub-agent can be given work. What did not exist was consultation —
+  existed: a sub-agent can be given work. What did not exist was consultation â€”
   asking mid-run whether a conclusion holds, without handing over the task or
   the workspace.
 - **It is never the model already running.** Asking the same model the same
@@ -516,7 +532,7 @@ Minor: Fast mode (F089 complete).
 - **They are genuinely two different mechanisms and the docs say so.** One is a
   model choice made on a server; the other is local syscall concurrency. They
   belong behind one control because a person asking for a fast reply is not
-  asking about either mechanism — they want the whole round trip shorter, and
+  asking about either mechanism â€” they want the whole round trip shorter, and
   moving one lever buys half of it.
 - **Neither lever trades correctness.** The router still picks a capable model,
   and `2X` changes only how many stats are in flight. The file set, the byte
@@ -539,7 +555,7 @@ Minor: stale referenced ranges are marked (F033 complete).
   claims the model read something it never saw. Nothing errors, and the
   conversation reads as though it were still about the current file. That is the
   quiet kind of wrong.
-- **The receipt now records a digest of exactly what was collected** — the
+- **The receipt now records a digest of exactly what was collected** â€” the
   range, not the whole file, because the range is what the reference names.
 - **The check runs on save.** A save is the only moment the answer can change,
   and it is the moment someone is looking, so the mark appears while they still
@@ -671,7 +687,7 @@ Minor: a run terminal (F069, narrowed).
   the wire could clear the scrollback, rewrite the window title, or turn a word
   into a hyperlink pointing anywhere, and a repository the agent read can put
   any of that in the model's mouth.
-- **Backspace is stripped for the same reason** — it lets a model overprint what
+- **Backspace is stripped for the same reason** â€” it lets a model overprint what
   it already wrote, so the terminal would show something other than what was
   sent.
 - **The line editor states every rule a shell gives for free**: what echoes,
@@ -717,7 +733,7 @@ Minor: domain rules in the project policy (F053, narrowed).
   meant to be about the origin. `https://evil.test/#docs.trusted.test` yields
   `evil.test`, because the host comes from the URL parser rather than a
   pattern.
-- **A call that names no host can never match a domain rule** — a rule about
+- **A call that names no host can never match a domain rule** â€” a rule about
   network access says nothing about a file read.
 - Still tighten-only, like every project rule: there is no `allow` outcome, so
   a cloned repository can only refuse work, never grant itself permission.
@@ -728,7 +744,7 @@ Minor: named checkpoints (F057).
 
 - **ClawAI: Create Checkpoint** remembers the current contents of every file
   the agent has changed this session, under a name you choose.
-- **ClawAI: Restore Checkpoint** puts them back — through the ordinary file
+- **ClawAI: Restore Checkpoint** puts them back â€” through the ordinary file
   transaction, so the restore is previewed, approved and itself undoable. A
   restore that could not be undone would make the safety feature the most
   dangerous button in the extension.
@@ -747,13 +763,13 @@ Minor: side questions (F042).
 - **ClawAI: Ask a Side Question** answers something without adding it to the
   conversation. The question goes to a separate thread and the answer opens as
   a document, not a message.
-- **The thread is archived at creation**, so it never appears in your history —
+- **The thread is archived at creation**, so it never appears in your history â€”
   a thread visible for even a moment has already polluted the list you were
   keeping clean. One thread is reused for the session rather than one per
   question.
 - **It carries none of the conversation's context, on purpose.** There is no
   way to give it that context without writing into the thread, which is the
-  thing being avoided — so the question is asked clean and the answer says so
+  thing being avoided â€” so the question is asked clean and the answer says so
   at the bottom.
 
 ## 1.16.0
@@ -761,13 +777,13 @@ Minor: side questions (F042).
 Minor: cell-granular notebook editing (F018).
 
 - **`workspace.notebook`** reads a notebook's cells and inserts, replaces or
-  deletes exactly one — instead of rewriting the whole `.ipynb` as opaque text
+  deletes exactly one â€” instead of rewriting the whole `.ipynb` as opaque text
   and destroying its structure.
 - **Everything the editor has no opinion about survives**: outputs, execution
   counts, per-cell metadata, kernelspec, widget state. Parsing into a narrow
   shape and writing it back is how a notebook gets destroyed by a tool that
   meant well.
-- **The file is written back the way it was found** — same indentation, same
+- **The file is written back the way it was found** â€” same indentation, same
   source representation per cell. A notebook reformatted from two spaces to
   four is a diff nobody asked for.
 - **Changing a cell's code clears its outputs.** An output that no longer
@@ -782,7 +798,7 @@ Minor: cell-granular notebook editing (F018).
 Minor: reference a terminal you are already using (F035), and a redaction fix.
 
 - **ClawAI: Attach Terminal Output** puts the last command from a terminal, and
-  what it printed, into the composer — tagged as terminal output, not pasted as
+  what it printed, into the composer â€” tagged as terminal output, not pasted as
   prose. A build log that happens to contain "ignore previous instructions" is
   still a build log.
 - **It goes into the composer, not into a message.** Attaching output is
@@ -793,9 +809,9 @@ Minor: reference a terminal you are already using (F035), and a redaction fix.
 - **Only commands VS Code saw start can be read.** Shell integration is the
   only supported way to read a terminal, so a terminal without it is named and
   said to be unreadable rather than attached empty.
-- **Security fix: `GITHUB_TOKEN=…` was not being redacted anywhere.** A word
+- **Security fix: `GITHUB_TOKEN=â€¦` was not being redacted anywhere.** A word
   boundary does not sit between an underscore and a letter, so every
-  underscore-prefixed secret name slipped through — in logs, diagnostics and
+  underscore-prefixed secret name slipped through â€” in logs, diagnostics and
   feedback reports, not only terminals. Underscore-joined names now match, and
   `SECRETARY_NAME=Alice` still does not.
 
@@ -804,7 +820,7 @@ Minor: reference a terminal you are already using (F035), and a redaction fix.
 Minor: conversation groups (F062).
 
 - **ClawAI: Group Conversation** files a conversation into a group, creates a
-  new group, or takes it out of one — all from the same question, because
+  new group, or takes it out of one â€” all from the same question, because
   "which group is this in" has an answer that includes none.
 - **The history view shows groups as folders**, expanded by default: a group
   somebody made is a group they want to see into.
@@ -822,7 +838,7 @@ Minor: open a conversation in a second window (F065).
 
 - **ClawAI: Open Conversation in New Window** opens the same folder in a new
   VS Code window and reveals the conversation there. A webview panel cannot
-  move between windows, so nothing is moved — two windows on one folder is what
+  move between windows, so nothing is moved â€” two windows on one folder is what
   you actually want, the conversation beside a different set of files.
 - **The handoff expires after a minute.** A note left by a window that never
   opened, or a cancelled folder prompt, must not hijack the next window you
@@ -845,7 +861,7 @@ Minor: manual conversation compaction (F041, partly).
   that was already there. A different model would be summarizing a
   conversation it never saw; a hidden side thread would conceal what was
   written on your behalf.
-- **The summary asks for decisions, not prose** — goal, decisions and why, work
+- **The summary asks for decisions, not prose** â€” goal, decisions and why, work
   done, work outstanding, open questions, files and paths. A summary optimised
   for reading loses exactly what the next turn needs.
 - An empty summary changes nothing and says so.
@@ -856,7 +872,7 @@ Minor: a reserved response budget and a truncation warning before you send
 (F040).
 
 - **A context window is not a budget for the prompt alone.** Whatever the model
-  says has to fit in the same window, so a quarter is kept back — bounded at
+  says has to fit in the same window, so a quarter is kept back â€” bounded at
   1 024 and 32 000, because the fraction that matters is small windows.
 - **The composer warns while you can still act on it.** "Nearly out of room"
   fires while this message still fits and the next one will not, which is the
@@ -874,14 +890,14 @@ Minor: images are stripped, gated and budgeted before they are sent (F039).
   before upload. A screenshot is usually harmless; a phone photo carries GPS
   coordinates, a device serial and a timestamp, and attaching one would send
   all three to a model provider. Nobody means to do that, so it is not an
-  option — it just happens.
+  option â€” it just happens.
 - **Segment surgery, not re-encoding.** The scan data is copied through
   untouched, so the picture is byte-for-byte what you attached minus the parts
   that describe you.
 - **A model that cannot see is not sent an image.** The attachment is dropped
   with a reason rather than the request failing at the provider.
 - **Images are budgeted per request**, and the one that would overrun is the
-  one refused — not the ones before it.
+  one refused â€” not the ones before it.
 - **One unusable attachment costs you that attachment**, never the message you
   were writing.
 
@@ -895,8 +911,8 @@ Minor: lifecycle hooks (F078).
 - **Hooks live in VS Code settings, never in `.clawai`.** That is the whole
   security design: a hook runs a command, and reading one from workspace
   content would make cloning a repository enough to execute code. Project
-  configuration here may only ever tighten — `policy.json` has no `allow`
-  outcome for the same reason — and a hook is the opposite of a tightening.
+  configuration here may only ever tighten â€” `policy.json` has no `allow`
+  outcome for the same reason â€” and a hook is the opposite of a tightening.
 - **Only a `before-tool` hook marked `blocking` can stop a call.** Everything
   else is advisory, so a broken hook slows a run rather than halting it.
 - **A hook that hangs is silence, not refusal.** Treating a timeout as a block
@@ -913,7 +929,7 @@ Minor: output styles (F082).
 - **ClawAI: Select Output Style** chooses how answers are written: default,
   concise, explanatory, or learning.
 - **A workspace can define its own.** `.clawai/output-styles/*.md` are read by
-  the same parser skills use — a style and a skill are the same kind of thing,
+  the same parser skills use â€” a style and a skill are the same kind of thing,
   a named block of instruction in a file, and two readers for one format would
   drift apart. A project style replaces a built-in of the same name.
 - **One place assembles the prompt now.** The Plan-mode instruction and the
@@ -921,7 +937,7 @@ Minor: output styles (F082).
   differently by each is a prompt whose behaviour depends on which transport
   was selected.
 - **Plan mode comes first, style second.** The first is a constraint on what
-  may happen, the second a preference about how to say it — so a style that
+  may happen, the second a preference about how to say it â€” so a style that
   could read as loosening the constraint is already overruled by the time it
   is read.
 - Style preambles stay in English because the model reads them; only the
@@ -933,8 +949,8 @@ Patch: the translation block fills gaps instead of overriding, and `npm run
 check` now verifies generated localization.
 
 - **1.6.0's new translations were consulted first** and silently replaced
-  existing ones — Chinese `view.chat` went from 聊天 to 对话 and Thai from แชต to
-  แชท. A block whose job is to fill gaps is now consulted last, so it can only
+  existing ones â€” Chinese `view.chat` went from èŠå¤© to å¯¹è¯ and Thai from à¹à¸Šà¸• to
+  à¹à¸Šà¸—. A block whose job is to fill gaps is now consulted last, so it can only
   add.
 - **The regenerated `package.nls.*.json` files were left uncommitted**, which
   CI caught and `npm run check` could not: freshness was a CI-only step.
@@ -954,10 +970,10 @@ Minor: skills are slash commands now (F077).
   someone chose, and offering `deploy` for `dp` would put a destructive command
   one Enter away from a typo.
 - **Arguments substitute.** `$ARGUMENTS` takes everything after the command,
-  `$1`…`$9` take one word each, and a body with no placeholder gets the
+  `$1`â€¦`$9` take one word each, and a body with no placeholder gets the
   arguments appended rather than dropping them.
 - **An optional header** sets `name`, `description` and `argument-hint`, read
-  by a three-field parser rather than a YAML library — this is workspace
+  by a three-field parser rather than a YAML library â€” this is workspace
   content, and a malformed header costs the header, not the skill.
 - **An unknown command is sent as ordinary text**, never refused: a message
   beginning with a slash has to stay sendable.
@@ -974,7 +990,7 @@ Minor: a translation ratchet, and the first twenty strings paid off.
 - **`l10n/untranslated-baseline.json` is the ledger** of what is still English
   in at least one locale. The test fails on anything untranslated that is not
   in it, refuses entries that are now translated, and refuses entries for
-  messages that no longer exist — so the list can only shrink.
+  messages that no longer exist â€” so the list can only shrink.
 - **Twenty high-traffic strings translated**, taking the ledger from 326 to 309. Strings that are legitimately identical in a language stay listed rather
   than being guessed at: no rule can tell a real match from a fallback.
 
@@ -984,14 +1000,14 @@ Minor: a status line that says what the agent is doing, and shortcuts for the
 commands that need them (F084).
 
 - **The status line reports activity, not just connection.** Waiting for you,
-  running, running with N queued, N queued, or idle — and the model the next
+  running, running with N queued, N queued, or idle â€” and the model the next
   prompt will use.
 - **Something waiting on you outranks work in flight.** A status line that said
   "busy" while a question sat unanswered would be telling you to wait for
   yourself, so that state gets the one colour the status bar has for "look
   here".
 - **Automatic routing is reported as automatic**, never resolved to whichever
-  model it happened to pick last time — naming one would promise the next
+  model it happened to pick last time â€” naming one would promise the next
   request goes to the same place, which is the one thing routing does not
   promise.
 - **Nine more commands have shortcuts**, including stopping a run, which is the
@@ -1006,7 +1022,7 @@ Minor: per-turn semantics and keyboard navigation of the transcript (F070).
   it is out of how many, renumbered as the conversation grows or a dropped
   request removes one.
 - **Alt+Up and Alt+Down step between turns.** From nowhere, Alt+Up means the
-  most recent turn — a reader who has not entered the transcript and presses
+  most recent turn â€” a reader who has not entered the transcript and presses
   "previous" means the newest thing said, not the oldest.
 - **Either end stops rather than wrapping.** Wrapping is fine in a menu of
   five items; in a conversation it silently teleports the reader from the
@@ -1038,7 +1054,7 @@ Minor: the agent can search the web and read a page (F004, F005).
   titles, URLs and snippets; `fetch` returns the cleaned text of one page.
 - **Both run on the server**, through the research service that already holds
   the provider credentials and records the run. No new server contract was
-  needed — the endpoints existed and nothing called them.
+  needed â€” the endpoints existed and nothing called them.
 - **Everything returned is marked untrusted.** It is content someone else
   wrote: evidence to weigh, never instructions to follow.
 - **A URL is checked before it is sent.** Only http and https; no embedded
@@ -1085,7 +1101,7 @@ Minor: chat tabs that say what they are doing, and an undo for closing one
 
 - **A tab shows its session's state.** A marker for running, waiting on you, or
   failed, and a dot for a finished run nobody has looked at yet. An idle,
-  read session is prefixed with nothing — the ordinary case has to stay quiet
+  read session is prefixed with nothing â€” the ordinary case has to stay quiet
   or the markers stop meaning anything.
 - **Unread is cleared by looking,** not by the next event, and a session you
   are looking at is never marked.
@@ -1183,7 +1199,7 @@ Minor: correct the proposal in the diff before applying it (F056).
 - Only the content is taken from your edit. The file, the operation and the
   root stay what you approved, so an edit cannot turn an update into a
   delete.
-- The left pane stays read-only, and unsaved edits still count — you do not
+- The left pane stays read-only, and unsaved edits still count â€” you do not
   have to save the preview before approving.
 
 ## 0.92.0
@@ -1194,7 +1210,7 @@ Minor: an autosave policy for edits (F058).
   Set it and ClawAI saves the files an edit touches instead of refusing the
   edit because a buffer was dirty.
 - Only the files the edit already names are saved, and only before the
-  review snapshot is taken — saving later would change the file the review
+  review snapshot is taken â€” saving later would change the file the review
   was about.
 - The default is unchanged: `off`, and dirty-buffer drift still fails closed.
 
@@ -1229,9 +1245,9 @@ back (F031).
 
 Minor: send feedback with a diagnostic report you read first (F027).
 
-- **ClawAI: Send Feedback** builds a report describing the installation —
+- **ClawAI: Send Feedback** builds a report describing the installation â€”
   versions, connection state, modes, recent run ids, and a redacted last
-  error — opens it in an editor, and sends it only when you choose Send.
+  error â€” opens it in an editor, and sends it only when you choose Send.
 - **What you approve is what is sent**, edits included. Closing the editor
   sends nothing.
 - The report has no field for a prompt, a transcript, a path or file
@@ -1255,7 +1271,7 @@ Minor: notifications when a run needs you or finishes without you (F023).
 
 - **The agent can reach you with `runtime.notify`.** One sentence, info or
   warning, for a result you are waiting on. It asks nothing and returns
-  nothing to act on — `runtime.ask` is still the way to put a decision to
+  nothing to act on â€” `runtime.ask` is still the way to put a decision to
   you.
 - **Approvals, questions, failures and completions notify on their own.** No
   more discovering an hour later that the run stopped on an approval nobody
@@ -1279,17 +1295,17 @@ worktree (F017).
   ever address it again.
 - **`workspace.git remove-worktree` cleans one up.** `git worktree remove
 --force` plus releasing the key, only after the command actually
-  succeeds — a failed removal leaves the worktree addressable rather than
+  succeeds â€” a failed removal leaves the worktree addressable rather than
   silently orphaning it.
 - **A `newRootKey` cannot shadow an advertised `workspace-N` key.** A
   sub-agent worktree is allowed to register under the key its own task runs
-  as — that is what keeps it from escaping into the parent checkout by
-  accident — but the main session has no equivalent binding, so a
+  as â€” that is what keeps it from escaping into the parent checkout by
+  accident â€” but the main session has no equivalent binding, so a
   `create-worktree` call from it is refused outright if it tries to reuse
   one of those keys instead of picking its own.
 - Not a stateful "enter/exit": every call in this protocol already carries
   its own explicit root, so there is no implicit "current directory" to
-  switch. The substance — create, address, clean up — is there.
+  switch. The substance â€” create, address, clean up â€” is there.
 
 ## 0.85.0
 
@@ -1297,8 +1313,8 @@ Minor: line-range references and coordinate-preserving selection context
 (F033).
 
 - **Type `path:L-L` (or `path:L`) directly into a message to pull that exact
-  range of a workspace file into context.** No autocomplete yet — that
-  discovery layer is a separate, later feature — but the reference resolves
+  range of a workspace file into context.** No autocomplete yet â€” that
+  discovery layer is a separate, later feature â€” but the reference resolves
   today: `src/service.ts:40-58 what does this do?` sends exactly those
   lines. A reference outside the workspace, to a missing file, or past the
   end of a file is silently skipped rather than failing the send, since
@@ -1312,7 +1328,7 @@ selection` previously sent the selected text with no way to say which
   onto the `<workspace-file startLine="..." endLine="...">` tag the model
   actually reads.
 - **Choosing "None" context still means none.** A reference found in the
-  prompt text is not resolved when the selected context mode is `none` —
+  prompt text is not resolved when the selected context mode is `none` â€”
   the deliberate choice to send no context always wins over an incidental
   `path:L-L`-shaped token in the message.
 - Not yet closed: stale-range UI. Nothing re-hashes a referenced file to
@@ -1340,7 +1356,7 @@ Minor: adds named, persisted sub-agent presets (F007).
   every fork. The role enum (`explorer`, `implementer`, `tester`, `reviewer`,
   `security-reviewer`, `documenter`, `integrator`) is unchanged and still
   gates behavior directly, most visibly the integrator-only Git mutation
-  exception — `definitionName` is additive, not a replacement.
+  exception â€” `definitionName` is additive, not a replacement.
 - **A definition only ever adds instructions, never a runtime grant.** Tools,
   model policy, budget, and risk ceiling still come from the task itself on
   every fork; a preset's `systemPrompt` and `description` prepend to that
@@ -1367,13 +1383,13 @@ F028 (ToolSearch).
 
 ## 0.82.0
 
-Minor: finishes F052 enforcement — an organization's model allowlist and
+Minor: finishes F052 enforcement â€” an organization's model allowlist and
 permission floor are now applied, not only carried.
 
 - **Model allowlist reaches local models.** `applyOrganizationModelAccess`
   filters the whole catalog, including local Ollama and llama.cpp models. The
-  existing entitlement filter deliberately exempts local models — a local model
-  costs nothing, so a billing entitlement has no opinion on it — but an
+  existing entitlement filter deliberately exempts local models â€” a local model
+  costs nothing, so a billing entitlement has no opinion on it â€” but an
   organization allowlist answers a different question, what a member is
   _permitted_ to use, and an unvetted local model is exactly what an
   organization would forbid. An empty allowlist still means every model,
@@ -1385,7 +1401,7 @@ permission floor are now applied, not only carried.
   Autonomous Scoped confirmation dialog, so a request the organization has
   already ruled out never reaches a dialog asking the user to confirm it.
 - Both were the two fields 0.81.0 named as stored and served but not yet
-  enforced, because an invocation carries neither a model nor a mode — the tool
+  enforced, because an invocation carries neither a model nor a mode â€” the tool
   evaluator was the wrong place for either. They are enforced at the two points
   that do carry that information: the model picker and the mode selector.
 
@@ -1413,7 +1429,7 @@ Minor: an organization can constrain what this client may do.
   here and only here: the endpoint exists to tighten, so its absence can only
   mean nothing extra is imposed.
 - The policy is unsigned on purpose. Every field narrows, so a forged one could
-  only refuse work, and entitlements — which gate money — already arrive over
+  only refuse work, and entitlements â€” which gate money â€” already arrive over
   the same authenticated channel. `verifyEnterprisePolicy` is retained for a
   distribution that must also survive a compromised backend.
 - Still enforced elsewhere, not here: `allowedModels` needs the model picker,
@@ -1454,7 +1470,7 @@ Minor: `vscode://` links can open the view or a conversation, and nothing else.
 Minor: the agent keeps a task list, and the sidebar shows it.
 
 - `workspace.planning` gains `set-tasks` and `list-tasks`. The tool was
-  stateless — validate, render, export — so there was no record of what the
+  stateless â€” validate, render, export â€” so there was no record of what the
   agent was working through, and a user watching a long run could not tell
   which step it was on.
 - Tasks are run state, deliberately separate from the implementation plan.
@@ -1471,7 +1487,7 @@ Minor: the agent keeps a task list, and the sidebar shows it.
   cannot see, and a replace cannot leave the store disagreeing with the model.
 - Order is preserved rather than grouped by status: the order the agent wrote
   is the order it intends to work, and sorting by state would move a task the
-  moment it started — which is when a reader is looking at it.
+  moment it started â€” which is when a reader is looking at it.
 - Adds a **Tasks** view beside Findings. Tasks and findings are cleared
   together when the workspace folder changes, because both describe a tree that
   is no longer open.
@@ -1509,7 +1525,7 @@ Minor: undo takes back more than the last change.
 
 - **ClawAI: Undo Last Edit** can be run repeatedly, up to twenty applied
   transactions deep. It remembered exactly one, so a run that made three edits
-  could take back the third and no more — and the third is rarely the one a
+  could take back the third and no more â€” and the third is rarely the one a
   reader objects to.
 - The notice says how many earlier changes remain, because a user otherwise
   cannot tell a stack with history left from one that has reached the end.
@@ -1529,7 +1545,7 @@ Minor: search can return the lines either side of a match.
 
 - `workspace.files search` takes `contextLines`. A match arrived as one line,
   so deciding whether a hit was the definition or a passing mention meant a
-  separate read of the file — once per hit worth judging.
+  separate read of the file â€” once per hit worth judging.
 - Context is off by default and capped at ten lines either side. The result cap
   is shared across matches, so generous context spends the answer on fewer of
   them, and three lines is usually enough to judge one.
@@ -1556,7 +1572,7 @@ Minor: a project can write permission rules, not just effect classes.
   will touch.
 - **A rule may tighten and may never loosen: `outcome` is `ask` or `deny`, and
   there is no `allow`.** The policy file lives inside the workspace, and
-  workspace content is untrusted — a repository that could write `allow` would
+  workspace content is untrusted â€” a repository that could write `allow` would
   grant itself permissions by being cloned. Rules are evaluated after the
   immutable rails, so none can reach past a workspace-trust denial or the
   elevation, production and destructive rails. Both are proven by test.
@@ -1605,7 +1621,7 @@ Minor: a review can report structured findings, and a person can read them.
   nobody triages.
 - Findings from different reviewers merge on location and title rather than on
   the whole record, so the same claim collapses even when two reviewers phrased
-  their detail differently — which is the normal case, because independent
+  their detail differently â€” which is the normal case, because independent
   reviewers converge on the obvious bug. When duplicates disagree on severity
   the highest wins: over-reporting costs a minute of reading, under-reporting
   costs the bug shipping.
@@ -1628,12 +1644,12 @@ Minor: truncated command output keeps the end, where the error is.
 
 - Both command runners kept the first bytes up to the output limit and dropped
   everything after. Compilers, test runners and package managers all put the
-  answer last — the failing assertion, the type error, the exit summary — while
+  answer last â€” the failing assertion, the type error, the exit summary â€” while
   the start is banners and dependency resolution. A build that overran its
   budget therefore returned the banner and dropped the reason it failed, which
   reads as though the command produced nothing useful.
 - Output now keeps the first quarter of the budget and the last three quarters,
-  with an explicit `… N bytes omitted …` marker between them. The marker states
+  with an explicit `â€¦ N bytes omitted â€¦` marker between them. The marker states
   the byte count, so an elided log is distinguishable from a complete one rather
   than inferred from a suspiciously abrupt line.
 - The budget is split between the streams, so a chatty stdout can no longer
@@ -1654,7 +1670,7 @@ Minor: a conversation can be exported to a file.
 - Adds **ClawAI: Export Transcript**, which writes one conversation as Markdown
   or JSON. The run journal and the evidence bundle already exported, but both
   describe a run rather than a conversation and both were reachable only as
-  agent tools, so there was no way for a person to keep what was said — which
+  agent tools, so there was no way for a person to keep what was said â€” which
   is what a support request or a review actually wants.
 - Every exported string passes through `redactText`, including the title. An
   export leaves the extension the moment it is written, and a transcript is the
@@ -1670,8 +1686,8 @@ Minor: a conversation can be exported to a file.
   often an earlier one.
 - The transcript is read from the backend thread, not from the webview or from
   `TranscriptEntry` in `chat-session.ts`. That type is declared with no
-  producers and no consumers — the fifth instance of the pattern the parity
-  audit keeps finding — so exporting from it would have meant inventing the
+  producers and no consumers â€” the fifth instance of the pattern the parity
+  audit keeps finding â€” so exporting from it would have meant inventing the
   data it describes.
 - The palette delegates on `AgentCoordinator` move into
   `agent-coordinator-commands.ts`. Two consecutive batches pushed that file two
@@ -1693,7 +1709,7 @@ Minor: the agent can ask the language servers, instead of searching for a name.
   provider answered first.
 - `LocationLink` is read as well as `Location`. TypeScript returns the former,
   so reading only `uri` and `range` would have returned nothing for the language
-  this extension is mostly used on — which looks exactly like "no definition
+  this extension is mostly used on â€” which looks exactly like "no definition
   found".
 - Locations outside the workspace and on credential-shaped files are dropped,
   through the same path rule every tool schema applies. `preview` quotes a line
@@ -1731,8 +1747,8 @@ Minor: the agent can ask the user a structured question instead of guessing.
   behalf would put words in their mouth and hide that the question went
   unanswered.
 - The selection is validated against the question that was actually asked, not
-  merely shape-checked, so a stale or forged selection — one naming an option
-  from an earlier question — resolves nothing and leaves the question standing.
+  merely shape-checked, so a stale or forged selection â€” one naming an option
+  from an earlier question â€” resolves nothing and leaves the question standing.
 - Options are buttons with a pressed state rather than a listbox: one tab stop
   each, legible at 200% zoom, correct under RTL through logical properties, and
   given a Highlight border under forced colours where the selection background
@@ -1745,7 +1761,7 @@ stops calling itself something it is not.
 
 - The meter now reads `used / capacity` against the selected model context
   window. `contextTokens` has been in the model catalog all along, populated
-  from four different backend shapes, and nothing read it — so the meter showed
+  from four different backend shapes, and nothing read it â€” so the meter showed
   a running total against nothing, a number that cannot say whether the window
   is comfortable or nearly spent. It also sets a percentage the stylesheet can
   fill.
@@ -1753,7 +1769,7 @@ stops calling itself something it is not.
   denominator-free form. There is no single capacity to measure against, and
   inventing one would be worse than omitting it.
 - The run budget meter counted tool calls while announcing itself to screen
-  readers as "tokens" — the one thing on screen it does not measure. It is now
+  readers as "tokens" â€” the one thing on screen it does not measure. It is now
   labelled "Tool calls used".
 - Adds the webview proof that 0.65.0 shipped without: `.env` is refused in the
   composer with the message that names the reason, and
@@ -1775,7 +1791,7 @@ Minor: the agent can read the editor's Problems collection.
 - Two filters are boundaries rather than conveniences. The editor reports
   problems for every open document, including files opened from outside the
   workspace, so anything that does not resolve to a workspace-relative path is
-  dropped — a diagnostic message quotes the source line, and an absolute path
+  dropped â€” a diagnostic message quotes the source line, and an absolute path
   from elsewhere is content this tool was never granted. Credential-shaped
   paths are dropped for the same reason: a parse error in `.env` would put a
   line of it in the message.
@@ -1794,8 +1810,8 @@ Minor: workspace search now searches the workspace.
   cap was also the candidate cap: a search of an 8,059-file repository read
   about one percent of it and reported nothing found. To a model that is
   indistinguishable from proof of absence, and nothing in the output said only a
-  hundred files had been opened. The two limits are now two numbers — up to
-  5,000 candidate files or 32 MiB, whichever comes first — and the result
+  hundred files had been opened. The two limits are now two numbers â€” up to
+  5,000 candidate files or 32 MiB, whichever comes first â€” and the result
   carries `scannedFiles`.
 - `truncated` now means what it says. It is set when the candidate set
   saturated, when the byte budget ran out, or when results hit the cap, so an
@@ -1803,7 +1819,7 @@ Minor: workspace search now searches the workspace.
   description says so.
 - `glob` and `search` skip dependency and build output. `findFiles` does not
   read `.gitignore`, and both operations passed no exclude at all, so a bare
-  `**/*.ts` returned whatever the walker reached first — on this repository,
+  `**/*.ts` returned whatever the walker reached first â€” on this repository,
   files under `.worktrees/`, which holds a full checkout per in-flight branch.
   The exclusion that fixed the intelligence index in an earlier release had
   never reached the tool the model actually calls.
@@ -1886,7 +1902,7 @@ Patch: two runtime fixes rebased onto the 0.64 line. Both were first cut as 0.63
 
 Patch: a second VS Code window no longer signs the first one out.
 
-- One ClawAI session is shared per backend origin across every window, but binding refused any session id it had not seen before. Signing in from a second window rotated the shared record, and the first window's next bind threw and dropped it to the Connect gate with its queued message lost — so two windows could never both work, and reconnecting one evicted the other. The account, not the session id, is now what may not change underneath a client: a rotation owned by the same account is adopted, a takeover by a different account still fails closed, and a record written before accounts were stored keeps the old strict behaviour rather than being adopted on faith.
+- One ClawAI session is shared per backend origin across every window, but binding refused any session id it had not seen before. Signing in from a second window rotated the shared record, and the first window's next bind threw and dropped it to the Connect gate with its queued message lost â€” so two windows could never both work, and reconnecting one evicted the other. The account, not the session id, is now what may not change underneath a client: a rotation owned by the same account is adopted, a takeover by a different account still fails closed, and a record written before accounts were stored keeps the old strict behaviour rather than being adopted on faith.
 - The account id is recorded on the shared session record at sign-in. It comes from the profile the extension already fetches, and `POST /auth/vscode/authorize/exchange` now returns it alongside the tokens so the binding decision does not depend on a second round trip.
 
 ### From 0.63.3
@@ -1897,13 +1913,13 @@ Patch: a run that exhausts its budget now ends visibly instead of stalling.
 
 ## 0.64.1
 
-Patch: a file too large to read can now be read — and therefore edited — instead of failing every attempt.
+Patch: a file too large to read can now be read â€” and therefore edited â€” instead of failing every attempt.
 
 - A read defaulted to 262,144 bytes while the Runtime V2 contract caps any single string at 65,536, so reading a large file produced a structurally invalid result and came back as `TOOL_OUTPUT_INVALID`. Because `patch` needs the sha256 from a successful read, any file over the cap could never be modified at all. Every locale file in a large monorepo is well past that ceiling, which put translation work permanently out of reach. Reads are now bounded by what the contract can actually carry, and page instead of failing.
 - A partial read still reports the whole-file hash, so a ranged read is a valid anchor for a patch. The result also carries `totalLines` and a `nextStartLine` cursor so the model can walk a large file to the end.
 - Truncation lands on a line boundary. A mid-line cut handed the model a partial line it would then use as a patch anchor, which could never match.
 - A missing file now says `No such file: <path>`, a directory says to use the list operation, and genuinely binary content says so. All three used to share "Requested file is not readable text", and a model told a file it had just created was unreadable kept probing it instead of moving on.
-- A transaction carrying several operations now reports the actual rule — exactly one operation per call — instead of a per-operation schema failure about a missing `beforeHash`, which sent models off inventing hashes for files that did not exist yet.
+- A transaction carrying several operations now reports the actual rule â€” exactly one operation per call â€” instead of a per-operation schema failure about a missing `beforeHash`, which sent models off inventing hashes for files that did not exist yet.
 
 ## 0.64.0
 
@@ -1929,7 +1945,7 @@ Patch: two correctness fixes in flagship recovery.
 
 ## 0.63.1
 
-Patch: the agent can once again write a source file longer than 100 lines. Runtime Protocol 2.0 sends a file body as one array entry per line, but arrays shared the 100-item object-entry ceiling, so any file over 100 lines was rejected — and the resulting validation error surfaced as an opaque internal error that ended the whole run instead of a correctable tool failure. Arrays now carry their own, much larger ceiling; the per-argument byte budget continues to do the real bounding, and the tighter object-entry ceiling is unchanged.
+Patch: the agent can once again write a source file longer than 100 lines. Runtime Protocol 2.0 sends a file body as one array entry per line, but arrays shared the 100-item object-entry ceiling, so any file over 100 lines was rejected â€” and the resulting validation error surfaced as an opaque internal error that ended the whole run instead of a correctable tool failure. Arrays now carry their own, much larger ceiling; the per-argument byte budget continues to do the real bounding, and the tighter object-entry ceiling is unchanged.
 
 ## 0.63.0
 
@@ -1937,7 +1953,7 @@ Minor: large flagship deliveries now survive interruption, run independent work 
 
 - **Durable resume.** A flagship delivery checkpoints its validated progress and resumes at the next unfinished stage after an extension-host restart, instead of replaying work it already completed. A resumed checkpoint is accepted only when the account, workspace, target, and policy identity all still match; a changed request or a live identity change starts fresh rather than reusing stale mutations. Completed and unresumable checkpoints are cleaned up instead of accumulating.
 - **Parallel implementation.** The planning stage now produces a host-validated task graph, and implementation dispatches that whole graph. Independent tasks run concurrently up to the admitted concurrency cap, dependent tasks wait for every declared dependency, and colliding write sets are refused before anything executes. Each task's share of the remaining turn and tool budget is reserved before dispatch, and a graph claiming writes outside the request's authorized write set is refused.
-- **Classified recovery.** A failed sub-agent task is now classified — malformed tool output, empty provider response, discovery loop, timeout, or gate failure — and each class follows its own bounded strategy ladder, escalating from a constrained retry to a fallback model to a replan. One hypothesis can never be tried more than three times. A failure that leaves a mutating task's effects unknown is never replayed. A replan identifies the failed task and everything downstream of it, so independent successes are kept.
+- **Classified recovery.** A failed sub-agent task is now classified â€” malformed tool output, empty provider response, discovery loop, timeout, or gate failure â€” and each class follows its own bounded strategy ladder, escalating from a constrained retry to a fallback model to a replan. One hypothesis can never be tried more than three times. A failure that leaves a mutating task's effects unknown is never replayed. A replan identifies the failed task and everything downstream of it, so independent successes are kept.
 - Retried attempts now report the budget every attempt consumed and how many attempts were made, so aggregate ceilings stay enforceable and reported evidence matches reality.
 
 ## 0.62.2
@@ -1970,7 +1986,7 @@ Patch: focusing the prompt still activated the global textarea focus outline, wh
 
 ## 0.61.10
 
-Patch: 0.61.9 only removed the duplicate box-shadow from the composer's focus ring; the border-color change to `--vscode-focusBorder` was still there and still read as an unwanted blue outline around the whole composer, hint line included. `.composer-card:focus-within` in `media/chat.css` is removed — the composer now keeps its normal border on focus, no color change at all.
+Patch: 0.61.9 only removed the duplicate box-shadow from the composer's focus ring; the border-color change to `--vscode-focusBorder` was still there and still read as an unwanted blue outline around the whole composer, hint line included. `.composer-card:focus-within` in `media/chat.css` is removed â€” the composer now keeps its normal border on focus, no color change at all.
 
 ## 0.61.9
 
@@ -1981,13 +1997,13 @@ Patch: two panel-styling fixes.
 
 ## 0.61.8
 
-Patch: the chat panel's per-message activity list (`workspace.files · read`, `workspace.command · run`, etc.) never scrolled as new entries streamed in. A message bubble scrolled into view once when it was first created, but every activity item appended into it afterward — often dozens per run — left the viewport wherever it happened to be, so watching a live run meant manually scrolling down after every few tool calls.
+Patch: the chat panel's per-message activity list (`workspace.files Â· read`, `workspace.command Â· run`, etc.) never scrolled as new entries streamed in. A message bubble scrolled into view once when it was first created, but every activity item appended into it afterward â€” often dozens per run â€” left the viewport wherever it happened to be, so watching a live run meant manually scrolling down after every few tool calls.
 
-- `appendActivity()` in `media/chat.js` now scrolls each new item into view as it's added, the same way a new message bubble already did. Both call sites that feed it — `publishRunActivity()` (phase/file/command activity) and `appendStreamActivity()` (reasoning and stream events) — get this for free since they both go through the one function.
+- `appendActivity()` in `media/chat.js` now scrolls each new item into view as it's added, the same way a new message bubble already did. Both call sites that feed it â€” `publishRunActivity()` (phase/file/command activity) and `appendStreamActivity()` (reasoning and stream events) â€” get this for free since they both go through the one function.
 
 ## 0.61.7
 
-Patch: a `runtime.agents` graph's status and outcome events — including the full `blocker` text 0.61.5 started reporting — went to a coordinator observer that was wired as a no-op (`{ status: () => undefined, outcome: () => undefined }`). Nothing about a sub-agent's progress or failure reason was ever written anywhere durable; the only copy of a `blocker` string existed in the tool-result JSON handed back through the chat backend, which independently clips any persisted tool-result content to 400 characters. For a graph that failed with a longer blocker, the real reason was unrecoverable from any source once that message was written.
+Patch: a `runtime.agents` graph's status and outcome events â€” including the full `blocker` text 0.61.5 started reporting â€” went to a coordinator observer that was wired as a no-op (`{ status: () => undefined, outcome: () => undefined }`). Nothing about a sub-agent's progress or failure reason was ever written anywhere durable; the only copy of a `blocker` string existed in the tool-result JSON handed back through the chat backend, which independently clips any persisted tool-result content to 400 characters. For a graph that failed with a longer blocker, the real reason was unrecoverable from any source once that message was written.
 
 - `VscodeSubAgentDiagnosticsSink` implements `SubAgentCoordinatorObserver` and appends one JSON line per status change and per outcome to `<globalStorage>/sub-agent-diagnostics.log`, alongside logging the same untruncated content through the existing `OutputLogger`. `VscodeRuntimeStudio` now wires this sink instead of the no-op observer. Best-effort: a write failure is reported to the logger, never thrown, so a diagnostics-log problem can't fail a real sub-agent run.
 - Covered with a unit test asserting a 2,000-character blocker round-trips intact through the log file, and a second test asserting a write failure onto an unwritable path is reported to the logger rather than thrown.
@@ -1996,53 +2012,53 @@ Patch: a `runtime.agents` graph's status and outcome events — including the fu
 
 Patch: a `runtime.agents` task that failed or was cancelled leaked its worktree forever, so retrying the same graph always failed immediately with "Sub-agent worktree is already active".
 
-- `VscodeSubAgentWorktreeAdapter` tracks one active worktree per `worktreeId` and only releases it via `abandon()`. `SubAgentCoordinatorService.start()` called `abandon()` on every path where `prepare()`/`execute()` threw an exception, but a sub-agent that ends with `run.failed` returns its outcome normally rather than throwing — that path went straight to `finish()`, which only releases the file lease, never the worktree. A succeeded task's worktree is correctly left alive on purpose (its commit waits there for a later `runtime.integration` call to cherry-pick it onto the target branch), which is exactly why this one case was never exercised before. Hit live: after fixing the git worktree path-length bug, batch-02 failed in-band once, and every following attempt at the same 2-task graph failed immediately for both tasks with the "already active" error, reported correctly by 0.61.5's more honest failure messages.
+- `VscodeSubAgentWorktreeAdapter` tracks one active worktree per `worktreeId` and only releases it via `abandon()`. `SubAgentCoordinatorService.start()` called `abandon()` on every path where `prepare()`/`execute()` threw an exception, but a sub-agent that ends with `run.failed` returns its outcome normally rather than throwing â€” that path went straight to `finish()`, which only releases the file lease, never the worktree. A succeeded task's worktree is correctly left alive on purpose (its commit waits there for a later `runtime.integration` call to cherry-pick it onto the target branch), which is exactly why this one case was never exercised before. Hit live: after fixing the git worktree path-length bug, batch-02 failed in-band once, and every following attempt at the same 2-task graph failed immediately for both tasks with the "already active" error, reported correctly by 0.61.5's more honest failure messages.
 - `settleWorkspace()` now abandons the worktree whenever the outcome isn't `succeeded`, matching the coordinator's existing rule for the two thrown-exception paths. Covered directly: a coordinator test with a mocked workspace port asserting `abandon()` is called for an in-band failed outcome and `finalize()` is not, alongside the existing test proving the reverse holds for a success.
 
 ## 0.61.5
 
 Patch: a failed `runtime.agents` sub-agent always reported the same unhelpful "Nested runtime failed", with no way to tell one failure from another.
 
-- The nested runtime's own `run.failed` event carries a real `{code, message}` reason, but `RuntimeSubAgentExecutor.observe()` discarded it and hardcoded the generic string regardless of cause. Every distinct failure — a blocked model, a policy rejection, a provider timeout — looked identical in the coordinator's report, leaving nothing to act on. Hit directly: a live two-task `runtime.agents` graph reported `Nested runtime failed` for both tasks with no further detail once an earlier worktree bug was fixed, and there was no way to tell whether the fix had even taken effect.
+- The nested runtime's own `run.failed` event carries a real `{code, message}` reason, but `RuntimeSubAgentExecutor.observe()` discarded it and hardcoded the generic string regardless of cause. Every distinct failure â€” a blocked model, a policy rejection, a provider timeout â€” looked identical in the coordinator's report, leaving nothing to act on. Hit directly: a live two-task `runtime.agents` graph reported `Nested runtime failed` for both tasks with no further detail once an earlier worktree bug was fixed, and there was no way to tell whether the fix had even taken effect.
 - `describeSubAgentFailure()` now reads that reason and reports the real code and message. Covered directly with unit tests for every combination of present/absent code and message, kept dependency-free rather than reusing the VS Code host's own reason-formatting helper, which would have pulled a `vscode` import into an otherwise headless module.
 
 ## 0.61.4
 
 Patch: `workspace.command` could not run `npm`, `npx`, or any other batch-file tool on Windows.
 
-- Node's `child_process.spawn()` cannot execute a `.bat`/`.cmd` file directly with `shell: false` — Windows has no native way to run a batch script as a process image, so `CreateProcess` rejects it and Node surfaces `spawn EINVAL`. `npm`, `npx`, `pnpm`, `yarn`, and `gradlew.bat` all resolve to batch files on Windows, so every one of them failed this way; it first surfaced as `npm run package` failing mid-release. Reproduced directly with `spawn('...\\npm.cmd', ['--version'], {shell:false})`, which throws the identical error.
-- `bounded-command-runner.ts` now spawns through `cross-spawn` instead of `node:child_process` directly. It resolves the same executable path this extension already verifies and hashes, and only adds the `cmd.exe` wrapper (with argument escaping audited against real-world shell-injection cases) when the resolved file is actually a batch script — every other command, on every platform, spawns exactly as before.
+- Node's `child_process.spawn()` cannot execute a `.bat`/`.cmd` file directly with `shell: false` â€” Windows has no native way to run a batch script as a process image, so `CreateProcess` rejects it and Node surfaces `spawn EINVAL`. `npm`, `npx`, `pnpm`, `yarn`, and `gradlew.bat` all resolve to batch files on Windows, so every one of them failed this way; it first surfaced as `npm run package` failing mid-release. Reproduced directly with `spawn('...\\npm.cmd', ['--version'], {shell:false})`, which throws the identical error.
+- `bounded-command-runner.ts` now spawns through `cross-spawn` instead of `node:child_process` directly. It resolves the same executable path this extension already verifies and hashes, and only adds the `cmd.exe` wrapper (with argument escaping audited against real-world shell-injection cases) when the resolved file is actually a batch script â€” every other command, on every platform, spawns exactly as before.
 - Covered by a regression test that writes a real `.cmd` file to a temp directory and spawns it through `runCommandSpec`, gated to Windows since that's the only platform the bug exists on.
 
 ## 0.61.3
 
 Patch: runtime.agents still rejected a valid empty array, one gate earlier than 0.61.2 fixed.
 
-- 0.61.2 fixed the hash agreement and the coordinator's own schema, but a THIRD, separate hand-rolled JSON-Schema validator in `runtime-invocation-registry.ts` runs first, at admission time, and had no tolerance for the same empty-array/empty-object ambiguity — so a graph with an empty `integrationSeams` array still failed immediately with `must be an array`, before either of the earlier fixes ever got a chance to run. Found by hand-building a real two-task graph with verified zero write-set collisions and watching it fail anyway.
+- 0.61.2 fixed the hash agreement and the coordinator's own schema, but a THIRD, separate hand-rolled JSON-Schema validator in `runtime-invocation-registry.ts` runs first, at admission time, and had no tolerance for the same empty-array/empty-object ambiguity â€” so a graph with an empty `integrationSeams` array still failed immediately with `must be an array`, before either of the earlier fixes ever got a chance to run. Found by hand-building a real two-task graph with verified zero write-set collisions and watching it fail anyway.
 - That gate now accepts an empty object wherever an array is expected, same as the other two. A populated object, or any other wrong type, is still rejected.
 
 ## 0.61.2
 
 Patch: a `runtime.agents` graph with any empty array field could not actually run.
 
-- 0.61.1 fixed the receipt hash disagreement so a completed sub-agent graph could report back, but the underlying value this extension executes with was still corrupted by the same Lua round trip: `contextNodeIds`, `dependencies`, `writeSet`, `integrationSeams` and `tools` all arrive here as `{}` instead of `[]` whenever the model sends them empty, and `subAgentGraphSchema` rejected that outright — "must be an array" — for a graph the backend had admitted correctly.
+- 0.61.1 fixed the receipt hash disagreement so a completed sub-agent graph could report back, but the underlying value this extension executes with was still corrupted by the same Lua round trip: `contextNodeIds`, `dependencies`, `writeSet`, `integrationSeams` and `tools` all arrive here as `{}` instead of `[]` whenever the model sends them empty, and `subAgentGraphSchema` rejected that outright â€” "must be an array" â€” for a graph the backend had admitted correctly.
 - Every array field on a sub-agent task now accepts an empty `{}` and repairs it to `[]` before validating. A populated array is unaffected; a populated object in an array field's place is still rejected, since only the empty case is genuinely ambiguous.
 
 ## 0.61.1
 
 Patch: `runtime.agents` (parallel sub-agents) could never return a result.
 
-- Redis 7.4's Lua `cjson` cannot represent an empty array — `cjson.encode(cjson.decode('[]'))` returns `{}`, verified directly against the running server, and `cjson.array_mt` is not available to mark one as a list. Every runtime event is decoded and re-encoded inside the Lua state machine on its way to this extension, so a `runtime.agents` graph admitted with `integrationSeams: []` arrived here as `{}`. The receipt hash this extension computed from what it received then disagreed with the hash the backend had recorded at admission, and the backend rejected every completed graph as `RECEIPT_ARGUMENT_MISMATCH` — no parallel sub-agent run could ever report back, full stop.
+- Redis 7.4's Lua `cjson` cannot represent an empty array â€” `cjson.encode(cjson.decode('[]'))` returns `{}`, verified directly against the running server, and `cjson.array_mt` is not available to mark one as a list. Every runtime event is decoded and re-encoded inside the Lua state machine on its way to this extension, so a `runtime.agents` graph admitted with `integrationSeams: []` arrived here as `{}`. The receipt hash this extension computed from what it received then disagreed with the hash the backend had recorded at admission, and the backend rejected every completed graph as `RECEIPT_ARGUMENT_MISMATCH` â€” no parallel sub-agent run could ever report back, full stop.
 - Both sides now treat an empty array and an empty object as the same value when hashing, matching what the Lua round trip actually preserves. Diagnosed by capturing the exact argument JSON on both sides of one failing call and diffing them byte for byte.
-- Also raises `MEDIUM`, `HIGH` and `MAX` effort turn/tool-call budgets and adds a longer backoff before giving up on an empty provider response — both were cutting real edit-heavy runs short.
+- Also raises `MEDIUM`, `HIGH` and `MAX` effort turn/tool-call budgets and adds a longer backoff before giving up on an empty provider response â€” both were cutting real edit-heavy runs short.
 
 ## 0.61.0
 
 Minor: effort budgets retuned for editing work.
 
 - `MEDIUM`, `HIGH` and `MAX` were calibrated on discovery runs, where a turn
-  reads one file and reasons about it. Editing spends turns differently — every
-  read, verification command and retry is a turn — and three supervised
+  reads one file and reasons about it. Editing spends turns differently â€” every
+  read, verification command and retry is a turn â€” and three supervised
   sessions in a row ended in "Runtime run exceeded its model turn budget" with
   the work half finished. One "fix this stylesheet" task spent twenty turns
   reading a 60 KB file in pieces before it could write anything. The ladder
@@ -2065,8 +2081,8 @@ Patch: searching the workspace no longer requires a glob the model was never
 told about.
 
 - `search` is keyed by its `query`, but it inherited `pattern` from the glob
-  schema as a REQUIRED field. The obvious call — search the workspace for this
-  string — sent `{rootKey, query}` and came back with a raw zod "expected
+  schema as a REQUIRED field. The obvious call â€” search the workspace for this
+  string â€” sent `{rootKey, query}` and came back with a raw zod "expected
   string, received undefined" naming a `pattern` argument the model had no
   reason to know existed. The tool description could not help: it sits 39
   characters under a hard cap whose overflow rejects the entire run-start
@@ -2086,9 +2102,9 @@ told about.
 Patch: rejected tool arguments now say what would have worked, not just what
 didn't.
 
-- A live password-reset mission sent a file-write flat — `rootKey`/`path`/
+- A live password-reset mission sent a file-write flat â€” `rootKey`/`path`/
   `content` directly on `arguments`, the shape `read`/`list`/`stat` correctly
-  use — instead of nested inside `transaction.operations[]`. Admission
+  use â€” instead of nested inside `transaction.operations[]`. Admission
   correctly rejected it with `Tool arguments $.content is not allowed`, but
   that message only names the key that broke, not the key that would have
   worked, so the model spent 7 tool calls cycling through `content`,
@@ -2098,7 +2114,7 @@ didn't.
 - Separately, once a request nested correctly, a model that copied the
   envelope's `operation` field from an earlier successful `patch` call while
   correctly setting the new operation's `kind` to `create` got back
-  "Filesystem mutation must contain exactly the requested operation" — one
+  "Filesystem mutation must contain exactly the requested operation" â€” one
   sentence covering two different checks (operation count, and operation/kind
   agreement), naming neither the count nor which two values disagreed. The
   checks are now separate and each names the actual values involved.
@@ -2113,7 +2129,7 @@ Patch: the tool description fits its budget again, so runs start.
   never began looked like a broken model. Documenting the operation shapes had
   quietly grown this description past the cap.
 - The description is rewritten to say the same things in fewer words, and a
-  regression now holds it at 1600 characters — deliberate headroom, because the
+  regression now holds it at 1600 characters â€” deliberate headroom, because the
   failure mode is a dead run rather than a truncated string.
 - The chat service now logs the offending field and rule whenever a request
   fails validation. The response already carried them; nothing wrote them down,
@@ -2149,14 +2165,14 @@ the model escaping it perfectly.
   does not. A live mission created an 808-byte SQL migration successfully and
   then failed every attempt at a TypeScript file: the request stopped being
   parseable JSON before it arrived, and the run was told the model "started a
-  tool object and did not finish it" — true, and useless. The right operation
+  tool object and did not finish it" â€” true, and useless. The right operation
   had been chosen and was lost to punctuation.
 - `contentBase64` now stands in for `content`, and `beforeBase64`/`afterBase64`
   for a hunk's `before`/`after`. Base64 carries no character JSON must escape
   and no brace or quote to confuse a parser, so a code payload arrives intact.
   The catalog tells the model to prefer it for source code.
 - Decoding happens before the strict transaction schema runs, so every existing
-  path — containment, hashes, previews, receipts, rollback — is untouched and
+  path â€” containment, hashes, previews, receipts, rollback â€” is untouched and
   a plain-text transaction behaves exactly as before. Sending both forms of one
   field is refused rather than silently preferring either.
 - Regressions pin decoding, substitution for create and for both halves of a
@@ -2196,10 +2212,10 @@ file no longer destroys it.
   transaction shape for only `create` and `update`. The nested transaction is
   reported to the model as an empty object, so `patch`, `rename`, `copy`,
   `delete`, `mkdir` and `artifact` were undiscoverable and had to be guessed.
-- `patch` takes exact hunks — `{"before":"<text present now>","after":"<new
-text>"}` — but nothing said so. A live mission tried three different spellings
-  of a unified diff (`"content":"PATCH\n@@ …"`, `"patch":"@@ …"`,
-  `"content":"@@ …"`), failed every time, and fell back to a whole-file `update`
+- `patch` takes exact hunks â€” `{"before":"<text present now>","after":"<new
+text>"}` â€” but nothing said so. A live mission tried three different spellings
+  of a unified diff (`"content":"PATCH\n@@ â€¦"`, `"patch":"@@ â€¦"`,
+  `"content":"@@ â€¦"`), failed every time, and fell back to a whole-file `update`
   that silently deleted about forty comments from a Prisma schema it had only
   meant to add one model to.
 - Every advertised kind now carries its exact shape, `patch` is described as
@@ -2232,15 +2248,15 @@ Patch: a malformed tool request no longer ends the run.
 
 ## 0.57.3
 
-Patch: the agent can run commands again — every command root was rejected
+Patch: the agent can run commands again â€” every command root was rejected
 before it did any work.
 
 - A runtime target advertises its folders as `workspace-1`, `workspace-2`, and
   the structured-command catalog ships `{"cwdRootKey":"workspace-1"}` as its
   worked example. The filesystem adapter resolved that advertised form for file
   operations but not for command roots, which still matched only the SHA-256
-  folder key. Nothing registers the ordinary workspace as a runtime root — only
-  sub-agent worktrees do — so `workspace-1` matched nothing and the model was
+  folder key. Nothing registers the ordinary workspace as a runtime root â€” only
+  sub-agent worktrees do â€” so `workspace-1` matched nothing and the model was
   refused the exact value it had been told to send.
 - Every consumer of a command root failed the same way, before touching disk:
   structured commands, the quality gates, git, the database tool, the container
@@ -2312,7 +2328,7 @@ Patch: a rejected tool request can no longer leave a run spinning forever.
 
 Minor: a run can now work long enough to finish a feature.
 
-- ULTRA — the default effort — was byte-identical to the pre-effort-modes
+- ULTRA â€” the default effort â€” was byte-identical to the pre-effort-modes
   fixed budget: 40 model turns. A feature-scale mission died of it live: the
   agent spent every turn on legitimate discovery reads of a large monorepo and
   was ended by the budget before writing a single file. The runtime protocol
@@ -2328,27 +2344,27 @@ Minor: a run can now work long enough to finish a feature.
 
 ## 0.56.2
 
-Patch: password-feature files are code, not credentials — and a refused path
+Patch: password-feature files are code, not credentials â€” and a refused path
 now says why.
 
 - The sensitive-name rule denied every path merely CONTAINING "password", so
   an agent asked to build password reset could not read or write any file the
-  feature consists of — `password-reset.controller.ts`,
+  feature consists of â€” `password-reset.controller.ts`,
   `reset-password/page.tsx`, even the task brief that assigned the work.
   Screened live: a model produced the correct path 38 times, was refused every
   time, and ran out of budget. The bare `token` word rule had the same
-  overreach one directory later (`…_add_password_reset_token/` migrations).
+  overreach one directory later (`â€¦_add_password_reset_token/` migrations).
 - Password and token names now get word-boundary and shape care, the way
   `token` already had boundaries: standalone names outside code modules stay
   denied (`passwords.txt`, `token.txt`, `password.md`, a `passwords/`
   directory, `etc/passwd`), any compound with a data-shaped extension stays
   denied (`user-passwords.csv`, `password-dump.json`), and feature code and
   prose pass. `secret`, `credential`, `api-key`, `private-key`, and
-  `access/refresh/auth`-token compounds keep the strict substring rule — those
+  `access/refresh/auth`-token compounds keep the strict substring rule â€” those
   name the credential itself. `.env`, key files, and the exact-name list are
   untouched.
 - The path refine used to fail with zod's bare "Invalid input", which reached
-  the model as its whole explanation — a model holding a valid path was told
+  the model as its whole explanation â€” a model holding a valid path was told
   the path was invalid. The refusal now states the rule it applied.
 - Four tests pin the boundary from both sides: credential stores stay denied,
   feature files pass, standalone names stay protected outside code modules,
@@ -2361,7 +2377,7 @@ Patch: a failed tool no longer ends the run before the model can react.
 - 0.56.0 made a failed tool say what went wrong, but the run still died before
   the model's answer to that error could execute. `RuntimeToolDispatcher`
   terminalized on every `failed` result regardless of the continuation, closing
-  the invocation registry — while `RuntimeRunService`, by design, kept the run
+  the invocation registry â€” while `RuntimeRunService`, by design, kept the run
   alive and submitted the error to the backend. The model reasoned about the
   failure and asked for its next tool, and that recovery turn hit the closed
   registry: `beginModelTurn` threw `RuntimeRunEndedError`, the stream stopped
@@ -2370,7 +2386,7 @@ Patch: a failed tool no longer ends the run before the model can react.
 - A `failed` step now defers to the continuation exactly as a succeeded one
   does, mirroring `terminalSteeringLifecycle`: under `continue`, the failure is
   the model's next input, not the run's end. `denied`, `cancelled`, and
-  `timed-out` still terminalize unconditionally — the first two are human
+  `timed-out` still terminalize unconditionally â€” the first two are human
   decisions to stop, the third means the run's whole deadline is spent.
 - Failure loops stay bounded: every dispatch still debits the tool-call and
   tool-round budget, so a model that keeps failing runs out of budget, not out
@@ -2384,8 +2400,8 @@ Patch: a failed tool no longer ends the run before the model can react.
 
 Patch-level behaviour, minor bump: a failed tool says what went wrong.
 
-- `RuntimeToolDispatcher` caught an executor failure with `catch {` — no error
-  parameter — and replaced whatever was thrown with one fixed sentence, "The
+- `RuntimeToolDispatcher` caught an executor failure with `catch {` â€” no error
+  parameter â€” and replaced whatever was thrown with one fixed sentence, "The
   trusted tool executor failed." A conformance screen of 21 hosted models found
   17 of them producing a valid `workspace.files list` request that failed with
   exactly that message and exactly 166 bytes, every time. Nothing in the panel,
@@ -2409,7 +2425,7 @@ Patch-level behaviour, minor bump: a failed tool says what went wrong.
 Minor: speed modes exist, and the settings popover stops hiding half of itself.
 
 - **The popover was clipping its own labels.** `.secondary-controls` is
-  positioned above its summary inside `.composer-card`, which clips overflow —
+  positioned above its summary inside `.composer-card`, which clips overflow â€”
   so once a fifth control pushed the panel to three rows, the entire top row of
   labels sat 32px above the card edge and was cut off. The controls were still
   there and still worked; they just had no visible names, and the panel looked
@@ -2420,12 +2436,12 @@ Minor: speed modes exist, and the settings popover stops hiding half of itself.
   reflows instead of truncating, with a height cap so nothing can push it off
   screen again.
 - **`clawAI.speedMode` adds 1X, 1.5X and 2X.** Building workspace context did a
-  containment check, then a stat, then a read — strictly one file at a time, for
+  containment check, then a stat, then a read â€” strictly one file at a time, for
   up to forty files. The containment checks and stats now run four (1.5X) or
   eight (2X) at a time.
 - **What speed deliberately does not do.** Reading a file's bytes stays serial
   and conditional on the running byte total. Parallelising that is faster and
-  pulls every near-limit candidate into memory only to discard it — the existing
+  pulls every near-limit candidate into memory only to discard it â€” the existing
   suite caught exactly that regression during development, and the memory bound
   it guards is worth more than the latency. Approvals, writes, commands and the
   set of files that end up in context are untouched at every speed.
@@ -2433,7 +2449,7 @@ Minor: speed modes exist, and the settings popover stops hiding half of itself.
   bytes the ones before them consumed, so the lookups overlap while the decision
   that consumes them stays strictly sequential. A test asserts the produced
   context is byte-identical at 1X, 1.5X and 2X, including under a byte limit
-  that truncates — a comparison that would be vacuous if nothing were excluded,
+  that truncates â€” a comparison that would be vacuous if nothing were excluded,
   so the test checks that too.
 - A speculatively prefetched neighbour cannot raise an error the one-at-a-time
   path would never have produced: a prefetch failure is held and surfaced only
@@ -2444,14 +2460,14 @@ Minor: speed modes exist, and the settings popover stops hiding half of itself.
 
 Minor: how hard a run may work is now a choice, and the choice does something.
 
-- Every run received one hardcoded budget — forty model turns, a hundred tool
-  calls, a two-hour clock — whether it was a one-line edit or a cross-service
+- Every run received one hardcoded budget â€” forty model turns, a hundred tool
+  calls, a two-hour clock â€” whether it was a one-line edit or a cross-service
   feature. `clawAI.effortMode` picks from six: Low, Medium, High, Max, xHigh,
   Ultra. Each resolves to a genuinely different `RunBudget`, and the runtime
   starts the run with the one the setting chose.
 - **Nothing changes until you choose.** Ultra is the default and is
   byte-identical to the budget that was hardcoded, so an upgraded install
-  behaves exactly as it did. Spending less is opt-in — which is the safe
+  behaves exactly as it did. Spending less is opt-in â€” which is the safe
   direction, because a default that quietly lowered a limit would fail long
   runs that had never had to respect one.
 - The names are checked, not asserted. The test suite fails if any two modes
@@ -2461,8 +2477,8 @@ Minor: how hard a run may work is now a choice, and the choice does something.
   mapped to identical behaviour would be worse than no labels at all.
 - Two limits belong to the budget schema rather than the ladder, and are
   documented rather than worked around. `maxRepairAttempts` is bounded `0..1`,
-  so it cannot form a six-step ladder: Low spends it — a malformed tool call
-  ends the turn instead of being retried — and every other mode keeps its
+  so it cannot form a six-step ladder: Low spends it â€” a malformed tool call
+  ends the turn instead of being retried â€” and every other mode keeps its
   single repair. Wall clock, output bytes and tool-result bytes were already
   pinned at the schema ceiling before this change, so the ladder reaches that
   ceiling at Ultra instead of exceeding what the product already did.
@@ -2495,7 +2511,7 @@ Minor: the Cloud lane is a real destination, not a placeholder.
 - Sessions were already keyed by a digest of the normalized backend origin, so
   Local and Cloud hold separate credentials. Switching lanes disconnects the
   current one and restores the other if it was authorized; it does not delete
-  the session left behind. Documented rather than changed — the behavior only
+  the session left behind. Documented rather than changed â€” the behavior only
   became reachable now that a second lane exists.
 - `clawAI.backendEnvironment` and `clawAI.frontendEnvironment` accept `CLOUD`.
   A settings file that already carried the value parsed but resolved to a
@@ -2510,14 +2526,14 @@ Patch to 0.51.0: a locally decided ending reaches the panel and stops there.
   belongs to the backend and admits events strictly in sequence; these carry the
   run service's own counter, which is a different series. They now go to the
   panel and nowhere else, through a forwarder that is given a panel callback and
-  no ledger — so the mistake cannot be made again. Caught by the confirmation
+  no ledger â€” so the mistake cannot be made again. Caught by the confirmation
   round in a real VS Code window, not by review.
 
 ## 0.51.0
 
 Minor: a refused run says so, and a slow turn is not a failed one.
 
-- A run stopped by policy — a tool the user denied, a mode that forbids it —
+- A run stopped by policy â€” a tool the user denied, a mode that forbids it â€”
   ends on this side, and the backend never learns of it, so it never streams a
   terminal back. Those locally decided endings were published into a sink that
   discarded them, and the panel reported "The ClawAI run ended without reporting
@@ -2528,7 +2544,7 @@ Minor: a refused run says so, and a slow turn is not a failed one.
 - Runtime commands are no longer held to the ordinary one-minute request budget.
   Posting a tool result hands the run back to the platform, which calls the model
   and only then answers, so the request stays open for as long as the turn takes
-  — and the platform's own provider timeout is five minutes. Any turn slower than
+  â€” and the platform's own provider timeout is five minutes. Any turn slower than
   a minute was aborted from this side while the backend was working perfectly
   well, and the panel reported "ClawAI request timed out." Seen twice in the
   final sweep, at 70 s and 110 s. Ordinary requests keep the one-minute budget.
@@ -2537,9 +2553,9 @@ Minor: a refused run says so, and a slow turn is not a failed one.
 
 Minor: an internal sentence is no longer the answer.
 
-- A run that ends between a stream frame arriving and its turn opening — which
+- A run that ends between a stream frame arriving and its turn opening â€” which
   is what Enterprise-locked mode does, correctly refusing the first tool it is
-  asked for — replied "Runtime invocation registry is terminal" and nothing
+  asked for â€” replied "Runtime invocation registry is terminal" and nothing
   else. That condition is now a named error the stream recognises, and the
   reader stops instead of raising it at the user.
 
@@ -2553,7 +2569,7 @@ Minor: a run that ends stops being in the way.
   threw, and "No runtime run is active" was shown to the user as the
   assistant's answer, eleven seconds into a run whose only fault was one tool
   returning an error. A failed step is now what the backend already treats it
-  as — the model's next input.
+  as â€” the model's next input.
 - Cancelling when nothing is active is success rather than an error. Because
   the coordinator awaited that call before telling the backend to stop, the
   throw skipped the cancel entirely, and the run left running on the server was
@@ -2574,7 +2590,7 @@ Minor: the agent can finally write a file.
 
 - Every mutation goes through a nested transaction, and the tool catalog
   reported that argument as an empty object while the description never
-  mentioned it — so a model had to guess the shape, and across eight different
+  mentioned it â€” so a model had to guess the shape, and across eight different
   models none ever did. The description now spells the transaction out:
   transactionId, summary, and one operation carrying kind, rootKey, path,
   content and beforeHash. This is the same channel that had to be taught the
@@ -2588,7 +2604,7 @@ Minor: the agent can finally write a file.
 Minor: a backend failure now reads as a sentence.
 
 - A run that ended because the provider returned no content showed the whole
-  HTTP envelope in the panel — statusCode, timestamp and all — with the actual
+  HTTP envelope in the panel â€” statusCode, timestamp and all â€” with the actual
   reason buried inside the JSON. The reason and its code are now shown on their
   own, and anything that is not a platform error body is left exactly as it was.
 
@@ -2601,7 +2617,7 @@ Minor: Ollama cloud models are usable again.
   of them as local, so the local entry shadowed the connector entry that holds
   the credentials and the request was dispatched to the local runtime. A
   cloud-tagged model now comes from its connector, which is also the truthful
-  source for tool support — the local entry hardcoded it to false, which made
+  source for tool support â€” the local entry hardcoded it to false, which made
   every cloud model look incapable of using tools.
 
 ## 0.45.0
@@ -2609,7 +2625,7 @@ Minor: Ollama cloud models are usable again.
 Minor: a second prompt now waits its turn instead of failing.
 
 - Sending another request while an agent run was working failed instantly with
-  "A Runtime V2 run is already active in this extension host" — an internal
+  "A Runtime V2 run is already active in this extension host" â€” an internal
   message shown to a user whose only mistake was asking a second question. The
   runtime holds one active run per window, so agent runs now share one queue
   and the next request starts when the current one finishes, which is what the
@@ -2645,7 +2661,7 @@ Minor: the agent now always tells you how a run ended.
 - A Runtime V2 agent run projected only its streamed text to the panel. When a
   run failed, completed, or was cancelled the response card was told nothing at
   all, so it kept its "Reading workspace" placeholder while the generation
-  quietly settled and released the request — a card that could never finish.
+  quietly settled and released the request â€” a card that could never finish.
   Every run now ends in exactly one visible terminal state: the answer, the
   failure with its stable reason and code, or a cancellation that keeps whatever
   had already streamed. A stream that ends without any terminal event says so
@@ -2677,8 +2693,8 @@ against a live backend showed the model calling `list` with
 `{rootKey: "workspace", path: ""}`, the tool failing in 1 ms without touching
 the disk, the model retrying, and the run stranding with no answer.
 
-- Lets the workspace root be addressed. Every spelling of it — `""`, `"."`,
-  `"./"`, `"/"` — was rejected by the relative-path policy, so no value meant
+- Lets the workspace root be addressed. Every spelling of it â€” `""`, `"."`,
+  `"./"`, `"/"` â€” was rejected by the relative-path policy, so no value meant
   "the root". An agent had to name a subdirectory to list, but could not list
   the root to discover one, which made the first tool call of any exploratory
   task impossible. Enumeration now accepts the root; reads and mutations keep
@@ -2686,7 +2702,7 @@ the disk, the model retrying, and the run stranding with no answer.
 - Makes the advertised `rootKey` the one the filesystem actually approves. The
   capability manifest advertised `workspace-1` while the filesystem adapter
   resolved only the SHA-256 folder key, so even a model that used the
-  advertised value got "The requested filesystem root is not approved" — every
+  advertised value got "The requested filesystem root is not approved" â€” every
   invocation was unsatisfiable. Both sides now derive the convention from one
   place so they cannot drift apart again. A near miss such as `workspace` or
   `workspace-0` is still rejected rather than resolved to the first folder.
@@ -2702,8 +2718,8 @@ Patch: a compatible correctness fix to event validation, with no new workflow.
 - Shows why a run ended instead of replacing the reason with a protocol error.
   Terminal events (`run.failed`, `run.blocked`, `run.cancelled`,
   `run.completed`) were validated against a strict empty payload, so once the
-  backend began attaching a reason — added precisely so a client could explain a
-  failure — every failed run was rejected here as an invalid payload. A run that
+  backend began attaching a reason â€” added precisely so a client could explain a
+  failure â€” every failed run was rejected here as an invalid payload. A run that
   the model correctly refused surfaced as `Runtime event run.failed has an
 invalid payload` rather than the actual cause, which is worse than the silence
   it replaced. Terminal payloads now accept an optional `{ code, message }`
