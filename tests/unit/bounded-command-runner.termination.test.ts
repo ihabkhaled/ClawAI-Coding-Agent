@@ -65,15 +65,22 @@ describe('runCommandSpec termination', () => {
     expect(result.timedOut).toBe(false);
   });
 
-  it('keeps the output the process produced before it was killed', async () => {
-    const result = await runCommandSpec(
-      specification(
-        "process.stdout.write('before'); process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);",
-        300,
-      ),
-      await workspace(),
-    );
+  // Same escalation as the first case, so the same allowance. On POSIX this
+  // waits out the full grace period before SIGKILL lands, which is longer than
+  // vitest's default and is the whole behaviour under test.
+  it(
+    'keeps the output the process produced before it was killed',
+    { timeout: 30_000 },
+    async () => {
+      const result = await runCommandSpec(
+        specification(
+          "process.stdout.write('before'); process.on('SIGTERM', () => {}); setInterval(() => {}, 1000);",
+          300,
+        ),
+        await workspace(),
+      );
 
-    expect(result.stdout).toContain('before');
-  });
+      expect(result.stdout).toContain('before');
+    },
+  );
 });
