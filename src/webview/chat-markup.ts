@@ -256,8 +256,29 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
       </div>
     </div>
   </section>
+  <section id="questionPanel" class="approval-panel" role="dialog" aria-modal="true" aria-labelledby="questionTitle" hidden>
+    <div class="approval-card">
+      <header>
+        <span id="questionHeader" class="badge accent-badge"></span>
+        <strong id="questionTitle">${translated('ClawAI needs a decision')}</strong>
+      </header>
+      <p id="questionMessage"></p>
+      <div id="questionOptions" class="question-options" role="group" aria-labelledby="questionTitle"></div>
+      <label id="questionOtherLabel" class="question-other" for="questionOther">${translated('Something else')}</label>
+      <input id="questionOther" type="text" maxlength="2000" autocomplete="off" />
+      <div class="approval-actions">
+        <button id="questionDismiss" class="quiet-button" type="button">${translated('Dismiss')}</button>
+        <button id="questionSubmit" class="send-button" type="button">${translated('Answer')}</button>
+      </div>
+    </div>
+  </section>
   <div id="i18n" hidden
+    data-question-dismissed="${translated('Question dismissed without an answer.')}"
+    data-turn-position="${translated('{who}, turn {position} of {total}')}"
+    data-context-overflow="${translated('This message will not fit. The oldest of the conversation will be dropped.')}"
+    data-context-tight="${translated('Nearly out of room. The next message may not fit.')}"
     data-auto="${translated('Auto')}"
+    data-mention-count="${translated('{count} workspace files match')}"
     data-agent-behavior-coding="${translated('Coding automatically')}"
     data-agent-behavior-planning="${translated('Planning only')}"
     data-agent="${translated('Agent')}"
@@ -282,6 +303,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-attachment-empty="${translated('Empty files cannot be attached.')}"
     data-attachment-limit-summary="${translated('{0}/10 attachments · {1}/50 MiB')}"
     data-attachment-read-failed="${translated('This file could not be attached.')}"
+    data-attachment-secret-blocked="${translated('This file looks like it holds a secret and cannot be attached.')}"
     data-attachment-too-large="${translated('Each attachment must be 25 MiB or smaller.')}"
     data-attachment-total-too-large="${translated('Attachments must total 50 MiB or less.')}"
     data-attachment-too-many="${translated('You can attach up to 10 files.')}"
@@ -290,6 +312,13 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-assistant="${translated('CLAWAI')}"
     data-automatic-routing="${translated('Automatic routing')}"
     data-route-automatic="${translated('Automatic')}"
+    data-routing="${translated('Routing')}"
+    data-model-cannot-call-tools="${translated('The selected model cannot call tools, so an agent run will not edit files.')}"
+    data-route-local-only="${translated('Local models only')}"
+    data-route-privacy-first="${translated('Privacy first')}"
+    data-route-low-latency="${translated('Fastest reply')}"
+    data-route-high-reasoning="${translated('Strongest reasoning')}"
+    data-route-cost-saver="${translated('Lowest cost')}"
     data-route-selected="${translated('Selected by you')}"
     data-cancel-run="${translated('Cancel run: {0}')}"
     data-choose-models="${translated('Choose between 2 and 5 models.')}"
@@ -342,6 +371,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-recent-conversations="${translated('Recent conversations')}"
     data-reasoning="${translated('Reasoning')}"
     data-reasoning-progress="${translated('Working through the request')}"
+    data-reasoning-steps="${translated('{0} steps · {1} tokens')}"
+    data-reasoning-private="${translated('ClawAI reports how much the model thought, never what it thought.')}"
     data-request-accepted="${translated('Request accepted')}"
     data-preparing-run="${translated('ClawAI is preparing the run.')}"
     data-waiting-turn="${translated('Waiting for the active run to finish.')}"
@@ -350,6 +381,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-estimated="${translated('estimated')}"
     data-tokens="${translated('tokens')}"
     data-token-detail="${translated('Input {0} · Output {1}')}"
+    data-token-cached="${translated('{0} cached ({1}%)')}"
     data-timed-out="${translated('Timed out')}"
     data-warning-llamacpp="${translated('Local llama.cpp models could not be loaded. Refresh to retry.')}"
     data-warning-ollama="${translated('Local Ollama models could not be loaded. Refresh to retry.')}"
@@ -360,6 +392,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-retry="${translated('Retry')}"
     data-running="${translated('Running')}"
     data-running-count="${translated('{0} running')}"
+    data-runtime-tool-budget="${translated('Tool calls used')}"
     data-runtime-turns="${translated('{0} turns · {1} retries')}"
     data-truncated="${translated('truncated')}"
     data-redacted="${translated('redacted')}"

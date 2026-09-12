@@ -163,6 +163,10 @@ export const threadSchema = z
   .object({
     id: z.string(),
     title: z.string().nullable().optional(),
+    // Both already exist on the thread contract; the extension simply never
+    // read them, so archived conversations stayed in the history list.
+    isArchived: z.boolean().optional(),
+    isPinned: z.boolean().optional(),
     routingMode: z.string().optional(),
     preferredProvider: z.string().nullable().optional(),
     preferredModel: z.string().nullable().optional(),
@@ -308,5 +312,61 @@ export type ChatThread = z.infer<typeof threadSchema>;
 export type ChatMessage = z.infer<typeof messageSchema>;
 export type UploadedFile = z.infer<typeof uploadedFileSchema>;
 export type ParallelResponse = z.infer<typeof parallelResponseSchema>;
+/**
+ * The policy an organization imposes on this client.
+ *
+ * Unsigned on purpose. Every field narrows and none widens, so a forged policy
+ * could only refuse work, never grant it — the same reason the project policy
+ * file may not carry an `allow`. Entitlements, which gate money, already arrive
+ * over the same authenticated channel. `enterprise-policy.ts` keeps its
+ * signature verification for a future distribution that must also survive a
+ * compromised backend; nothing here needs it yet.
+ */
+export const organizationPolicySchema = z
+  .object({
+    allowedTools: z.array(z.string().max(200)).max(256),
+    allowedModels: z.array(z.string().max(200)).max(1_000),
+    maximumRisk: z.enum(['R0', 'R1', 'R2', 'R3', 'R4']),
+    deniedEffects: z.array(z.string().max(100)).max(20),
+    requireApproval: z.array(z.string().max(100)).max(20),
+    maximumRetentionDays: z.number().int().min(0).max(3_650),
+    minimumPermissionMode: z.enum(['PLAN', 'ASK', 'AUTO_EDIT', 'AUTONOMOUS_SCOPED']).nullable(),
+  })
+  .strict();
+
+export type OrganizationPolicy = z.infer<typeof organizationPolicySchema>;
+
 export type Entitlements = z.infer<typeof entitlementsSchema>;
 export type Usage = z.infer<typeof usageSchema>;
+
+/**
+ * The feedback ticket the audit service returns for an accepted submission.
+ *
+ * `loose` for the same reason every other backend read is: a field the
+ * service adds later must not fail a client that only needs these three.
+ */
+export const feedbackTicketSchema = z
+  .object({
+    id: z.string().min(1).max(200),
+    ticketNumber: z.string().min(1).max(200),
+    status: z.string().min(1).max(100),
+  })
+  .loose();
+
+export type FeedbackTicket = z.infer<typeof feedbackTicketSchema>;
+
+/** Mirrors `createFeedbackSchema` in the audit service. */
+export const FEEDBACK_TYPES = [
+  'BUG_REPORT',
+  'GENERAL_FEEDBACK',
+  'FEATURE_REQUEST',
+  'UI_UX',
+  'PERFORMANCE',
+  'DATA_ISSUE',
+  'INTEGRATION_ISSUE',
+  'DOCUMENTATION',
+  'SECURITY_CONCERN',
+  'OTHER',
+] as const;
+
+export type FeedbackType = (typeof FEEDBACK_TYPES)[number];

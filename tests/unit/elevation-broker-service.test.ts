@@ -41,6 +41,7 @@ describe('ElevationBrokerService', () => {
       timedOut: false,
       cancelled: false,
       truncated: false,
+      forciblyTerminated: false,
     }));
     const broker = new ElevationBrokerService(
       native,

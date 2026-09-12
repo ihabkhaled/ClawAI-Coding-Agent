@@ -1,4 +1,9 @@
 import {
+  autosaveTargets,
+  DEFAULT_AUTOSAVE_POLICY,
+  type AutosavePolicy,
+} from '../core/autosave-policy';
+import {
   applyExactHunks,
   contentHash,
   fileTransactionSchema,
@@ -28,6 +33,11 @@ export interface PreparedFileOperation {
 
 export interface FileTransactionAdapter {
   isTrusted(): boolean;
+  /** Saves any open, dirty document among these, and resolves when written. */
+  saveIfDirty(
+    targets: readonly { readonly rootKey: string; readonly path: string }[],
+    signal?: AbortSignal,
+  ): Promise<void>;
   snapshot(operation: FileTransactionOperation, signal?: AbortSignal): Promise<FileSnapshot>;
   apply(
     transaction: FileTransaction,
@@ -108,16 +118,32 @@ function touchedReceipt(prepared: PreparedFileOperation): TouchedFileReceipt {
   };
 }
 
+/**
+ * How many applied transactions can be undone.
+ *
+ * Undo remembered exactly one, so a run that made three edits could take back
+ * the third and no more — and the third is rarely the one a reader objects to.
+ * The stack is bounded because each entry holds the before-state bytes it
+ * would restore, and an unbounded history of those is an unbounded amount of
+ * the workspace held in memory for a session that may never undo anything.
+ */
+export const MAX_UNDO_DEPTH = 20;
+
 export class FileTransactionService {
-  private lastApplied: FileTransactionPreview | undefined;
+  private readonly applied: FileTransactionPreview[] = [];
   constructor(
     private readonly adapter: FileTransactionAdapter,
     private readonly gate = new WorkspaceMutationGate(),
+    private readonly autosavePolicy: () => AutosavePolicy = () => DEFAULT_AUTOSAVE_POLICY,
   ) {}
 
   async preview(candidate: unknown, signal?: AbortSignal): Promise<FileTransactionPreview> {
     const transaction = fileTransactionSchema.parse(candidate);
     if (!this.adapter.isTrusted()) throw new Error('Trust the workspace before reviewing changes');
+    // Before the snapshot, never after. Saving a dirty buffer changes the file
+    // the preview is about to hash, so a save between preview and apply would
+    // trip the very drift check it is meant to resolve.
+    await this.adapter.saveIfDirty(autosaveTargets(transaction, this.autosavePolicy()), signal);
     const prepared: PreparedFileOperation[] = [];
     for (const operation of transaction.operations) {
       signal?.throwIfAborted();
@@ -146,7 +172,10 @@ export class FileTransactionService {
       }
       try {
         await this.adapter.apply(preview.transaction, preview.prepared, operationSignal);
-        this.lastApplied = preview;
+        // Newest last, oldest dropped: an undo takes back the most recent
+        // change, so the far end of the stack is the one worth forgetting.
+        this.applied.push(preview);
+        if (this.applied.length > MAX_UNDO_DEPTH) this.applied.shift();
         return {
           transactionId: preview.transaction.transactionId,
           status: 'applied',
@@ -160,14 +189,42 @@ export class FileTransactionService {
     });
   }
 
+  /**
+   * Every file the agent has changed in this session, newest capture last.
+   *
+   * The applied stack is in application order, so a file changed three times
+   * appears three times and the last entry is the one on disk.
+   */
+  get touchedFiles(): { rootKey: string; path: string }[] {
+    return this.applied.flatMap((preview) =>
+      preview.touched.map((file) => ({ rootKey: file.rootKey, path: file.path })),
+    );
+  }
+
+  /** How many applied transactions could still be undone. */
+  get undoDepth(): number {
+    return this.applied.length;
+  }
+
+  /**
+   * Cleared on a boundary: a stack entry restores bytes into a workspace that
+   * is no longer the open one, which would write a stale file into a new tree.
+   */
+  forgetUndoHistory(): void {
+    this.applied.length = 0;
+  }
+
   async undoLast(signal?: AbortSignal): Promise<FileTransactionReceipt | undefined> {
     const operationSignal = signal ?? new AbortController().signal;
     return this.gate.runExclusive(operationSignal, async () => {
-      const preview = this.lastApplied;
+      const preview = this.applied.at(-1);
       if (preview === undefined) return undefined;
       operationSignal.throwIfAborted();
       await this.adapter.rollback(preview.transaction, preview.prepared);
-      this.lastApplied = undefined;
+      // Popped only after the rollback succeeds. A failed rollback leaves the
+      // entry in place so the same undo can be retried, rather than losing the
+      // only record of how to restore the file.
+      this.applied.pop();
       return {
         transactionId: preview.transaction.transactionId,
         status: 'rolled-back',

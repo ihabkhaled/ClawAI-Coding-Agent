@@ -26,6 +26,21 @@ function strict(
 }
 
 const identifier = { type: 'string', minLength: 2, maxLength: 200 } as const;
+// Mirrors flagshipStrategySchema. A closed enum here would refuse the very
+// strategy names the validator now accepts, and the model would never learn why.
+//
+// The slug rule is stated rather than expressed as `pattern`, which this
+// catalog does not permit: a pattern is an unbounded regular expression, and
+// every bound in these schemas exists so a tool definition cannot cost an
+// unpredictable amount to check. The description is what the model reads, and
+// the validator is what enforces it.
+const flagshipStrategy = {
+  type: 'string',
+  minLength: 3,
+  maxLength: 60,
+  description:
+    'Lowercase slug naming the approach, such as cross-stack-feature or security-hardening. Letters and digits with single hyphens between them.',
+} as const;
 const shortText = { type: 'string', minLength: 1, maxLength: 2_000 } as const;
 const epochs = strict({ account: integer, workspace: integer, target: integer, policy: integer }, [
   'account',
@@ -61,6 +76,7 @@ const subAgentTask = strict(
         'integrator',
       ],
     },
+    definitionName: { type: 'string', minLength: 2, maxLength: 80 },
     goal: text,
     modelPolicy,
     contextNodeIds: texts,
@@ -71,8 +87,8 @@ const subAgentTask = strict(
     budget: taskBudget,
     tools: texts,
     riskCeiling: { type: 'string', enum: ['R0', 'R1', 'R2', 'R3'] },
+    inherit: { type: 'string', enum: ['none', 'summary', 'findings'] },
     acceptanceChecks: texts,
-    mandatoryGateIds: texts,
     epochs,
   },
   [
@@ -135,16 +151,7 @@ const flagshipRequest = strict(
     deliveryId: identifier,
     runId: identifier,
     goal: text,
-    strategy: {
-      type: 'string',
-      enum: [
-        'cross-stack-feature',
-        'incident-fix',
-        'architecture-refactor',
-        'mobile-web-backend',
-        'prompt-pack-audit',
-      ],
-    },
+    strategy: flagshipStrategy,
     repositories: texts,
     writeSet: texts,
     acceptanceChecks: texts,
@@ -189,7 +196,27 @@ const elevationRecipe = strict(
 );
 
 export const runtimeToolInputSchemas = {
+  advisor: strict({ question: text, context: text }, ['question']),
+  board: strict({ kind: text, text: text, since: integer }, []),
+  scan: strict({ path: text }, ['path']),
+  workflows: strict({ name: text, description: text, graph: subAgentGraph }, []),
+  goal: strict({ statement: text, checks: texts, checkId: text, state: text, evidence: text }, []),
+  monitor: strict({ kind: text, path: text, pattern: text, timeoutMs: integer }, ['kind', 'path']),
   agents: strict({ graph: subAgentGraph }, ['graph']),
+  ask: strict(
+    {
+      header: shortText,
+      question: text,
+      options: {
+        type: 'array',
+        items: strict({ label: shortText, description: shortText }, ['label']),
+        minItems: 2,
+        maxItems: 4,
+      },
+      allowOther: flag,
+    },
+    ['header', 'question', 'options'],
+  ),
   browser: strict({
     sessionId: text,
     contextId: text,
@@ -274,14 +301,25 @@ export const runtimeToolInputSchemas = {
     pattern: text,
     maxResults: filesystemResultLimit,
     query: text,
+    regex: flag,
+    ignoreCase: flag,
+    contextLines: integer,
+    multiline: flag,
+    fileTypes: texts,
     transaction: opaque,
   }),
+  end: strict({ reason: text, lifecycle: { type: 'string', enum: ['completed', 'abandoned'] } }, [
+    'reason',
+  ]),
   git: strict({
     rootKey: text,
     path: text,
     ref: text,
+    baseBranch: text,
     branch: text,
     startPoint: text,
+    newRootKey: text,
+    worktreeRootKey: text,
     paths: texts,
     message: text,
     amend: flag,
@@ -293,9 +331,48 @@ export const runtimeToolInputSchemas = {
     target: text,
   }),
   integration: strict({ request: integrationRequest }, ['request']),
-  intelligence: strict({ identity: opaque, query: text, nodeIds: texts, paths: texts }),
-  journal: strict({ journal: opaque, query: text, runId: text }),
-  planning: strict({ plan: opaque, output: opaque }),
+  intelligence: strict({
+    identity: opaque,
+    query: text,
+    nodeIds: texts,
+    paths: texts,
+    rootKey: text,
+    path: text,
+    line: integer,
+    column: integer,
+    minimumSeverity: text,
+    maxResults: integer,
+  }),
+  journal: strict({
+    journal: opaque,
+    query: text,
+    runId: text,
+    lifecycle: {
+      type: 'string',
+      enum: [
+        'resumable',
+        'needs-revalidation',
+        'blocked-by-drift',
+        'completed',
+        'cancelled',
+        'abandoned',
+      ],
+    },
+    label: shortText,
+    pinned: flag,
+    updatedSince: shortText,
+  }),
+  notify: strict({ message: shortText, kind: { type: 'string', enum: ['info', 'warning'] } }, [
+    'message',
+  ]),
+  planning: strict({ plan: opaque, output: opaque, document: text, revision: text }),
+  notebook: strict({
+    rootKey: text,
+    path: text,
+    index: integer,
+    source: text,
+    cellType: text,
+  }),
   process: strict({
     executablePath: text,
     arguments: texts,
@@ -310,6 +387,14 @@ export const runtimeToolInputSchemas = {
     receipt: opaque,
     receipts: objects,
     data: text,
+  }),
+  web: strict({
+    query: text,
+    maxResults: integer,
+    providerId: text,
+    url: text,
+    timeoutMs: integer,
+    refresh: flag,
   }),
   quality: strict({ rootKey: text, scope: text, projects: objects, gateId: text }),
   services: strict({

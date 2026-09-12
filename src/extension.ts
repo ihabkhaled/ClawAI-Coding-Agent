@@ -8,23 +8,47 @@ import { ExternalOutputGrantStore } from './core/external-output-grants';
 import { createRuntimeSnapshot } from './core/runtime/runtime-event-reducer';
 import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
+import { openAgentTerminal } from './infrastructure/agent-terminal';
 import { OutputLogger } from './infrastructure/output-logger';
+import { VscodeContextRangeReader } from './infrastructure/vscode-context-range-reader';
+import { VscodeMentionIndex } from './infrastructure/vscode-mention-index';
 import { probeRuntimeHost } from './infrastructure/vscode-runtime-host-probe';
 import { buildRuntimeCapabilityManifest } from './infrastructure/vscode-runtime-target-adapter';
+import { VscodeTerminalTracker } from './infrastructure/vscode-terminal-capture';
+import { VscodeUserNotifier } from './infrastructure/vscode-user-notifier';
 import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-edit-adapter';
 import { AgentCoordinator } from './services/agent-coordinator';
+import { attachTerminalOutput } from './services/attach-terminal-command';
 import { ConfigurationService } from './services/configuration-service';
+import { ContextFreshnessTracker } from './services/context-freshness-tracker';
+import { ClawaiUriHandler } from './services/deep-link-handler';
 import { ExternalOutputGrantService } from './services/external-output-grant-service';
+import { toggleFastMode } from './services/fast-mode-command';
 import { GlobalContextService } from './services/global-context-service';
+import { groupConversation } from './services/group-conversation-command';
+import { MentionSuggestionService } from './services/mention-suggestion-service';
+import {
+  HANDOFF_KEY,
+  claimPendingWindowHandoff,
+  openConversationInNewWindow,
+} from './services/open-in-new-window-command';
+import { ThreadGroupStore } from './services/thread-group-store';
 import { WorkspaceContextService } from './services/workspace-context-service';
 import { WorkspaceScopeService } from './services/workspace-scope-service';
+import { workspaceSkillCatalog } from './services/workspace-skill-catalog';
+import { AttentionView } from './views/attention-view';
 import { createClawIconPath } from './views/claw-icon-path';
 import { DiffPreviewProvider } from './views/diff-preview-provider';
+import { NotificationController } from './views/notification-controller';
+import { watchSetupCompletion } from './views/setup-context-key';
 import { StateTreeProvider } from './views/state-tree-provider';
 import { StatusBarController } from './views/status-bar-controller';
 import { ChatViewProvider } from './webview/chat-view-provider';
 
+import type { FastModeSettings } from './core/fast-mode.types';
 import type { CapabilityManifest } from './core/runtime/capability-manifest';
+import type { WindowHandoff } from './core/window-handoff.types';
+import type { NewWindowDependencies } from './services/open-in-new-window.types';
 
 function registerCommands(
   context: vscode.ExtensionContext,
@@ -74,17 +98,31 @@ function registerCommands(
       () =>
         coordinator.runReadOnlyWorkflow('audit', contextModeForCommand('clawAI.auditWorkspace')),
     ],
-    ['clawAI.initializeWorkspace', () => coordinator.initializeWorkspace()],
+    ['clawAI.initializeWorkspace', () => coordinator.commands.initializeWorkspace()],
     ['clawAI.openGlobalRules', () => globalContext.open('rules')],
     ['clawAI.openGlobalSkills', () => globalContext.open('skills')],
-    ['clawAI.refreshModels', () => coordinator.refreshModels()],
+    ['clawAI.refreshModels', () => coordinator.commands.refreshModels()],
     [
       'clawAI.selectModel',
       (modelKey?: unknown) =>
-        coordinator.selectModel(typeof modelKey === 'string' ? modelKey : undefined),
+        coordinator.commands.selectModel(typeof modelKey === 'string' ? modelKey : undefined),
     ],
     ['clawAI.cancel', () => coordinator.cancel()],
-    ['clawAI.undoLastEdit', () => coordinator.undoLastEdit()],
+    ['clawAI.undoLastEdit', () => coordinator.commands.undoLastEdit()],
+    ['clawAI.exportTranscript', () => coordinator.commands.exportTranscript()],
+    ['clawAI.showSessionRecap', () => coordinator.commands.showSessionRecap()],
+    ['clawAI.sendFeedback', () => coordinator.commands.sendFeedback()],
+    ['clawAI.searchRunHistory', () => coordinator.commands.searchRunHistory()],
+    ['clawAI.showUsage', () => coordinator.commands.showUsage()],
+    ['clawAI.createCheckpoint', () => coordinator.commands.createCheckpoint()],
+    ['clawAI.restoreCheckpoint', () => coordinator.commands.restoreCheckpoint()],
+    ['clawAI.askSideQuestion', () => coordinator.commands.askSideQuestion()],
+    ['clawAI.compactConversation', () => coordinator.commands.compactConversation()],
+    ['clawAI.selectOutputStyle', () => coordinator.commands.selectOutputStyle()],
+    ['clawAI.toggleFocusView', () => coordinator.commands.toggleFocusView()],
+    ['clawAI.renameChat', () => coordinator.commands.renameChat()],
+    ['clawAI.archiveChat', () => coordinator.commands.archiveChat()],
+    ['clawAI.browseArchivedChats', () => coordinator.commands.browseArchivedChats()],
     [
       'clawAI.showLogs',
       () => {
@@ -112,6 +150,15 @@ function registerChatParticipant(
   context.subscriptions.push(participant);
 }
 
+/**
+ * Where the pair Fast mode replaced is kept.
+ *
+ * Workspace state rather than a setting: it is not something to configure,
+ * it is what the toggle has to put back, and a user editing it by hand would
+ * only be able to break the undo.
+ */
+const FAST_MODE_MEMORY_KEY = 'clawAI.fastMode.previous';
+
 export function activate(context: vscode.ExtensionContext): void {
   const connectionConfiguration = new ConfigurationService();
   const configuration = connectionConfiguration.read();
@@ -126,7 +173,13 @@ export function activate(context: vscode.ExtensionContext): void {
     agentRun: undefined,
     agentRuns: {},
     agentMode: configuration.agentMode,
+    viewDensity: configuration.viewDensity,
     approvalRequest: undefined,
+    questionRequest: undefined,
+    findings: [],
+    tasks: [],
+    artifacts: [],
+    organizationPolicy: undefined,
     backendCustomUrl: configuration.backendCustomUrl,
     backendEnvironment: configuration.backendEnvironment,
     backendUrl: configuration.backendUrl,
@@ -182,9 +235,15 @@ export function activate(context: vscode.ExtensionContext): void {
     context,
     workspaceScope,
   );
+  const mentions = new MentionSuggestionService(
+    new VscodeMentionIndex(),
+    workspaceSkillCatalog(context.globalStorageUri, workspaceScope),
+  );
   const chatView = new ChatViewProvider(context.extensionUri, state, {
     agent: (input) => coordinator.runAgent(input),
     cancel: (requestId) => coordinator.cancel(requestId),
+    conversationTokens: (threadId, tokens) => coordinator.conversationTokens(threadId, tokens),
+    dropUris: (uriList, shiftKey) => coordinator.dropUris(uriList, shiftKey),
     captureAdmission: (threadId) => coordinator.captureAdmission(threadId),
     compare: (input) => coordinator.compare(input),
     configureConnections: async (profile) => {
@@ -200,12 +259,13 @@ export function activate(context: vscode.ExtensionContext): void {
       await vscode.commands.executeCommand('workbench.action.configureLocale');
     },
     logout: () => coordinator.logout(),
+    mentionSuggestions: (text, caretIndex) => mentions.suggest(text, caretIndex),
     manageExternalOutputFolders: () => externalOutputGrants.manage(),
     openThread: (input) => coordinator.openThread(input),
     openFolder: async () => {
       await vscode.commands.executeCommand('workbench.action.files.openFolder');
     },
-    refreshModels: () => coordinator.refreshModels(),
+    refreshModels: () => coordinator.commands.refreshModels(),
     reviewChanges: async (previewId) => {
       const available = await diffPreview.show(previewId);
       if (!available) {
@@ -217,34 +277,81 @@ export function activate(context: vscode.ExtensionContext): void {
       return Promise.resolve();
     },
     resolveApproval: (requestId, approved) => {
-      coordinator.resolveApproval(requestId, approved);
+      coordinator.interruptions.resolveApproval(requestId, approved);
       return Promise.resolve();
+    },
+    answerQuestion: (requestId, selection) => {
+      coordinator.interruptions.answerQuestion(requestId, selection);
     },
     runtimePause: () => coordinator.runtimeControl('pause'),
     runtimeResume: () => coordinator.runtimeControl('resume'),
     runtimeSteer: (message) => coordinator.runtimeSteer(message),
     runtimeStop: () => coordinator.cancel(),
-    undo: () => coordinator.undoLastEdit(),
+    undo: () => coordinator.commands.undoLastEdit(),
     selectAgentMode: (mode) => coordinator.sessionControls.selectAgentMode(mode),
+    selectViewDensity: (density) => coordinator.sessionControls.selectViewDensity(density),
     selectEffortMode: (mode) => coordinator.sessionControls.selectEffortMode(mode),
     selectSpeedMode: (mode) => coordinator.sessionControls.selectSpeedMode(mode),
-    selectModel: (modelKey) => coordinator.selectModel(modelKey),
+    selectModel: (modelKey) => coordinator.commands.selectModel(modelKey),
     selectPermissionMode: (mode) => coordinator.sessionControls.selectPermissionMode(mode),
     selectWorkspaceFolder: (folderKey) => coordinator.selectWorkspaceFolder(folderKey),
     send: (input) => coordinator.send(input),
   });
   coordinator.attachView(chatView);
 
+  const setupTree = new StateTreeProvider('setup', state);
   const modelTree = new StateTreeProvider('model', state);
-  const contextTree = new StateTreeProvider('context', state);
-  const historyTree = new StateTreeProvider('history', state);
+  // Declared before the tree so the tree can read it, and given the tree's
+  // refresh afterwards, because each needs the other and only one can be first.
+  let refreshContextTree = (): void => undefined;
+  const contextFreshness = new ContextFreshnessTracker(
+    state,
+    new VscodeContextRangeReader(workspaceScope),
+    () => {
+      refreshContextTree();
+    },
+  );
+  const contextTree = new StateTreeProvider('context', state, undefined, (key) =>
+    contextFreshness.freshness(key),
+  );
+  refreshContextTree = () => {
+    contextTree.refresh();
+  };
+  const threadGroups = new ThreadGroupStore(context.workspaceState);
+  const terminals = new VscodeTerminalTracker();
+  const historyTree = new StateTreeProvider('history', state, () => threadGroups.read());
+  const findingsTree = new StateTreeProvider('findings', state);
+  const tasksTree = new StateTreeProvider('tasks', state);
+  const artifactsTree = new StateTreeProvider('artifacts', state);
+  const attentionTree = new StateTreeProvider('attention', state);
   const statusBar = new StatusBarController(state);
+  const setupVisibility = watchSetupCompletion(state);
+  const newWindowParts: NewWindowDependencies = {
+    activeThreadId: () => chatView.activeThreadId(),
+    workspaceFolder: () => vscode.workspace.workspaceFolders?.[0]?.uri,
+    readHandoff: () => context.globalState.get<WindowHandoff>(HANDOFF_KEY),
+    storeHandoff: async (handoff) => {
+      await context.globalState.update(HANDOFF_KEY, handoff);
+    },
+    openFolderInNewWindow: async (folder) => {
+      await vscode.commands.executeCommand('vscode.openFolder', folder, {
+        forceNewWindow: true,
+      });
+    },
+    openThread: (threadId) => coordinator.openChat(threadId).then(() => undefined),
+    now: Date.now,
+  };
+  void claimPendingWindowHandoff(newWindowParts);
+  const notifications = new NotificationController(state, new VscodeUserNotifier());
 
   context.subscriptions.push(
+    notifications,
     coordinator,
     logger,
     diffPreview,
     chatView,
+    setupVisibility,
+    setupTree,
     modelTree,
     contextTree,
     historyTree,
@@ -254,9 +361,28 @@ export function activate(context: vscode.ExtensionContext): void {
         retainContextWhenHidden: true,
       },
     }),
+    // Navigation only. See docs/adr/0001-uri-handler-navigation-only.md.
+    vscode.window.registerUriHandler(
+      new ClawaiUriHandler({ openChat: (threadId) => coordinator.openChat(threadId) }),
+    ),
+    vscode.window.registerTreeDataProvider('clawAI.setup', setupTree),
     vscode.window.registerTreeDataProvider('clawAI.model', modelTree),
     vscode.window.registerTreeDataProvider('clawAI.context', contextTree),
+    vscode.workspace.onDidSaveTextDocument((document) => {
+      // A save is the only moment the answer can change, and the moment a
+      // person is looking, so the mark appears while they still remember the
+      // edit that caused it.
+      void contextFreshness.fileSaved(vscode.workspace.asRelativePath(document.uri, false));
+    }),
     vscode.window.registerTreeDataProvider('clawAI.history', historyTree),
+    vscode.window.registerTreeDataProvider('clawAI.tasks', tasksTree),
+    tasksTree,
+    vscode.window.registerTreeDataProvider('clawAI.findings', findingsTree),
+    artifactsTree,
+    vscode.window.registerTreeDataProvider('clawAI.artifacts', artifactsTree),
+    attentionTree,
+    new AttentionView('clawAI.attention', attentionTree, state),
+    findingsTree,
     vscode.workspace.onDidChangeConfiguration((event) => {
       if (event.affectsConfiguration('clawAI')) {
         void coordinator.configurationChanged();
@@ -281,6 +407,74 @@ export function activate(context: vscode.ExtensionContext): void {
     }),
     vscode.window.onDidChangeTextEditorSelection(() => {
       coordinator.refreshWorkspaceReadiness();
+    }),
+  );
+  context.subscriptions.push(
+    terminals,
+    vscode.commands.registerCommand('clawAI.attachTerminalOutput', () =>
+      attachTerminalOutput({
+        terminals: () => vscode.window.terminals,
+        capture: (terminal) => terminals.capture(terminal),
+        insert: (block) => chatView.appendToComposer(block),
+      }),
+    ),
+    vscode.commands.registerCommand('clawAI.groupConversation', () =>
+      groupConversation({
+        threads: () => state.snapshot.history,
+        assignments: () => threadGroups.read(),
+        save: async (assignments) => {
+          await threadGroups.write(assignments);
+          historyTree.refresh();
+        },
+      }),
+    ),
+    vscode.commands.registerCommand('clawAI.openConversationInNewWindow', () =>
+      openConversationInNewWindow(newWindowParts),
+    ),
+    vscode.commands.registerCommand('clawAI.toggleFastMode', () =>
+      toggleFastMode({
+        current: () => ({
+          routingMode: state.snapshot.routingMode,
+          speedMode: state.snapshot.speedMode,
+        }),
+        apply: async (settings) => {
+          await connectionConfiguration.selectRoutingMode(settings.routingMode);
+          await connectionConfiguration.selectSpeedMode(settings.speedMode);
+          const updated = connectionConfiguration.read();
+          state.update({
+            routingMode: updated.routingMode,
+            selectedModel: updated.selectedModel,
+            speedMode: updated.speedMode,
+          });
+        },
+        remembered: () => context.workspaceState.get<FastModeSettings>(FAST_MODE_MEMORY_KEY),
+        remember: async (settings) => {
+          await context.workspaceState.update(FAST_MODE_MEMORY_KEY, settings);
+        },
+      }),
+    ),
+    vscode.commands.registerCommand('clawAI.openTerminal', () =>
+      openAgentTerminal(
+        {
+          runAgent: (input) => coordinator.runAgent(input),
+          cancel: (requestId) => coordinator.cancel(requestId),
+        },
+        {
+          subscribe: (listener) =>
+            state.subscribe((snapshot) => {
+              listener(snapshot.agentRuns);
+            }),
+          currentRuns: () => state.snapshot.agentRuns,
+        },
+      ),
+    ),
+    vscode.commands.registerCommand('clawAI.reopenClosedChat', async () => {
+      const sessionId = await chatView.reopenClosedSession();
+      if (sessionId === undefined) {
+        await vscode.window.showInformationMessage(
+          vscode.l10n.t('No recently closed ClawAI chat to reopen.'),
+        );
+      }
     }),
   );
   registerCommands(context, coordinator, logger, globalContext);

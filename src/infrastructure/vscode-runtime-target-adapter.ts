@@ -10,16 +10,19 @@ import {
 } from '../core/runtime/capability-manifest';
 import { advertisedWorkspaceRootKey } from '../core/workspace-scope';
 
+import { askUserToolDefinition } from './ask-user-tool-executor';
 import { browserToolDefinition } from './browser-tool-executor';
 import { containerToolDefinition } from './container-tool-executor';
 import { databaseToolDefinition } from './database-tool-executor';
 import { developmentServiceToolDefinition } from './development-service-tool-executor';
 import { elevationToolDefinition } from './elevation-tool-executor';
+import { endConversationToolDefinition } from './end-conversation-tool-executor';
 import { evidenceToolDefinition } from './evidence-tool-executor';
 import { flagshipToolDefinition } from './flagship-tool-executor';
 import { gitToolDefinition } from './git-tool-executor';
 import { integrationToolDefinition } from './integration-tool-executor';
 import { intelligenceToolDefinition } from './intelligence-tool-executor';
+import { notifyUserToolDefinition } from './notify-user-tool-executor';
 import { planningToolDefinition } from './planning-tool-executor';
 import { processSupervisorToolDefinition } from './process-supervisor-tool-executor';
 import { qualityToolDefinition } from './quality-tool-executor';
@@ -302,6 +305,18 @@ export function buildRuntimeCapabilityManifest(
 function localToolDefinitions(probe: RuntimeHostProbe) {
   const definitions = [
     workspaceFilesystemToolDefinition,
+    // Asking the user needs no host prerequisite and no workspace trust: it
+    // reads nothing and writes nothing. It has to be advertised unconditionally
+    // or `executableToolDefinitions` filters it out of the offered catalog and
+    // the model is never told the question channel exists.
+    askUserToolDefinition,
+    // Notifying carries the same reasoning as asking: no host prerequisite, no
+    // trust, nothing read or written. Advertised unconditionally or the model
+    // is never told it can reach a user who walked away.
+    notifyUserToolDefinition,
+    // Declaring a run finished needs no host prerequisite either, and a run
+    // that cannot say how it ended leaves no terminal record at all.
+    endConversationToolDefinition,
     intelligenceToolDefinition,
     planningToolDefinition,
     runJournalToolDefinition,

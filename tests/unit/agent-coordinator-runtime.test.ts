@@ -33,6 +33,7 @@ describe('agent coordinator account boundary', () => {
   it('clears every account-scoped value while preserving workspace and local settings', () => {
     const state = new ExtensionState({
       agentMode: 'PLAN',
+      viewDensity: 'full' as const,
       effortMode: 'ULTRA',
       speedMode: '1X',
       agentRun: { phase: 'generating' } as never,
@@ -40,6 +41,11 @@ describe('agent coordinator account boundary', () => {
         'request-a': { phase: 'generating' } as never,
       },
       approvalRequest: { id: 'approval-a' } as never,
+      questionRequest: { id: 'question-a' } as never,
+      findings: [{ title: 'Account-scoped finding' }] as never,
+      tasks: [{ id: 'a', title: 'Account-scoped task' }] as never,
+      artifacts: [{ path: 'a.pdf', fsPath: '/w/a.pdf' }] as never,
+      organizationPolicy: { maximumRisk: 'R0' } as never,
       backendStatus: 'connected',
       backendUrl: 'https://claw.local',
       busy: true,
@@ -95,11 +101,17 @@ describe('agent coordinator account boundary', () => {
 
     expect(state.snapshot).toMatchObject({
       agentMode: 'PLAN',
+      viewDensity: 'full' as const,
       effortMode: 'ULTRA',
       speedMode: '1X',
       agentRun: undefined,
       agentRuns: {},
       approvalRequest: undefined,
+      questionRequest: undefined,
+      findings: [],
+      tasks: [],
+      artifacts: [],
+      organizationPolicy: undefined,
       backendStatus: 'disconnected',
       backendUrl: 'https://claw.local',
       busy: false,

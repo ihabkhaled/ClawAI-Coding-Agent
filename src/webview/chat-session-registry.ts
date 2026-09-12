@@ -9,7 +9,9 @@ export interface RegisteredChatSession<TTarget extends ChatSessionTarget = ChatS
   target: TTarget;
 }
 
-type SessionUpdate = Partial<Pick<ChatSessionDescriptor, 'subject' | 'threadId' | 'updatedAt'>>;
+type SessionUpdate = Partial<
+  Pick<ChatSessionDescriptor, 'activity' | 'subject' | 'threadId' | 'unread' | 'updatedAt'>
+>;
 
 export class ChatSessionRegistry<TTarget extends ChatSessionTarget = ChatSessionTarget> {
   private readonly requests = new Map<string, string>();

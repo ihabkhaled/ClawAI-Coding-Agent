@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import { z } from 'zod';
 
+import { flagshipStrategySchema } from './flagship-strategy';
 import { subAgentGraphSchema, type SubAgentGraph } from './multi-agent-dag';
 import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
 
@@ -50,13 +51,7 @@ export const flagshipRequestSchema = z
     deliveryId: z.string().min(8).max(200),
     runId: z.string().min(8).max(200),
     goal: z.string().min(1).max(50_000),
-    strategy: z.enum([
-      'cross-stack-feature',
-      'incident-fix',
-      'architecture-refactor',
-      'mobile-web-backend',
-      'prompt-pack-audit',
-    ]),
+    strategy: flagshipStrategySchema,
     repositories: z.array(z.string().min(1).max(4_096)).min(1).max(100),
     writeSet: z
       .array(z.string().min(1).max(4_096).refine(isSafeRelativeWorkspacePath))

@@ -33,7 +33,18 @@ add exclusions but cannot remove built-in denials.
 Composer attachments are untrusted input. The webview rejects oversized
 batches before reading their bytes, while the extension host independently
 validates the count, canonical Base64 representation, decoded size, filename,
-and MIME allowlist before any upload. Files are uploaded only when their queued
+and MIME allowlist before any upload.
+
+Attachment filenames are screened against the same credential-name policy that
+denies `.env`, key material and credential-shaped names to context collection
+and to every tool. The extension host is the boundary and refuses them whatever
+the webview did; the webview repeats the check only so the refusal can name the
+file instead of reporting a generic invalid request. Because the predicate is
+shared, a name that code merely implements — `password-reset.controller.ts` — is
+still attachable, and a name that stores credentials — `passwords.csv` — is not.
+The screen is on the name, not the bytes: it stops an accidental sweep in a
+multi-select or a folder drop, and it is not a defence against a user who is
+determined to paste a secret into the composer. Files are uploaded only when their queued
 request starts and only backend file IDs enter chat contracts. Attachment bytes
 are never written to webview persistence. The backend validates filenames and
 media signatures, keeps video payloads binary, and routes video only to a

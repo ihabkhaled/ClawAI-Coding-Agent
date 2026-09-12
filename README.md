@@ -11,7 +11,7 @@ in the ClawAI platform.
 
 ## Runtime foundation
 
-Version 0.64.4 delivers the model-neutral Runtime Protocol V2 studio. Bounded
+Version 1.47.0 delivers the model-neutral Runtime Protocol V2 studio. Bounded
 workspace, command, process, Git, container, database, quality, browser,
 planning, service, journal, and evidence capabilities share one ordered,
 policy-controlled execution loop. An unavailable or incompatible additive
@@ -28,7 +28,9 @@ endpoint keeps the supported V1 chat and reviewed edit workflow active.
 - Chat from a workspace even when no editor tab is open.
 - Paste, drop, or pick screenshots, images, videos, documents, and source files
   into the composer. Attachments stay visibly bound to the request that owns
-  them and upload only when that queued request starts.
+  them and upload only when that queued request starts. A file whose name looks
+  like it stores credentials â€” `.env`, `id_rsa`, `passwords.csv` â€” is refused by
+  name, the same way context collection and every tool refuse it.
 - Recall submitted prompts with Arrow Up and move forward again with Arrow Down.
 - Switch between Auto execution and read-only Plan mode.
 - Choose manual approvals, persistent per-workspace routine consent, or Full
@@ -36,6 +38,8 @@ endpoint keeps the supported V1 chat and reviewed edit workflow active.
 - Compare two to five models in structured responsive result cards and
   optionally request a judge response.
 - Ask about a selection, active file, or bounded workspace context.
+- Type `path:L-L` in a message to pull that exact line range of a workspace
+  file into context, independent of what is open or selected.
 - Generate, fix, review, test, document, plan, and audit code.
 - Follow two request-owned run lanes and vivid reported/estimated token use for
   prompts, reasoning status, tools, files, responses, comparisons, and the
@@ -44,7 +48,8 @@ endpoint keeps the supported V1 chat and reviewed edit workflow active.
   only when **Review changes** is selected.
 - Run bounded development commands in visible VS Code task terminals after
   approved edits.
-- Undo the most recent ClawAI edit made during the current extension session.
+- Undo ClawAI edits step by step, up to twenty applied changes deep, until the
+  workspace folder changes.
 - Keep project rules in `.clawai/` and profile-wide rules in extension storage.
 - Use the interface in 13 locales, including RTL Arabic and Persian.
 
@@ -135,7 +140,9 @@ The **Context** view shows exactly what was included, excluded, and truncated.
 Run **ClawAI: Initialize .clawai** to create the documented project structure
 without overwriting existing files. Use **Open Global Rules** and
 **Open Global Skills** for profile-wide guidance. Global guidance is read before
-project rules.
+project rules. Optionally define named sub-agent presets in
+`.clawai/agents/agents.json`; a sub-agent graph can then reference one by
+name instead of restating its identity on every fork.
 
 See [the `.clawai` specification](docs/CLAWAI_FOLDER_SPEC.md) for the complete
 layout.
@@ -148,7 +155,7 @@ layout.
 | `clawAI.backendEnvironment`  | machine   | `LOCAL` (`LOCAL`, `CLOUD`, `CUSTOM`)    |
 | `clawAI.frontendEnvironment` | machine   | `LOCAL` (`LOCAL`, `CLOUD`, `CUSTOM`)    |
 | `clawAI.requestTimeoutMs`    | machine   | `60000`                                 |
-| `clawAI.effortMode`          | resource  | `ULTRA` (`LOW`…`ULTRA`)                 |
+| `clawAI.effortMode`          | resource  | `ULTRA` (`LOW`â€¦`ULTRA`)               |
 | `clawAI.speedMode`           | resource  | `1X` (`1X`, `1.5X`, `2X`)               |
 | `clawAI.routingMode`         | workspace | `AUTO`                                  |
 | `clawAI.agentMode`           | workspace | `AUTO`                                  |
@@ -181,7 +188,7 @@ Architecture, API, security, test, publishing, UX, and UAT references live in
 
 ## Status
 
-Version `0.64.4` is current and implements the extension surface from the ClawAI
+Version `1.47.0` is current and implements the extension surface from the ClawAI
 VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
 [ROADMAP.md](docs/ROADMAP.md).
 

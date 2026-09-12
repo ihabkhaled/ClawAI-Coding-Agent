@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "0.64.4",
+  "version": "1.47.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -171,6 +171,106 @@
         "icon": "$(discard)"
       },
       {
+        "command": "clawAI.exportTranscript",
+        "title": "%command.exportTranscript%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.showSessionRecap",
+        "title": "%command.showSessionRecap%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.createCheckpoint",
+        "title": "%command.createCheckpoint%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.restoreCheckpoint",
+        "title": "%command.restoreCheckpoint%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.askSideQuestion",
+        "title": "%command.askSideQuestion%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.attachTerminalOutput",
+        "title": "%command.attachTerminalOutput%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.openTerminal",
+        "title": "%command.openTerminal%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.toggleFastMode",
+        "title": "%command.toggleFastMode%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.groupConversation",
+        "title": "%command.groupConversation%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.openConversationInNewWindow",
+        "title": "%command.openConversationInNewWindow%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.compactConversation",
+        "title": "%command.compactConversation%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.selectOutputStyle",
+        "title": "%command.selectOutputStyle%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.toggleFocusView",
+        "title": "%command.toggleFocusView%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.renameChat",
+        "title": "%command.renameChat%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.archiveChat",
+        "title": "%command.archiveChat%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.browseArchivedChats",
+        "title": "%command.browseArchivedChats%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.reopenClosedChat",
+        "title": "%command.reopenClosedChat%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.showUsage",
+        "title": "%command.showUsage%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.searchRunHistory",
+        "title": "%command.searchRunHistory%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.sendFeedback",
+        "title": "%command.sendFeedback%",
+        "category": "ClawAI"
+      },
+      {
         "command": "clawAI.showLogs",
         "title": "%command.showLogs%",
         "category": "ClawAI"
@@ -231,11 +331,51 @@
           "type": "string",
           "enum": [
             "AUTO",
-            "MANUAL_MODEL"
+            "MANUAL_MODEL",
+            "LOCAL_ONLY",
+            "PRIVACY_FIRST",
+            "LOW_LATENCY",
+            "HIGH_REASONING",
+            "COST_SAVER"
           ],
           "default": "AUTO",
           "scope": "resource",
           "description": "%config.routingMode%"
+        },
+        "clawAI.telemetryEndpoint": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "%config.telemetryEndpoint%"
+        },
+        "clawAI.telemetryHeaders": {
+          "type": "object",
+          "default": {},
+          "scope": "machine",
+          "additionalProperties": {
+            "type": "string"
+          },
+          "description": "%config.telemetryHeaders%"
+        },
+        "clawAI.browserOrigins": {
+          "type": "array",
+          "items": {
+            "type": "string"
+          },
+          "default": [],
+          "scope": "resource",
+          "description": "%config.browserOrigins%"
+        },
+        "clawAI.autoCompact": {
+          "type": "string",
+          "enum": [
+            "off",
+            "prompt",
+            "automatic"
+          ],
+          "default": "prompt",
+          "scope": "resource",
+          "description": "%config.autoCompact%"
         },
         "clawAI.agentMode": {
           "type": "string",
@@ -246,6 +386,62 @@
           "default": "AUTO",
           "scope": "resource",
           "description": "%config.agentMode%"
+        },
+        "clawAI.hooks": {
+          "type": "array",
+          "default": [],
+          "scope": "resource",
+          "markdownDescription": "%config.hooks%",
+          "items": {
+            "type": "object",
+            "required": [
+              "event",
+              "command"
+            ],
+            "additionalProperties": false,
+            "properties": {
+              "event": {
+                "type": "string",
+                "enum": [
+                  "run-start",
+                  "run-end",
+                  "before-tool",
+                  "after-tool"
+                ]
+              },
+              "command": {
+                "type": "string"
+              },
+              "arguments": {
+                "type": "array",
+                "items": {
+                  "type": "string"
+                }
+              },
+              "toolGlob": {
+                "type": "string"
+              },
+              "blocking": {
+                "type": "boolean"
+              }
+            }
+          }
+        },
+        "clawAI.outputStyle": {
+          "type": "string",
+          "default": "default",
+          "scope": "resource",
+          "description": "%config.outputStyle%"
+        },
+        "clawAI.viewDensity": {
+          "type": "string",
+          "enum": [
+            "full",
+            "focus"
+          ],
+          "default": "full",
+          "scope": "resource",
+          "description": "%config.viewDensity%"
         },
         "clawAI.effortMode": {
           "type": "string",
@@ -290,6 +486,16 @@
           "default": "",
           "scope": "resource",
           "description": "%config.selectedModel%"
+        },
+        "clawAI.autosave": {
+          "type": "string",
+          "enum": [
+            "off",
+            "before-edit"
+          ],
+          "default": "off",
+          "scope": "resource",
+          "description": "%config.autosave%"
         },
         "clawAI.maxContextBytes": {
           "type": "number",
@@ -353,6 +559,11 @@
           "contextualTitle": "%view.chatTitle%"
         },
         {
+          "id": "clawAI.setup",
+          "name": "%view.setup%",
+          "when": "clawAI.setupIncomplete"
+        },
+        {
           "id": "clawAI.model",
           "name": "%view.model%"
         },
@@ -363,6 +574,22 @@
         {
           "id": "clawAI.history",
           "name": "%view.history%"
+        },
+        {
+          "id": "clawAI.attention",
+          "name": "%view.attention%"
+        },
+        {
+          "id": "clawAI.tasks",
+          "name": "%view.tasks%"
+        },
+        {
+          "id": "clawAI.findings",
+          "name": "%view.findings%"
+        },
+        {
+          "id": "clawAI.artifacts",
+          "name": "%view.artifacts%"
         }
       ]
     },
@@ -448,6 +675,64 @@
         "key": "ctrl+shift+enter",
         "mac": "cmd+shift+enter",
         "when": "editorTextFocus && editorHasSelection"
+      },
+      {
+        "command": "clawAI.cancel",
+        "key": "ctrl+alt+escape",
+        "mac": "cmd+alt+escape"
+      },
+      {
+        "command": "clawAI.undoLastEdit",
+        "key": "ctrl+alt+z",
+        "mac": "cmd+alt+z"
+      },
+      {
+        "command": "clawAI.toggleFocusView",
+        "key": "ctrl+alt+f",
+        "mac": "cmd+alt+f"
+      },
+      {
+        "command": "clawAI.reopenClosedChat",
+        "key": "ctrl+alt+t",
+        "mac": "cmd+alt+t"
+      },
+      {
+        "command": "clawAI.selectModel",
+        "key": "ctrl+alt+m",
+        "mac": "cmd+alt+m"
+      },
+      {
+        "command": "clawAI.searchRunHistory",
+        "key": "ctrl+alt+h",
+        "mac": "cmd+alt+h"
+      },
+      {
+        "command": "clawAI.reviewCode",
+        "key": "ctrl+alt+r",
+        "mac": "cmd+alt+r",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "clawAI.generateTests",
+        "key": "ctrl+alt+u",
+        "mac": "cmd+alt+u",
+        "when": "editorTextFocus"
+      },
+      {
+        "command": "clawAI.fixCode",
+        "key": "ctrl+alt+x",
+        "mac": "cmd+alt+x",
+        "when": "editorTextFocus && editorHasSelection"
+      }
+    ],
+    "jsonValidation": [
+      {
+        "fileMatch": "/.clawai/policies/policy.json",
+        "url": "./schemas/clawai-policy.schema.json"
+      },
+      {
+        "fileMatch": "/.clawai/agents/agents.json",
+        "url": "./schemas/clawai-agents.schema.json"
       }
     ]
   },
@@ -461,6 +746,7 @@
     "test:integration": "vitest run tests/integration",
     "test:labs": "node --test tests/labs/*.test.mjs",
     "test:host": "npm run build && node scripts/run-extension-tests.mjs",
+    "test:host:installed": "node scripts/run-installed-extension-tests.mjs",
     "test:playwright": "playwright test",
     "lab:bootstrap": "node scripts/labs/bootstrap-lab.mjs",
     "lab:release-parity": "node scripts/labs/verify-release-parity.mjs",
@@ -471,10 +757,13 @@
     "package:audit": "node scripts/package-audit.mjs",
     "supply-chain": "node scripts/generate-supply-chain.mjs",
     "l10n:build": "node scripts/generate-locales.mjs",
+    "l10n:verify": "node scripts/generate-locales.mjs && git diff --exit-code -- l10n package.nls.json package.nls.*.json",
     "package": "npm run build && node scripts/package-extension.mjs",
-    "check": "npm run format:check && npm run lint && npm run typecheck && npm run scan:paths && npm run coverage:scope && npm test && npm run build && npm run package:audit",
+    "check": "npm run format:check && npm run l10n:verify && npm run lint && npm run typecheck && npm run scan:paths && npm run coverage:scope && npm test && npm run build && npm run package:audit",
     "scan:paths": "node scripts/scan-absolute-paths.mjs",
-    "prepublishOnly": "npm run check"
+    "prepublishOnly": "npm run check",
+    "check:live": "node scripts/live-agent-check.mjs",
+    "headless": "node dist/headless.mjs"
   },
   "dependencies": {
     "@homebridge/node-pty-prebuilt-multiarch": "^0.14.1",

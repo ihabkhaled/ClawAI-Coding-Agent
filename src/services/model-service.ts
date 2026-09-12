@@ -5,6 +5,7 @@ import type {
   Entitlements,
   LocalFrontierModel,
   LocalOllamaModel,
+  OrganizationPolicy,
   RouterModel,
 } from '../backend/contracts';
 
@@ -14,6 +15,7 @@ export interface ModelBackendPort {
   getLocalFrontierModels(): Promise<LocalFrontierModel[]>;
   getLocalOllamaModels(): Promise<LocalOllamaModel[]>;
   getRouterModels(): Promise<RouterModel[]>;
+  getOrganizationPolicy(): Promise<OrganizationPolicy | undefined>;
 }
 
 export interface ModelRefreshResult {
@@ -42,6 +44,28 @@ function applyModelAccess(
   );
 }
 
+/**
+ * The organization's model allowlist, which is not the entitlement one.
+ *
+ * `applyModelAccess` exempts local models on purpose: entitlements describe
+ * what a plan pays for, and a local model costs nothing. An organization
+ * allowlist answers a different question — what a member is *permitted* to use
+ * — and an unvetted local model is exactly the kind of thing an organization
+ * forbids. So this filter applies to every model, local included.
+ *
+ * An empty list means every model, matching the backend intersection and the
+ * tool allowlist. Reading it as "nothing allowed" would leave a member of an
+ * organization that has not set the field with no models at all.
+ */
+function applyOrganizationModelAccess(
+  catalog: ModelCatalogEntry[],
+  allowedModels: readonly string[] | undefined,
+): ModelCatalogEntry[] {
+  if (allowedModels === undefined || allowedModels.length === 0) return catalog;
+  const allowed = new Set(allowedModels);
+  return catalog.filter((model) => allowed.has(model.key) || allowed.has(model.model));
+}
+
 export class ModelService {
   constructor(private backend: ModelBackendPort) {}
 
@@ -50,15 +74,17 @@ export class ModelService {
   }
 
   async refresh(): Promise<ModelRefreshResult> {
-    const [routerModels, connectorModels, entitlements, localResults] = await Promise.all([
-      this.backend.getRouterModels(),
-      this.backend.getConnectorModels(),
-      this.backend.getEntitlements(),
-      Promise.allSettled([
-        this.backend.getLocalOllamaModels(),
-        this.backend.getLocalFrontierModels(),
-      ]),
-    ]);
+    const [routerModels, connectorModels, entitlements, organizationPolicy, localResults] =
+      await Promise.all([
+        this.backend.getRouterModels(),
+        this.backend.getConnectorModels(),
+        this.backend.getEntitlements(),
+        this.backend.getOrganizationPolicy(),
+        Promise.allSettled([
+          this.backend.getLocalOllamaModels(),
+          this.backend.getLocalFrontierModels(),
+        ]),
+      ]);
     const [localOllamaResult, localFrontierResult] = localResults;
     const localOllamaModels =
       localOllamaResult.status === 'fulfilled' ? localOllamaResult.value : [];
@@ -75,7 +101,10 @@ export class ModelService {
       localFrontierModels,
     );
     return {
-      catalog: applyModelAccess(catalog, entitlements),
+      catalog: applyOrganizationModelAccess(
+        applyModelAccess(catalog, entitlements),
+        organizationPolicy?.allowedModels,
+      ),
       entitlements,
       warnings,
     };

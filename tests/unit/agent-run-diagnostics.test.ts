@@ -11,6 +11,13 @@ import type {
 
 const configuration = {
   agentMode: 'AUTO' as const,
+  viewDensity: 'full' as const,
+  outputStyle: 'default',
+  autoCompact: 'prompt' as const,
+  browserOrigins: [],
+  telemetryEndpoint: '',
+  telemetryHeaders: {},
+  hooks: [],
   effortMode: 'ULTRA' as const,
   speedMode: '1X' as const,
   backendUrl: 'https://claw.local',
@@ -20,6 +27,7 @@ const configuration = {
   maxContextFiles: 40,
   permissionMode: 'EDIT_AUTOMATICALLY' as const,
   requestTimeoutMs: 60_000,
+  autosave: 'off' as const,
   routingMode: 'AUTO' as const,
   selectedModel: 'AUTO',
 };
@@ -116,7 +124,7 @@ describe('AgentRunService Docker diagnostics', () => {
       send: vi.fn(async () => ({
         threadId: 'thread-1',
         content: dockerPlan,
-        tokens: { input: 1, output: 1, source: 'estimated' as const, total: 2 },
+        tokens: { input: 1, output: 1, cached: 0, source: 'estimated' as const, total: 2 },
       })),
     };
     const result = await service(chat, editPort()).run(input(), callbacks());
@@ -129,7 +137,7 @@ describe('AgentRunService Docker diagnostics', () => {
       send: vi.fn(async () => ({
         threadId: 'thread-1',
         content: dockerPlan,
-        tokens: { input: 1, output: 1, source: 'estimated' as const, total: 2 },
+        tokens: { input: 1, output: 1, cached: 0, source: 'estimated' as const, total: 2 },
       })),
     };
     expect(await service(chat, editPort(), false).run(input(), callbacks())).toMatchObject({
@@ -142,7 +150,7 @@ describe('AgentRunService Docker diagnostics', () => {
       send: vi.fn(async () => ({
         threadId: 'thread-1',
         content: dockerPlan,
-        tokens: { input: 1, output: 1, source: 'estimated' as const, total: 2 },
+        tokens: { input: 1, output: 1, cached: 0, source: 'estimated' as const, total: 2 },
       })),
     };
     const events: Record<string, unknown>[] = [];

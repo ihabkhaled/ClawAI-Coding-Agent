@@ -13,6 +13,8 @@ import {
   type WorkspaceReadiness,
 } from '../core/context-mode';
 import { EMPTY_CONTEXT } from '../core/empty-context';
+import { findFileRangeReferences, findMentionedPaths } from '../core/file-range-reference';
+import { memoryFileCandidates } from '../core/memory-file-discovery';
 import { forEachPrefetched, readConcurrency } from '../core/speed-mode';
 import {
   isRealPathInsideWorkspace,
@@ -113,8 +115,94 @@ export class WorkspaceContextService {
     const candidate = {
       path,
       content: editor.document.getText(editor.selection),
+      // VS Code positions are 0-indexed; the range a person reads and types
+      // is 1-indexed.
+      startLine: editor.selection.start.line + 1,
+      endLine: editor.selection.end.line + 1,
     };
     return this.finish([candidate], configuration, []);
+  }
+
+  /**
+   * Resolves the file references written into the prompt text itself — a
+   * `path:L-L` range, or a whole-file `@path` mention — so a message can pull
+   * in any workspace file regardless of what is open or selected. A reference
+   * that does not resolve — outside the workspace, missing, sensitive, or past
+   * the end of the file — is silently skipped rather than failing the whole
+   * request: free text can coincide with the syntax by accident, and a typo
+   * should not block a send.
+   */
+  async referencedRanges(
+    promptText: string,
+    configuration: RuntimeConfiguration,
+  ): Promise<CollectedContext> {
+    const references = findFileRangeReferences(promptText);
+    const mentioned = findMentionedPaths(promptText);
+    if (
+      (references.length === 0 && mentioned.length === 0) ||
+      this.scope.refresh().selectedFolderKey === undefined
+    ) {
+      return EMPTY_CONTEXT;
+    }
+    const folder = this.scope.selectedFolder();
+    const canonicalWorkspacePath = await this.canonicalWorkspacePath(folder.uri);
+    const candidates: ContextCandidate[] = [];
+    for (const path of mentioned) {
+      const text = await this.readReferencedFile(folder.uri, canonicalWorkspacePath, path);
+      if (text !== undefined) candidates.push({ path, content: text });
+    }
+    for (const reference of references) {
+      const text = await this.readReferencedFile(
+        folder.uri,
+        canonicalWorkspacePath,
+        reference.path,
+      );
+      if (text === undefined) continue;
+      const lines = text.split(/\r?\n/u);
+      if (reference.startLine > lines.length) continue;
+      const endLine = Math.min(reference.endLine, lines.length);
+      candidates.push({
+        path: reference.path,
+        content: lines.slice(reference.startLine - 1, endLine).join('\n'),
+        startLine: reference.startLine,
+        endLine,
+      });
+    }
+    return this.finish(candidates, configuration, []);
+  }
+
+  /**
+   * One referenced workspace file, or nothing if it may not be handed over.
+   *
+   * The screen is the same for a ranged reference and a whole-file mention,
+   * because the question is the same: naming a file in a prompt is not
+   * authority to read one outside the workspace. A path that fails is skipped
+   * silently — a typo must not block a send.
+   *
+   * Secrets are not screened here on purpose. `finish` already drops them and
+   * records why in the receipt, and a user who mentions `.env` is better told
+   * it was excluded than left wondering why their message did nothing.
+   */
+  private async readReferencedFile(
+    folderUri: vscode.Uri,
+    canonicalWorkspacePath: string | undefined,
+    path: string,
+  ): Promise<string | undefined> {
+    const uri = vscode.Uri.joinPath(folderUri, path);
+    if (
+      canonicalWorkspacePath !== undefined &&
+      uri.scheme === 'file' &&
+      !(await isRealPathInsideWorkspace(canonicalWorkspacePath, uri.fsPath))
+    ) {
+      return undefined;
+    }
+    try {
+      return new TextDecoder('utf-8', { fatal: false }).decode(
+        await vscode.workspace.fs.readFile(uri),
+      );
+    } catch {
+      return undefined;
+    }
   }
 
   async activeFile(configuration: RuntimeConfiguration): Promise<CollectedContext> {
@@ -173,18 +261,23 @@ export class WorkspaceContextService {
     ]);
   }
 
+  /**
+   * Standing guidance, weakest first: profile, then workspace root, then every
+   * directory down to the file being worked on.
+   *
+   * Nested discovery is the point. A repository-wide rule and a rule for one
+   * package are both true, and when they disagree the package is the one that
+   * meant it — so the nearer file is read last and therefore speaks last. A
+   * fixed three files at the root could not express that at all.
+   */
   async projectRules(): Promise<string> {
     const folder = this.scope.selectedFolder();
     const canonicalWorkspacePath = await this.canonicalWorkspacePath(folder.uri);
-    const ruleUris = [
-      vscode.Uri.joinPath(folder.uri, '.clawai', 'rules.md'),
-      vscode.Uri.joinPath(folder.uri, '.clawai', 'architecture.md'),
-      vscode.Uri.joinPath(folder.uri, '.clawai', 'memory.md'),
-    ];
     const globalContext = await this.globalContext?.readAll();
     const contents: string[] =
       globalContext === undefined || globalContext.length === 0 ? [] : [globalContext];
-    for (const uri of ruleUris) {
+    for (const candidate of memoryFileCandidates(this.activeRelativePath())) {
+      const uri = vscode.Uri.joinPath(folder.uri, ...candidate.split('/'));
       await this.assertRealPathInsideWorkspace(canonicalWorkspacePath, uri);
       const content = await this.readOptionalText(uri);
       if (content !== null) {
@@ -192,6 +285,18 @@ export class WorkspaceContextService {
       }
     }
     return contents.join('\n\n');
+  }
+
+  /**
+   * The open file's path relative to the selected folder, when it belongs to it.
+   *
+   * A file from another folder resolves to nothing rather than to a path that
+   * would be joined onto the wrong root.
+   */
+  private activeRelativePath(): string | undefined {
+    const editor = vscode.window.activeTextEditor;
+    if (editor === undefined || !this.scope.owns(editor.document.uri)) return undefined;
+    return this.scope.relativePath(editor.document.uri);
   }
 
   private finish(

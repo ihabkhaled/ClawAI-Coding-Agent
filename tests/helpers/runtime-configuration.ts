@@ -3,6 +3,13 @@ import type { RuntimeConfiguration } from '../../src/services/configuration-serv
 export function testRuntimeConfiguration(): RuntimeConfiguration {
   return {
     agentMode: 'AUTO',
+    viewDensity: 'full' as const,
+    outputStyle: 'default',
+    autoCompact: 'prompt',
+    browserOrigins: [],
+    telemetryEndpoint: '',
+    telemetryHeaders: {},
+    hooks: [],
     effortMode: 'ULTRA',
     speedMode: '1X',
     backendCustomUrl: '',
@@ -17,6 +24,7 @@ export function testRuntimeConfiguration(): RuntimeConfiguration {
     maxContextFiles: 40,
     permissionMode: 'MANUAL',
     requestTimeoutMs: 60_000,
+    autosave: 'off' as const,
     routingMode: 'AUTO',
     selectedModel: '',
   };

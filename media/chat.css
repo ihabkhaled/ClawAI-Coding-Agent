@@ -1583,6 +1583,46 @@ pre {
   overflow-wrap: anywhere;
 }
 
+/*
+ * The reasoning row spans the whole item because a disclosure needs the width
+ * its open state will use; the three-column grid the other activity rows share
+ * would pin the summary to the middle track and leave the explanation ragged.
+ */
+.activity-item-reasoning {
+  grid-template-columns: minmax(0, 1fr);
+}
+
+.reasoning-disclosure {
+  min-width: 0;
+  padding-inline-start: var(--sp-3);
+  border-inline-start: 1px solid color-mix(in srgb, var(--claw-accent) 30%, var(--claw-border));
+}
+
+.reasoning-summary {
+  display: flex;
+  min-width: 0;
+  align-items: baseline;
+  gap: var(--sp-2);
+  cursor: pointer;
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  line-height: 1.4;
+}
+
+.reasoning-summary small {
+  color: var(--claw-muted);
+  font-weight: 400;
+  white-space: nowrap;
+}
+
+.reasoning-disclosure p {
+  margin-block: var(--sp-1) 0;
+  color: var(--claw-muted);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
 .activity-token {
   margin-block-start: 1px;
   color: var(--claw-muted);
@@ -2251,6 +2291,71 @@ pre {
   color: var(--vscode-input-placeholderForeground);
 }
 
+/*
+ * Focus view hides what reports on or steers work, not the work itself, and
+ * gives the conversation the room the hidden surfaces were using.
+ */
+body[data-view-density='focus'] #runtimeTimeline,
+body[data-view-density='focus'] #modelTray,
+body[data-view-density='focus'] #runDeck {
+  display: none !important;
+}
+
+body[data-view-density='focus'] .conversation {
+  max-width: 78ch;
+  margin-inline: auto;
+}
+
+.focus-toggle[aria-pressed='true'] {
+  color: var(--vscode-list-activeSelectionForeground);
+  background: var(--vscode-list-activeSelectionBackground);
+}
+
+.context-warning {
+  margin: 0 var(--sp-3) var(--sp-2);
+  padding: var(--sp-1) var(--sp-2);
+  border-radius: var(--radius-sm);
+  font-size: 0.9em;
+}
+
+.context-warning[data-level='tight'] {
+  background: color-mix(in srgb, var(--vscode-editorWarning-foreground) 18%, transparent);
+  color: var(--vscode-editorWarning-foreground);
+}
+
+.context-warning[data-level='over'] {
+  background: color-mix(in srgb, var(--vscode-editorError-foreground) 18%, transparent);
+  color: var(--vscode-editorError-foreground);
+}
+
+.mention-panel {
+  max-height: 220px;
+  overflow-y: auto;
+  margin: 0 var(--sp-3) var(--sp-2);
+  border: 1px solid var(--claw-line);
+  border-radius: var(--radius-sm);
+  background: var(--claw-card);
+}
+
+.mention-list {
+  margin: 0;
+  padding: 0;
+  list-style: none;
+}
+
+.mention-option {
+  padding: var(--sp-1) var(--sp-2);
+  overflow-wrap: anywhere;
+  cursor: pointer;
+  font-family: var(--vscode-editor-font-family, monospace);
+  font-size: 0.9em;
+}
+
+.mention-option[aria-selected='true'] {
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
 .attachment-tray {
   padding: 0 var(--sp-3) var(--sp-2);
 }
@@ -2536,6 +2641,63 @@ pre {
   justify-content: flex-end;
   margin-block-start: var(--sp-3);
   gap: var(--sp-2);
+}
+
+/* Options stack rather than sit in a row: the sidebar can be 320px wide, and a
+   label plus its description has to stay readable at 200% zoom. Logical
+   properties keep the layout correct under RTL without a mirrored rule. */
+.question-options {
+  display: flex;
+  flex-direction: column;
+  gap: var(--sp-2);
+  margin-block-start: var(--sp-3);
+}
+
+.question-option {
+  display: flex;
+  flex-direction: column;
+  gap: 2px;
+  padding: var(--sp-2) var(--sp-3);
+  text-align: start;
+  cursor: pointer;
+  border: 1px solid var(--vscode-widget-border, transparent);
+  border-radius: var(--radius-2, 6px);
+  background: var(--vscode-editorWidget-background);
+  color: var(--vscode-editorWidget-foreground);
+}
+
+.question-option:hover {
+  background: var(--vscode-list-hoverBackground);
+}
+
+.question-option[aria-pressed='true'] {
+  border-color: var(--vscode-focusBorder);
+  background: var(--vscode-list-activeSelectionBackground);
+  color: var(--vscode-list-activeSelectionForeground);
+}
+
+/* Forced colours flatten the selection background, so the pressed state needs a
+   border the high-contrast theme is guaranteed to keep. */
+@media (forced-colors: active) {
+  .question-option[aria-pressed='true'] {
+    border-color: Highlight;
+    border-width: 2px;
+  }
+}
+
+.question-other {
+  display: block;
+  margin-block-start: var(--sp-3);
+}
+
+#questionOther {
+  width: 100%;
+  margin-block-start: var(--sp-1);
+  padding: var(--sp-1) var(--sp-2);
+  color: var(--vscode-input-foreground);
+  background: var(--vscode-input-background);
+  border: 1px solid var(--vscode-input-border, transparent);
+  border-radius: var(--radius-2, 6px);
 }
 
 .toast-stack {

@@ -101,7 +101,9 @@ describe('reading a file larger than the Runtime V2 string cap', () => {
     vi.clearAllMocks();
     const adapter = new VscodeFileTransactionAdapter();
     adapter.registerRuntimeRoot('workspace-1', WORKSPACE_ROOT);
-    executor = new VscodeFilesystemToolExecutor(adapter, new FileTransactionService(adapter));
+    executor = new VscodeFilesystemToolExecutor(adapter, new FileTransactionService(adapter), {
+      record: () => undefined,
+    });
     vi.mocked(vscode.workspace.fs.stat).mockResolvedValue({ type: 1 } as never);
   });
 
@@ -177,7 +179,9 @@ describe('filesystem tool error messages a model can act on', () => {
     vi.clearAllMocks();
     const adapter = new VscodeFileTransactionAdapter();
     adapter.registerRuntimeRoot('workspace-1', WORKSPACE_ROOT);
-    executor = new VscodeFilesystemToolExecutor(adapter, new FileTransactionService(adapter));
+    executor = new VscodeFilesystemToolExecutor(adapter, new FileTransactionService(adapter), {
+      record: () => undefined,
+    });
   });
 
   it('says a missing file is missing, not "not readable text"', async () => {

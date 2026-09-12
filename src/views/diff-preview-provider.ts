@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import * as vscode from 'vscode';
 
+import { PREVIEW_DRAFT_SCHEME, PreviewDraftFileSystem } from './preview-draft-file-system';
+
 import type { EditPreview } from '../services/safe-edit-service';
 
 interface StagedPreview {
@@ -15,6 +17,7 @@ export class DiffPreviewProvider implements vscode.TextDocumentContentProvider, 
   private readonly content = new Map<string, string>();
   private latestId: string | undefined;
   private readonly registration: vscode.Disposable;
+  private readonly drafts = new PreviewDraftFileSystem();
 
   constructor() {
     this.registration = vscode.workspace.registerTextDocumentContentProvider(
@@ -31,9 +34,11 @@ export class DiffPreviewProvider implements vscode.TextDocumentContentProvider, 
     const generation = randomUUID();
     const staged = previews.map((preview, index) => {
       const before = this.uri(generation, index, preview.path, 'before');
-      const after = this.uri(generation, index, preview.path, 'after');
+      const after = this.uri(generation, index, preview.path, 'after', PREVIEW_DRAFT_SCHEME);
       this.content.set(before.toString(), preview.before ?? '');
-      this.content.set(after.toString(), preview.after ?? '');
+      // The after side is a writable draft, so a reviewer can correct the
+      // proposal in the pane where they noticed it was wrong.
+      this.drafts.set(after, preview.after ?? '');
       return {
         after,
         before,
@@ -65,8 +70,29 @@ export class DiffPreviewProvider implements vscode.TextDocumentContentProvider, 
     return true;
   }
 
+  /**
+   * What the reviewer left in the right-hand pane, keyed by path.
+   *
+   * Read from the open document first and the draft store second: a pane the
+   * user typed in but never saved is exactly the case worth honouring, and
+   * requiring a save before Apply would make the edit easy to lose.
+   */
+  edits(previewId = this.latestId): ReadonlyMap<string, string> {
+    const previews = previewId === undefined ? undefined : this.batches.get(previewId);
+    const edits = new Map<string, string>();
+    for (const preview of previews ?? []) {
+      const open = vscode.workspace.textDocuments.find(
+        (document) => document.uri.toString() === preview.after.toString(),
+      );
+      const text = open?.getText() ?? this.drafts.text(preview.after);
+      if (text !== undefined) edits.set(preview.path, text);
+    }
+    return edits;
+  }
+
   dispose(): void {
     this.registration.dispose();
+    this.drafts.dispose();
     this.batches.clear();
     this.content.clear();
   }
@@ -82,15 +108,21 @@ export class DiffPreviewProvider implements vscode.TextDocumentContentProvider, 
     const oldest = this.batches.get(oldestId) ?? [];
     for (const preview of oldest) {
       this.content.delete(preview.before.toString());
-      this.content.delete(preview.after.toString());
+      this.drafts.forget(preview.after);
     }
     this.batches.delete(oldestId);
   }
 
-  private uri(generation: string, index: number, path: string, side: string): vscode.Uri {
+  private uri(
+    generation: string,
+    index: number,
+    path: string,
+    side: string,
+    scheme = 'clawai-preview',
+  ): vscode.Uri {
     const safePath = path.replaceAll('\\', '/');
     return vscode.Uri.from({
-      scheme: 'clawai-preview',
+      scheme,
       path: `/${generation}/${side}/${String(index)}/${safePath}`,
     });
   }

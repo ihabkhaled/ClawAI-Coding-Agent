@@ -25,6 +25,22 @@ Use the highest-impact change in the batch:
 Explain the selected level in the changelog. If uncertain between two levels,
 choose the larger safe bump.
 
+## Coding Agent release-number policy
+
+For this extension, every coherent delivery release advances the **second**
+version component. Do not stop at two digits: `1.46.0` becomes `1.47.0`, then
+`1.99.0`, `1.100.0`, `1.101.0`, and so on. A release that bundles a user-facing
+fix, a capability, documentation, rules, skills, or a rebuilt VSIX is a delivery
+release unless the release owner explicitly designates it patch-only.
+
+Use the third component for a compatible patch within an already-delivered
+release line, for example `1.46.1`, `1.46.2`, or `1.56.3`. It does not reset or
+replace the requirement to issue the next delivery release at `1.47.0`.
+
+Use a major bump only for an incompatible public contract, removed capability,
+or migration that requires user action. Record the reason in the changelog and
+release notes before changing the major component.
+
 ## Release workflow
 
 1. Read the current `package.json` version and existing `v*` tags.

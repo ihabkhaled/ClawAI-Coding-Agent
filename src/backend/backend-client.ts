@@ -16,31 +16,31 @@ import {
 } from './backend-errors';
 import { BackendRuntimeClient } from './backend-runtime-client';
 import {
-  connectorModelSchema,
   entitlementsSchema,
-  localFrontierListSchema,
-  localOllamaModelSchema,
   messageSchema,
-  paginatedSchema,
   parallelResponseSchema,
   refreshResultSchema,
-  routerModelSchema,
-  threadSchema,
   usageSchema,
   userProfileSchema,
   vscodeAuthorizationInitResultSchema,
-  uploadedFileSchema,
   type ChatMessage,
   type ChatThread,
   type ConnectorModel,
   type Entitlements,
   type LocalFrontierModel,
   type LocalOllamaModel,
+  type FeedbackTicket,
+  type OrganizationPolicy,
   type ParallelResponse,
   type RouterModel,
   type Usage,
   type UploadedFile,
 } from './contracts';
+import { submitFeedback, type FeedbackSubmission } from './feedback-client';
+import { deleteFile, uploadFile } from './file-client';
+import { modelCatalogClient, type Requester } from './model-catalog-client';
+import { fetchOrganizationPolicy } from './organization-policy-client';
+import { type ResearchRequester } from './research-client';
 import {
   discardResponseBody,
   readBoundedResponseText,
@@ -49,6 +49,14 @@ import {
   type ResponseLease,
 } from './response-lease';
 import { SessionRefresher } from './session-refresher';
+import {
+  createThread,
+  listMessages,
+  listThreads,
+  updateThread,
+  type ThreadCreateInput,
+  type ThreadPatch,
+} from './thread-client';
 
 import type {
   BackendClientOptions,
@@ -229,80 +237,77 @@ export class BackendClient {
     return this.runtime.openStream(binding, after, signal);
   }
 
+  private readonly catalogRequest: Requester = (path, schema) => this.request(path, schema);
+
+  private readonly fileRequest = <T>(
+    path: string,
+    schema: z.ZodType<T>,
+    options: { method: 'POST' | 'DELETE'; body?: unknown; signal?: AbortSignal },
+  ): Promise<T> => this.request(path, schema, options);
+
+  /** POST seam for the research endpoints. See `research-client`. */
+  readonly researchPost: ResearchRequester = (path, schema, options) =>
+    this.request(path, schema, options);
+
   async getRouterModels(): Promise<RouterModel[]> {
-    const result = await this.request(
-      '/routing/models?limit=200&isExecutionCapable=true',
-      paginatedSchema(routerModelSchema),
-    );
-    return result.data;
+    return modelCatalogClient.routerModels(this.catalogRequest);
   }
 
   async getConnectorModels(): Promise<ConnectorModel[]> {
-    return this.request('/connectors/available-models', z.array(connectorModelSchema));
+    return modelCatalogClient.connectorModels(this.catalogRequest);
   }
 
   async getLocalOllamaModels(): Promise<LocalOllamaModel[]> {
-    const result = await this.request(
-      '/ollama/models?limit=100&runtime=OLLAMA&isInstalled=true',
-      paginatedSchema(localOllamaModelSchema),
-    );
-    return result.data;
+    return modelCatalogClient.localOllamaModels(this.catalogRequest);
   }
 
   async getLocalFrontierModels(): Promise<LocalFrontierModel[]> {
-    const result = await this.request('/llamacpp/catalog?limit=100', localFrontierListSchema);
-    return result.data;
+    return modelCatalogClient.localFrontierModels(this.catalogRequest);
   }
 
   authorizationUrl(path: string): string {
     return `${this.backendUrl}${path}`;
   }
 
-  async createThread(input: {
-    title?: string;
-    routingMode: 'AUTO' | 'MANUAL_MODEL';
-    preferredProvider?: string;
-    preferredModel?: string;
-  }): Promise<ChatThread> {
-    return this.request('/chat-threads', threadSchema, {
-      body: input,
-      method: 'POST',
-    });
+  async createThread(input: ThreadCreateInput): Promise<ChatThread> {
+    return createThread((path, schema, options) => this.request(path, schema, options), input);
+  }
+
+  /** See `updateThread` for why this needed no new server contract. */
+  async updateThread(threadId: string, patch: ThreadPatch): Promise<ChatThread> {
+    return updateThread(
+      (path, schema, options) => this.request(path, schema, options),
+      threadId,
+      patch,
+    );
   }
 
   async listThreads(limit = 50): Promise<ChatThread[]> {
-    const result = await this.request(
-      `/chat-threads?limit=${String(limit)}`,
-      paginatedSchema(threadSchema),
-    );
-    return result.data;
+    return listThreads((path, schema) => this.request(path, schema), limit);
   }
 
-  async listMessages(threadId: string, limit = 100): Promise<ChatMessage[]> {
-    const result = await this.request(
-      `/chat-messages/thread/${encodeURIComponent(threadId)}?limit=${String(limit)}`,
-      paginatedSchema(messageSchema),
+  /** See `fetchOrganizationPolicy` for why a missing endpoint fails open. */
+  async getOrganizationPolicy(): Promise<OrganizationPolicy | undefined> {
+    return fetchOrganizationPolicy(this.catalogRequest);
+  }
+
+  /** See `submitFeedback` for why this one does not fail open. */
+  async submitFeedback(submission: FeedbackSubmission): Promise<FeedbackTicket> {
+    return submitFeedback(
+      (path, schema, options) => this.request(path, schema, options),
+      submission,
     );
-    return result.data;
+  }
+  async listMessages(threadId: string, limit = 100): Promise<ChatMessage[]> {
+    return listMessages((path, schema) => this.request(path, schema), threadId, limit);
   }
 
   async uploadFile(input: ChatAttachment, signal?: AbortSignal): Promise<UploadedFile> {
-    return this.request('/files/upload', uploadedFileSchema, {
-      body: {
-        content: input.content,
-        filename: input.filename,
-        mimeType: input.mimeType,
-        sizeBytes: input.sizeBytes,
-      },
-      method: 'POST',
-      ...(signal === undefined ? {} : { signal }),
-    });
+    return uploadFile(this.fileRequest, input, signal);
   }
 
   async deleteFile(id: string): Promise<void> {
-    await this.request(`/files/${encodeURIComponent(id)}`, z.unknown(), {
-      method: 'DELETE',
-    });
+    await deleteFile(this.fileRequest, id);
   }
 
   async sendMessage(input: MessageRequest, signal?: AbortSignal): Promise<ChatMessage> {
