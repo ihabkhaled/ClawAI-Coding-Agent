@@ -83,6 +83,12 @@ function toolRows(files, testFiles) {
       const name = /\bname: '([^']+)'/u.exec(block)?.[1] ?? match[1];
       const operations = /operations: \[([^\]]*)\]/u.exec(block)?.[1] ?? '';
       const count = operations.split(',').filter((entry) => entry.trim().length > 0).length;
+      // The executor class, not the definition. A test that imports a definition
+      // may only be building a fixture; a test that reaches the executor is the
+      // one exercising what the tool actually does.
+      const executor = /export class (\w+) implements RuntimeToolExecutorPort/u.exec(
+        file.text,
+      )?.[1];
       rows.push({
         surface: 'Runtime tool',
         id: name,
@@ -90,13 +96,14 @@ function toolRows(files, testFiles) {
         callPath:
           referenceOf(files, match[1], file.path) ??
           testOnly(referenceOf(testFiles, match[1], file.path)),
+        test: executor === undefined ? undefined : referenceOf(testFiles, executor, file.path),
       });
     }
   }
   return rows.sort((left, right) => left.id.localeCompare(right.id));
 }
 
-function manifestRows(manifest, files) {
+function manifestRows(manifest, files, testFiles) {
   const contributes = manifest.contributes ?? {};
   const rows = [];
 
@@ -106,6 +113,7 @@ function manifestRows(manifest, files) {
       id: command.command,
       detail: command.title ?? '',
       callPath: referenceOf(files, `'${command.command}'`, ''),
+      test: referenceOf(testFiles, `'${command.command}'`, ''),
     });
   }
 
@@ -117,6 +125,7 @@ function manifestRows(manifest, files) {
       // Settings are read through the configuration service by their suffix,
       // never by the fully qualified key, so the suffix is what to look for.
       callPath: referenceOf(files, `'${key.replace(SETTING_PREFIX, '')}'`, ''),
+      test: referenceOf(testFiles, `'${key.replace(SETTING_PREFIX, '')}'`, ''),
     });
   }
 
@@ -127,6 +136,7 @@ function manifestRows(manifest, files) {
         id: view.id,
         detail: `${container}: ${view.name ?? ''}`,
         callPath: referenceOf(files, `'${view.id}'`, ''),
+        test: referenceOf(testFiles, `'${view.id}'`, ''),
       });
     }
   }
@@ -137,13 +147,22 @@ function manifestRows(manifest, files) {
       id: `${binding.key} -> ${binding.command}`,
       detail: binding.when ?? '',
       callPath: referenceOf(files, `'${binding.command}'`, ''),
+      test: referenceOf(testFiles, `'${binding.command}'`, ''),
     });
   }
 
   return rows;
 }
 
-/** Existing status and evidence, so regenerating never erases an observation. */
+/**
+ * Existing lane, status and evidence, so regenerating never erases an
+ * observation.
+ *
+ * Columns are located by reading the header rather than by counting from the
+ * left. Adding a column once shifted every recorded status one place and
+ * silently rewrote the ledger, which is the exact failure this file exists to
+ * prevent.
+ */
 function existingObservations() {
   const observations = new Map();
   let text;
@@ -152,13 +171,33 @@ function existingObservations() {
   } catch {
     return observations;
   }
-  for (const line of text.split('\n')) {
-    if (!line.startsWith('| ')) continue;
-    const cells = line.split('|').map((cell) => cell.trim());
-    if (cells.length < 8) continue;
-    const [, , id, , , lane, status, evidence] = cells;
-    if (id === 'Identifier' || id.startsWith('---')) continue;
-    observations.set(id, { lane, status, evidence });
+  const rows = text
+    .split('\n')
+    .filter((line) => line.startsWith('|'))
+    .map((line) =>
+      line
+        .split('|')
+        .slice(1, -1)
+        .map((cell) => cell.trim()),
+    );
+  // Identified by what it contains, not where it sits, so a column added at
+  // either end still resolves.
+  const header = rows.find(
+    (cell) => cell.includes('Identifier') && cell.includes('Status') && cell.includes('Evidence'),
+  );
+  if (header === undefined) return observations;
+  const at = (label) => header.indexOf(label);
+  const [id, lane, status, evidence] = ['Identifier', 'Lane', 'Status', 'Evidence'].map(at);
+  if ([id, lane, status, evidence].some((index) => index === -1)) return observations;
+
+  for (const cell of rows) {
+    if (cell === header || cell.length !== header.length) continue;
+    if (cell[0] === undefined || cell[0].startsWith('---')) continue;
+    observations.set(cell[id], {
+      lane: cell[lane],
+      status: cell[status],
+      evidence: cell[evidence],
+    });
   }
   return observations;
 }
@@ -166,6 +205,7 @@ function existingObservations() {
 function render(rows, observations) {
   const counts = { 'NOT RUN': 0, PASS: 0, FAIL: 0, BLOCKED: 0 };
   const dormant = rows.filter((row) => row.callPath === undefined).length;
+  const untested = rows.filter((row) => row.test === undefined).length;
   const body = rows
     .map((row) => {
       const seen = observations.get(row.id) ?? {};
@@ -174,7 +214,8 @@ function render(rows, observations) {
       const path = row.callPath ?? '**none found**';
       const lane = seen.lane && seen.lane.length > 0 ? seen.lane : '—';
       const evidence = seen.evidence && seen.evidence.length > 0 ? seen.evidence : '—';
-      return `| ${row.surface} | ${row.id} | ${row.detail} | ${path} | ${lane} | ${status} | ${evidence} |`;
+      const test = row.test ?? '**none**';
+      return `| ${row.surface} | ${row.id} | ${row.detail} | ${path} | ${test} | ${lane} | ${status} | ${evidence} |`;
     })
     .join('\n');
 
@@ -198,6 +239,7 @@ until a lane has actually exercised the row, and most rows start there.
 | --- | --- |
 | Rows | ${String(rows.length)} |
 | No call path found | ${String(dormant)} |
+| No test found | ${String(untested)} |
 | PASS | ${String(counts.PASS)} |
 | FAIL | ${String(counts.FAIL)} |
 | BLOCKED | ${String(counts.BLOCKED)} |
@@ -205,8 +247,8 @@ until a lane has actually exercised the row, and most rows start there.
 
 ## Rows
 
-| Surface | Identifier | Detail | Call path | Lane | Status | Evidence |
-| --- | --- | --- | --- | --- | --- | --- |
+| Surface | Identifier | Detail | Call path | Test | Lane | Status | Evidence |
+| --- | --- | --- | --- | --- | --- | --- | --- |
 ${body}
 `;
 }
@@ -214,7 +256,7 @@ ${body}
 const manifest = JSON.parse(readFileSync(join(root, 'package.json'), 'utf8'));
 const files = filesUnder('src');
 const testFiles = filesUnder('tests');
-const rows = [...manifestRows(manifest, files), ...toolRows(files, testFiles)];
+const rows = [...manifestRows(manifest, files, testFiles), ...toolRows(files, testFiles)];
 
 // Formatted here rather than left for `format:check` to rewrite afterwards.
 // A generated file the formatter then edits can never satisfy its own drift

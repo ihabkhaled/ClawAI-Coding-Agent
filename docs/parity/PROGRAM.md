@@ -3038,3 +3038,36 @@ thing the ledger is for.
 
 **Still NOT RUN:** all 116 rows. Phase 2 reconciles them against the 61 SHIPPED
 parity rows.
+
+### Batch 88 — what has a test, and the Git tool getting one (Phase 2)
+
+| Batch | Version | Status                                | Evidence                                                |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------- |
+| 88    | 1.49.0  | Code and deterministic gates complete | `git-tool-executor.types.ts`, 17 new tests. 2347 total. |
+
+**Rule 1 asks two questions and the ledger was answering one.** Reachability was
+computed; whether anything tested the surface was not. The new column reports
+75 of 116 surfaces with no test.
+
+**13 of 28 tool executors had no direct test.** The core each calls is covered.
+The adapter that parses arguments and dispatches operations was not, and that is
+the layer where a wrong operation reaches a repository.
+
+**`workspace.git` closed first, because it is the one that mutates.** Eight
+tests, including the one that matters most: the operation comes from the
+invocation, so an argument named `operation` cannot override it. Without that a
+caller could ask for `status` and run `push`.
+
+**A production change, made for the right reason.** The Git executor took a
+concrete service while every sibling takes a port. Narrowing it to a port let
+the test drop an `as unknown as` cast that policy bans, rather than keeping the
+cast and the inconsistency.
+
+**The ledger broke itself and the fix is the lesson.** Adding a column shifted
+every recorded status one place, because the parser counted from the left. It
+now locates columns by header name, and a regression test adds a column to prove
+an observation survives.
+
+**A silent no-op patch cost a cycle.** A replace whose target did not match left
+tool rows without the new column while command rows had it, and nothing failed.
+Assert the match, or the edit is a guess.
