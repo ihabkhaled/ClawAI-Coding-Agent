@@ -123,6 +123,24 @@ function flag(name: string): string | undefined {
   return argv[index + 1];
 }
 
+/**
+ * Refuses a read or create that named no file.
+ *
+ * A missing `path` used to fall back to `.`, which resolves to the workspace
+ * directory itself, so the write failed with EISDIR — a message about
+ * directories that says nothing about the actual mistake. A model given that
+ * error repeats the same call until its budget runs out. Naming the missing
+ * argument lets it correct itself on the next turn.
+ */
+function requirePath(operation: string, args: Record<string, unknown>): string {
+  const value = args.path;
+  if (typeof value === 'string' && value.trim().length > 0) return value;
+  const provided = Object.keys(args).join(', ');
+  throw new Error(
+    `workspace.file ${operation} requires a "path" argument. Received: ${provided.length > 0 ? provided : 'nothing'}.`,
+  );
+}
+
 function execute(
   toolName: string,
   operation: string,
@@ -131,13 +149,18 @@ function execute(
 ): unknown {
   const workspace = limits.workspace;
   if (toolName === 'workspace.command') return runCommandTool(args, limits);
-  const target = containedPath(workspace, typeof args.path === 'string' ? args.path : '.');
   if (operation === 'list') return { entries: readdirSync(workspace) };
-  if (operation === 'read') return { content: readFileSync(target, 'utf8') };
+  if (operation === 'read') {
+    return {
+      content: readFileSync(containedPath(workspace, requirePath(operation, args)), 'utf8'),
+    };
+  }
   if (operation === 'create') {
+    const relative = requirePath(operation, args);
+    const target = containedPath(workspace, relative);
     mkdirSync(path.dirname(target), { recursive: true });
     writeFileSync(target, typeof args.content === 'string' ? args.content : '', 'utf8');
-    return { written: args.path };
+    return { written: relative };
   }
   throw new Error(`Unsupported operation ${operation}`);
 }

@@ -3071,3 +3071,35 @@ an observation survives.
 **A silent no-op patch cost a cycle.** A replace whose target did not match left
 tool rows without the new column while command rows had it, and nothing failed.
 Assert the match, or the edit is a guess.
+
+### Batch 89 — three defects a live run found (Phase 5)
+
+| Batch | Version | Status                      | Evidence                                             |
+| ----- | ------- | --------------------------- | ---------------------------------------------------- |
+| 89    | 1.50.0  | Gates green and a live PASS | 8 new tests, 2355 total. Live: 5 tool calls, exit 0. |
+
+**Unit tests had covered all of this and found none of it.** Running the thing
+found three defects in one afternoon.
+
+**The provider error was thrown away.** The backend read `error` only as a
+string, and Anthropic nests the sentence at `error.message`, so every provider
+rejection logged as a bare status code. Fixing the extractor turned
+"returned status 400" into "Your credit balance is too low" — not a code bug at
+all, which is precisely what the log should have said the first time.
+
+**A failed tool call was never printed.** Thirty calls and no files looked
+identical to a run that never tried.
+
+**`workspace.file` accepted a create with no path.** It fell back to `.`, which
+resolves to the workspace directory, so the write failed with `EISDIR` — a
+message about directories that says nothing about a missing argument. The model
+repeated the call until the budget ran out.
+
+**The fix is the error message, not just the guard.** Told
+`Received: transaction`, the model corrected itself on the next call and the run
+completed. An error a model can act on is worth more than one that merely
+refuses.
+
+**Gemini replaced Anthropic for the live lane**, because the Anthropic account
+has no credit. That is an environment fact, now visible in the log rather than
+guessed at.
