@@ -185,14 +185,31 @@ function resolveInside(relative) {
   return target;
 }
 
+/**
+ * Refuses a read or create that named no file.
+ *
+ * Without this, a missing `path` resolved to the workspace directory itself and
+ * the write failed with EISDIR — a message about directories that says nothing
+ * about the actual mistake. The model then repeated the same call until the
+ * budget ran out. Naming the missing argument lets it correct itself on the
+ * next turn, which is the whole point of returning an error instead of dying.
+ */
+function requirePath(operation, args) {
+  if (typeof args.path === 'string' && args.path.trim().length > 0) return args.path;
+  const provided = Object.keys(args).join(', ') || 'nothing';
+  throw new Error(`workspace.file ${operation} requires a "path" argument. Received: ${provided}.`);
+}
+
 function runFileTool(operation, args) {
-  const target = resolveInside(args.path);
   if (operation === 'list') return { entries: readdirSync(workspace) };
-  if (operation === 'read') return { content: readFileSync(target, 'utf8') };
+  if (operation === 'read')
+    return { content: readFileSync(resolveInside(requirePath(operation, args)), 'utf8') };
   if (operation === 'create') {
+    const relative = requirePath(operation, args);
+    const target = resolveInside(relative);
     mkdirSync(path.dirname(target), { recursive: true });
-    writeFileSync(target, args.content ?? '', 'utf8');
-    return { written: args.path };
+    writeFileSync(target, typeof args.content === 'string' ? args.content : '', 'utf8');
+    return { written: relative };
   }
   throw new Error(`Unsupported file operation ${operation}`);
 }
@@ -356,7 +373,14 @@ for await (const chunk of stream.body) {
           redactionApplied: false,
         };
       }
-      say(`  tool ${event.payload.toolName}.${event.payload.operation}`);
+      // A failed tool call is the most useful line in the log and was the one
+      // line not printed. A run that called a tool thirty times and created
+      // nothing looked identical to a run that never tried.
+      say(
+        failure === undefined
+          ? `  tool ${event.payload.toolName}.${event.payload.operation}`
+          : `  tool ${event.payload.toolName}.${event.payload.operation} FAILED: ${failure.message}`,
+      );
       await api(
         `/chat-messages/runtime/runs/${encodeURIComponent(ack.runId)}/results?threadId=${encodeURIComponent(threadId)}`,
         {

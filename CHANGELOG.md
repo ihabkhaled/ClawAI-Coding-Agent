@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.50.0
+
+Minor: three defects a live run found, which no unit test had.
+
+- **A tool call that failed was not logged.** A run that called `create` thirty
+  times and produced nothing looked exactly like a run that never tried. The
+  failed call is the most useful line in the log and was the only one missing.
+- **`workspace.file` accepted a create with no path.** It fell back to `.`,
+  which resolves to the workspace directory, so the write failed with `EISDIR` —
+  a message about directories that says nothing about a missing argument. The
+  model repeated the same call until its budget ran out.
+- **The error now names the arguments it did receive.** Given
+  `Received: transaction`, the model corrected itself on the very next call.
+  That is the difference between an error a model can act on and one it cannot.
+- The same fallback existed in the headless runner and is fixed there too.
+- Verified live end to end: the agent reads a file, writes two, runs the result,
+  and the produced program prints the expected output.
+
 ## 1.49.0
 
 Minor: the inventory now records which surfaces have a test, and the Git tool
