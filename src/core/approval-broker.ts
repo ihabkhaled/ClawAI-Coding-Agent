@@ -1,12 +1,26 @@
 import { randomUUID } from 'node:crypto';
 
+import { resolveQuestionAnswer } from './user-question';
+
 import type { PermissionOperation } from './permission-policy.types';
+import type { UserQuestion, UserQuestionAnswer, UserQuestionInput } from './user-question';
 
 export type ApprovalKind =
-  PermissionOperation | 'command' | 'enableFullAccess' | 'runtimeEffect' | 'undo';
+  | PermissionOperation
+  | 'command'
+  | 'enableFullAccess'
+  | 'runtimeEffect'
+  | 'runtimeQuestion'
+  | 'undo';
 
 /** The kind every Runtime Protocol tool approval is filed under. */
 export const RUNTIME_EFFECT_APPROVAL_KIND: ApprovalKind = 'runtimeEffect';
+
+/**
+ * The kind agent questions are filed under, distinct from tool approvals so a
+ * run can withdraw one without withdrawing the other.
+ */
+export const RUNTIME_QUESTION_APPROVAL_KIND: ApprovalKind = 'runtimeQuestion';
 
 export interface ApprovalEffectSummary {
   readonly purpose: string;
@@ -30,13 +44,27 @@ export interface ApprovalRequest extends ApprovalRequestInput {
 }
 
 export interface ApprovalStatePort {
-  update(patch: { approvalRequest: ApprovalRequest | undefined }): void;
+  update(patch: {
+    approvalRequest: ApprovalRequest | undefined;
+    questionRequest: UserQuestion | undefined;
+  }): void;
 }
 
+/**
+ * One queued interruption, either an approval or a structured question.
+ *
+ * Both live in the same queue on purpose. There is one modal slot in the panel,
+ * one cancellation story and one epoch that invalidates them, so a second
+ * channel would mean a second thing to withdraw when a run ends and a second
+ * way to leave a prompt stranded over the composer. `question` is what tells
+ * the two apart; an approval settles to a boolean, a question to an answer.
+ */
 interface PendingApproval {
   abort?: () => void;
   request: ApprovalRequest;
+  question?: UserQuestion;
   resolve(approved: boolean): void;
+  answer?: (answer: UserQuestionAnswer) => void;
   signal?: AbortSignal;
 }
 
@@ -91,6 +119,71 @@ export class ApprovalBroker {
     this.pending.push(pending);
     this.activateNext();
     return completion;
+  }
+
+  /**
+   * Puts a structured question to the user and waits for the answer.
+   *
+   * It rides the approval queue rather than a channel of its own, so a question
+   * is withdrawn by the same `cancelKind` a run already calls when it ends, and
+   * invalidated by the same account and workspace epochs. The panel shows one
+   * interruption at a time either way.
+   */
+  ask(input: UserQuestionInput, signal?: AbortSignal): Promise<UserQuestionAnswer> {
+    if (this.disposed || signal?.aborted === true) {
+      return Promise.resolve({ kind: 'dismissed' });
+    }
+    const question: UserQuestion = { ...input, id: randomUUID() };
+    let resolveAnswer: ((answer: UserQuestionAnswer) => void) | undefined;
+    const completion = new Promise<UserQuestionAnswer>((resolve) => {
+      resolveAnswer = resolve;
+    });
+    const pending: PendingApproval = {
+      // The question carries the panel copy, so the approval request beside it
+      // exists to give the queue an id and a kind to cancel by.
+      request: {
+        id: question.id,
+        kind: RUNTIME_QUESTION_APPROVAL_KIND,
+        title: question.header,
+        message: question.question,
+      },
+      question,
+      resolve: () => undefined,
+      answer: (answer) => {
+        resolveAnswer?.(answer);
+      },
+      ...(signal === undefined ? {} : { signal }),
+    };
+    if (signal !== undefined) {
+      pending.abort = () => {
+        this.cancel(pending);
+      };
+      signal.addEventListener('abort', pending.abort, { once: true });
+    }
+    this.pending.push(pending);
+    this.activateNext();
+    return completion;
+  }
+
+  /**
+   * Records the user's answer to the question currently on screen.
+   *
+   * The selection is validated against the question that was actually asked, so
+   * a stale or forged one resolves nothing and leaves the question standing
+   * rather than completing the run with an answer the user never gave.
+   */
+  answer(id: string, selection: unknown): boolean {
+    const active = this.active;
+    if (active?.question === undefined || active.request.id !== id) return false;
+    const answer = resolveQuestionAnswer(active.question, selection);
+    if (answer === undefined) return false;
+    this.active = undefined;
+    if (active.signal !== undefined && active.abort !== undefined) {
+      active.signal.removeEventListener('abort', active.abort);
+    }
+    active.answer?.(answer);
+    this.activateNext();
+    return true;
   }
 
   resolve(id: string, approved: boolean): boolean {
@@ -183,10 +276,20 @@ export class ApprovalBroker {
     if (approval.signal !== undefined && approval.abort !== undefined) {
       approval.signal.removeEventListener('abort', approval.abort);
     }
+    // A withdrawn question is dismissed, never silently answered. Every path
+    // that cancels an approval reaches here with `approved: false`, and a
+    // question has no equivalent of "denied" — the user simply did not answer.
+    if (approval.answer !== undefined) {
+      approval.answer({ kind: 'dismissed' });
+      return;
+    }
     approval.resolve(approved);
   }
 
   private publish(): void {
-    this.state.update({ approvalRequest: this.active?.request });
+    this.state.update({
+      approvalRequest: this.active?.request,
+      questionRequest: this.active?.question,
+    });
   }
 }

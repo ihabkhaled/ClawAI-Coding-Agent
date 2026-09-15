@@ -1,7 +1,14 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import { fileTransactionSchema } from '../core/file-transaction';
+import { findingsSchema, type Finding } from '../core/findings';
 import { subAgentGraphSchema } from '../core/multi-agent-dag';
+import { resolveSubAgentDefinition } from '../core/sub-agent-definitions';
+import { buildInheritedContext } from '../core/sub-agent-inheritance';
+import {
+  AgentBoardToolExecutor,
+  agentBoardToolDefinition,
+} from '../infrastructure/agent-board-tool-executor';
 
 import { RuntimeRunService } from './runtime-run-service';
 
@@ -14,12 +21,15 @@ import type {
 } from './runtime-tool-dispatcher';
 import type { SubAgentExecutionPort } from './sub-agent-coordinator-service';
 import type { BackendClient } from '../backend/backend-client';
+import type { AgentBoard } from '../core/agent-board.types';
 import type { SubAgentGraph, SubAgentOutcome, SubAgentTask } from '../core/multi-agent-dag';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { SubAgentDefinition } from '../core/sub-agent-definitions';
+import type { ParentRunContext } from '../core/sub-agent-inheritance.types';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
-interface RuntimeSubAgentDependencies {
+export interface RuntimeSubAgentDependencies {
   readonly backend: () => BackendClient;
   readonly currentEpochs: () => ToolInvocation['epochs'];
   readonly definitions: () => readonly ToolDefinition[];
@@ -27,11 +37,26 @@ interface RuntimeSubAgentDependencies {
   readonly policy: RuntimeToolPolicyPort;
   readonly stream: RuntimeEventStreamService;
   readonly transport: BackendRuntimeTransport;
+  /** Named sub-agent presets a task may reference by `definitionName`. */
+  readonly subAgentPresets: () => Promise<readonly SubAgentDefinition[]>;
+  /**
+   * What the delegating run knows, for a task that asked to inherit it. Read
+   * at launch rather than captured once, so a child started later sees the
+   * decisions the parent made in the meantime.
+   */
+  readonly parentContext: () => ParentRunContext;
+  /**
+   * The note board this graph shares. One store per coordinator run, because
+   * two unrelated graphs reading each other's notes makes every note ambiguous
+   * about which run it belongs to.
+   */
+  readonly board: { read: () => AgentBoard; write: (board: AgentBoard) => void };
 }
 
 interface SubAgentTelemetry {
   changedPaths: Set<string>;
   artifacts: Set<string>;
+  findings: Finding[];
   tokens: number;
   toolCalls: number;
   modelTurns: number;
@@ -56,6 +81,41 @@ export function describeSubAgentFailure(payload: Record<string, unknown>): strin
   return `Nested runtime failed: ${message} (${code})`;
 }
 
+/**
+ * Builds the prompt handed to a sub-agent's own runtime.
+ *
+ * A named preset (`resolveSubAgentDefinition`) only ever adds instructions —
+ * its `systemPrompt` and `description` — never a runtime parameter. Tools,
+ * model, and budget still come from the task alone, so a definition cannot be
+ * used to grant a wider scope than the task itself declares.
+ */
+export function buildSubAgentPrompt(
+  task: SubAgentTask,
+  steering: readonly string[],
+  preset: SubAgentDefinition | undefined,
+  parent?: ParentRunContext,
+): string {
+  // Inherited context comes before the goal on purpose. A model reads the goal
+  // as its instruction; anything after it competes with the instruction, and a
+  // child told what to do and then told the history tends to answer the
+  // history.
+  const inherited = parent === undefined ? '' : buildInheritedContext(task.inherit, parent);
+  return [
+    `Role: ${task.role}`,
+    preset === undefined ? '' : `Definition: ${preset.name} — ${preset.description}`,
+    preset === undefined ? '' : preset.systemPrompt,
+    inherited,
+    `Goal: ${task.goal}`,
+    `Worktree/root key: ${task.worktreeId}`,
+    `Declared write set: ${task.writeSet.join(', ') || '(read-only)'}`,
+    `Acceptance checks:\n${task.acceptanceChecks.map((check) => `- ${check}`).join('\n')}`,
+    steering.length === 0 ? '' : `Current steering:\n${steering.join('\n')}`,
+    'Do not broaden scope, elevate, push, publish, or access another root.',
+  ]
+    .filter((part) => part.length > 0)
+    .join('\n\n');
+}
+
 export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
   constructor(private readonly dependencies: RuntimeSubAgentDependencies) {}
 
@@ -66,6 +126,10 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
   ): Promise<SubAgentOutcome> {
     const definitions = this.allowedDefinitions(task);
     if (definitions.length === 0) return this.blocked(task, 'No admitted tools match the task');
+    const preset = resolveSubAgentDefinition(
+      await this.dependencies.subAgentPresets(),
+      task.definitionName,
+    );
     const selection = this.modelSelection(task);
     const thread = await this.dependencies.backend().createThread({
       title: `[${task.role}] ${task.goal.slice(0, 120)}`,
@@ -74,7 +138,23 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       ...(selection.model === 'AUTO' ? {} : { preferredModel: selection.model }),
     });
     const telemetry = this.telemetry();
-    const scopedExecutor = new ScopedSubAgentExecutor(task, this.dependencies.executor, telemetry);
+    // The board is answered inside the scope rather than by the parent router,
+    // because the caller's identity has to come from the task being run. An
+    // agent that could name itself could post as another, and a warning
+    // attributed to the security reviewer carries weight it did not earn.
+    const board = new AgentBoardToolExecutor({
+      read: () => this.dependencies.board.read(),
+      write: (next) => {
+        this.dependencies.board.write(next);
+      },
+      callerTaskId: () => task.taskId,
+    });
+    const scopedExecutor = new ScopedSubAgentExecutor(
+      task,
+      this.dependencies.executor,
+      telemetry,
+      board,
+    );
     const runtime = new RuntimeRunService({
       clock: { now: Date.now },
       currentEpochs: this.dependencies.currentEpochs,
@@ -91,7 +171,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       threadId: thread.id,
       clientRequestId: requestId,
       idempotencyKey: requestId,
-      prompt: this.prompt(task, steering()),
+      prompt: buildSubAgentPrompt(task, steering(), preset, this.dependencies.parentContext()),
       manifestHash: this.hash({ taskId: task.taskId, worktreeId: task.worktreeId }),
       toolCatalogHash: this.hash(definitions),
       provider: selection.provider,
@@ -147,6 +227,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       toolCalls: telemetry.toolCalls,
       modelTurns: telemetry.modelTurns,
       artifacts: [...telemetry.artifacts],
+      findings: telemetry.findings,
       ...(telemetry.blocker === undefined ? {} : { blocker: telemetry.blocker }),
       ...(telemetry.graph === undefined ? {} : { graph: telemetry.graph }),
     };
@@ -154,14 +235,23 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
 
   private allowedDefinitions(task: SubAgentTask): readonly ToolDefinition[] {
     const allowed = new Set(task.tools);
-    return this.dependencies
-      .definitions()
-      .filter(
-        (definition) =>
-          allowed.has(definition.name) &&
-          !/(?:elevat|publish)/iu.test(definition.name) &&
-          !['runtime.agents', 'runtime.integration', 'runtime.flagship'].includes(definition.name),
-      );
+    // The board is not in the parent's catalogue: it only means anything inside
+    // a graph, and offering it to a run with no siblings would be a tool whose
+    // reads are always empty.
+    const board = allowed.has(agentBoardToolDefinition.name) ? [agentBoardToolDefinition] : [];
+    return [
+      ...board,
+      ...this.dependencies
+        .definitions()
+        .filter(
+          (definition) =>
+            allowed.has(definition.name) &&
+            !/(?:elevat|publish)/iu.test(definition.name) &&
+            !['runtime.agents', 'runtime.integration', 'runtime.flagship'].includes(
+              definition.name,
+            ),
+        ),
+    ];
   }
 
   private modelSelection(task: SubAgentTask): {
@@ -177,20 +267,6 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       provider: task.modelPolicy.allowedProviders[0] ?? 'AUTO',
       model: task.modelPolicy.allowedModels[0] ?? 'AUTO',
     };
-  }
-
-  private prompt(task: SubAgentTask, steering: readonly string[]): string {
-    return [
-      `Role: ${task.role}`,
-      `Goal: ${task.goal}`,
-      `Worktree/root key: ${task.worktreeId}`,
-      `Declared write set: ${task.writeSet.join(', ') || '(read-only)'}`,
-      `Acceptance checks:\n${task.acceptanceChecks.map((check) => `- ${check}`).join('\n')}`,
-      steering.length === 0 ? '' : `Current steering:\n${steering.join('\n')}`,
-      'Do not broaden scope, elevate, push, publish, or access another root.',
-    ]
-      .filter((part) => part.length > 0)
-      .join('\n\n');
   }
 
   private observe(event: RuntimeEvent, telemetry: SubAgentTelemetry): void {
@@ -217,6 +293,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
     return {
       changedPaths: new Set(),
       artifacts: new Set(),
+      findings: [],
       tokens: 0,
       toolCalls: 0,
       modelTurns: 0,
@@ -232,6 +309,7 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       tokens: 0,
       toolCalls: 0,
       artifacts: [],
+      findings: [],
       blocker,
     };
   }
@@ -247,6 +325,7 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
     private readonly task: SubAgentTask,
     private readonly delegate: RuntimeToolExecutorPort,
     private readonly telemetry: SubAgentTelemetry,
+    private readonly board?: RuntimeToolExecutorPort,
   ) {}
 
   async execute(
@@ -254,6 +333,11 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
     signal?: AbortSignal,
   ): Promise<RuntimeToolExecutionOutput> {
     if (!this.task.tools.includes(invocation.toolName)) throw new Error('Sub-agent tool is denied');
+    // Answered here, before the delegate, because the parent's router has no
+    // way to know which task is calling.
+    if (invocation.toolName === agentBoardToolDefinition.name && this.board !== undefined) {
+      return this.board.execute(invocation, signal);
+    }
     if (/(?:push|publish|elevat)/iu.test(`${invocation.toolName}.${invocation.operation}`)) {
       throw new Error('Sub-agents cannot push, publish, or elevate');
     }
@@ -271,6 +355,7 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
         'conflicts',
         'submodules',
         'topology',
+        'pr-readiness',
       ].includes(invocation.operation) &&
       !(
         this.task.role === 'integrator' &&
@@ -281,6 +366,7 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
     }
     this.assertRoot(invocation);
     this.captureWrites(invocation);
+    this.captureFindings(invocation);
     this.captureArtifact(invocation);
     const output = await this.delegate.execute(invocation, signal);
     this.capturePlanGraph(invocation, output);
@@ -307,6 +393,26 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
       }
       this.assertBoundRoots(child);
     }
+  }
+
+  /**
+   * Collects what a reviewer sub-agent reported, from the call it made.
+   *
+   * Reviewer roles were enum labels with nothing behind them: a reviewer wrote
+   * its conclusions into prose, so the parent could not count them, merge them
+   * with another reviewer's, or decide whether they blocked. The findings are
+   * in the invocation arguments, exactly as writes are, so they are captured
+   * the same way and reach the parent on the outcome.
+   *
+   * A malformed report is dropped rather than failing the task. A reviewer that
+   * found something real and described one finding badly should still deliver
+   * the rest, and the tool call itself will report the validation error.
+   */
+  private captureFindings(invocation: ToolInvocation): void {
+    if (invocation.toolName !== 'workspace.quality' || invocation.operation !== 'report') return;
+    const parsed = findingsSchema.safeParse(invocation.arguments.findings);
+    if (!parsed.success) return;
+    for (const finding of parsed.data) this.telemetry.findings.push(finding);
   }
 
   private captureWrites(invocation: ToolInvocation): void {

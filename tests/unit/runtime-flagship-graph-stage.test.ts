@@ -30,6 +30,7 @@ describe('RuntimeFlagshipStageAdapter implementation graph', () => {
         toolCalls: 2,
         modelTurns: 1,
         artifacts: ['evidence:api'],
+        findings: [],
       },
       {
         taskId: 'implement-ui',
@@ -40,6 +41,7 @@ describe('RuntimeFlagshipStageAdapter implementation graph', () => {
         toolCalls: 3,
         modelTurns: 2,
         artifacts: ['evidence:ui'],
+        findings: [],
       },
     ]);
     const adapter = new RuntimeFlagshipStageAdapter(
@@ -84,6 +86,7 @@ describe('RuntimeFlagshipStageAdapter implementation graph', () => {
         toolCalls: 1,
         modelTurns: 1,
         artifacts: [],
+        findings: [],
       })),
     );
     const adapter = new RuntimeFlagshipStageAdapter(
@@ -144,6 +147,7 @@ describe('RuntimeFlagshipStageAdapter implementation graph', () => {
         toolCalls: 1,
         modelTurns: 1,
         artifacts: [],
+        findings: [],
       })),
     );
     const adapter = new RuntimeFlagshipStageAdapter(

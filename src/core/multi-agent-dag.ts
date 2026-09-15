@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
+import { subAgentDefinitionNameSchema } from './sub-agent-definitions';
 import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
+
+import type { Finding } from './findings';
 
 /**
  * Accepts an empty `{}` wherever an empty array is valid, then hands the
@@ -46,6 +49,8 @@ export const subAgentTaskSchema = z
   .object({
     taskId: z.string().regex(/^[a-z][a-z0-9-]{1,99}$/u),
     role: subAgentRoleSchema,
+    /** Optional reference to a named preset from `sub-agent-definitions.ts`. */
+    definitionName: subAgentDefinitionNameSchema.optional(),
     goal: z.string().min(1).max(20_000),
     modelPolicy: z
       .object({
@@ -74,6 +79,13 @@ export const subAgentTaskSchema = z
       .strict(),
     tools: tolerateEmptyObjectAsArray(z.array(z.string().min(2).max(80)).max(256)),
     riskCeiling: z.enum(['R0', 'R1', 'R2', 'R3']),
+    /**
+     * How much of the delegating run this task starts knowing. Defaults to
+     * `none`, which is exactly what every task received before inheritance
+     * existed: widening what a delegated agent sees is a scope change, and a
+     * scope change that happens by upgrading is one nobody approved.
+     */
+    inherit: z.enum(['none', 'summary', 'findings']).default('none'),
     acceptanceChecks: z.array(z.string().min(1).max(2_000)).min(1).max(200),
     epochs: z
       .object({
@@ -150,6 +162,8 @@ export interface SubAgentOutcome {
   readonly toolCalls: number;
   readonly modelTurns?: number;
   readonly artifacts: readonly string[];
+  /** What a reviewer reported, structured rather than written into prose. */
+  readonly findings: readonly Finding[];
   readonly blocker?: string;
   readonly graph?: SubAgentGraph;
   /** How many attempts the coordinator spent before this terminal outcome. */

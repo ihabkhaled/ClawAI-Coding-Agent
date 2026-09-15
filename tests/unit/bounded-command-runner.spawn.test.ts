@@ -59,4 +59,37 @@ describe('runCommandSpec', () => {
       expect(result.stdout).toContain('hello-from-cmd');
     },
   );
+  // A build or test run that overruns the budget is almost always one that
+  // failed, and the reason is on the last lines. Head-only truncation returned
+  // the banner and dropped the error.
+  it('keeps the end of an over-budget stream, not only the beginning', async () => {
+    const script =
+      "process.stdout.write('BANNER-START');" +
+      "process.stdout.write('x'.repeat(200000));" +
+      "process.stdout.write('ERROR-AT-THE-END');";
+
+    const result = await runCommandSpec(
+      commandSpec({ arguments: ['-e', script], outputLimitBytes: 2048 }),
+      process.cwd(),
+    );
+
+    expect(result.truncated).toBe(true);
+    expect(result.stdout).toContain('BANNER-START');
+    expect(result.stdout).toContain('ERROR-AT-THE-END');
+    expect(result.stdout).toMatch(/bytes omitted/u);
+  });
+
+  // stderr usually carries the reason, so a chatty stdout must not be able to
+  // consume the whole budget and leave none for it.
+  it('keeps stderr even when stdout floods the budget', async () => {
+    const script =
+      "process.stdout.write('y'.repeat(200000));" + "process.stderr.write('THE-REAL-REASON');";
+
+    const result = await runCommandSpec(
+      commandSpec({ arguments: ['-e', script], outputLimitBytes: 2048 }),
+      process.cwd(),
+    );
+
+    expect(result.stderr).toContain('THE-REAL-REASON');
+  });
 });

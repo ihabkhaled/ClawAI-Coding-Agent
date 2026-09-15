@@ -2,6 +2,7 @@ import { createHash } from 'node:crypto';
 
 import * as vscode from 'vscode';
 
+import { prepareAttachments } from '../core/attachment-preparation';
 import { chatAttachmentsSchema } from '../core/chat-attachment';
 
 import {
@@ -10,6 +11,7 @@ import {
 } from './attachment-upload-service';
 
 import type { BackendClient } from '../backend/backend-client';
+import type { AttachmentRefusal } from '../core/attachment-preparation.types';
 import type { ChatAttachment } from '../core/chat-attachment';
 import type { ChatViewProvider } from '../webview/chat-view-provider';
 
@@ -38,6 +40,20 @@ function attachmentFingerprint(attachment: ChatAttachment): string {
     .digest('hex');
 }
 
+/**
+ * Why an attachment was dropped, in words the person who attached it can act
+ * on. A refusal with no reason reads as the feature being broken.
+ */
+function refusalNotice(filename: string, reason: AttachmentRefusal): string {
+  if (reason === 'model-cannot-see') {
+    return vscode.l10n.t('{0} was not sent: the selected model cannot read images.', filename);
+  }
+  if (reason === 'too-large') {
+    return vscode.l10n.t('{0} was not sent: the image is too large to read.', filename);
+  }
+  return vscode.l10n.t('{0} was not sent: this message already carries enough images.', filename);
+}
+
 export class AttachmentRequestService {
   private readonly cache = new Map<string, CachedAttachment>();
   private readonly uploads: AttachmentUploadService;
@@ -45,6 +61,7 @@ export class AttachmentRequestService {
   constructor(
     private readonly backend: () => BackendClient,
     private readonly view: () => ChatViewProvider | null,
+    private readonly modelAcceptsImages: () => boolean = () => true,
   ) {
     this.uploads = new AttachmentUploadService(backend);
   }
@@ -54,7 +71,16 @@ export class AttachmentRequestService {
     signal: AbortSignal,
     requestId: string,
   ): Promise<AttachmentLease> {
-    const validated = chatAttachmentsSchema.parse(attachments);
+    // Preparation happens before validation and before upload: metadata is
+    // removed on this machine, so nothing that describes the user leaves it
+    // even if the upload later fails.
+    const preparation = prepareAttachments(chatAttachmentsSchema.parse(attachments), {
+      modelAcceptsImages: this.modelAcceptsImages(),
+    });
+    for (const { filename, reason } of preparation.refused) {
+      void this.view()?.postNotice(refusalNotice(filename, reason));
+    }
+    const validated = preparation.prepared.map(({ attachment }) => attachment);
     const resolved = new Map<string, string>();
     const missing: ChatAttachment[] = [];
     for (const attachment of validated) {

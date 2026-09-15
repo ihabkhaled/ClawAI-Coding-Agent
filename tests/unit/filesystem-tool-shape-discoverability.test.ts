@@ -77,6 +77,26 @@ describe('the filesystem catalog documents every kind it advertises', () => {
     expect(description).toMatch(/replaces the whole file/i);
   });
 
+  // The description is the only channel that reaches the model. An argument it
+  // does not mention is an argument no model sends, which is how `pattern`
+  // cost ten consecutive search calls in a live mission.
+  it('documents the search matching arguments', () => {
+    expect(description).toMatch(/regex:true/i);
+    expect(description).toMatch(/ignoreCase:true/i);
+    expect(description).toMatch(/contextLines/i);
+    // A capability the description does not mention is a capability no model
+    // ever uses: the catalog reports a bare input shape and nothing else.
+    expect(description).toMatch(/multiline/i);
+    expect(description).toMatch(/fileTypes/i);
+  });
+
+  // A search now reports how much of the workspace it actually opened. Without
+  // that in the description, an empty result still reads as proof of absence.
+  it('tells the model when an empty search result means absence', () => {
+    expect(description).toMatch(/scannedFiles/i);
+    expect(description).toMatch(/truncated is false/i);
+  });
+
   // Both sides of the wire cap a tool description at 2000 characters, and the
   // backend rejects the whole run-start request when it is exceeded — the panel
   // shows only "Validation failed", with nothing naming the field. Every

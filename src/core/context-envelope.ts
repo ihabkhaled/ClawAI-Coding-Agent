@@ -31,13 +31,31 @@ function truncateUtf8(value: string, maxBytes: number): string {
   return '';
 }
 
-function contextFileBlock(file: ContextCandidate): string {
-  const path = file.path
+function escapeAttribute(value: string): string {
+  return value
     .replaceAll('&', '&amp;')
     .replaceAll('"', '&quot;')
     .replaceAll('<', '&lt;')
     .replaceAll('>', '&gt;');
-  return `<workspace-file path="${path}">\n${file.content}\n</workspace-file>`;
+}
+
+function contextFileBlock(file: ContextCandidate): string {
+  const path = escapeAttribute(file.path);
+  // Coordinates from a selection or a `path:L-L` reference: the model would
+  // otherwise see the same untitled slice of a file as a whole-file read,
+  // with no way to say where it sits or ask about a line by number.
+  const range =
+    file.startLine === undefined
+      ? ''
+      : ` startLine="${String(file.startLine)}" endLine="${String(file.endLine)}"`;
+  return `<workspace-file path="${path}"${range}>\n${file.content}\n</workspace-file>`;
+}
+
+function contextInclusion(file: ContextCandidate): ContextReceipt['included'][number] {
+  return {
+    path: file.path,
+    ...(file.startLine === undefined ? {} : { startLine: file.startLine, endLine: file.endLine }),
+  };
 }
 
 export function assembleContextEnvelope(input: ContextEnvelopeInput): ContextEnvelope {
@@ -51,7 +69,7 @@ export function assembleContextEnvelope(input: ContextEnvelopeInput): ContextEnv
 
   const contentBudget = Math.max(0, maxBytes - Buffer.byteLength(input.header, 'utf8'));
   let content = `${truncateUtf8(input.content, contentBudget)}${input.header}`;
-  const included: string[] = [];
+  const included: ContextReceipt['included'] = [];
   const excluded = [...(input.contextReceipt?.excluded ?? [])];
   let totalBytes = 0;
   let transportTruncated = false;
@@ -65,7 +83,7 @@ export function assembleContextEnvelope(input: ContextEnvelopeInput): ContextEnv
       continue;
     }
     content += block;
-    included.push(file.path);
+    included.push(contextInclusion(file));
     totalBytes += Buffer.byteLength(file.content, 'utf8');
   }
 

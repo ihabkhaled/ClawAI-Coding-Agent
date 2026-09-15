@@ -38,6 +38,28 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('runtimeStop') }),
   z.object({ type: z.literal('runtimeSteer'), message: z.string().trim().min(1).max(20_000) }),
   z.object({ type: z.literal('undo') }),
+  z.object({
+    type: z.literal('mentionQuery'),
+    text: z.string().max(20_000),
+    caretIndex: z.number().int().min(0).max(20_000),
+  }),
+  // The panel is the only place that knows a conversation's running token
+  // total, so it reports the number; the host decides what it means. The
+  // capacity is not sent with it, because the host can derive that from the
+  // catalog and a number the host owns is one it should not accept from here.
+  z.object({
+    type: z.literal('conversationTokens'),
+    threadId: z.string().min(1).max(200),
+    tokens: z.number().int().min(0).max(100_000_000),
+  }),
+  // The panel forwards the drag payload rather than resolving it: only the
+  // host knows the workspace root, and only the host owns the path policy that
+  // decides whether a dropped URI may be read at all.
+  z.object({
+    type: z.literal('dropUris'),
+    uriList: z.string().max(20_000),
+    shiftKey: z.boolean(),
+  }),
   z.object({ type: z.literal('newChat') }),
   z.object({ type: z.literal('openFolder') }),
   z.object({ type: z.literal('refreshModels') }),
@@ -59,6 +81,14 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
     type: z.literal('resolveApproval'),
     requestId: z.uuid(),
     approved: z.boolean(),
+  }),
+  // The selection is deliberately loose here and validated against the question
+  // that was actually asked, in `resolveQuestionAnswer`. A shape check alone
+  // would happily pass a label from a previous question.
+  z.object({
+    type: z.literal('answerQuestion'),
+    requestId: z.uuid(),
+    selection: z.unknown(),
   }),
   z.object({
     type: z.literal('agent'),
@@ -91,6 +121,10 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({
     type: z.literal('selectModel'),
     modelKey: z.string().min(1).max(500),
+  }),
+  z.object({
+    type: z.literal('selectViewDensity'),
+    density: z.enum(['full', 'focus']),
   }),
   z.object({
     type: z.literal('selectAgentMode'),

@@ -6,7 +6,9 @@ import type { EffortMode } from '../core/effort-mode';
 import type { PermissionMode } from '../core/permission-policy.types';
 import type { ResearchMode } from '../core/research-mode';
 import type { SpeedMode } from '../core/speed-mode';
+import type { ViewDensity } from '../core/view-density.types';
 import type { RequestAdmission } from '../services/agent-coordinator.types';
+import type { MentionSuggestions } from '../services/mention-suggestion.types';
 
 interface SessionInput {
   sessionId: string;
@@ -35,18 +37,25 @@ export interface ChatViewActions {
   configureLanguage(): Promise<void>;
   connect(profile: ConnectionProfile): Promise<void>;
   manageExternalOutputFolders(): Promise<void>;
+  mentionSuggestions(text: string, caretIndex: number): Promise<MentionSuggestions>;
   logout(): Promise<void>;
   openFolder(): Promise<void>;
+  /** The panel's running token total for a conversation, which only it knows. */
+  conversationTokens(threadId: string, tokens: number): Promise<void>;
+  /** Files dragged onto the composer from the editor or the explorer. */
+  dropUris(uriList: string, shiftKey: boolean): Promise<void>;
   openThread(input: SessionInput & { threadId: string }): Promise<void>;
   refreshModels(): Promise<void>;
   reviewChanges(previewId?: string): Promise<void>;
   removeQueued(requestId: string): Promise<void>;
   resolveApproval(requestId: string, approved: boolean): Promise<void>;
+  answerQuestion(requestId: string, selection: unknown): void;
   runtimePause(): Promise<void>;
   runtimeResume(): Promise<void>;
   runtimeSteer(message: string): Promise<void>;
   runtimeStop(): Promise<void>;
   selectAgentMode(mode: AgentMode): Promise<void>;
+  selectViewDensity(density: ViewDensity): Promise<void>;
   selectEffortMode(mode: EffortMode): Promise<void>;
   selectSpeedMode(mode: SpeedMode): Promise<void>;
   selectModel(modelKey: string): Promise<void>;

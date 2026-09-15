@@ -20,6 +20,7 @@ const validTask = {
   budget: { maxTokens: 200_000, maxToolCalls: 200, maxRuntimeMs: 2_700_000, maxRetries: 1 },
   tools: ['workspace.files', 'workspace.command'],
   riskCeiling: 'R2' as const,
+  inherit: 'none' as const,
   acceptanceChecks: ['npm test'],
   epochs: { account: 1, workspace: 1, target: 1, policy: 1 },
 };

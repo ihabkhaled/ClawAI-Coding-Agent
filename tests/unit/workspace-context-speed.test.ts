@@ -85,6 +85,13 @@ vi.mock('vscode', () => ({
 
 const configuration: RuntimeConfiguration = {
   agentMode: 'AUTO',
+  viewDensity: 'full' as const,
+  outputStyle: 'default',
+  autoCompact: 'prompt' as const,
+  browserOrigins: [],
+  telemetryEndpoint: '',
+  telemetryHeaders: {},
+  hooks: [],
   effortMode: 'ULTRA',
   speedMode: '1X',
   backendUrl: 'https://claw.local',
@@ -94,6 +101,7 @@ const configuration: RuntimeConfiguration = {
   maxContextFiles: 10,
   permissionMode: 'MANUAL',
   requestTimeoutMs: 60_000,
+  autosave: 'off' as const,
   routingMode: 'AUTO',
   selectedModel: '',
 };

@@ -20,15 +20,30 @@ function respond(response: ServerResponse, status: number, body: string, csp?: s
   response.end(body);
 }
 
-function authorizationPage(success: boolean): { body: string; csp: string } {
+function escapeHtml(value: string): string {
+  return value
+    .replaceAll('&', '&amp;')
+    .replaceAll('<', '&lt;')
+    .replaceAll('>', '&gt;')
+    .replaceAll('"', '&quot;')
+    .replaceAll("'", '&#39;');
+}
+
+function authorizationPage(
+  success: boolean,
+  translate: (message: string) => string,
+): { body: string; csp: string } {
+  const translated = (message: string): string => escapeHtml(translate(message));
   const nonce = randomBytes(16).toString('base64');
-  const title = success ? 'Connected to ClawAI' : 'Sign-in was not completed';
+  const title = success
+    ? translated('Connected to ClawAI')
+    : translated('Sign-in was not completed');
   const message = success
-    ? 'Your identity was verified. Return to VS Code to start building.'
-    : 'ClawAI could not verify this sign-in. Return to VS Code and try again.';
-  const status = success ? 'SECURE SESSION READY' : 'VERIFICATION FAILED';
+    ? translated('Your identity was verified. Return to VS Code to start building.')
+    : translated('ClawAI could not verify this sign-in. Return to VS Code and try again.');
+  const status = success ? translated('SECURE SESSION READY') : translated('VERIFICATION FAILED');
   const tone = success ? '#3ddc97' : '#ff6b7a';
-  const body = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style nonce="${nonce}">:root{color-scheme:dark}*{box-sizing:border-box}body{min-height:100vh;margin:0;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 20% 10%,#17344a 0,transparent 38%),#080b10;color:#f4f7fb;font:16px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}main{width:min(560px,100%);padding:42px;border:1px solid #294257;border-radius:24px;background:linear-gradient(145deg,rgba(24,35,48,.96),rgba(10,14,20,.98));box-shadow:0 24px 80px #0009}.mark{display:grid;place-items:center;width:52px;height:52px;margin-bottom:26px;border:1px solid ${tone};border-radius:16px;color:${tone};font-size:24px;box-shadow:0 0 32px ${tone}33}.eyebrow{color:${tone};font:700 12px/1.2 ui-monospace,monospace;letter-spacing:.13em}h1{margin:12px 0 10px;font-size:clamp(28px,6vw,40px);line-height:1.08}p{margin:0;color:#b9c6d3}.hint{margin-top:28px;padding-top:20px;border-top:1px solid #263543;color:#8fa0b1;font-size:14px}button{margin-top:22px;padding:11px 18px;border:1px solid #45647d;border-radius:10px;background:#172534;color:#f4f7fb;font:inherit;cursor:pointer}</style></head><body><main><div class="mark" aria-hidden="true">${success ? '&#10003;' : '!'}</div><div class="eyebrow">${status}</div><h1>${title}</h1><p>${message}</p><p class="hint">${success ? 'This tab will close automatically. If it stays open, you can close it safely.' : 'No session was saved.'}</p><button id="close" type="button">Close this tab</button></main><script nonce="${nonce}">document.getElementById('close').addEventListener('click',()=>window.close());${success ? 'setTimeout(()=>window.close(),1400);' : ''}</script></body></html>`;
+  const body = `<!doctype html><html lang="en"><head><meta charset="utf-8"><meta name="viewport" content="width=device-width,initial-scale=1"><title>${title}</title><style nonce="${nonce}">:root{color-scheme:dark}*{box-sizing:border-box}body{min-height:100vh;margin:0;display:grid;place-items:center;padding:24px;background:radial-gradient(circle at 20% 10%,#17344a 0,transparent 38%),#080b10;color:#f4f7fb;font:16px/1.55 Inter,ui-sans-serif,system-ui,sans-serif}main{width:min(560px,100%);padding:42px;border:1px solid #294257;border-radius:24px;background:linear-gradient(145deg,rgba(24,35,48,.96),rgba(10,14,20,.98));box-shadow:0 24px 80px #0009}.mark{display:grid;place-items:center;width:52px;height:52px;margin-bottom:26px;border:1px solid ${tone};border-radius:16px;color:${tone};font-size:24px;box-shadow:0 0 32px ${tone}33}.eyebrow{color:${tone};font:700 12px/1.2 ui-monospace,monospace;letter-spacing:.13em}h1{margin:12px 0 10px;font-size:clamp(28px,6vw,40px);line-height:1.08}p{margin:0;color:#b9c6d3}.hint{margin-top:28px;padding-top:20px;border-top:1px solid #263543;color:#8fa0b1;font-size:14px}button,a{display:inline-block;text-decoration:none;margin-inline-end:12px;margin-top:22px;padding:11px 18px;border:1px solid #45647d;border-radius:10px;background:#172534;color:#f4f7fb;font:inherit;cursor:pointer}</style></head><body><main><div class="mark" aria-hidden="true">${success ? '&#10003;' : '!'}</div><div class="eyebrow">${status}</div><h1>${title}</h1><p>${message}</p><p class="hint">${success ? translated('You can safely close this tab and return to VS Code.') : translated('No session was saved.')}</p><a href="vscode://clawai.clawai-coding-agent/open">${translated('Open Chat')}</a><button id="close" type="button">${translated('Close this tab')}</button><p id="close-fallback" class="hint" role="status" hidden>${translated('Your browser kept this tab open. Close it using the tab close button or Ctrl+W (Command+W on Mac), then return to VS Code.')}</p></main><script nonce="${nonce}">history.replaceState(null,'',location.pathname);document.getElementById('close').addEventListener('click',()=>{window.close();setTimeout(()=>{document.getElementById('close-fallback').hidden=false;},150);});</script></body></html>`;
   return {
     body,
     csp: `default-src 'none'; style-src 'nonce-${nonce}'; script-src 'nonce-${nonce}'; frame-ancestors 'none'`,
@@ -47,6 +62,7 @@ export class LoopbackAuthorizationServer {
   private constructor(
     private readonly expectedState: string,
     private readonly server: Server,
+    private readonly translate: (message: string) => string,
   ) {
     this.completion = new Promise<string>((resolve, reject) => {
       this.resolveCompletion = resolve;
@@ -58,9 +74,10 @@ export class LoopbackAuthorizationServer {
   static async open(
     state: string,
     timeoutMs = 10 * 60 * 1_000,
+    translate: (message: string) => string = (message) => message,
   ): Promise<LoopbackAuthorizationServer> {
     const server = createServer();
-    const instance = new LoopbackAuthorizationServer(state, server);
+    const instance = new LoopbackAuthorizationServer(state, server, translate);
     server.on('request', (request, response) => {
       instance.handle(request.url, request.method, response);
     });
@@ -152,7 +169,7 @@ export class LoopbackAuthorizationServer {
       return;
     }
     this.pendingResponse = undefined;
-    const page = authorizationPage(success);
+    const page = authorizationPage(success, this.translate);
     respond(response, success ? 200 : 400, page.body, page.csp);
     this.server.close();
   }

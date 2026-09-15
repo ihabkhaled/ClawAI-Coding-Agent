@@ -374,3 +374,30 @@ test('clears account-bound draft attachments and ignores a late file read', asyn
   await expect(page.locator('#attachmentList')).toBeEmpty();
   await expect(page.locator('#attachmentTray')).toBeHidden();
 });
+
+// The host refuses these whatever the webview does. Refusing here too is what
+// turns the generic "invalid request" into a message naming the file.
+test('refuses a credential-shaped attachment by name', async ({ page }) => {
+  await page.locator('#attachmentInput').setInputFiles({
+    name: '.env',
+    mimeType: 'text/plain',
+    buffer: Buffer.from('STRIPE_SECRET_KEY=sk_live_example'),
+  });
+
+  await expect(page.locator('#attachmentStatus')).toHaveText(
+    'This file looks like it holds a secret and cannot be attached.',
+  );
+  await expect(page.locator('#attachmentList')).toBeEmpty();
+});
+
+// The shared predicate distinguishes a credential store from code that
+// implements one, and the composer must not be stricter than the host.
+test('still attaches source that merely implements a credential feature', async ({ page }) => {
+  await page.locator('#attachmentInput').setInputFiles({
+    name: 'password-reset.controller.ts',
+    mimeType: 'application/typescript',
+    buffer: Buffer.from('export class PasswordResetController {}'),
+  });
+
+  await expect(page.locator('#attachmentList')).not.toBeEmpty();
+});

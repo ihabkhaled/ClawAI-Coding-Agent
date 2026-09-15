@@ -1,8 +1,11 @@
 import type { EditConfirmation, EditPreview } from './safe-edit-service';
 import type { SessionControlPort } from './session-control.types';
+import type { PreviewEdits } from '../core/preview-edits';
 
 export interface DiffPreviewPort {
   stage(previews: EditPreview[]): string;
+  /** What the reviewer left in the preview. Absent on a preview that cannot be edited. */
+  edits?(previewId?: string): PreviewEdits;
 }
 
 export async function confirmSafeEdits(
@@ -29,5 +32,8 @@ export async function confirmSafeEdits(
   return {
     approved,
     previewId,
+    // Read after the decision, not before: the corrections that count are the
+    // ones standing when the user approved, not the ones typed along the way.
+    ...(approved && diffPreview.edits !== undefined ? { edits: diffPreview.edits(previewId) } : {}),
   };
 }

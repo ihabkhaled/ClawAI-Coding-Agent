@@ -113,3 +113,59 @@ describe('chatAttachmentsSchema', () => {
     ).toThrow();
   });
 });
+
+describe('attachment secret screening', () => {
+  const denied = [
+    '.env',
+    '.env.local',
+    '.env.production',
+    '.npmrc',
+    '.netrc',
+    '.pypirc',
+    'id_rsa',
+    'id_ed25519',
+    'service-account-credentials.json',
+    'stripe-secret.txt',
+    'aws_access_token.json',
+    'my-api-key.txt',
+    'private_key.pem',
+    'passwords.csv',
+    'token.txt',
+  ];
+
+  it.each(denied)('refuses %s, which every other path into the product denies', (filename) => {
+    const result = chatAttachmentsSchema.safeParse([attachment({ filename })]);
+    expect(result.success).toBe(false);
+  });
+
+  const allowed = [
+    'claw.png',
+    'loop.ts',
+    'repro.mp4',
+    'password-reset.controller.ts',
+    'password-reset-flow.md',
+    'environment.ts',
+    'token-telemetry.ts',
+  ];
+
+  it.each(allowed)(
+    'still accepts %s, which merely implements or describes a secret',
+    (filename) => {
+      const result = chatAttachmentsSchema.safeParse([attachment({ filename })]);
+      expect(result.success).toBe(true);
+    },
+  );
+
+  // `sensitiveNamePattern` matches `api-key` as a bare substring, with none of
+  // the code/document exemptions the password and token rules carry. So prose
+  // about key rotation is refused. That is over-broad, and it is deliberately
+  // left alone here: the same predicate denies the same file to every tool and
+  // to context collection, and attachments earn nothing by being the one path
+  // that disagrees. Widening it is a change to `workspace-path-policy.ts` that
+  // must be argued on its own, against all of its callers.
+  it('inherits the over-broad api-key rule rather than disagreeing with the tools', () => {
+    expect(
+      chatAttachmentsSchema.safeParse([attachment({ filename: 'api-key-rotation.md' })]).success,
+    ).toBe(false);
+  });
+});

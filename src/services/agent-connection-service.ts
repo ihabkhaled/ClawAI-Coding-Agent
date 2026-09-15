@@ -103,6 +103,7 @@ export class AgentConnectionService {
     this.models.setBackend(this.backend());
     this.state.update({
       agentMode: configuration.agentMode,
+      viewDensity: configuration.viewDensity,
       backendCustomUrl: configuration.backendCustomUrl,
       backendEnvironment: configuration.backendEnvironment,
       backendUrl: configuration.backendUrl,

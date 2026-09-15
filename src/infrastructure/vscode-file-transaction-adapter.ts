@@ -61,6 +61,34 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
     return workspace.uri;
   }
 
+  /**
+   * Saves the open, dirty documents among these targets.
+   *
+   * Only documents that are actually open and actually dirty are touched, and
+   * a path that will not resolve is skipped rather than failing the
+   * transaction: autosave is a convenience ahead of the real work, and a
+   * convenience that can abort an edit is worse than no convenience.
+   */
+  async saveIfDirty(
+    targets: readonly { readonly rootKey: string; readonly path: string }[],
+    signal?: AbortSignal,
+  ): Promise<void> {
+    for (const target of targets) {
+      signal?.throwIfAborted();
+      let uri: vscode.Uri;
+      try {
+        uri = await this.uriFor(target.rootKey, target.path, 'update');
+      } catch {
+        continue;
+      }
+      const open = vscode.workspace.textDocuments.find(
+        (document) => document.uri.toString() === uri.toString(),
+      );
+      if (open?.isDirty !== true) continue;
+      await open.save();
+    }
+  }
+
   registerRuntimeRoot(rootKey: string, rootPath: string): void {
     if (this.runtimeRoots.has(rootKey)) throw new Error('Runtime root is already registered');
     this.runtimeRoots.set(rootKey, vscode.Uri.file(rootPath));

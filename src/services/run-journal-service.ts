@@ -4,6 +4,12 @@ import { z } from 'zod';
 
 import { durableRunJournalSchema, type DurableRunJournal } from '../core/durable-run-journal';
 import { redactText } from '../core/redaction';
+import {
+  matchesRunJournalSearch,
+  rankRunJournals,
+  runJournalSearchSchema,
+  type RunJournalSummary,
+} from '../core/run-journal-search';
 
 export interface RunJournalStoragePort {
   read(runId: string): Promise<string | undefined>;
@@ -91,37 +97,35 @@ export class RunJournalService {
     return journals.sort((left, right) => left.createdAt.localeCompare(right.createdAt));
   }
 
-  async search(
-    query: string,
-  ): Promise<
-    readonly Pick<
-      DurableRunJournal,
-      'runId' | 'goal' | 'labels' | 'pinned' | 'lifecycle' | 'updatedAt'
-    >[]
-  > {
-    const normalized = query.trim().toLocaleLowerCase();
-    const matches: Pick<
-      DurableRunJournal,
-      'runId' | 'goal' | 'labels' | 'pinned' | 'lifecycle' | 'updatedAt'
-    >[] = [];
+  /**
+   * Faceted search over the stored journals.
+   *
+   * The text query is unchanged; what is new is that lifecycle, label, pinned
+   * and an updated-since bound can narrow it. "Which runs did I abandon this
+   * week" was previously unanswerable no matter how the query was worded,
+   * because a query string was the only thing a search could say.
+   *
+   * A bare string is still accepted so the existing tool call keeps working.
+   */
+  async search(candidate: unknown): Promise<readonly RunJournalSummary[]> {
+    const search = runJournalSearchSchema.parse(
+      typeof candidate === 'string' ? { query: candidate } : (candidate ?? {}),
+    );
+    const matches: RunJournalSummary[] = [];
     for (const runId of await this.storage.list()) {
       const journal = await this.load(runId);
       if (journal === undefined) continue;
-      if (`${journal.goal} ${journal.labels.join(' ')}`.toLocaleLowerCase().includes(normalized)) {
-        matches.push({
-          runId,
-          goal: redactText(journal.goal),
-          labels: journal.labels,
-          pinned: journal.pinned,
-          lifecycle: journal.lifecycle,
-          updatedAt: journal.updatedAt,
-        });
-      }
+      const summary: RunJournalSummary = {
+        runId,
+        goal: redactText(journal.goal),
+        labels: journal.labels,
+        pinned: journal.pinned,
+        lifecycle: journal.lifecycle,
+        updatedAt: journal.updatedAt,
+      };
+      if (matchesRunJournalSearch(summary, search)) matches.push(summary);
     }
-    return matches.sort(
-      (left, right) =>
-        Number(right.pinned) - Number(left.pinned) || right.updatedAt.localeCompare(left.updatedAt),
-    );
+    return rankRunJournals(matches);
   }
 
   async safeExport(runId: string): Promise<Readonly<Record<string, unknown>>> {

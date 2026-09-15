@@ -201,9 +201,15 @@ function streamUsage(event: Record<string, unknown>): ReportedTokenUsage | undef
   const completion = numericValue(usage.completionTokens);
   const reasoning = numericValue(usage.reasoningTokens) ?? 0;
   const total = numericValue(usage.totalTokens);
+  // The backend has reported this since prompt caching was billed, and nothing
+  // here read it: a conversation served almost entirely from cache counted
+  // every cached token at full price in the meter people use to decide when to
+  // compact.
+  const cached = numericValue(usage.cachedPromptTokens);
   return {
     ...(prompt === undefined ? {} : { input: prompt }),
     ...(completion === undefined ? {} : { output: completion + reasoning }),
+    ...(cached === undefined ? {} : { cached }),
     ...(total === undefined ? {} : { total }),
   };
 }
@@ -214,6 +220,7 @@ function estimatedUsage(prompt: string, response: string): TokenReceipt {
   return addTokenReceipts(input, {
     input: 0,
     output: outputEstimate,
+    cached: 0,
     source: 'estimated',
     total: outputEstimate,
   });

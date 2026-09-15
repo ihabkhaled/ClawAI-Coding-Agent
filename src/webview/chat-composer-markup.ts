@@ -17,6 +17,11 @@ export function renderComposerMarkup(translated: ChatMarkupTranslator): string {
         </div>
         <label class="sr-only" for="prompt">${translated('Ask ClawAI')}</label>
         <textarea id="prompt" class="prompt-field" rows="2" maxlength="20000" placeholder="${translated('Ask ClawAI to inspect, plan, or build…')}" required></textarea>
+        <p id="contextWarning" class="context-warning" role="status" aria-live="polite" hidden></p>
+        <div id="mentionPanel" class="mention-panel" hidden>
+          <ul id="mentionList" class="mention-list" role="listbox" aria-label="${translated('Workspace files')}"></ul>
+        </div>
+        <p id="mentionStatus" class="sr-only" role="status" aria-live="polite"></p>
         <div id="attachmentTray" class="attachment-tray" hidden>
           <div id="attachmentList" class="attachment-list" role="list" aria-label="${translated('Attachments')}"></div>
           <p id="attachmentStatus" class="attachment-status" role="status" aria-live="polite"></p>
@@ -25,6 +30,9 @@ export function renderComposerMarkup(translated: ChatMarkupTranslator): string {
           <input id="attachmentInput" class="sr-only" type="file" multiple>
           <button id="attachmentButton" class="icon-button attachment-button" type="button" title="${translated('Attach files')}" aria-label="${translated('Attach files')}">
             ${iconMarkup('attach')}
+          </button>
+          <button id="focusToggle" class="icon-button focus-toggle" type="button" aria-pressed="false" title="${translated('Focus view')}" aria-label="${translated('Focus view')}">
+            <span aria-hidden="true">&#9678;</span>
           </button>
           <label class="compact-control model-control" for="modelSelect"><span>${translated('Model')}</span>
             <select id="modelSelect" aria-label="${translated('Model')}" title="${translated('Automatic routing')}">

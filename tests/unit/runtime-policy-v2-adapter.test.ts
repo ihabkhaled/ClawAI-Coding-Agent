@@ -28,6 +28,19 @@ describe('RuntimePolicyV2Adapter effect classification', () => {
     );
   });
 
+  // Reading the Problems collection changes nothing, so it must not reach the
+  // approval broker. The classifier matches on the operation name, and an
+  // operation that ever matched a mutation pattern would put a prompt in front
+  // of the cheapest read in the runtime.
+  it('classifies reading editor diagnostics as an unprompted read', async () => {
+    const approve = vi.fn(async () => true);
+
+    await expect(
+      service(approve).evaluate(invocation('workspace.intelligence', 'diagnostics')),
+    ).resolves.toMatchObject({ decision: 'allow' });
+    expect(approve).not.toHaveBeenCalled();
+  });
+
   it('classifies elevation as an immutable R4 consent boundary', async () => {
     const approve = vi.fn(async () => true);
 
@@ -70,9 +83,12 @@ function service(approve: (request: unknown, signal?: AbortSignal) => Promise<bo
       mode: () => 'AUTONOMOUS_SCOPED',
       workspaceTrusted: () => true,
       userPresent: () => true,
+      organizationPolicy: () => undefined,
       approve,
     },
-    { load: async () => ({ deniedEffects: [], maximumRisk: 'R4', requireApproval: [] }) },
+    {
+      load: async () => ({ deniedEffects: [], maximumRisk: 'R4', requireApproval: [], rules: [] }),
+    },
   );
 }
 

@@ -1,5 +1,11 @@
 import * as vscode from 'vscode';
 
+import {
+  renderTranscriptExport,
+  transcriptExportFilename,
+  type TranscriptExportFormat,
+} from '../core/transcript-export';
+
 import type { BackendClient } from '../backend/backend-client';
 import type { ExtensionState } from '../core/extension-state';
 import type { ChatViewProvider } from '../webview/chat-view-provider';
@@ -43,6 +49,44 @@ export class ConversationSessionService {
         ? vscode.l10n.t('Untitled conversation')
         : trimmedTitle;
     return this.view()?.revealThread(threadId, title);
+  }
+
+  /**
+   * The transcript of one thread, ready to write to disk.
+   *
+   * Sourced from the backend rather than from the webview, because the backend
+   * is where the conversation actually lives: the webview holds only what it
+   * has rendered, and a reloaded window has rendered nothing. `TranscriptEntry`
+   * in `chat-session.ts` is a declared type with no producers and is not the
+   * source either.
+   */
+  async exportThread(
+    threadId: string,
+    format: TranscriptExportFormat,
+    title: string,
+    now = Date.now(),
+  ): Promise<{ readonly filename: string; readonly content: string }> {
+    const messages = await this.backend().listMessages(threadId, 1_000);
+    if (messages.length === 0) {
+      throw new Error(vscode.l10n.t('This conversation has no messages to export.'));
+    }
+    return {
+      filename: transcriptExportFilename(title, format, now),
+      content: renderTranscriptExport({
+        title,
+        threadId,
+        format,
+        exportedAt: now,
+        messages: messages.map((message) => ({
+          role: message.role,
+          content: message.content,
+          ...(message.provider == null ? {} : { provider: message.provider }),
+          ...(message.model == null ? {} : { model: message.model }),
+          ...(message.inputTokens == null ? {} : { inputTokens: message.inputTokens }),
+          ...(message.outputTokens == null ? {} : { outputTokens: message.outputTokens }),
+        })),
+      }),
+    };
   }
 
   async loadThread(sessionId: string, threadId: string): Promise<void> {

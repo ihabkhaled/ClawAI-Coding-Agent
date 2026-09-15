@@ -29,6 +29,8 @@ import {
 import { normalizeToolInvocationForAdmission } from '../core/runtime/runtime-tool-normalization';
 import { buildRuntimeToolResult } from '../core/runtime/runtime-tool-result';
 
+import type { LifecycleHookPort } from './lifecycle-hook.types';
+
 export interface RuntimeToolPolicyDecision {
   readonly decision: 'allow' | 'deny';
   readonly code: string;
@@ -80,6 +82,8 @@ export interface RuntimeToolDispatcherInput {
   readonly now: () => number;
   readonly receiptId: () => string;
   readonly restoredBudgetState?: RuntimeBudgetState;
+  /** Optional: a run with no configured hooks pays for nothing. */
+  readonly hooks?: LifecycleHookPort;
 }
 
 export interface RuntimeToolDispatcherSnapshot {
@@ -154,6 +158,45 @@ export class RuntimeToolDispatcher {
 
   assertWithinBudget(): void {
     consumeRuntimeBudget(this.state.budget, {}, this.input.now());
+  }
+
+  /**
+   * Runs the call, with the user's own hooks around it.
+   *
+   * The before-tool hook runs after the policy has allowed the call and before
+   * it happens. After the policy, because a hook is the user's preference and
+   * the policy is the rail — a hook must never become a way to reach something
+   * policy refused.
+   */
+  private async executeWithHooks(
+    admission: { invocation: ToolInvocation },
+    deadline: RuntimeDeadline,
+  ): Promise<RuntimeToolDispatchOutcome> {
+    const hook = await this.input.hooks?.run(
+      'before-tool',
+      admission.invocation.toolName,
+      deadline.signal,
+    );
+    if (hook?.blocked === true) {
+      return {
+        status: 'denied',
+        error: {
+          code: 'HOOK_REFUSED',
+          message: 'A configured before-tool hook refused this call.',
+          retryable: false,
+          redactionApplied: false,
+        },
+      };
+    }
+    const output = await this.awaitWithinDeadline(
+      this.input.executor.execute(admission.invocation, deadline.signal),
+      deadline.signal,
+    );
+    deadline.signal.throwIfAborted();
+    this.assertCurrentEpochs();
+    const validated = this.validatedExecutionOutcome(output);
+    await this.input.hooks?.run('after-tool', admission.invocation.toolName);
+    return validated;
   }
 
   async dispatch(
@@ -249,13 +292,7 @@ export class RuntimeToolDispatcher {
             },
           };
         } else {
-          const output = await this.awaitWithinDeadline(
-            this.input.executor.execute(admission.invocation, deadline.signal),
-            deadline.signal,
-          );
-          deadline.signal.throwIfAborted();
-          this.assertCurrentEpochs();
-          outcome = this.validatedExecutionOutcome(output);
+          outcome = await this.executeWithHooks(admission, deadline);
         }
       } catch (error: unknown) {
         this.assertCurrentEpochs();

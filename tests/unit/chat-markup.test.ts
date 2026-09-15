@@ -28,6 +28,10 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('Current model');
     expect(html).toContain('Context used');
     expect(html).toContain('Agent behavior');
+    expect(html).toContain('data-reasoning-steps="{0} steps · {1} tokens"');
+    expect(html).toContain(
+      'data-reasoning-private="ClawAI reports how much the model thought, never what it thought."',
+    );
     expect(html).not.toContain('<dt>Plan</dt>');
     expect(html).toContain('id="runDeck"');
     expect(html).toContain('id="runDeckCount"');
@@ -161,5 +165,26 @@ describe('renderChatMarkup', () => {
     expect(html).toContain('<html lang="en" dir="ltr">');
     expect(html).toContain("script-src 'nonce-test-nonce'");
     expect(html).not.toMatch(/<[^>]+\son[a-z]+=/iu);
+  });
+});
+
+describe('attachment refusal strings', () => {
+  const html = renderChatMarkup({
+    cspSource: 'vscode-webview://test',
+    language: 'en',
+    logoUri: 'vscode-webview://test/icon.png',
+    nonce: 'test-nonce',
+    scriptUri: 'vscode-webview://test/chat.js',
+    styleUri: 'vscode-webview://test/chat.css',
+    translate: (message) => message,
+  });
+
+  // The webview reads its reasons from this dataset. Without the string the
+  // secret refusal falls back to the generic invalid-request error, which names
+  // neither the file nor the cause.
+  it('carries a localized reason for a secret-bearing attachment', () => {
+    expect(html).toContain(
+      'data-attachment-secret-blocked="This file looks like it holds a secret and cannot be attached."',
+    );
   });
 });

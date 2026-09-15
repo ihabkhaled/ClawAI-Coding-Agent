@@ -1,3 +1,4 @@
+import type { SessionActivity } from './chat-session-status.types';
 import type { TokenReceipt } from './token-telemetry';
 
 export const DEFAULT_CHAT_SUBJECT = 'New ClawAI chat';
@@ -21,10 +22,14 @@ export interface TranscriptEntry {
 }
 
 export interface ChatSessionDescriptor {
+  /** What the session is doing, as far as its tab is concerned. */
+  activity: SessionActivity;
   createdAt: number;
   sessionId: string;
   subject: string;
   threadId: string | undefined;
+  /** News the user has not looked at. Cleared by looking, not by the next event. */
+  unread: boolean;
   updatedAt: number;
 }
 
@@ -63,10 +68,12 @@ export function deriveConversationSubject(prompt: string): string {
 
 export function createChatSession(sessionId: string, now = Date.now()): ChatSessionDescriptor {
   return {
+    activity: 'idle',
     createdAt: now,
     sessionId,
     subject: DEFAULT_CHAT_SUBJECT,
     threadId: undefined,
+    unread: false,
     updatedAt: now,
   };
 }

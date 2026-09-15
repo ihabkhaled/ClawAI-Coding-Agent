@@ -43,3 +43,29 @@ export const WORKSPACE_SCAN_EXCLUDE_GLOB = `**/{${WORKSPACE_SCAN_EXCLUDED_DIRECT
  * returns everything is a scan that finishes too late to matter.
  */
 export const WORKSPACE_SCAN_MAX_RESULTS = 50_000;
+
+/**
+ * How many files a single `workspace.files search` may open.
+ *
+ * This used to be the same number as the result cap, because one `maxResults`
+ * argument was passed to `findFiles` and then used again to slice the matches.
+ * A result cap of 100 therefore meant a *candidate* cap of 100: a search of
+ * this repository read 100 of its 8,059 files, about one percent, and reported
+ * nothing found. That reads to a model exactly like proof of absence, and the
+ * model moves on. Nothing in the output said only a hundred files were opened.
+ *
+ * The two limits answer different questions — how much work the search may do,
+ * and how much of it the model is shown — so they are two numbers now. The
+ * output carries `scannedFiles` so a saturated scan is visible rather than
+ * inferred.
+ */
+export const WORKSPACE_SEARCH_MAX_CANDIDATE_FILES = 5_000;
+
+/**
+ * Total decoded bytes one search may read before it stops and says so.
+ *
+ * The candidate cap alone is not a cost bound: five thousand large files is a
+ * stalled run. Whichever limit is reached first ends the scan, and either way
+ * the result reports truncation instead of implying the workspace was covered.
+ */
+export const WORKSPACE_SEARCH_MAX_SCANNED_BYTES = 32 * 1024 * 1024;

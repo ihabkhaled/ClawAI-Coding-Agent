@@ -11,6 +11,13 @@ import type { RuntimeConfiguration } from '../../src/services/configuration-serv
 
 const configuration: RuntimeConfiguration = {
   agentMode: 'AUTO',
+  viewDensity: 'full' as const,
+  outputStyle: 'default',
+  autoCompact: 'prompt' as const,
+  browserOrigins: [],
+  telemetryEndpoint: '',
+  telemetryHeaders: {},
+  hooks: [],
   effortMode: 'ULTRA',
   speedMode: '1X',
   backendUrl: 'https://claw.local',
@@ -20,6 +27,7 @@ const configuration: RuntimeConfiguration = {
   maxContextFiles: 40,
   permissionMode: 'EDIT_AUTOMATICALLY',
   requestTimeoutMs: 60_000,
+  autosave: 'off' as const,
   routingMode: 'MANUAL_MODEL',
   selectedModel: 'OLLAMA:qwen2.5-coder',
 };
@@ -36,7 +44,7 @@ describe('AgentRunService malformed model repair', () => {
       .mockResolvedValueOnce({
         threadId: 'thread-1',
         content: JSON.stringify({ summary: 'No change needed', files: [], commands: [] }),
-        tokens: { input: 1, output: 1, source: 'estimated', total: 2 },
+        tokens: { input: 1, output: 1, cached: 0, source: 'estimated', total: 2 },
       });
     const events: Record<string, unknown>[] = [];
     const service = new AgentRunService(
@@ -128,7 +136,7 @@ describe('AgentRunService malformed model repair', () => {
       .fn<AgentRunChatPort['send']>()
       .mockResolvedValueOnce({
         threadId: 'thread-1',
-        tokens: { input: 1, output: 1, source: 'estimated', total: 2 },
+        tokens: { input: 1, output: 1, cached: 0, source: 'estimated', total: 2 },
         content: JSON.stringify({
           summary: 'Production-ready code',
           files: [
@@ -142,7 +150,7 @@ describe('AgentRunService malformed model repair', () => {
       })
       .mockResolvedValueOnce({
         threadId: 'thread-1',
-        tokens: { input: 1, output: 1, source: 'estimated', total: 2 },
+        tokens: { input: 1, output: 1, cached: 0, source: 'estimated', total: 2 },
         content: JSON.stringify({
           summary: 'Create the loop',
           files: [
@@ -222,7 +230,7 @@ describe('AgentRunService malformed model repair', () => {
     ).resolves.toMatchObject({
       status: 'applied',
       threadId: 'thread-1',
-      tokens: { input: 2, output: 2, source: 'estimated', total: 4 },
+      tokens: { input: 2, output: 2, cached: 0, source: 'estimated', total: 4 },
     });
     expect(send).toHaveBeenCalledTimes(2);
     expect(send.mock.calls[1]?.[0]).toMatchObject({

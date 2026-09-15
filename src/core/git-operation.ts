@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
 
+import type { PullRequestFacts, PullRequestReadiness } from './pull-request-readiness.types';
+
 const safeRef = z
   .string()
   .min(1)
@@ -30,9 +32,12 @@ export const gitOperationSchema = z.discriminatedUnion('operation', [
         'conflicts',
         'submodules',
         'topology',
+        'pr-readiness',
       ]),
       path: safePath.optional(),
       ref: safeRef.optional(),
+      /** The branch a pull request would target. Defaults to the repository head. */
+      baseBranch: safeRef.optional(),
     })
     .strict(),
   z
@@ -50,6 +55,21 @@ export const gitOperationSchema = z.discriminatedUnion('operation', [
       path: safePath,
       branch: safeRef,
       startPoint: safeRef.optional(),
+      /**
+       * The identity later `rootKey` arguments will address this worktree
+       * by. Without this, `create-worktree` puts a real worktree on disk
+       * that no later tool call can ever reach — the worktree exists, but
+       * there is no way in.
+       */
+      newRootKey: base.rootKey,
+    })
+    .strict(),
+  z
+    .object({
+      ...base,
+      operation: z.literal('remove-worktree'),
+      /** The worktree to remove and stop being able to address. */
+      worktreeRootKey: base.rootKey,
     })
     .strict(),
   z
@@ -132,4 +152,6 @@ export interface GitReceipt {
   readonly stagedDiffHash?: string;
   readonly pushedRef?: string;
   readonly output: string;
+  /** Present only for `pr-readiness`, which answers a question rather than running a command. */
+  readonly pullRequest?: PullRequestReadiness & { readonly facts: PullRequestFacts };
 }

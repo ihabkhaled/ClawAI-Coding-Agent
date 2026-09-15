@@ -1,7 +1,10 @@
 import { randomUUID } from 'node:crypto';
 
+import { resumeAgentMode } from '../core/agent-mode';
 import { effortBudget } from '../core/effort-mode';
 import { flagshipAdmission, withFlagshipRequirement } from '../core/flagship-admission';
+import { outputStylePreamble } from '../core/output-style';
+import { composePrompt } from '../core/prompt-composition';
 import { isRuntimeRunEnded } from '../core/runtime/runtime-event-reducer';
 
 import { RuntimeJournalTracker } from './runtime-journal-tracker';
@@ -9,6 +12,7 @@ import { RuntimeRunService } from './runtime-run-service';
 
 import type { RuntimeConfiguration } from './configuration-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
+import type { LifecycleHookPort } from './lifecycle-hook.types';
 import type { LocalObservabilityService } from './observability-service';
 import type { RunJournalService } from './run-journal-service';
 import type { RuntimeEventStreamService } from './runtime-event-stream-service';
@@ -31,6 +35,8 @@ export interface RuntimeStudioExecutionDependencies {
   readonly router: RuntimeToolRouter;
   readonly definitions?: readonly ToolDefinition[];
   readonly policy: RuntimePolicyV2Adapter;
+  /** Optional: a run with no configured hooks pays for nothing. */
+  readonly hooks?: LifecycleHookPort;
   readonly transport: BackendRuntimeTransport;
   readonly stream: RuntimeEventStreamService;
   readonly observability: LocalObservabilityService;
@@ -102,6 +108,8 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
   // agree on what this run was allowed to spend, and the setting can change
   // under a long run.
   const effortMode = dependencies.configuration().effortMode;
+  const agentMode = dependencies.configuration().agentMode;
+  const stylePreamble = outputStylePreamble(dependencies.configuration().outputStyle);
   const runtimeBudget = effortBudget(effortMode);
   const traceId = input.requestId;
   const spanId = `span:${randomUUID()}`;
@@ -133,6 +141,7 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
     }),
     executor: dependencies.targetRouter(manifest),
     policy: dependencies.policy,
+    ...(dependencies.hooks === undefined ? {} : { hooks: dependencies.hooks }),
     receiptId: () => `receipt:${randomUUID()}`,
     transport: dependencies.transport,
   });
@@ -144,7 +153,11 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
       threadId: input.threadId,
       clientRequestId: input.requestId,
       idempotencyKey: `request:${input.requestId}`,
-      prompt: input.prompt,
+      // The mode rides on the prompt here and not at the caller, so the
+      // journal's goal stays the raw request. Resuming re-applies the mode it
+      // restores; a goal that already carried the instruction would collect a
+      // second copy of it on every resume.
+      prompt: composePrompt({ agentMode, stylePreamble, content: input.prompt }),
       manifestHash: dependencies.hash(manifest),
       toolCatalogHash: dependencies.hash(definitions),
       provider: input.provider ?? 'AUTO',
@@ -169,6 +182,7 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
       fingerprints: await dependencies.fingerprint(input.signal),
       budget: runtimeBudget,
       createdAt: startedAt,
+      agentMode,
       recovery: {
         version: 1,
         start: {
@@ -250,6 +264,7 @@ export async function recoverRuntimeStudio(
     }),
     executor: dependencies.targetRouter(dependencies.manifest),
     policy: dependencies.policy,
+    ...(dependencies.hooks === undefined ? {} : { hooks: dependencies.hooks }),
     receiptId: () => `receipt:${randomUUID()}`,
     transport: dependencies.transport,
   });
@@ -265,7 +280,11 @@ export async function recoverRuntimeStudio(
       turnId: capsule.start.turnId,
       clientRequestId: capsule.start.clientRequestId,
       idempotencyKey: capsule.start.idempotencyKey,
-      prompt: journal.goal,
+      prompt: composePrompt({
+        agentMode: resumeAgentMode(journal.agentMode, dependencies.configuration().agentMode),
+        stylePreamble: outputStylePreamble(dependencies.configuration().outputStyle),
+        content: journal.goal,
+      }),
       manifestHash: capsule.start.manifestHash,
       toolCatalogHash: capsule.start.toolCatalogHash,
       provider: capsule.start.provider,

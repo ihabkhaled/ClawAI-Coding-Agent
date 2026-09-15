@@ -7,6 +7,8 @@ import {
   DEFAULT_CHAT_SUBJECT,
   deriveConversationSubject,
 } from '../core/chat-session';
+import { rememberClosedSession, takeClosedSession } from '../core/closed-session-stack';
+import { redactReasoningEvent } from '../core/reasoning-visibility';
 
 import { publicHistoryMessage } from './chat-history-message';
 import {
@@ -19,10 +21,12 @@ import {
 import { renderChatMarkup } from './chat-markup';
 import { toPublicChatState } from './chat-public-state';
 import { ChatSessionRegistry } from './chat-session-registry';
+import { markSessionRead, syncSessions } from './chat-session-sync';
 import { runPromptAdmissionFlow } from './prompt-admission-flow';
 
 import type { ChatViewActions } from './chat-view-actions';
 import type { ChatMessage } from '../backend/contracts';
+import type { ClosedSession } from '../core/closed-session-stack.types';
 import type { ExtensionState } from '../core/extension-state';
 
 const SIDEBAR_SESSION_ID = 'sidebar';
@@ -35,6 +39,8 @@ function isPromptMessage(request: InboundMessage): request is PromptMessage {
 
 export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disposable {
   private readonly sessions = new ChatSessionRegistry<vscode.WebviewPanel>();
+  /** Sessions the user closed, most recent first, so one can be brought back. */
+  private closedSessions: ClosedSession[] = [];
   private view: vscode.WebviewView | null = null;
   private readonly unsubscribe: () => void;
 
@@ -44,7 +50,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     private readonly actions: ChatViewActions,
   ) {
     this.unsubscribe = state.subscribe((snapshot) => {
-      this.syncSessionTitles(snapshot.history);
+      syncSessions(this.sessions, snapshot);
       void this.broadcast({
         type: 'state',
         state: toPublicChatState(snapshot),
@@ -59,6 +65,22 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       this.view = null;
     });
     void this.postStateTo(view.webview);
+  }
+
+  /**
+   * The conversation a palette command should act on.
+   *
+   * The panel the user is looking at, or the most recently touched session if
+   * they are looking at something else entirely. A command run from the
+   * palette has no other way to know which conversation was meant.
+   */
+  activeThreadId(): string | undefined {
+    const sessions = this.sessions.list();
+    const active = sessions.find((session) => session.target.active);
+    const recent = [...sessions].sort(
+      (left, right) => right.descriptor.updatedAt - left.descriptor.updatedAt,
+    )[0];
+    return (active ?? recent)?.descriptor.threadId;
   }
 
   async reveal(): Promise<string> {
@@ -132,11 +154,16 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     });
   }
 
+  /**
+   * The one door every stream event goes through on its way to the panel, and
+   * therefore the only place where a model's private reasoning can be dropped
+   * once instead of by convention in four producers.
+   */
   async postEvent(event: Record<string, unknown>, requestId?: string): Promise<void> {
     await this.postForRequest(
       {
         type: 'streamEvent',
-        event,
+        event: redactReasoningEvent(event),
         ...(requestId === undefined ? {} : { requestId }),
       },
       requestId,
@@ -169,10 +196,32 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     await this.broadcast({ type: 'notice', message });
   }
 
+  /**
+   * Puts text into the composer for the user to send, rather than sending it.
+   *
+   * Attaching terminal output is the user gathering evidence, not asking a
+   * question. Sending it for them would decide what the question was.
+   */
+  async appendToComposer(text: string): Promise<void> {
+    await this.broadcast({ type: 'appendToComposer', text });
+  }
+
   dispose(): void {
     this.unsubscribe();
     this.sessions.dispose();
     this.view = null;
+  }
+
+  /**
+   * Brings back the session closed most recently, or reports that there is
+   * none. Closing is the one destructive action a tab bar makes trivial, so
+   * it is the one that most needs an undo.
+   */
+  async reopenClosedSession(): Promise<string | undefined> {
+    const taken = takeClosedSession(this.closedSessions);
+    if (taken === undefined) return undefined;
+    this.closedSessions = taken.remaining;
+    return this.createEditorSession(taken.entry.subject, taken.entry.threadId);
   }
 
   private async createEditorSession(
@@ -201,7 +250,18 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     };
     this.sessions.add(descriptor, panel);
     this.configureWebview(panel.webview, sessionId);
+    panel.onDidChangeViewState(() => {
+      if (panel.active) markSessionRead(this.sessions, sessionId);
+    });
     panel.onDidDispose(() => {
+      const closed = this.sessions.get(sessionId)?.descriptor;
+      if (closed !== undefined) {
+        this.closedSessions = rememberClosedSession(this.closedSessions, {
+          subject: closed.subject,
+          threadId: closed.threadId,
+          closedAt: Date.now(),
+        });
+      }
       this.sessions.remove(sessionId);
     });
     await this.postStateTo(panel.webview);
@@ -245,6 +305,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       }
       return;
     }
+    if (request.type === 'mentionQuery') {
+      const suggestions = await this.actions.mentionSuggestions(request.text, request.caretIndex);
+      await sourceWebview.postMessage({ type: 'mentionSuggestions', ...suggestions });
+      return;
+    }
     if (isPromptMessage(request)) {
       await this.handlePromptMessage(request, sourceSessionId);
       return;
@@ -278,12 +343,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   ): Promise<void> {
     if (await this.handleRuntimeControl(request)) return;
     if (await this.handleSessionControl(request)) return;
+    if (await this.handlePanelReport(request)) return;
     if (request.type === 'undo') {
       await this.actions.undo();
     } else if (request.type === 'newChat') {
       await this.reveal();
-    } else if (request.type === 'openFolder') {
-      await this.actions.openFolder();
     } else if (request.type === 'refreshModels') {
       await this.actions.refreshModels();
     } else if (request.type === 'reviewChanges') {
@@ -294,9 +358,26 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.actions.removeQueued(request.requestId);
     } else if (request.type === 'resolveApproval') {
       await this.actions.resolveApproval(request.requestId, request.approved);
+    } else if (request.type === 'answerQuestion') {
+      this.actions.answerQuestion(request.requestId, request.selection);
     } else {
       await this.handleSelectionControl(request);
     }
+  }
+
+  /**
+   * The messages the panel sends on its own, rather than because someone
+   * clicked. Grouped so the click dispatcher stays one readable chain.
+   */
+  private async handlePanelReport(request: ControlMessage): Promise<boolean> {
+    if (request.type === 'conversationTokens') {
+      await this.actions.conversationTokens(request.threadId, request.tokens);
+    } else if (request.type === 'dropUris') {
+      await this.actions.dropUris(request.uriList, request.shiftKey);
+    } else if (request.type === 'openFolder') {
+      await this.actions.openFolder();
+    } else return false;
+    return true;
   }
 
   private async handleSessionControl(request: ControlMessage): Promise<boolean> {
@@ -325,6 +406,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.actions.manageExternalOutputFolders();
     } else if (request.type === 'selectModel') {
       await this.actions.selectModel(request.modelKey);
+    } else if (request.type === 'selectViewDensity') {
+      await this.actions.selectViewDensity(request.density);
     } else if (request.type === 'selectAgentMode') {
       await this.actions.selectAgentMode(request.mode);
     } else if (request.type === 'selectEffortMode') {
@@ -384,27 +467,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       threadId,
     });
     await this.actions.openThread({ sessionId: sourceSessionId, threadId });
-  }
-
-  private syncSessionTitles(history: ExtensionState['snapshot']['history']): void {
-    for (const session of this.sessions.list()) {
-      const thread = history.find((entry) => entry.id === session.descriptor.threadId);
-      const title = thread?.title?.trim();
-      if (title === undefined || title.length === 0 || title === session.descriptor.subject) {
-        continue;
-      }
-      const updated = this.sessions.update(session.descriptor.sessionId, {
-        subject: title,
-        updatedAt: Date.now(),
-      });
-      if (updated !== undefined) {
-        updated.target.title = title;
-        void updated.target.webview.postMessage({
-          type: 'session',
-          session: updated.descriptor,
-        });
-      }
-    }
   }
 
   private async broadcast(message: unknown): Promise<void> {

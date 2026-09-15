@@ -6,6 +6,13 @@ import type { RuntimeConfiguration } from '../../src/services/configuration-serv
 
 const configuration: RuntimeConfiguration = {
   agentMode: 'AUTO',
+  viewDensity: 'full' as const,
+  outputStyle: 'default',
+  autoCompact: 'prompt' as const,
+  browserOrigins: [],
+  telemetryEndpoint: '',
+  telemetryHeaders: {},
+  hooks: [],
   effortMode: 'ULTRA',
   speedMode: '1X',
   backendUrl: 'https://claw.local',
@@ -15,6 +22,7 @@ const configuration: RuntimeConfiguration = {
   maxContextFiles: 40,
   permissionMode: 'MANUAL',
   requestTimeoutMs: 60_000,
+  autosave: 'off' as const,
   routingMode: 'MANUAL_MODEL',
   selectedModel: 'OLLAMA:qwen2.5-coder:0.5b',
 };
@@ -27,7 +35,7 @@ describe('AgentRunService conversational requests', () => {
     const send = vi.fn(async () => ({
       threadId: 'thread-greeting',
       content: 'Hi! How can I help?',
-      tokens: { input: 1, output: 1, source: 'estimated' as const, total: 2 },
+      tokens: { input: 1, output: 1, cached: 0, source: 'estimated' as const, total: 2 },
     }));
     const service = new AgentRunService(
       {

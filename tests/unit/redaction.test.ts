@@ -45,3 +45,30 @@ describe('redaction', () => {
     );
   });
 });
+
+describe('redactText environment-variable shapes', () => {
+  it('redacts a token whose name is prefixed, which is how shells write them', () => {
+    const redacted = redactText('GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123456789');
+
+    expect(redacted).not.toContain('ghp_abcdefghijklmnopqrstuvwxyz0123456789');
+  });
+
+  it('redacts a prefixed secret and key too', () => {
+    expect(redactText('AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI')).not.toContain('wJalrXUtnFEMI');
+    expect(redactText('MY_API_KEY=abc123def456')).not.toContain('abc123def456');
+  });
+
+  it('keeps the variable name, so the reader knows what was hidden', () => {
+    expect(redactText('GITHUB_TOKEN=ghp_secretvalue123456')).toContain('GITHUB_TOKEN');
+  });
+
+  it('leaves an ordinary underscore word alone', () => {
+    expect(redactText('BUILD_NUMBER=1234')).toContain('1234');
+  });
+});
+
+describe('redactText precision', () => {
+  it('does not redact a word that merely starts with a keyword', () => {
+    expect(redactText('SECRETARY_NAME=Alice')).toContain('Alice');
+  });
+});
