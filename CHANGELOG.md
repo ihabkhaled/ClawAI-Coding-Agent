@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.48.1
+
+Patch: record what the installed-host lane actually proves about commands.
+
+- The installed-host lane asserts **every** contributed command is registered in
+  the packaged artifact, not a sample of them. All 43 command rows now cite that
+  lane as evidence.
+- **Registration is not PASS.** A registered command is reachable, which is what
+  rule 1 asks for, but its behaviour is still unexercised — so those rows stay
+  NOT RUN with the registration recorded beside them. Calling them PASS would
+  claim a test that does not exist.
+- `clawAI.openChat` is the one exception and is PASS: the lane executes it and
+  asserts the extension stays active afterwards.
+- No behaviour changed, so this is a patch within the 1.48 line rather than a
+  delivery release.
+
 ## 1.48.0
 
 Minor: the surface inventory `docs/RULES.md` rule 6 requires, generated so it
