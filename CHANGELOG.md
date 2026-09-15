@@ -2,6 +2,21 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.54.0
+
+Minor: every contributed setting is now checked against the manifest.
+
+- **A setting is a promise to a user.** It appears in their settings UI, claims a
+  type, and claims a default. None of that was tested.
+- Every setting is read by the configuration service, so none is decorative —
+  rule 1 applied to settings rather than only to commands and tools.
+- Every default matches the type its own schema declares, and every enumerated
+  default is inside its own enum. A setting whose default contradicts its type
+  is a control the user cannot trust.
+- Every setting carries a description, and every numeric setting carries a bound.
+- The checks read `package.json` directly, so a setting added tomorrow is
+  covered without anyone remembering to add it to a list.
+
 ## 1.53.0
 
 Minor: the three highest-risk executors get tests — browser, elevation, process.

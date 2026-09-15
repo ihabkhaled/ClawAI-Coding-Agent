@@ -3166,3 +3166,25 @@ second operation arriving by accident should be refused rather than interpreted.
 
 Surfaces with no test: 66 to 63. All 12 previously untested executors now have
 dispatch coverage.
+
+### Batch 93 — every contributed setting checked
+
+| Batch | Version | Status          | Evidence                 |
+| ----- | ------- | --------------- | ------------------------ |
+| 93    | 1.54.0  | All lanes green | 8 new tests, 2405 total. |
+
+**A setting is a promise to a user** — it appears in their settings UI, claims a
+type and claims a default — and none of that was tested.
+
+**Rule 1 applied to settings.** Every one is read by the configuration service,
+so none is decorative. Every default matches its declared type, every
+enumerated default sits inside its own enum, every setting is described, and
+every numeric setting is bounded.
+
+**The checks read `package.json` directly**, so a setting added tomorrow is
+covered without anyone remembering a list.
+
+**A limitation worth recording.** The ledger detects a test by name, so a test
+that reads the manifest generically is invisible to it. Those 24 rows carry the
+evidence in the preserved columns instead, and stay NOT RUN because schema
+validity is not behaviour.
