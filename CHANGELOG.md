@@ -2,6 +2,29 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.48.0
+
+Minor: the surface inventory `docs/RULES.md` rule 6 requires, generated so it
+cannot fall behind the manifest.
+
+- **116 rows**: 43 commands, 24 settings, 9 views, 11 keybindings and 28 runtime
+  tools, each carrying PASS, FAIL, BLOCKED or NOT RUN with evidence.
+- **Every row starts at NOT RUN**, because that is the honest value before a
+  lane has exercised it. A status is an observation, not an intention.
+- **The rows are generated, not typed.** A hand-written table falls behind the
+  first time somebody adds a command and forgets the row, and a ledger that can
+  be wrong about what the product contributes is worse than none.
+- **`npm run inventory:verify` runs in the gate** and fails when a contributed
+  surface has no row, or a row names a surface that no longer exists.
+- **Lane, status and evidence survive regeneration.** They record what was
+  observed, and regenerating must never erase an observation.
+- **The call-path column is what rule 1 turns on.** A surface nothing in `src/`
+  references is dormant, and the table says so rather than implying delivery.
+  One definition is labelled `test-only`: `fixture.workspace-summary` is reached
+  only by specs, so it is a fixture and not a delivered tool.
+- `INSTALLED_UAT.md` now says plainly that it is not this ledger. It stopped at
+  0.79.0, has no status rows, and was being mistaken for coverage it never had.
+
 ## 1.47.0
 
 Minor: the browser sign-in callback now gives a safe, working return path when

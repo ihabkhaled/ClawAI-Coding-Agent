@@ -1,5 +1,15 @@
 # Installed-artifact evidence
 
+> **Superseded for surface coverage.** This file records installed-VSIX runs for
+> batches 1–15 and stops at 0.79.0. It is not the inventory `docs/RULES.md`
+> rule 6 requires and never was: it has no PASS/FAIL/BLOCKED/NOT RUN row and no
+> per-surface coverage. That ledger is
+> [`SURFACE_INVENTORY.md`](SURFACE_INVENTORY.md), which is generated from the
+> manifest and cannot fall behind it.
+>
+> Kept because the artifact hashes below are real evidence of what was installed
+> and when. Do not add new rows here; record them in the inventory instead.
+
 Every batch in [`PROGRAM.md`](PROGRAM.md) shipped its code and deterministic
 gates but recorded "installed-VSIX UAT not yet run". This closes that for the
 five batches together, against the artifact that carries all of them.
