@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.51.0
+
+Minor: the tool executors that dispatch to a service now have tests of their own.
+
+- **Twelve executors had none.** The services behind them were well covered; the
+  adapter that checks the tool name, validates an identifier and forwards the
+  call was not, and that adapter is where a misrouted operation gets through.
+- **Every one refuses an invocation addressed to another tool** and, importantly,
+  does not touch its service first.
+- `runtime.agents` refuses any operation but `run`, and forwards the graph and
+  the abort signal unchanged.
+- `runtime.journal` defaults an absent search query to empty rather than
+  refusing, omits filters that were never set instead of sending `undefined`,
+  and rejects a run identifier too short to be one before reaching storage.
+- Surfaces without a test fall from 75 to 70.
+
 ## 1.50.0
 
 Minor: three defects a live run found, which no unit test had.
