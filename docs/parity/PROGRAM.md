@@ -3103,3 +3103,24 @@ refuses.
 **Gemini replaced Anthropic for the live lane**, because the Anthropic account
 has no credit. That is an environment fact, now visible in the log rather than
 guessed at.
+
+### Batch 90 — the dispatch layer gets tests
+
+| Batch | Version | Status          | Evidence                                          |
+| ----- | ------- | --------------- | ------------------------------------------------- |
+| 90    | 1.51.0  | All lanes green | 17 new tests, 2372 total. Host, Playwright, live. |
+
+**Twelve executors had no test.** The services behind them were covered. The
+adapter that checks the tool name, validates an identifier and forwards the call
+was not — and that is the layer where a misrouted operation gets through.
+
+**The important assertion is the negative one.** An executor handed another
+tool's invocation must not touch its service before refusing. Checking only that
+it throws would pass even if it had already run the command.
+
+**`runtime.journal` carries real argument logic** and now has it pinned: an
+absent query defaults to empty rather than refusing, an unset filter is omitted
+rather than sent as `undefined`, and a run identifier too short to be one is
+rejected before it reaches storage.
+
+Surfaces with no test: 75 to 70.
