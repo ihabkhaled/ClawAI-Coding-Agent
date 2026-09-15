@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.52.0
+
+Minor: four more tool executors get the tests they never had.
+
+- `workspace.database` carries the operation from the invocation, so an argument
+  named `operation` cannot turn a query into something else. It answers profiles
+  from the vault without touching the workbench, and refuses a discovery that
+  named no root key.
+- `workspace.services` lists from the manager snapshot rather than rediscovering,
+  and passes the root key and abort signal through to discovery unchanged.
+- `runtime.evidence` refuses to verify a payload that is not a bundle.
+- `runtime.quality` reports whether recorded findings block a release, and lists
+  current findings without recording anything new.
+- Each refuses an invocation addressed to another tool **without touching its
+  service first** — the assertion that separates a real guard from one that
+  throws after the damage.
+- Surfaces with no test fall from 70 to 66.
+
 ## 1.51.0
 
 Minor: the tool executors that dispatch to a service now have tests of their own.
