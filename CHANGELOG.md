@@ -2,6 +2,20 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.56.0
+
+Minor: the live and headless lanes default to the Ollama connector, so running
+them costs no metered credit.
+
+- **A default that needs a paid balance turns "run the check" into "top up an
+  account first".** The lane that proves the agent can code should be the one
+  anybody can run, so it now defaults to `OLLAMA` / `kimi-k3`.
+- Verified across four connector models: `kimi-k3`, `qwen3.5:397b` and
+  `minimax-m3` complete the task; `gpt-oss:120b` stops after one tool call and
+  is recorded as not suitable for this lane rather than quietly retried.
+- `CLAW_LIVE_PROVIDER` and `CLAW_LIVE_MODEL` still override, so a metered
+  provider remains one variable away.
+
 ## 1.55.0
 
 Minor: the live check speaks the file-transaction shape the product actually uses.
