@@ -39,8 +39,8 @@ const { fetch } = globalThis;
 const BASE = env.CLAW_LIVE_BACKEND_URL ?? 'https://claw.local/api/v1';
 const EMAIL = env.CLAW_LIVE_EMAIL;
 const PASSWORD = env.CLAW_LIVE_PASSWORD;
-const PROVIDER = env.CLAW_LIVE_PROVIDER ?? 'ANTHROPIC';
-const MODEL = env.CLAW_LIVE_MODEL ?? 'claude-haiku-4-5-20251001';
+const PROVIDER = env.CLAW_LIVE_PROVIDER ?? 'OLLAMA';
+const MODEL = env.CLAW_LIVE_MODEL ?? 'kimi-k3';
 const KEEP = argv.includes('--keep');
 
 if (EMAIL === undefined || PASSWORD === undefined) {

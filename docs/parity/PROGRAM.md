@@ -3211,3 +3211,28 @@ fails now.
 deterministic: one run of 1.54.1 produced code that did not print the expected
 output, and the retry passed. That is a property of the lane, recorded rather
 than hidden.
+
+### Batch 95 — the live lane stops needing paid credit
+
+| Batch | Version | Status          | Evidence                                      |
+| ----- | ------- | --------------- | --------------------------------------------- |
+| 95    | 1.56.0  | All lanes green | Live on OLLAMA/kimi-k3: 4 tool calls, exit 0. |
+
+**The lane that proves the agent codes was the one nobody could run.** It
+defaulted to a metered provider, and the Anthropic balance was empty, so "run
+the check" meant "top up an account first". It now defaults to the Ollama
+connector.
+
+**The catalog said none of those models supported tools, and that was stale
+data rather than a code defect.** The heuristics already matched `kimi-k3`,
+`qwen3.5` and `minimax`; the rows simply predated them. A connector re-sync took
+the local catalog from 0 of 19 tool-capable to 14 of 15. Production was already
+correct at 20 of 21, so nothing there needed changing.
+
+**Four models tried, three suitable.** `kimi-k3`, `qwen3.5:397b` and
+`minimax-m3` complete the task. `gpt-oss:120b` stops after one tool call and is
+recorded as unsuitable for this lane rather than quietly retried until it looks
+fine.
+
+**The override still exists.** `CLAW_LIVE_PROVIDER` and `CLAW_LIVE_MODEL` put a
+metered provider one variable away.

@@ -8,8 +8,11 @@
  */
 export const AGENT_SDK_DEFAULTS = {
   backendUrl: 'https://claw.local/api/v1',
-  provider: 'ANTHROPIC',
-  model: 'claude-haiku-4-5-20251001',
+  // Ollama's connector rather than a metered provider. A default that needs a
+  // paid balance turns "run the check" into "top up an account first", and the
+  // lane that proves the agent codes should not be the one nobody can run.
+  provider: 'OLLAMA',
+  model: 'kimi-k3',
   title: 'Agent run',
   deadlineMs: 300_000,
   budget: {
