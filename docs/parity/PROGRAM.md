@@ -3236,3 +3236,30 @@ fine.
 
 **The override still exists.** `CLAW_LIVE_PROVIDER` and `CLAW_LIVE_MODEL` put a
 metered provider one variable away.
+
+### Batch 96 — the advertised surface is checked against the manifest
+
+| Batch | Version | Status          | Evidence                  |
+| ----- | ------- | --------------- | ------------------------- |
+| 96    | 1.57.0  | All lanes green | 14 new tests, 2419 total. |
+
+**A command in the manifest is a row in the user's palette.** If nothing
+registers it, choosing it raises "command not found" — the worst kind of
+failure, because the product advertised it. All 43 are now proven referenced.
+
+**A missing view provider is worse than a missing command.** It renders an empty
+panel with no error, so nothing tells the user it is broken. Every view now has
+a registered provider, and the container ships the icon it points at.
+
+**Localization is checked structurally.** Every command title and view name must
+be a `%key%` reference, because a literal title is English in all thirteen
+locales and no locale gate would notice.
+
+**Keybindings and menu entries resolve to commands that exist**, so a rename
+cannot quietly leave a dead binding.
+
+`onUri` stays absent from activation events: no link should be able to trigger
+activation.
+
+62 inventory rows gained evidence. Status stays NOT RUN, because manifest
+correctness is not behaviour.
