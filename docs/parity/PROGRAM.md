@@ -3006,3 +3006,35 @@ right answer.
 no `exports` entry in `package.json`, deliberately — VS Code resolves the
 extension through `main`, and adding an export map is a packaging change that
 deserves its own batch rather than riding along with this one.
+
+### Batch 87 — the surface inventory (Phase 1 of the refined plan)
+
+| Batch | Version | Status                                | Evidence                                                                       |
+| ----- | ------- | ------------------------------------- | ------------------------------------------------------------------------------ |
+| 87    | 1.48.0  | Code and deterministic gates complete | `scripts/generate-surface-inventory.mjs`, `SURFACE_INVENTORY.md`. 7 new tests. |
+
+**Axis B had no ledger, and the file that looked like one was not.**
+`INSTALLED_UAT.md` stops at 0.79.0, records four VSIX hashes, and carries no
+PASS/FAIL/BLOCKED/NOT RUN row. It was being read as coverage it never had.
+
+**116 rows, generated from the manifest.** Typing this table by hand would put
+it one forgotten row behind the first new command, and a ledger that can be
+wrong about what the product contributes is worse than having none.
+
+**Every row starts NOT RUN.** That is the correct value before a lane has
+exercised it, and starting anywhere else would be inventing evidence.
+
+**The call-path column is rule 1 made mechanical.** A surface nothing in `src/`
+references is dormant. The generator computes it, so nobody has to notice.
+
+**The first finding came free.** `fixture.workspace-summary` is reached only by
+specs, so it is labelled `test-only` rather than counted as a delivered tool.
+That is 28 shipped tools, not the 29 the refined plan estimated by counting
+files.
+
+**Lane, status and evidence survive regeneration**, because they record
+observations and a regeneration that erased them would quietly destroy the only
+thing the ledger is for.
+
+**Still NOT RUN:** all 116 rows. Phase 2 reconciles them against the 61 SHIPPED
+parity rows.
