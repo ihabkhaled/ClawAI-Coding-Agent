@@ -3124,3 +3124,24 @@ rather than sent as `undefined`, and a run identifier too short to be one is
 rejected before it reaches storage.
 
 Surfaces with no test: 75 to 70.
+
+### Batch 91 — four more executors covered
+
+| Batch | Version | Status          | Evidence                  |
+| ----- | ------- | --------------- | ------------------------- |
+| 91    | 1.52.0  | All lanes green | 14 new tests, 2386 total. |
+
+**`workspace.database` takes its operation from the invocation**, so an argument
+named `operation` cannot turn a query into a drop. It answers profiles from the
+vault without touching the workbench, and refuses a discovery that named no root
+key.
+
+**`workspace.services` lists from the manager snapshot** rather than
+rediscovering, and forwards the root key and abort signal unchanged.
+
+**`runtime.evidence` refuses to verify a payload that is not a bundle.**
+
+**`runtime.quality` reports whether findings block a release**, and listing does
+not record.
+
+Surfaces with no test: 70 to 66.
