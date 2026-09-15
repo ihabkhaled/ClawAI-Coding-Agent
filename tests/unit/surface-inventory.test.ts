@@ -115,9 +115,11 @@ describe('surface inventory', () => {
     // erase what a lane actually observed.
     const status = columnOf('Status');
     const evidence = columnOf('Evidence');
-    const blank = cells().find(
-      (cell) => cell[0] === 'Setting' && cell[status] === 'NOT RUN' && cell[evidence] === '—',
-    );
+    // Any row whose evidence is still blank. Pinning this to one surface broke
+    // the moment that surface gained evidence, which is the normal direction of
+    // travel for this ledger.
+    const blank = cells().find((cell) => cell[status] === 'NOT RUN' && cell[evidence] === '—');
+    const surface = blank?.[0] ?? '';
     const identifier = blank?.[1] ?? '';
     expect(identifier.length).toBeGreaterThan(0);
 
@@ -125,7 +127,7 @@ describe('surface inventory', () => {
       .split('\n')
       .map((line) => {
         const parts = line.split('|').map((part) => part.trim());
-        if (parts[1] !== 'Setting' || parts[2] !== identifier) return line;
+        if (parts[1] !== surface || parts[2] !== identifier) return line;
         const body = parts.slice(1, -1);
         body[columnOf('Lane')] = 'test:playwright';
         body[columnOf('Status')] = 'PASS';
@@ -137,9 +139,9 @@ describe('surface inventory', () => {
 
     regenerate();
 
-    expect(field('Setting', identifier, 'Lane')).toBe('test:playwright');
-    expect(field('Setting', identifier, 'Status')).toBe('PASS');
-    expect(field('Setting', identifier, 'Evidence')).toBe('observed run 42');
+    expect(field(surface, identifier, 'Lane')).toBe('test:playwright');
+    expect(field(surface, identifier, 'Status')).toBe('PASS');
+    expect(field(surface, identifier, 'Evidence')).toBe('observed run 42');
   });
 
   it('reports a definition only tests reach as test-only rather than delivered', () => {

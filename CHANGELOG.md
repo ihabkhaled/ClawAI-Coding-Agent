@@ -2,6 +2,15 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.54.1
+
+Patch: the inventory preservation test no longer depends on one surface staying blank.
+
+- It looked for a Setting row with no evidence, and 1.54.0 gave every Setting row
+  evidence. The test broke on the ledger working as intended.
+- It now picks any row whose evidence is still blank, which is what it always
+  meant to assert.
+
 ## 1.54.0
 
 Minor: every contributed setting is now checked against the manifest.
