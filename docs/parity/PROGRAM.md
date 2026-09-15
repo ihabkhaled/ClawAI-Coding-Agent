@@ -3188,3 +3188,26 @@ covered without anyone remembering a list.
 that reads the manifest generically is invisible to it. Those 24 rows carry the
 evidence in the preserved columns instead, and stay NOT RUN because schema
 validity is not behaviour.
+
+### Batch 94 — the live check learns the real file shape
+
+| Batch | Version | Status          | Evidence                                |
+| ----- | ------- | --------------- | --------------------------------------- |
+| 94    | 1.55.0  | All lanes green | Live: 4 tool calls, 0 failures, exit 0. |
+
+**The check was testing a schema nothing uses.** It declared a flat
+`{path, content}` file tool. The model sent
+`{transaction:{operations:[{kind,path,contentLines}]}}`, which is the shape the
+product's own workspace file tool takes.
+
+**Found only because the error printed what it received.** A refusal that does
+not show the payload leaves the reader guessing, and this one had been guessed
+at for two releases.
+
+**One wasted call per run, gone.** Five tool calls became four, and no call
+fails now.
+
+**A note on flakiness.** The live lane runs a real model and is not
+deterministic: one run of 1.54.1 produced code that did not print the expected
+output, and the retry passed. That is a property of the lane, recorded rather
+than hidden.

@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.55.0
+
+Minor: the live check speaks the file-transaction shape the product actually uses.
+
+- **The model was not sending a flat path and content.** It sent
+  `{transaction:{operations:[{kind,path,contentLines}]}}` — the shape the real
+  workspace file tool takes. The check refused it, so the check was testing a
+  schema nothing uses.
+- Accepting it removes a wasted tool call from every run: 5 calls became 4, and
+  no call fails any more.
+- The error message now includes the argument shape it received, which is how
+  this was found at all. A refusal that does not show what arrived leaves the
+  reader guessing.
+- Multi-file transactions are applied in order, and an operation without a path
+  is still refused — per operation, not per call.
+
 ## 1.54.1
 
 Patch: the inventory preservation test no longer depends on one surface staying blank.

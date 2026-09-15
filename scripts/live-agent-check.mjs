@@ -197,10 +197,42 @@ function resolveInside(relative) {
 function requirePath(operation, args) {
   if (typeof args.path === 'string' && args.path.trim().length > 0) return args.path;
   const provided = Object.keys(args).join(', ') || 'nothing';
-  throw new Error(`workspace.file ${operation} requires a "path" argument. Received: ${provided}.`);
+  throw new Error(
+    `workspace.file ${operation} requires a "path" argument. Received: ${provided}. Shape: ${JSON.stringify(args).slice(0, 300)}`,
+  );
+}
+
+/**
+ * Applies the transaction shape the real workspace tool uses.
+ *
+ * The model produces `{transaction:{operations:[{kind,path,contentLines}]}}`
+ * rather than a flat path and content, because that is the shape the product's
+ * own file tool takes. Refusing it made the check test a schema nothing uses;
+ * accepting it makes this lane exercise what actually ships.
+ */
+function applyTransaction(transaction) {
+  const operations = Array.isArray(transaction?.operations) ? transaction.operations : [];
+  if (operations.length === 0) throw new Error('workspace.file transaction carried no operations');
+  const written = [];
+  for (const operation of operations) {
+    if (typeof operation?.path !== 'string' || operation.path.trim().length === 0) {
+      throw new Error('Each transaction operation needs a "path".');
+    }
+    const target = resolveInside(operation.path);
+    const body = Array.isArray(operation.contentLines)
+      ? operation.contentLines.join('\n')
+      : typeof operation.content === 'string'
+        ? operation.content
+        : '';
+    mkdirSync(path.dirname(target), { recursive: true });
+    writeFileSync(target, body, 'utf8');
+    written.push(operation.path);
+  }
+  return { written };
 }
 
 function runFileTool(operation, args) {
+  if (args.transaction !== undefined) return applyTransaction(args.transaction);
   if (operation === 'list') return { entries: readdirSync(workspace) };
   if (operation === 'read')
     return { content: readFileSync(resolveInside(requirePath(operation, args)), 'utf8') };
