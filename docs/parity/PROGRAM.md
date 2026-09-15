@@ -3145,3 +3145,24 @@ rediscovering, and forwards the root key and abort signal unchanged.
 not record.
 
 Surfaces with no test: 70 to 66.
+
+### Batch 92 — the three highest-risk executors
+
+| Batch | Version | Status          | Evidence                  |
+| ----- | ------- | --------------- | ------------------------- |
+| 92    | 1.53.0  | All lanes green | 11 new tests, 2397 total. |
+
+**Browser, elevation and process were the three worth doing next**, because each
+reaches something the model should not be able to redirect.
+
+**A page can influence arguments.** `workspace.browser` now has it pinned that
+the operation comes from the invocation, so a snapshot cannot be renamed into a
+download.
+
+**Elevation refuses any operation but `execute`.** It raises privilege, so a
+second operation arriving by accident should be refused rather than interpreted.
+
+**`workspace.process` refuses a malformed create before anything is spawned.**
+
+Surfaces with no test: 66 to 63. All 12 previously untested executors now have
+dispatch coverage.

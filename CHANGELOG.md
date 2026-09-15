@@ -2,6 +2,21 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.53.0
+
+Minor: the three highest-risk executors get tests — browser, elevation, process.
+
+- **`workspace.browser` takes its operation from the invocation.** A page can
+  influence arguments; it must never be able to rename the operation and turn a
+  snapshot into a download.
+- `wait-ready` routes to the readiness service and never reaches the browser.
+- **`runtime.elevation` refuses any operation but `execute`.** Elevation raises
+  privilege, so a second operation arriving here by accident is worth refusing
+  loudly rather than interpreting.
+- **`workspace.process` refuses a create whose arguments do not describe a
+  process**, before anything is spawned.
+- Surfaces with no test fall from 66 to 63.
+
 ## 1.52.0
 
 Minor: four more tool executors get the tests they never had.
