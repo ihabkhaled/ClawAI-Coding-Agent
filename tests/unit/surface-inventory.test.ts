@@ -95,31 +95,61 @@ describe('surface inventory', () => {
   it('keeps a recorded observation when the inventory is regenerated', () => {
     // The whole point of preserving these columns: regenerating must never
     // erase what a lane actually observed.
-    const marked = original.replace(
-      /(\| Command +\| clawAI\.logout +\|[^|]*\|[^|]*\|) +— +\| NOT RUN \| +— +\|/u,
-      '$1 test:host | PASS | run 1234 |',
+    const blank = cells().find(
+      (cell) => cell[0] === 'Setting' && cell[5] === 'NOT RUN' && cell[6] === '—',
     );
-    expect(marked).not.toBe(original);
+    const identifier = blank?.[1] ?? '';
+    expect(identifier.length).toBeGreaterThan(0);
+
+    const marked = original
+      .split('\n')
+      .map((line) => {
+        const parts = line.split('|').map((part) => part.trim());
+        if (parts[1] !== 'Setting' || parts[2] !== identifier) return line;
+        parts[5] = 'test:playwright';
+        parts[6] = 'PASS';
+        parts[7] = 'observed run 42';
+        return `| ${parts.slice(1, 8).join(' | ')} |`;
+      })
+      .join('\n');
     writeFileSync(INVENTORY, marked, 'utf8');
 
     regenerate();
 
-    const logout = row('Command', 'clawAI.logout');
-    expect(logout?.[4]).toBe('test:host');
-    expect(logout?.[5]).toBe('PASS');
-    expect(logout?.[6]).toBe('run 1234');
+    const preserved = cells().find((cell) => cell[1] === identifier);
+    expect(preserved?.[4]).toBe('test:playwright');
+    expect(preserved?.[5]).toBe('PASS');
+    expect(preserved?.[6]).toBe('observed run 42');
   });
 
   it('reports a definition only tests reach as test-only rather than delivered', () => {
     expect(row('Runtime tool', 'fixture.workspace-summary')?.[3]).toMatch(/^test-only \(/u);
   });
 
-  it('counts every row and starts them at NOT RUN until something observes them', () => {
+  it('counts every row and gives each a status the rules recognise', () => {
     const rows = cells().filter((cell) =>
       ['Command', 'Setting', 'View', 'Keybinding', 'Runtime tool'].includes(cell[0] ?? ''),
     );
 
     expect(rows.length).toBe(116);
-    expect(rows.every((cell) => cell[5] === 'NOT RUN')).toBe(true);
+    for (const cell of rows) {
+      expect(['PASS', 'FAIL', 'BLOCKED', 'NOT RUN']).toContain(cell[5]);
+    }
+  });
+
+  it('keeps the totals table agreeing with the rows it summarises', () => {
+    const rows = cells().filter((cell) =>
+      ['Command', 'Setting', 'View', 'Keybinding', 'Runtime tool'].includes(cell[0] ?? ''),
+    );
+    const totals = new Map(
+      cells()
+        .filter((cell) => cell.length === 2)
+        .map((cell) => [cell[0] ?? '', cell[1] ?? '']),
+    );
+
+    for (const status of ['PASS', 'FAIL', 'BLOCKED', 'NOT RUN']) {
+      const counted = rows.filter((cell) => cell[5] === status).length;
+      expect(totals.get(status)).toBe(String(counted));
+    }
   });
 });
