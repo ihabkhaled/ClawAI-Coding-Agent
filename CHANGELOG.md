@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.57.0
+
+Minor: every contributed command, keybinding, menu entry and view is checked.
+
+- **A command in the manifest is a row in the user's palette.** If nothing
+  registers it, choosing it raises "command not found" — the worst failure,
+  because the product advertised it. All 43 are now proven to be referenced.
+- Every title and view name is localized rather than literal, so the palette is
+  translated like everything else instead of being English in 13 locales.
+- Every keybinding and menu entry points at a command that exists, so a rename
+  cannot leave a dead binding behind.
+- **Every view has a provider registered in source.** A view whose provider is
+  missing renders an empty panel with no error, which is worse than a missing
+  command because nothing tells the user it is broken.
+- The activity-bar container ships the icon it points at.
+- `onUri` remains absent from activation events, so no link can trigger
+  activation.
+
 ## 1.56.0
 
 Minor: the live and headless lanes default to the Ollama connector, so running
