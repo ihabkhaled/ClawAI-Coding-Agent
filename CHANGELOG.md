@@ -2,6 +2,31 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.49.0
+
+Minor: the inventory now records which surfaces have a test, and the Git tool
+gets the one it never had.
+
+- **A new computed column answers the second half of rule 1.** The call-path
+  column says a surface is reachable; this one says whether anything tests it.
+  Rule 1 needs both, and only one was being tracked.
+- **75 of 116 surfaces have no test.** That number is the point of the column.
+  It is reported rather than estimated, and it moves only when a test is written.
+- **13 of 28 tool executors had no direct test.** The core each one calls is
+  well covered; the adapter that parses arguments and dispatches operations was
+  not, and that adapter is where a wrong operation would slip through.
+- **`workspace.git` is the first closed**, with 8 tests. One of them matters
+  beyond coverage: the operation comes from the invocation and an argument
+  named `operation` cannot override it. Without that, a caller could ask for
+  `status` and run `push`.
+- **The Git executor now takes a port rather than a concrete service**, matching
+  every other executor in the folder. That is what let the test drop a banned
+  `as unknown as` cast instead of hiding behind it.
+- **The inventory parser finds its columns by header name.** Adding this column
+  shifted every recorded status one place and silently rewrote the ledger, which
+  is precisely the failure the ledger exists to prevent. It now reads the header,
+  and a regression test adds a column to prove a status survives.
+
 ## 1.48.1
 
 Patch: record what the installed-host lane actually proves about commands.

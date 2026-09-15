@@ -6,6 +6,7 @@ import process from 'node:process';
 import { afterEach, describe, expect, it } from 'vitest';
 
 const INVENTORY = path.join('docs', 'parity', 'SURFACE_INVENTORY.md');
+const NEWLINE = String.fromCharCode(10);
 const GENERATOR = path.join('scripts', 'generate-surface-inventory.mjs');
 
 function inventory(): string {
@@ -33,6 +34,20 @@ function row(surface: string, id: string): string[] | undefined {
   return cells().find((cell) => cell[0] === surface && cell[1] === id);
 }
 
+/** Column index by header name, so a new column never silently shifts a test. */
+function columnOf(label: string): number {
+  const header = cells().find(
+    (cell) => cell.includes('Identifier') && cell.includes('Status') && cell.includes('Evidence'),
+  );
+  const index = header?.indexOf(label) ?? -1;
+  expect(index).toBeGreaterThan(-1);
+  return index;
+}
+
+function field(surface: string, id: string, label: string): string | undefined {
+  return row(surface, id)?.[columnOf(label)];
+}
+
 function runCheck(): number {
   try {
     execFileSync(process.execPath, [GENERATOR, '--check'], { stdio: 'pipe' });
@@ -46,6 +61,9 @@ function regenerate(): void {
   execFileSync(process.execPath, [GENERATOR], { stdio: 'pipe' });
 }
 
+// Snapshotted from a freshly generated file so the suite never measures a
+// half-written tree left behind by something else.
+execFileSync(process.execPath, [GENERATOR], { stdio: 'pipe' });
 const original = inventory();
 
 afterEach(() => {
@@ -95,8 +113,10 @@ describe('surface inventory', () => {
   it('keeps a recorded observation when the inventory is regenerated', () => {
     // The whole point of preserving these columns: regenerating must never
     // erase what a lane actually observed.
+    const status = columnOf('Status');
+    const evidence = columnOf('Evidence');
     const blank = cells().find(
-      (cell) => cell[0] === 'Setting' && cell[5] === 'NOT RUN' && cell[6] === '—',
+      (cell) => cell[0] === 'Setting' && cell[status] === 'NOT RUN' && cell[evidence] === '—',
     );
     const identifier = blank?.[1] ?? '';
     expect(identifier.length).toBeGreaterThan(0);
@@ -106,24 +126,26 @@ describe('surface inventory', () => {
       .map((line) => {
         const parts = line.split('|').map((part) => part.trim());
         if (parts[1] !== 'Setting' || parts[2] !== identifier) return line;
-        parts[5] = 'test:playwright';
-        parts[6] = 'PASS';
-        parts[7] = 'observed run 42';
-        return `| ${parts.slice(1, 8).join(' | ')} |`;
+        const body = parts.slice(1, -1);
+        body[columnOf('Lane')] = 'test:playwright';
+        body[columnOf('Status')] = 'PASS';
+        body[columnOf('Evidence')] = 'observed run 42';
+        return `| ${body.join(' | ')} |`;
       })
       .join('\n');
     writeFileSync(INVENTORY, marked, 'utf8');
 
     regenerate();
 
-    const preserved = cells().find((cell) => cell[1] === identifier);
-    expect(preserved?.[4]).toBe('test:playwright');
-    expect(preserved?.[5]).toBe('PASS');
-    expect(preserved?.[6]).toBe('observed run 42');
+    expect(field('Setting', identifier, 'Lane')).toBe('test:playwright');
+    expect(field('Setting', identifier, 'Status')).toBe('PASS');
+    expect(field('Setting', identifier, 'Evidence')).toBe('observed run 42');
   });
 
   it('reports a definition only tests reach as test-only rather than delivered', () => {
-    expect(row('Runtime tool', 'fixture.workspace-summary')?.[3]).toMatch(/^test-only \(/u);
+    expect(field('Runtime tool', 'fixture.workspace-summary', 'Call path')).toMatch(
+      /^test-only \(/u,
+    );
   });
 
   it('counts every row and gives each a status the rules recognise', () => {
@@ -132,8 +154,9 @@ describe('surface inventory', () => {
     );
 
     expect(rows.length).toBe(116);
+    const status = columnOf('Status');
     for (const cell of rows) {
-      expect(['PASS', 'FAIL', 'BLOCKED', 'NOT RUN']).toContain(cell[5]);
+      expect(['PASS', 'FAIL', 'BLOCKED', 'NOT RUN']).toContain(cell[status]);
     }
   });
 
@@ -147,9 +170,32 @@ describe('surface inventory', () => {
         .map((cell) => [cell[0] ?? '', cell[1] ?? '']),
     );
 
+    const column = columnOf('Status');
     for (const status of ['PASS', 'FAIL', 'BLOCKED', 'NOT RUN']) {
-      const counted = rows.filter((cell) => cell[5] === status).length;
+      const counted = rows.filter((cell) => cell[column] === status).length;
       expect(totals.get(status)).toBe(String(counted));
     }
+  });
+
+  it('finds its columns by header name, so adding one cannot shift a status', () => {
+    // A parser that counted from the left rewrote every status the first time a
+    // column was inserted. The ledger's whole value is that it does not do that.
+    const reordered = original
+      .split(NEWLINE)
+      .map((line) => {
+        if (!line.startsWith('|')) return line;
+        const parts = line
+          .split('|')
+          .slice(1, -1)
+          .map((part) => part.trim());
+        if (parts.length < 8) return line;
+        return `| ${parts.join(' | ')} | extra |`;
+      })
+      .join(NEWLINE);
+    writeFileSync(INVENTORY, reordered, 'utf8');
+
+    regenerate();
+
+    expect(field('Command', 'clawAI.openChat', 'Status')).toBe('PASS');
   });
 });
