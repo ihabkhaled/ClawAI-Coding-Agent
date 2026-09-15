@@ -7,7 +7,7 @@ import { runCommandSpec } from './bounded-command-runner';
 import type { SubAgentTask } from '../core/multi-agent-dag';
 import type { SubAgentWorktreePort } from '../services/sub-agent-worktree-service';
 
-interface RuntimeRootRegistry {
+export interface RuntimeRootRegistry {
   workspaceRootUri(rootKey: string): { readonly fsPath: string };
   registerRuntimeRoot(rootKey: string, rootPath: string): void;
   unregisterRuntimeRoot(rootKey: string): void;

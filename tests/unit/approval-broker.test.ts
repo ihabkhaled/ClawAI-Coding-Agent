@@ -137,3 +137,88 @@ describe('ApprovalBroker', () => {
     expect(broker.cancelKind('runtimeEffect')).toBe(false);
   });
 });
+
+describe('ApprovalBroker questions', () => {
+  const question = {
+    header: 'Storage',
+    question: 'Which store should the cache use?',
+    options: [{ label: 'Redis' }, { label: 'In-memory' }],
+    allowOther: true,
+  };
+
+  function broker(published: unknown[] = []) {
+    return new ApprovalBroker({
+      update: (patch) => {
+        published.push(patch.questionRequest);
+      },
+    });
+  }
+
+  it('publishes the question and resolves with the chosen option', async () => {
+    const published: unknown[] = [];
+    const subject = broker(published);
+
+    const answer = subject.ask(question);
+    const asked = published.at(-1) as { id: string };
+
+    expect(asked.id).toBeTypeOf('string');
+    expect(subject.answer(asked.id, { label: 'Redis' })).toBe(true);
+    await expect(answer).resolves.toEqual({ kind: 'option', label: 'Redis' });
+  });
+
+  it('resolves free text when the question allows it', async () => {
+    const published: unknown[] = [];
+    const subject = broker(published);
+
+    const answer = subject.ask(question);
+    const asked = published.at(-1) as { id: string };
+    subject.answer(asked.id, { other: 'DynamoDB' });
+
+    await expect(answer).resolves.toEqual({ kind: 'other', text: 'DynamoDB' });
+  });
+
+  // A selection naming an option this question never offered would otherwise
+  // complete the run with an answer the user did not give.
+  it('leaves the question standing when the selection is not one it offered', async () => {
+    const published: unknown[] = [];
+    const subject = broker(published);
+
+    void subject.ask(question);
+    const asked = published.at(-1) as { id: string };
+
+    expect(subject.answer(asked.id, { label: 'Postgres' })).toBe(false);
+    expect(subject.answer('some-other-id', { label: 'Redis' })).toBe(false);
+    expect(subject.current?.id).toBe(asked.id);
+  });
+
+  // A run that ends withdraws what it was asking. The question must report that
+  // it went unanswered rather than resolve to one of the options.
+  it('reports a withdrawn question as dismissed, never as a choice', async () => {
+    const subject = broker();
+
+    const answer = subject.ask(question);
+    subject.cancelKind('runtimeQuestion');
+
+    await expect(answer).resolves.toEqual({ kind: 'dismissed' });
+  });
+
+  it('shares one modal slot with approvals rather than opening a second one', async () => {
+    const subject = broker();
+
+    const approval = subject.request({
+      kind: 'workspaceContext',
+      message: 'Read the workspace',
+      title: 'Workspace access',
+    });
+    const queued = subject.ask(question);
+
+    // The approval is on screen; the question is queued behind it.
+    expect(subject.current?.kind).toBe('workspaceContext');
+    subject.resolve(subject.current?.id ?? '', true);
+    await expect(approval).resolves.toBe(true);
+    expect(subject.current?.kind).toBe('runtimeQuestion');
+
+    subject.cancelAll();
+    await expect(queued).resolves.toEqual({ kind: 'dismissed' });
+  });
+});

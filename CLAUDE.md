@@ -38,7 +38,8 @@ and RTL-compatible layout.
 - all 13 package/runtime locale bundles regenerated;
 - formatting, ESLint, strict TypeScript, bundle, package audit, runtime
   dependency audit, and VSIX packaging green;
-- docs and changelog updated for user-visible or contract changes.
+- docs and changelog updated for user-visible or contract changes, and no claim
+  written for a module that nothing yet imports.
 
 Every publishable change must apply `skills/version-every-change/SKILL.md`,
 advance SemVer, rebuild the versioned VSIX in `builds/`, and publish a matching

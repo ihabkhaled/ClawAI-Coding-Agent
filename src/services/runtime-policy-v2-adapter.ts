@@ -1,6 +1,13 @@
 import { createHash, randomBytes } from 'node:crypto';
 
-import { evaluatePolicyV2, OneShotCapabilityIssuer, type PolicyRequest } from '../core/policy-v2';
+import { z } from 'zod';
+
+import {
+  evaluatePolicyV2,
+  OneShotCapabilityIssuer,
+  type PolicyRequest,
+  type PolicySubject,
+} from '../core/policy-v2';
 
 import type { RuntimeToolPolicyDecision, RuntimeToolPolicyPort } from './runtime-tool-dispatcher';
 import type { PermissionMode } from '../core/permission-policy.types';
@@ -15,6 +22,8 @@ interface RuntimePolicyContext {
   readonly mode: () => PermissionMode;
   readonly workspaceTrusted: () => boolean;
   readonly userPresent: () => boolean;
+  /** Undefined when no organization constrains this user, or the backend is older. */
+  readonly organizationPolicy: () => unknown;
   readonly approve: (request: PolicyRequest, signal?: AbortSignal) => Promise<boolean>;
 }
 
@@ -45,6 +54,95 @@ function classify(
 
 type Classification = Pick<PolicyRequest, 'effect' | 'risk' | 'reversible'>;
 
+/**
+ * What a project rule may match on: the tool, the operation, the paths the
+ * call names and the command it would run.
+ *
+ * Paths are collected from the argument shapes the tools actually use rather
+ * than by walking the whole object, so a rule matches what the call will touch
+ * and not an unrelated string that happens to look like a path.
+ */
+// The argument shapes that name a path. Parsing them beats walking the object:
+// a rule then matches what the call will touch, not an unrelated string that
+// happens to look like a path, and nothing is read off an `any`.
+const pathBearingArgumentsSchema = z
+  .object({
+    path: z.string().min(1).max(4_096).optional(),
+    paths: z.array(z.string().min(1).max(4_096)).max(1_000).optional(),
+    transaction: z
+      .object({
+        operations: z
+          .array(
+            z
+              .object({
+                path: z.string().min(1).max(4_096).optional(),
+                destination: z.string().min(1).max(4_096).optional(),
+              })
+              .loose(),
+          )
+          .max(1_000)
+          .optional(),
+      })
+      .loose()
+      .optional(),
+    executable: z.string().min(1).max(4_096).optional(),
+    arguments: z.array(z.string().max(32_768)).max(1_000).optional(),
+    url: z.string().min(1).max(4_096).optional(),
+  })
+  .loose();
+
+/**
+ * The hosts a call names, for domain rules to match against.
+ *
+ * Parsed with the URL parser rather than a pattern, so `https://evil.test/#a.trusted.test`
+ * yields `evil.test` and not the host someone hoped a reader would see. A URL
+ * that does not parse contributes nothing: the tool's own guard is what
+ * rejects it, and inventing a host here would be inventing a policy subject.
+ */
+function subjectDomains(parsed: z.infer<typeof pathBearingArgumentsSchema>): string[] {
+  if (parsed.url === undefined) return [];
+  try {
+    return [new URL(parsed.url).hostname.toLowerCase()];
+  } catch {
+    return [];
+  }
+}
+
+function subjectPaths(parsed: z.infer<typeof pathBearingArgumentsSchema>): string[] {
+  const paths = new Set<string>();
+  if (parsed.path !== undefined) paths.add(parsed.path);
+  for (const value of parsed.paths ?? []) paths.add(value);
+  for (const operation of parsed.transaction?.operations ?? []) {
+    if (operation.path !== undefined) paths.add(operation.path);
+    if (operation.destination !== undefined) paths.add(operation.destination);
+  }
+  return [...paths];
+}
+
+/**
+ * What a project rule may match on: the tool, the operation, the paths the
+ * call names and the command it would run.
+ *
+ * Malformed arguments yield a subject with no paths rather than throwing. The
+ * tool's own schema is what rejects them; refusing to classify here would turn
+ * a bad argument into a policy failure.
+ */
+function policySubject(invocation: ToolInvocation): PolicySubject {
+  const parsed = pathBearingArgumentsSchema.safeParse(invocation.arguments);
+  const base = { tool: invocation.toolName, operation: invocation.operation };
+  if (!parsed.success) return { ...base, paths: [], domains: [] };
+  const command =
+    parsed.data.executable === undefined
+      ? undefined
+      : [parsed.data.executable, ...(parsed.data.arguments ?? [])].join(' ').slice(0, 8_192);
+  return {
+    ...base,
+    paths: subjectPaths(parsed.data),
+    domains: subjectDomains(parsed.data),
+    ...(command === undefined ? {} : { command }),
+  };
+}
+
 const gitReadOperations = new Set([
   'status',
   'diff',
@@ -57,6 +155,7 @@ const gitReadOperations = new Set([
   'conflicts',
   'submodules',
   'topology',
+  'pr-readiness',
 ]);
 
 function classifyGit(operation: string): Classification {
@@ -151,8 +250,13 @@ export class RuntimePolicyV2Adapter implements RuntimeToolPolicyPort {
       },
       workspaceTrusted: this.context.workspaceTrusted(),
       userPresent: this.context.userPresent(),
+      subject: policySubject(invocation),
     };
-    const decision = evaluatePolicyV2(request, await this.projectPolicy.load());
+    const decision = evaluatePolicyV2(
+      request,
+      await this.projectPolicy.load(),
+      this.context.organizationPolicy(),
+    );
     if (decision.outcome === 'deny') {
       return {
         decision: 'deny',
@@ -192,6 +296,7 @@ export class RuntimePolicyV2Adapter implements RuntimeToolPolicyPort {
       },
       workspaceTrusted: this.context.workspaceTrusted(),
       userPresent: this.context.userPresent(),
+      subject: policySubject(invocation),
     };
     this.issuer.consume(token, request);
     this.capabilities.delete(invocation.invocationId);

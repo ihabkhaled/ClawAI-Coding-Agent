@@ -2,6 +2,7 @@ import { createHash, randomUUID } from 'node:crypto';
 
 import * as vscode from 'vscode';
 
+import { browserAllowedOrigins } from '../core/browser-origins';
 import { flagshipHostIdentityHash } from '../core/flagship-delivery';
 import { browserToolDefinition } from '../infrastructure/browser-tool-executor';
 
@@ -63,7 +64,7 @@ export function runtimeBrowserScope(configuration: RuntimeConfiguration): Browse
     value === undefined ? [] : [new URL(value).origin],
   );
   return {
-    allowedOrigins: [...new Set(origins)],
+    allowedOrigins: browserAllowedOrigins(origins, configuration.browserOrigins),
     allowExternalNavigationWithApproval: true,
     allowDownloads: false,
     maxDownloadBytes: 104_857_600,
@@ -205,4 +206,37 @@ export async function steerRuntime(
     },
     new AbortController().signal,
   );
+}
+
+type RuntimeEpochs = ToolInvocation['epochs'];
+
+/**
+ * A change of account raises the account epoch and nothing else.
+ *
+ * The workspace is still the same tree, so its undo history and its run-scoped
+ * stores are still about files that are still there. Clearing them here would
+ * throw away recoverable work for a reason unrelated to it.
+ */
+export function nextAccountEpoch(epochs: RuntimeEpochs): RuntimeEpochs {
+  return { ...epochs, account: epochs.account + 1 };
+}
+
+export function nextWorkspaceEpoch(epochs: RuntimeEpochs): RuntimeEpochs {
+  return { ...epochs, workspace: epochs.workspace + 1 };
+}
+
+/**
+ * What a change of folder makes untrue.
+ *
+ * An undo entry restores bytes into the workspace it was captured from.
+ * Replaying one after a folder change would write a stale file into a tree that
+ * never had it, which is the rare kind of undo that damages rather than
+ * repairs.
+ */
+export function forgetWorkspaceScopedState(
+  transactions: { forgetUndoHistory: () => void },
+  stores: { clear: () => void },
+): void {
+  transactions.forgetUndoHistory();
+  stores.clear();
 }

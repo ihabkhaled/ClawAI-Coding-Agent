@@ -32,6 +32,10 @@ async function run() {
     'AUTONOMOUS_SCOPED',
     'ENTERPRISE_LOCKED',
   ]);
+  // Still true after the navigation-only URI handler landed: activation is
+  // already `onStartupFinished`, so the handler needs no `onUri` event, and
+  // authorization still never travels through a URI callback.
+  // See docs/adr/0001-uri-handler-navigation-only.md.
   assert.ok(
     !extension.packageJSON.activationEvents.includes('onUri'),
     'loopback browser authorization does not expose a custom URI callback',

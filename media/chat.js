@@ -9,6 +9,15 @@ const elements = {
   agentBehavior: byId('agentBehavior'),
   announcer: byId('announcer'),
   approvalApprove: byId('approvalApprove'),
+  questionPanel: byId('questionPanel'),
+  questionHeader: byId('questionHeader'),
+  questionTitle: byId('questionTitle'),
+  questionMessage: byId('questionMessage'),
+  questionOptions: byId('questionOptions'),
+  questionOther: byId('questionOther'),
+  questionOtherLabel: byId('questionOtherLabel'),
+  questionDismiss: byId('questionDismiss'),
+  questionSubmit: byId('questionSubmit'),
   approvalDetails: byId('approvalDetails'),
   approvalKind: byId('approvalKind'),
   approvalMessage: byId('approvalMessage'),
@@ -64,6 +73,11 @@ const elements = {
   effortMode: byId('effortMode'),
   speedMode: byId('speedMode'),
   permissionMode: byId('permissionMode'),
+  contextWarning: byId('contextWarning'),
+  focusToggle: byId('focusToggle'),
+  mentionList: byId('mentionList'),
+  mentionPanel: byId('mentionPanel'),
+  mentionStatus: byId('mentionStatus'),
   prompt: byId('prompt'),
   refreshModelsButton: byId('refreshModelsButton'),
   researchMode: byId('researchMode'),
@@ -106,6 +120,7 @@ let currentState = {
   busy: false,
   connected: false,
   modelWarnings: [],
+  modelRunsTools: true,
   models: [],
   permissionMode: 'ASK',
   routingMode: 'AUTO',
@@ -130,6 +145,60 @@ const MAX_RETRY_ATTACHMENT_CHARS = 32 * 1024 * 1024;
 const MAX_ATTACHMENTS = 10;
 const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 const MAX_TOTAL_ATTACHMENT_BYTES = 50 * 1024 * 1024;
+// Mirrors the secret screening in src/core/chat-attachment.ts, which mirrors
+// src/core/workspace-path-policy.ts. The host is the boundary and blocks these
+// regardless; refusing here is what turns a bare "invalid request" into a
+// message naming the file. Keep the three in step — tests/unit/chat-attachment
+// holds the shared corpus, and package:audit fails if this check disappears.
+const SENSITIVE_ATTACHMENT_EXACT_NAMES = new Set([
+  '.git',
+  '.ssh',
+  '.npmrc',
+  '.pypirc',
+  '.netrc',
+  'id_rsa',
+  'id_dsa',
+  'id_ecdsa',
+  'id_ed25519',
+]);
+const SENSITIVE_ATTACHMENT_NAME_PATTERN =
+  /(?:secret|credential|api[-_]?key|private[-_]?key|(?:access|refresh|auth)[-_]?token)/iu;
+const ATTACHMENT_CREDENTIAL_WORD_PATTERN =
+  /(?:^|[^a-z0-9])(?:passwords?|passwd|tokens?)(?:[^a-z0-9]|$)/u;
+const ATTACHMENT_CREDENTIAL_WORD_ONLY = /^(?:passwords?|passwd|tokens?)$/u;
+const ATTACHMENT_CODE_EXTENSION_PATTERN =
+  /\.(?:ts|tsx|mts|cts|js|jsx|mjs|cjs|py|rb|go|rs|java|kt|cs|php|swift|scala|vue|svelte|astro|sql|prisma|graphql|gql|proto|css|scss|less)$/u;
+const ATTACHMENT_DOCUMENT_EXTENSION_PATTERN = /\.(?:md|mdx|html|adoc|rst|tex)$/u;
+
+function isCredentialShapedAttachmentName(segment) {
+  if (!ATTACHMENT_CREDENTIAL_WORD_PATTERN.test(segment)) return false;
+  const extension = /\.[a-z0-9]+$/u.exec(segment);
+  const stem = extension === null ? segment : segment.slice(0, extension.index);
+  const words = stem.split(/[^a-z0-9]+/u).filter((word) => word.length > 0);
+  if (words.every((word) => ATTACHMENT_CREDENTIAL_WORD_ONLY.test(word))) {
+    return extension === null || !ATTACHMENT_CODE_EXTENSION_PATTERN.test(segment);
+  }
+  if (extension === null) return false;
+  return (
+    !ATTACHMENT_CODE_EXTENSION_PATTERN.test(segment) &&
+    !ATTACHMENT_DOCUMENT_EXTENSION_PATTERN.test(segment)
+  );
+}
+
+function isSecretBearingAttachmentName(filename) {
+  const normalized = filename
+    .trim()
+    .replace(/[. ]+$/gu, '')
+    .toLowerCase();
+  return (
+    SENSITIVE_ATTACHMENT_EXACT_NAMES.has(normalized) ||
+    normalized === '.env' ||
+    normalized.startsWith('.env.') ||
+    SENSITIVE_ATTACHMENT_NAME_PATTERN.test(normalized) ||
+    isCredentialShapedAttachmentName(normalized)
+  );
+}
+
 const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
   'application/graphql',
   'application/javascript',
@@ -312,11 +381,90 @@ function translatedTemplate(template, ...values) {
   );
 }
 
+// The cache share belongs in the tooltip rather than the label. It changes what
+// a request cost and not how much of the window it used, and the label is read
+// as a capacity number.
+function tokenTooltip(receipt) {
+  const detail = translatedTemplate(labels.tokenDetail, receipt.input, receipt.output);
+  const cached = Number(receipt.cached ?? 0);
+  if (cached <= 0 || receipt.input <= 0) {
+    return detail;
+  }
+  const share = Math.round((cached / receipt.input) * 100);
+  return `${detail} · ${translatedTemplate(labels.tokenCached, cached, share)}`;
+}
+
 function tokenChip(receipt, className = '') {
   const chip = textElement('span', `token-chip ${className}`.trim(), tokenLabel(receipt));
   chip.dataset.source = receipt.source;
-  chip.title = translatedTemplate(labels.tokenDetail, receipt.input, receipt.output);
+  chip.title = tokenTooltip(receipt);
   return chip;
+}
+
+/**
+ * The context window of the model this conversation will actually use.
+ *
+ * The catalog has carried `contextTokens` from four different backend shapes
+ * all along and nothing ever read it, so the meter showed a running total with
+ * nothing to measure it against — a number that cannot say whether it is
+ * comfortable or nearly spent. AUTO has no single answer, and a model may
+ * report no window at all, so both return null and the meter keeps its old
+ * denominator-free form rather than inventing one.
+ */
+function activeContextCapacity() {
+  const modelKey = activeModelValue();
+  // A strategy has no single window: the router chooses per request, so there is
+  // no denominator the meter could honestly show.
+  if (isRoutingStrategy(modelKey) || modelKey === '') return null;
+  const entry = (currentState.models ?? []).find((model) => model.key === modelKey);
+  const capacity = entry?.contextTokens ?? null;
+  return typeof capacity === 'number' && capacity > 0 ? capacity : null;
+}
+
+// Truncation risk. Mirrors src/core/context-budget.ts: a window is not a
+// budget for the prompt alone, because the answer has to fit in the same
+// window. A quarter is kept back, bounded at both ends.
+const RESERVED_FRACTION = 0.25;
+const MIN_RESERVED = 1024;
+const MAX_RESERVED = 32000;
+
+function promptBudget() {
+  const capacity = activeContextCapacity();
+  if (capacity === null) {
+    return undefined;
+  }
+  const reserved = Math.min(
+    MAX_RESERVED,
+    Math.max(MIN_RESERVED, Math.round(capacity * RESERVED_FRACTION)),
+  );
+  return { capacity, reserved, availableForPrompt: Math.max(0, capacity - reserved) };
+}
+
+function renderTruncationWarning() {
+  const budget = promptBudget();
+  if (budget === undefined) {
+    elements.contextWarning.hidden = true;
+    return;
+  }
+  const receipts = [...requestTokens.values()];
+  const spent = historyTokenTotal + receipts.reduce((total, receipt) => total + receipt.total, 0);
+  const drafted = Math.ceil(elements.prompt.value.length / 4);
+  const projected = spent + drafted;
+  if (projected > budget.availableForPrompt) {
+    elements.contextWarning.textContent = labels.contextOverflow;
+    elements.contextWarning.dataset.level = 'over';
+    elements.contextWarning.hidden = false;
+    return;
+  }
+  // Warned while it can still be acted on cheaply: this message fits, the next
+  // one will not. A meter that only speaks after the loss is a receipt.
+  if (projected > budget.availableForPrompt * 0.85) {
+    elements.contextWarning.textContent = labels.contextTight;
+    elements.contextWarning.dataset.level = 'tight';
+    elements.contextWarning.hidden = false;
+    return;
+  }
+  elements.contextWarning.hidden = true;
 }
 
 function renderConversationTokenCount() {
@@ -328,10 +476,37 @@ function renderConversationTokenCount() {
     (historyTokenTotal === 0 || historyTokensReported) &&
     receipts.every((receipt) => receipt.source === 'reported');
   const source = allReported ? 'reported' : 'estimated';
-  const summary = `${total} ${labels.tokens} · ${labels[source]}`;
+  const capacity = activeContextCapacity();
+  const summary =
+    capacity === null
+      ? `${total} ${labels.tokens} · ${labels[source]}`
+      : `${total} / ${capacity} ${labels.tokens} · ${labels[source]}`;
   elements.tokenCount.textContent = summary;
   elements.conversationTokenMeter.dataset.source = source;
+  if (capacity === null) {
+    delete elements.conversationTokenMeter.dataset.fill;
+  } else {
+    elements.conversationTokenMeter.dataset.fill = String(
+      Math.min(100, Math.round((total / capacity) * 100)),
+    );
+  }
   describeText(elements.conversationTokenMeter, summary);
+  renderTruncationWarning();
+  reportConversationTokens(total);
+}
+
+// The panel is the only place that knows this number, and the host is the only
+// place that can act on it. Sent as a bare total: the host derives the capacity
+// from the catalog it owns rather than trusting a denominator computed here.
+let reportedTokenTotal = -1;
+
+function reportConversationTokens(total) {
+  const threadId = currentSession?.threadId ?? '';
+  if (threadId.length === 0 || total === reportedTokenTotal) {
+    return;
+  }
+  reportedTokenTotal = total;
+  vscode.postMessage({ type: 'conversationTokens', threadId, tokens: total });
 }
 
 function updateRequestMeta(requestId) {
@@ -401,19 +576,48 @@ function appendActivity(requestId, key, title, description = '', tokens = 0) {
   item.scrollIntoView({ block: 'end', behavior: 'auto' });
 }
 
-function updateActivityTokens(requestId, key, tokens) {
-  const streamState = streamStates.get(requestId);
-  const item = streamState?.activityItems.get(key);
-  if (!item) {
+/**
+ * The reasoning row is a disclosure, not a line.
+ *
+ * Extended thinking can run for minutes, and a flat list item that only grows a
+ * token count gives no way to tell a long think from a stalled request. The
+ * summary carries the size and the step count; opening it explains why there is
+ * no text to read, which is a deliberate product answer rather than a missing
+ * feature.
+ */
+function appendReasoningActivity(requestId, streamState) {
+  const list = activityLists.get(requestId);
+  if (!list) {
     return;
   }
-  let counter = item.querySelector('.activity-token');
-  if (!counter) {
-    counter = textElement('span', 'activity-token token-chip token-chip-compact', '');
-    item.append(counter);
+  let item = streamState.activityItems.get('reasoning');
+  if (!item) {
+    item = document.createElement('li');
+    item.className = 'activity-item activity-item-reasoning';
+    streamState.activityKeys.add('reasoning');
+    streamState.activityItems.set('reasoning', item);
+    const details = document.createElement('details');
+    details.className = 'reasoning-disclosure';
+    const summary = document.createElement('summary');
+    summary.className = 'reasoning-summary';
+    summary.append(textElement('strong', '', labels.reasoning));
+    summary.append(textElement('small', 'reasoning-progress', ''));
+    details.append(summary);
+    details.append(textElement('p', 'reasoning-detail', labels.reasoningProgress));
+    details.append(textElement('p', 'reasoning-private', labels.reasoningPrivate));
+    item.append(details);
+    list.hidden = false;
+    list.append(item);
   }
-  counter.textContent = `${tokens} ${labels.tokens} · ${labels.estimated}`;
-  counter.title = translatedTemplate(labels.tokenDetail, tokens, 0);
+  const progress = item.querySelector('.reasoning-progress');
+  if (progress) {
+    progress.textContent = translatedTemplate(
+      labels.reasoningSteps,
+      streamState.reasoningSegments,
+      streamState.reasoningTokens,
+    );
+  }
+  item.scrollIntoView({ block: 'end', behavior: 'auto' });
 }
 
 function textElement(tag, className, text) {
@@ -583,6 +787,10 @@ function appendMessage(
 ) {
   const article = document.createElement('article');
   article.className = `message timeline-item message-${role}`;
+  // Per-turn semantics: a screen reader announces which turn this is and who
+  // said it, and the turn can take focus so it can be navigated to.
+  article.tabIndex = -1;
+  article.dataset.turnRole = role;
   if (requestId.length > 0) {
     article.dataset.requestId = requestId;
   }
@@ -627,6 +835,7 @@ function appendMessage(
   }
   article.append(card);
   elements.conversation.append(article);
+  renumberTurns();
   setConversationVisibility();
   article.scrollIntoView({ block: 'end', behavior: 'smooth' });
   return body;
@@ -839,16 +1048,47 @@ function renderHistory(history) {
   elements.historySelect.value = selectedThreadId;
 }
 
+// The backend has always offered seven routing strategies; the panel offered
+// one of them. A user who wanted local-only or cost-conscious routing had to
+// pick a model by hand and keep picking, which is the manual mode in disguise.
+// Only MANUAL_MODEL names a model, so every other value belongs in this list.
+const ROUTING_STRATEGIES = [
+  'AUTO',
+  'LOCAL_ONLY',
+  'PRIVACY_FIRST',
+  'LOW_LATENCY',
+  'HIGH_REASONING',
+  'COST_SAVER',
+];
+
+function routingStrategyLabel(mode) {
+  const strategyLabels = {
+    AUTO: labels.automaticRouting,
+    LOCAL_ONLY: labels.routeLocalOnly,
+    PRIVACY_FIRST: labels.routePrivacyFirst,
+    LOW_LATENCY: labels.routeLowLatency,
+    HIGH_REASONING: labels.routeHighReasoning,
+    COST_SAVER: labels.routeCostSaver,
+  };
+  return strategyLabels[mode] ?? mode;
+}
+
+function isRoutingStrategy(value) {
+  return ROUTING_STRATEGIES.includes(value);
+}
+
 function activeModelValue() {
   if (pendingModel !== null) {
     return pendingModel;
   }
-  return currentState.routingMode === 'AUTO' ? 'AUTO' : currentState.selectedModel;
+  return currentState.routingMode === 'MANUAL_MODEL'
+    ? currentState.selectedModel
+    : currentState.routingMode;
 }
 
 function modelLabel(modelKey) {
-  if (modelKey === 'AUTO') {
-    return labels.automaticRouting;
+  if (isRoutingStrategy(modelKey)) {
+    return routingStrategyLabel(modelKey);
   }
   return currentState.models.find((model) => model.key === modelKey)?.displayName ?? modelKey;
 }
@@ -873,10 +1113,15 @@ function renderModels(models) {
     groups.set(groupName, group);
   }
   elements.modelSelect.replaceChildren();
-  const auto = document.createElement('option');
-  auto.value = 'AUTO';
-  auto.textContent = labels.automaticRouting;
-  elements.modelSelect.append(auto);
+  const strategies = document.createElement('optgroup');
+  strategies.label = labels.routing;
+  for (const mode of ROUTING_STRATEGIES) {
+    const option = document.createElement('option');
+    option.value = mode;
+    option.textContent = routingStrategyLabel(mode);
+    strategies.append(option);
+  }
+  elements.modelSelect.append(strategies);
   for (const [groupName, groupModels] of groups) {
     const group = document.createElement('optgroup');
     group.label = groupName;
@@ -1358,7 +1603,11 @@ function backendStatusLabel(status) {
 }
 
 function reconcilePending(state) {
-  if (pendingModel === 'AUTO' && state.routingMode === 'AUTO' && state.selectedModel.length === 0) {
+  if (
+    pendingModel === state.routingMode &&
+    state.routingMode !== 'MANUAL_MODEL' &&
+    state.selectedModel.length === 0
+  ) {
     pendingModel = null;
   } else if (
     pendingModel !== null &&
@@ -1464,10 +1713,78 @@ function closeConnectionSettings() {
   connectionSettingsReturnFocus = null;
 }
 
+// Turn navigation. A transcript read linearly is unusable once it is long, so
+// each turn is focusable and Alt+Up / Alt+Down step between them. Positions
+// are renumbered on every change rather than stored, because messages are
+// appended, removed when a request is dropped, and replaced on retry.
+let focusedTurn;
+
+function turnElements() {
+  return [...elements.conversation.querySelectorAll('.timeline-item')];
+}
+
+function renumberTurns() {
+  const turns = turnElements();
+  turns.forEach((turn, index) => {
+    const who = turn.dataset.turnRole === 'user' ? labels.you : labels.assistant;
+    turn.setAttribute('role', 'article');
+    turn.setAttribute(
+      'aria-label',
+      labels.turnPosition
+        .replace('{who}', who)
+        .replace('{position}', String(index + 1))
+        .replace('{total}', String(turns.length)),
+    );
+  });
+  if (focusedTurn !== undefined && focusedTurn >= turns.length) {
+    focusedTurn = undefined;
+  }
+}
+
+function focusTurn(index) {
+  if (index === undefined) {
+    return;
+  }
+  const target = turnElements()[index];
+  if (target === undefined) {
+    return;
+  }
+  focusedTurn = index;
+  target.focus();
+  target.scrollIntoView({ block: 'nearest' });
+  elements.announcer.textContent = target.getAttribute('aria-label') ?? '';
+}
+
+// Mirrors nextTurnIndex in src/core/turn-navigation.ts: from nowhere,
+// "previous" means the most recent turn, and either end stops rather than
+// wrapping a reader from the newest message to the oldest.
+function stepTurn(delta) {
+  const total = turnElements().length;
+  if (total <= 0) {
+    return;
+  }
+  if (focusedTurn === undefined) {
+    focusTurn(delta < 0 ? total - 1 : 0);
+    return;
+  }
+  focusTurn(Math.min(Math.max(focusedTurn + delta, 0), total - 1));
+}
+
+document.addEventListener('keydown', (event) => {
+  if (!event.altKey || event.ctrlKey || event.metaKey || event.isComposing) {
+    return;
+  }
+  if (event.key === 'ArrowUp' || event.key === 'ArrowDown') {
+    event.preventDefault();
+    stepTurn(event.key === 'ArrowDown' ? 1 : -1);
+  }
+});
+
 function renderState(state) {
   const previousState = currentState;
   currentState = state;
   reconcilePending(state);
+  applyViewDensity(state.viewDensity);
   const authorizing = !state.connected && state.backendStatus === 'loading';
   elements.connectionGate.hidden = state.connected;
   elements.authenticatedUi.hidden = !state.connected;
@@ -1493,10 +1810,12 @@ function renderState(state) {
   elements.backendLabel.textContent = backendStatusLabel(state.backendStatus);
   elements.backendDot.dataset.status = state.backendStatus;
   elements.routeMode.textContent =
-    state.routingMode === 'AUTO' ? labels.routeAutomatic : labels.routeSelected;
+    state.routingMode === 'MANUAL_MODEL' ? labels.routeSelected : labels.routeAutomatic;
   const active = state.models.find((model) => model.key === state.selectedModel);
   const routeModelLabel =
-    state.routingMode === 'AUTO' ? 'AUTO' : (active?.displayName ?? state.selectedModel);
+    state.routingMode === 'MANUAL_MODEL'
+      ? (active?.displayName ?? state.selectedModel)
+      : routingStrategyLabel(state.routingMode);
   elements.routeModel.textContent = routeModelLabel;
   describeText(elements.routeToggle, `${routeModelLabel} · ${elements.routeMode.textContent}`);
   elements.activeModeBadge.textContent =
@@ -1536,11 +1855,20 @@ function renderState(state) {
   endModelRefreshFeedback();
   renderModels(state.models);
   renderHistory(state.history);
-  renderWarnings(state.modelWarnings ?? []);
+  // A model that cannot call a tool cannot run the agent at all, so the warning
+  // belongs beside the ones about providers that failed to load. It is the same
+  // dismissible footnote, because it is a limitation to know about rather than
+  // an error to act on.
+  renderWarnings(
+    state.modelRunsTools === false
+      ? [...(state.modelWarnings ?? []), labels.modelCannotCallTools]
+      : (state.modelWarnings ?? []),
+  );
   renderWorkspace(state.workspaceReadiness, state.workspaceScope);
   renderRunDeck(state.generationQueue, state.agentRuns);
   renderRuntimeTimeline(state.runtime);
   renderApproval(state.approvalRequest);
+  renderQuestion(state.questionRequest);
   renderContextHint();
   syncControlTitles();
   autoGrowPrompt();
@@ -1626,7 +1954,9 @@ function runtimeBudget(budget) {
   const percent = Math.min(100, Math.round((used / maximum) * 100));
   const region = document.createElement('section');
   region.className = 'runtime-budget';
-  region.setAttribute('aria-label', labels.tokens);
+  // This meter counts tool calls against the run budget. It was announced as
+  // "tokens", which is the one thing on screen it does not measure.
+  region.setAttribute('aria-label', labels.runtimeToolBudget);
   const copy = textElement('span', 'runtime-budget-copy', '');
   copy.append(
     textElement('strong', '', `${String(used)} / ${String(maximum)}`),
@@ -1875,6 +2205,9 @@ function validateAttachmentFiles(files) {
   if (files.some((file) => !ALLOWED_ATTACHMENT_MIME_TYPES.has(normalizedMimeType(file.type)))) {
     return labels.attachmentTypeUnsupported;
   }
+  if (files.some((file) => isSecretBearingAttachmentName(file.name))) {
+    return labels.attachmentSecretBlocked;
+  }
   const currentBytes = composerAttachments.reduce(
     (total, attachment) => total + attachment.sizeBytes,
     0,
@@ -2069,6 +2402,7 @@ function submitPrompt(retryInput) {
     provider: '',
     submittedModelLabel,
     reasoningTokens: 0,
+    reasoningSegments: 0,
   });
   setRequestTokens(requestId, {
     input: promptTokens,
@@ -2155,8 +2489,17 @@ elements.prompt.addEventListener('paste', (event) => {
   }
 });
 
+// A drag from the editor or the explorer carries references, not file data, so
+// it advertises `text/uri-list` rather than `Files`. Accepting only `Files` is
+// why dropping from the file tree used to do nothing at all: the drop was never
+// allowed, so it never arrived.
+function draggingWorkspaceFiles(transfer) {
+  const types = transfer?.types;
+  return types !== undefined && (types.includes('Files') || types.includes('text/uri-list'));
+}
+
 elements.form.addEventListener('dragover', (event) => {
-  if (event.dataTransfer?.types.includes('Files')) {
+  if (draggingWorkspaceFiles(event.dataTransfer)) {
     event.preventDefault();
     elements.form.classList.add('dragging-files');
   }
@@ -2174,7 +2517,17 @@ elements.form.addEventListener('drop', (event) => {
   if (files && files.length > 0) {
     event.preventDefault();
     addAttachmentFiles(files);
+    return;
   }
+  const uriList = event.dataTransfer?.getData('text/uri-list') ?? '';
+  if (uriList.length === 0) {
+    return;
+  }
+  event.preventDefault();
+  // Forwarded raw. Only the host knows the workspace root, and only the host
+  // owns the policy that decides whether a dropped path may be read at all.
+  // Shift asks for the path as text instead of a mention that reads the file.
+  vscode.postMessage({ type: 'dropUris', uriList, shiftKey: event.shiftKey === true });
 });
 
 elements.connectionForm.addEventListener('submit', (event) => {
@@ -2273,6 +2626,112 @@ function resolveApproval(approved) {
   vscode.postMessage({ type: 'resolveApproval', requestId, approved });
 }
 
+let questionReturnFocus = null;
+let selectedQuestionLabel = null;
+
+// The panel is the same modal slot approvals use, so only one of the two is
+// ever on screen. Options are buttons rather than a listbox: each is a single
+// tab stop with a visible pressed state, which stays operable at 200% zoom and
+// reads correctly in RTL without any bidi handling of its own.
+function renderQuestion(question) {
+  const wasHidden = elements.questionPanel.hidden;
+  elements.questionPanel.hidden = question === undefined;
+  if (question === undefined) {
+    elements.questionPanel.dataset.requestId = '';
+    selectedQuestionLabel = null;
+    elements.questionOther.value = '';
+    if (!wasHidden && questionReturnFocus?.focus) {
+      questionReturnFocus.focus();
+    }
+    questionReturnFocus = null;
+    return;
+  }
+  if (wasHidden) {
+    questionReturnFocus = document.activeElement;
+  }
+  elements.questionPanel.dataset.requestId = question.id;
+  elements.questionHeader.textContent = question.header;
+  elements.questionMessage.textContent = question.question;
+  selectedQuestionLabel = null;
+  elements.questionOptions.replaceChildren();
+  for (const option of question.options ?? []) {
+    const button = document.createElement('button');
+    button.type = 'button';
+    button.className = 'question-option';
+    button.dataset.label = option.label;
+    button.setAttribute('aria-pressed', 'false');
+    button.append(textElement('strong', '', option.label));
+    if (option.description) {
+      button.append(textElement('small', '', option.description));
+    }
+    button.addEventListener('click', () => {
+      selectQuestionOption(option.label);
+    });
+    elements.questionOptions.append(button);
+  }
+  const allowOther = question.allowOther !== false;
+  elements.questionOther.hidden = !allowOther;
+  elements.questionOtherLabel.hidden = !allowOther;
+  if (wasHidden) {
+    elements.questionOptions.querySelector('button')?.focus();
+  }
+}
+
+// Clearing the typed text belongs to choosing an option, not to the shared
+// pressed-state update. Doing both here emptied the field on every keystroke,
+// because typing also has to release the pressed option.
+function markSelectedOption(label) {
+  selectedQuestionLabel = label;
+  for (const button of elements.questionOptions.querySelectorAll('button')) {
+    button.setAttribute('aria-pressed', button.dataset.label === label ? 'true' : 'false');
+  }
+}
+
+function selectQuestionOption(label) {
+  elements.questionOther.value = '';
+  markSelectedOption(label);
+}
+
+function answerQuestion() {
+  const requestId = elements.questionPanel.dataset.requestId;
+  if (!requestId) {
+    return;
+  }
+  const other = elements.questionOther.hidden ? '' : elements.questionOther.value.trim();
+  // Typed text wins when it is present: a user who selected an option and then
+  // typed has changed their mind, and the host validates either way.
+  const selection = other.length > 0 ? { other } : { label: selectedQuestionLabel };
+  if (selection.label === null && other.length === 0) {
+    return;
+  }
+  vscode.postMessage({ type: 'answerQuestion', requestId, selection });
+}
+
+// A dismissal is a rejected interruption, so it takes the path approvals
+// already take. The broker settles a withdrawn question as dismissed, which
+// keeps one cancellation story instead of two.
+function dismissQuestion() {
+  const requestId = elements.questionPanel.dataset.requestId;
+  if (!requestId) {
+    return;
+  }
+  vscode.postMessage({ type: 'resolveApproval', requestId, approved: false });
+}
+
+elements.questionSubmit.addEventListener('click', answerQuestion);
+elements.questionDismiss.addEventListener('click', dismissQuestion);
+elements.questionOther.addEventListener('input', () => {
+  if (elements.questionOther.value.trim().length > 0) {
+    markSelectedOption(null);
+  }
+});
+elements.questionPanel.addEventListener('keydown', (event) => {
+  if (event.key === 'Escape') {
+    event.preventDefault();
+    dismissQuestion();
+  }
+});
+
 elements.approvalApprove.addEventListener('click', () => resolveApproval(true));
 elements.approvalReject.addEventListener('click', () => resolveApproval(false));
 elements.approvalReview.addEventListener('click', () => {
@@ -2342,6 +2801,105 @@ elements.permissionMode.addEventListener('change', () => {
 
 elements.contextMode.addEventListener('change', renderContextHint);
 
+// The extension owns mention matching so there is one implementation of it.
+// The webview only draws the list and splices in the chosen path, using the
+// span the extension already worked out.
+let mentionState = { start: -1, end: -1, paths: [], active: 0 };
+
+function mentionOpen() {
+  return mentionState.paths.length > 0 && mentionState.start >= 0;
+}
+
+function closeMentions() {
+  mentionState = { start: -1, end: -1, paths: [], active: 0 };
+  elements.mentionPanel.hidden = true;
+  elements.mentionList.replaceChildren();
+  elements.prompt.removeAttribute('aria-activedescendant');
+}
+
+function renderMentions() {
+  if (!mentionOpen()) {
+    closeMentions();
+    return;
+  }
+  const options = mentionState.paths.map((path, index) => {
+    const option = document.createElement('li');
+    option.className = 'mention-option';
+    option.id = `mention-option-${index}`;
+    option.role = 'option';
+    option.textContent = path;
+    option.setAttribute('aria-selected', String(index === mentionState.active));
+    option.addEventListener('mousedown', (event) => {
+      event.preventDefault();
+      acceptMention(index);
+    });
+    return option;
+  });
+  elements.mentionList.replaceChildren(...options);
+  elements.mentionPanel.hidden = false;
+  elements.prompt.setAttribute('aria-activedescendant', `mention-option-${mentionState.active}`);
+  elements.mentionStatus.textContent = labels.mentionCount.replace(
+    '{count}',
+    String(mentionState.paths.length),
+  );
+}
+
+function acceptMention(index) {
+  const path = mentionState.paths[index];
+  if (typeof path !== 'string') {
+    return;
+  }
+  const text = elements.prompt.value;
+  const following = text.slice(mentionState.end);
+  const separator = path.endsWith('/') || /^[\s"'`]/u.test(following) ? '' : ' ';
+  // A command suggestion already carries its own leading slash; only a file
+  // path needs the mention marker put back in front of it.
+  const marker = path.startsWith('/') ? '' : '@';
+  const inserted = `${marker}${path}${separator}`;
+  elements.prompt.value = `${text.slice(0, mentionState.start)}${inserted}${following}`;
+  const caret = mentionState.start + inserted.length;
+  elements.prompt.setSelectionRange(caret, caret);
+  closeMentions();
+  autoGrowPrompt();
+  syncSendAvailability();
+  // A folder keeps the mention open, so ask again from the new caret.
+  if (path.endsWith('/')) {
+    requestMentions();
+  }
+}
+
+function moveMention(delta) {
+  const count = mentionState.paths.length;
+  mentionState.active = (mentionState.active + delta + count) % count;
+  renderMentions();
+}
+
+function requestMentions() {
+  vscode.postMessage({
+    type: 'mentionQuery',
+    text: elements.prompt.value,
+    caretIndex: elements.prompt.selectionStart ?? elements.prompt.value.length,
+  });
+}
+
+// Focus view: a reading mode. The extension owns the setting so the choice
+// survives a reload and a second panel; the webview only reflects it.
+function applyViewDensity(density) {
+  const focused = density === 'focus';
+  document.body.dataset.viewDensity = focused ? 'focus' : 'full';
+  elements.focusToggle.setAttribute('aria-pressed', String(focused));
+}
+
+elements.focusToggle.addEventListener('click', () => {
+  vscode.postMessage({
+    type: 'selectViewDensity',
+    density: document.body.dataset.viewDensity === 'focus' ? 'full' : 'focus',
+  });
+});
+
+elements.prompt.addEventListener('blur', closeMentions);
+elements.prompt.addEventListener('click', requestMentions);
+
 elements.prompt.addEventListener('input', () => {
   if (promptHistoryIndex < promptHistory.length) {
     promptHistoryIndex = promptHistory.length;
@@ -2349,9 +2907,28 @@ elements.prompt.addEventListener('input', () => {
   }
   autoGrowPrompt();
   syncSendAvailability();
+  requestMentions();
+  renderTruncationWarning();
 });
 
 elements.prompt.addEventListener('keydown', (event) => {
+  if (mentionOpen() && !event.isComposing) {
+    if (event.key === 'ArrowDown' || event.key === 'ArrowUp') {
+      event.preventDefault();
+      moveMention(event.key === 'ArrowDown' ? 1 : -1);
+      return;
+    }
+    if (event.key === 'Enter' || event.key === 'Tab') {
+      event.preventDefault();
+      acceptMention(mentionState.active);
+      return;
+    }
+    if (event.key === 'Escape') {
+      event.preventDefault();
+      closeMentions();
+      return;
+    }
+  }
   if (event.isComposing || event.altKey || event.ctrlKey || event.metaKey || event.shiftKey) {
     return;
   }
@@ -2475,20 +3052,22 @@ function reconcileStreamUsage(requestId, stream) {
 }
 
 function appendStreamActivity(requestId, stream) {
-  if (stream.type === 'REASONING_DELTA' && typeof stream.delta === 'string') {
+  if (stream.type === 'REASONING_DELTA') {
     const streamState = streamStates.get(requestId);
     if (!streamState) {
       return;
     }
-    streamState.reasoningTokens += estimateTokens(stream.delta);
-    appendActivity(
-      requestId,
-      'reasoning',
-      labels.reasoning,
-      labels.reasoningProgress,
-      streamState.reasoningTokens,
-    );
-    updateActivityTokens(requestId, 'reasoning', streamState.reasoningTokens);
+    // The host strips the chain of thought and sends its size instead, so this
+    // no longer measures a string it should never have been given. An event
+    // without a usable count still counts as a step: the model demonstrably
+    // thought, and showing nothing would be the bigger lie.
+    const deltaTokens =
+      typeof stream.deltaTokens === 'number' && Number.isFinite(stream.deltaTokens)
+        ? Math.max(0, Math.round(stream.deltaTokens))
+        : 0;
+    streamState.reasoningTokens += deltaTokens;
+    streamState.reasoningSegments += 1;
+    appendReasoningActivity(requestId, streamState);
     return;
   }
   if (
@@ -2521,6 +3100,14 @@ window.addEventListener('message', (event) => {
     currentSession = message.session;
     elements.conversationTitle.textContent = message.session.subject;
     elements.historySelect.value = message.session.threadId ?? '';
+  } else if (message?.type === 'mentionSuggestions') {
+    mentionState = {
+      start: message.start,
+      end: message.end,
+      paths: Array.isArray(message.paths) ? message.paths : [],
+      active: 0,
+    };
+    renderMentions();
   } else if (message?.type === 'historyLoaded') {
     renderHistoryMessages(message.messages ?? []);
   } else if (message?.type === 'accountReset') {
@@ -2534,6 +3121,7 @@ window.addEventListener('message', (event) => {
     renderHistoryMessages([]);
   } else if (message?.type === 'requestDropped' && typeof message.requestId === 'string') {
     responseBodies.get(message.requestId)?.closest('.timeline-item')?.remove();
+    renumberTurns();
     responseBodies.delete(message.requestId);
     streamStates.delete(message.requestId);
     activityLists.delete(message.requestId);
@@ -2635,6 +3223,18 @@ window.addEventListener('message', (event) => {
       elements.connectionError.hidden = false;
     }
     elements.announcer.textContent = message.message;
+  } else if (message?.type === 'appendToComposer' && typeof message.text === 'string') {
+    const existing = elements.prompt.value;
+    elements.prompt.value =
+      existing.length === 0
+        ? message.text
+        : `${existing}
+
+${message.text}`;
+    elements.prompt.focus();
+    autoGrowPrompt();
+    syncSendAvailability();
+    renderTruncationWarning();
   } else if (message?.type === 'notice' && typeof message.message === 'string') {
     showNotice(message.message);
   }

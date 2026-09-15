@@ -15,7 +15,7 @@ describe('assembleContextEnvelope', () => {
       ],
       contextReceipt: {
         excluded: [{ path: 'dist/out.js', reason: 'excluded' }],
-        included: ['src/a".ts', 'src/large.ts'],
+        included: [{ path: 'src/a".ts' }, { path: 'src/large.ts' }],
         totalBytes: MAX_BACKEND_MESSAGE_BYTES + 11,
         truncated: false,
       },
@@ -32,10 +32,32 @@ describe('assembleContextEnvelope', () => {
         { path: 'dist/out.js', reason: 'excluded' },
         { path: 'src/large.ts', reason: 'limit' },
       ],
-      included: ['src/a".ts'],
+      included: [{ path: 'src/a".ts' }],
       totalBytes: 11,
       truncated: true,
     });
+  });
+
+  it('carries a line range onto the workspace-file tag and the receipt', () => {
+    const result = assembleContextEnvelope({
+      content: 'Question',
+      context: [
+        {
+          content: 'const x = 1;',
+          path: 'src/a.ts',
+          startLine: 10,
+          endLine: 12,
+        },
+      ],
+      header: '',
+    });
+
+    expect(result.content).toContain(
+      '<workspace-file path="src/a.ts" startLine="10" endLine="12">',
+    );
+    expect(result.contextReceipt?.included).toEqual([
+      { path: 'src/a.ts', startLine: 10, endLine: 12 },
+    ]);
   });
 
   it('truncates multibyte user content on a valid UTF-8 boundary', () => {

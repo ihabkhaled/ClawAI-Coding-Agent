@@ -49,3 +49,15 @@ export interface AgentWorkflowInput {
   researchMode?: ResearchMode;
   sessionId?: string;
 }
+
+/** What a coding-agent run is started with. */
+export interface RunAgentInput {
+  admission?: RequestAdmission;
+  attachments?: ChatAttachment[];
+  content: string;
+  contextMode: ContextMode;
+  modelKey?: string;
+  researchMode?: ResearchMode;
+  requestId?: string;
+  sessionId?: string;
+}

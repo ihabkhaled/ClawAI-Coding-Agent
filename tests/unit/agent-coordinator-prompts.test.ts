@@ -15,6 +15,13 @@ import type { RuntimeConfiguration } from '../../src/services/configuration-serv
 
 const configuration: RuntimeConfiguration = {
   agentMode: 'AUTO',
+  viewDensity: 'full' as const,
+  outputStyle: 'default',
+  autoCompact: 'prompt' as const,
+  browserOrigins: [],
+  telemetryEndpoint: '',
+  telemetryHeaders: {},
+  hooks: [],
   effortMode: 'ULTRA',
   speedMode: '1X',
   backendUrl: 'https://claw.local',
@@ -24,6 +31,7 @@ const configuration: RuntimeConfiguration = {
   maxContextFiles: 40,
   permissionMode: 'BYPASS_PERMISSIONS',
   requestTimeoutMs: 60_000,
+  autosave: 'off' as const,
   routingMode: 'MANUAL_MODEL',
   selectedModel: 'OLLAMA:gemma3:4b',
 };

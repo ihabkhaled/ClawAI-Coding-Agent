@@ -10,20 +10,24 @@ describe('ChatSessionRegistry', () => {
 
     registry.add(
       {
+        activity: 'idle',
         createdAt: 1,
         sessionId: 'session-1',
         subject: 'First',
         threadId: undefined,
+        unread: false,
         updatedAt: 1,
       },
       { dispose: firstDisposed },
     );
     registry.add(
       {
+        activity: 'idle',
         createdAt: 2,
         sessionId: 'session-2',
         subject: 'Second',
         threadId: undefined,
+        unread: false,
         updatedAt: 2,
       },
       { dispose: secondDisposed },
@@ -46,10 +50,12 @@ describe('ChatSessionRegistry', () => {
     const target = { dispose: vi.fn() };
     registry.add(
       {
+        activity: 'idle',
         createdAt: 1,
         sessionId: 'session-1',
         subject: 'New ClawAI chat',
         threadId: undefined,
+        unread: false,
         updatedAt: 1,
       },
       target,
@@ -58,15 +64,18 @@ describe('ChatSessionRegistry', () => {
     registry.update('session-1', {
       subject: 'Create loop file',
       threadId: 'thread-1',
+      unread: false,
       updatedAt: 3,
     });
 
     expect(registry.get('session-1')).toEqual({
       descriptor: {
+        activity: 'idle',
         createdAt: 1,
         sessionId: 'session-1',
         subject: 'Create loop file',
         threadId: 'thread-1',
+        unread: false,
         updatedAt: 3,
       },
       target,
@@ -78,10 +87,12 @@ describe('ChatSessionRegistry', () => {
     const target = { dispose: vi.fn() };
     registry.add(
       {
+        activity: 'idle',
         createdAt: 1,
         sessionId: 'session-1',
         subject: 'Private thread',
         threadId: 'thread-1',
+        unread: false,
         updatedAt: 1,
       },
       target,
@@ -95,6 +106,7 @@ describe('ChatSessionRegistry', () => {
     expect(registry.get('session-1')?.descriptor).toMatchObject({
       subject: 'New ClawAI chat',
       threadId: undefined,
+      unread: false,
       updatedAt: 5,
     });
   });
@@ -103,20 +115,24 @@ describe('ChatSessionRegistry', () => {
     const registry = new ChatSessionRegistry();
     registry.add(
       {
+        activity: 'idle',
         createdAt: 1,
         sessionId: 'session-1',
         subject: 'First',
         threadId: undefined,
+        unread: false,
         updatedAt: 1,
       },
       { dispose: vi.fn() },
     );
     registry.add(
       {
+        activity: 'idle',
         createdAt: 2,
         sessionId: 'session-2',
         subject: 'Second',
         threadId: undefined,
+        unread: false,
         updatedAt: 2,
       },
       { dispose: vi.fn() },

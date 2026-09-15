@@ -6,10 +6,9 @@ import { type BackendClient } from '../backend/backend-client';
 import { AccountEpoch } from '../core/account-epoch';
 import { ApprovalBroker } from '../core/approval-broker';
 import { totalAttachmentBytes } from '../core/chat-attachment';
-import { contextModeForCommand } from '../core/command-context';
 import { type ContextMode } from '../core/context-mode';
 import { GenerationThreadRegistry } from '../core/generation-thread-registry';
-import { type ResearchMode } from '../core/research-mode';
+import { selectedModelAcceptsImages } from '../core/model-vision';
 import { type OutputLogger } from '../infrastructure/output-logger';
 import { type VscodeWorkspaceEditAdapter } from '../infrastructure/vscode-workspace-edit-adapter';
 import { type DiffPreviewProvider } from '../views/diff-preview-provider';
@@ -18,10 +17,10 @@ import { type ChatViewProvider } from '../webview/chat-view-provider';
 import { AgentConnectionService } from './agent-connection-service';
 import { collectAgentContext } from './agent-context-service';
 import { AgentCoordinatorBoundaries } from './agent-coordinator-boundaries';
-import { pickCompareInput, pickModelKey } from './agent-coordinator-prompts';
+import { coordinatorCommands } from './agent-coordinator-commands';
+import { coordinatorInterruptions } from './agent-coordinator-interruptions';
 import {
   agentConcurrencyKey,
-  applyModelSelection,
   cancelCoordinator,
   createBackendClient,
   prepareGeneration,
@@ -33,8 +32,9 @@ import {
   type CompareInput,
   type ExternalOutputGrantStore,
   type RequestAdmission,
+  type RunAgentInput,
 } from './agent-coordinator.types';
-import { refreshAgentData, refreshConversationData } from './agent-data-service';
+import { conversationRefresher, refreshAgentData } from './agent-data-service';
 import { AgentExecutionPresenter } from './agent-execution-presenter';
 import { AgentRunService } from './agent-run-service';
 import { AgentWorkflowService } from './agent-workflow-service';
@@ -43,24 +43,33 @@ import { BrowserAuthorizationService } from './browser-authorization-service';
 import { ChatParticipantService } from './chat-participant-service';
 import { ChatService } from './chat-service';
 import { ClawaiInitializer } from './clawai-initializer';
+import { compareModels } from './compare-models-command';
 import { ConfigurationService } from './configuration-service';
+import { continueInNewConversation, summarizeThread } from './conversation-compaction';
 import { ConversationSessionService } from './conversation-session-service';
 import { GenerationScheduler } from './generation-scheduler';
 import { ModelService } from './model-service';
+import { panelReports } from './panel-reports';
 import { PromptExecutionService } from './prompt-execution-service';
 import { RequestAdmissionService } from './request-admission-service';
+import { runQueuedAgent } from './run-queued-agent';
 import { RuntimeProtocolService } from './runtime-protocol-service';
 import { RuntimeRecoveryLauncher } from './runtime-recovery-launcher';
-import { RuntimeUiProjector } from './runtime-ui-projection';
 import { confirmSafeEdits } from './safe-edit-confirmation';
 import { SafeEditService } from './safe-edit-service';
 import { SessionControlService } from './session-control-service';
+import { SideQuestionThread } from './side-question-thread';
+import { expandSkillPrompt } from './skill-expansion';
 import { VscodeRuntimeStudio } from './vscode-runtime-studio';
 import { type WorkflowKind } from './workflow-service';
+import { workspaceCheckpoints } from './workspace-checkpoints';
+import { workspaceCatalogs } from './workspace-skill-catalog';
 
+import type { CheckpointDependencies } from './checkpoint-command.types';
+import type { OutputStyleCatalog } from './output-style-catalog';
+import type { SkillCatalogService } from './skill-catalog-service';
 import type { WorkspaceContextService } from './workspace-context-service';
 import type { WorkspaceScopeService } from './workspace-scope-service';
-import type { ChatAttachment } from '../core/chat-attachment';
 import type { ExtensionState } from '../core/extension-state';
 import type { SessionVault } from '../core/session-vault';
 import type { WorkspaceApprovalMemory } from '../core/workspace-approval-memory';
@@ -93,6 +102,18 @@ export class AgentCoordinator implements vscode.Disposable {
   private readonly workflowActions: AgentCoordinatorWorkflowActions;
   private view: ChatViewProvider | null = null;
 
+  /** Slash commands the workspace and this VS Code profile define. */
+  /** Slash commands and response styles the workspace and profile define. */
+  private readonly skills: SkillCatalogService;
+
+  private readonly outputStyles: OutputStyleCatalog;
+
+  /** One archived thread for questions that must not enter the conversation. */
+  private readonly sideQuestions = new SideQuestionThread(() => this.backend);
+
+  /** Named snapshots of the files the agent has changed this session. */
+  private readonly checkpoints: CheckpointDependencies;
+
   constructor(
     readonly state: ExtensionState,
     private readonly sessionVault: SessionVault,
@@ -103,12 +124,16 @@ export class AgentCoordinator implements vscode.Disposable {
     approvalMemory: WorkspaceApprovalMemory,
     externalOutputs: ExternalOutputGrantStore,
     extensionContext: vscode.ExtensionContext,
-    workspaceScope: WorkspaceScopeService,
+    private readonly workspaceScope: WorkspaceScopeService,
   ) {
     this.backend = createBackendClient(this.configuration.read(), this.sessionVault);
+    const catalogs = workspaceCatalogs(extensionContext.globalStorageUri, workspaceScope);
+    this.skills = catalogs.skills;
+    this.outputStyles = catalogs.outputStyles;
     this.attachmentRequests = new AttachmentRequestService(
       () => this.backend,
       () => this.view,
+      () => selectedModelAcceptsImages(this.state.snapshot),
     );
     this.approvals = new ApprovalBroker(this.state);
     this.runtimeStudio = new VscodeRuntimeStudio(
@@ -121,6 +146,7 @@ export class AgentCoordinator implements vscode.Disposable {
       () => this.backend,
       this.logger,
     );
+    this.checkpoints = workspaceCheckpoints(this.runtimeStudio, extensionContext.workspaceState);
     this.runtimeRecovery = new RuntimeRecoveryLauncher(
       this.state,
       this.runtimeStudio,
@@ -132,15 +158,7 @@ export class AgentCoordinator implements vscode.Disposable {
         if (!this.state.snapshot.connected) {
           return;
         }
-        const settings = this.configuration.read();
-        await refreshConversationData(
-          this.backend,
-          settings.historyLimit,
-          this.state,
-          this.accountEpoch,
-          signal,
-          this.dataRefreshEpoch,
-        );
+        await this.refreshConversations(signal);
       },
       before: () => prepareGeneration(this.state),
       dropped: (requestId) => {
@@ -234,17 +252,14 @@ export class AgentCoordinator implements vscode.Disposable {
       backend: () => this.backend,
       captureAdmission: (threadId) => this.captureAdmission(threadId),
       chat: this.chat,
-      collect: (mode, configuration, session, signal) =>
+      collect: (...args) =>
         collectAgentContext(
           this.context,
           this.state,
           () => {
             this.refreshWorkspaceReadiness();
           },
-          mode,
-          configuration,
-          session,
-          signal,
+          ...args,
         ),
       configuration: this.configuration,
       conversations: this.conversations,
@@ -373,36 +388,25 @@ export class AgentCoordinator implements vscode.Disposable {
     await this.connection.logout();
   }
 
-  async openChat(threadId?: string): Promise<string | undefined> {
-    return this.conversations.openChat(threadId);
-  }
+  openChat = (threadId?: string): Promise<string | undefined> =>
+    this.conversations.openChat(threadId);
 
   async openThread(input: { sessionId: string; threadId: string }): Promise<void> {
-    if (!this.state.snapshot.connected) {
-      return;
-    }
-    await this.connection.run(async () => {
-      await this.conversations.loadThread(input.sessionId, input.threadId);
-    });
+    if (!this.state.snapshot.connected) return;
+    await this.connection.run(() => this.conversations.loadThread(input.sessionId, input.threadId));
   }
 
-  async send(input: ChatPromptInput): Promise<void> {
-    await this.promptExecutions.send(input);
-  }
+  send = (input: ChatPromptInput): Promise<void> => this.promptExecutions.send(input);
 
-  async runAgent(input: {
-    admission?: RequestAdmission;
-    attachments?: ChatAttachment[];
-    content: string;
-    contextMode: ContextMode;
-    modelKey?: string;
-    researchMode?: ResearchMode;
-    requestId?: string;
-    sessionId?: string;
-  }): Promise<void> {
+  async runAgent(input: RunAgentInput): Promise<void> {
     const requestId = input.requestId ?? randomUUID();
+    // Expanded once, here, before the prompt reaches any transport. Doing it
+    // deeper would mean every path that sends a prompt had to remember to,
+    // and one of them would forget.
+    const content = await expandSkillPrompt(this.skills, input.content);
     const queuedInput = await this.agentWorkflows.snapshot({
       ...input,
+      content,
       kind: 'generate',
     });
     const sessionId = await this.agentWorkflows.prepare(queuedInput, requestId);
@@ -410,40 +414,12 @@ export class AgentCoordinator implements vscode.Disposable {
       requestId,
       'agent',
       input.content,
-      async (signal) => {
-        const requiresLegacyPayload =
-          (queuedInput.attachments?.length ?? 0) > 0 ||
-          (queuedInput.researchMode !== undefined && queuedInput.researchMode !== 'NONE');
-        if (
-          this.state.snapshot.runtime.protocolSelection.mode !== 'runtime-v2' ||
-          requiresLegacyPayload
-        ) {
-          return this.agentWorkflows.execute(queuedInput, signal, requestId);
-        }
-        const threadId = await this.agentWorkflows.runtimeThread(queuedInput, requestId);
-        const projector = new RuntimeUiProjector(() => this.view, this.logger, requestId);
-        await this.runtimeStudio.execute({
-          prompt: queuedInput.content,
-          threadId,
-          requestId,
-          ...(queuedInput.selection.provider === undefined
-            ? {}
-            : { provider: queuedInput.selection.provider }),
-          ...(queuedInput.selection.model === undefined
-            ? {}
-            : { model: queuedInput.selection.model }),
-          signal,
-          onEvent: (event) => {
-            projector.project(event);
-          },
-          onApproval: (phase, effect) => {
-            projector.approval(phase, effect);
-          },
-        });
-        // Only the non-throwing path settles here: a thrown failure is already
-        // reported, and cancelled, by the generation failure boundary.
-        await projector.settle();
-      },
+      (signal) =>
+        runQueuedAgent(
+          { workflows: this.agentWorkflows, studio: this.runtimeStudio, state: this.state },
+          { view: () => this.view, logger: this.logger },
+          { queuedInput, requestId, signal },
+        ),
       {
         concurrencyKey: agentConcurrencyKey(this.state, sessionId, queuedInput.admission.threadId),
         modelLabel: queuedInput.modelLabel,
@@ -454,51 +430,77 @@ export class AgentCoordinator implements vscode.Disposable {
 
   compare = (input: CompareInput): Promise<void> => this.promptExecutions.compare(input);
 
-  async compareModels(judgeEnabled = false): Promise<void> {
-    const input = await pickCompareInput(this.state.snapshot.models, judgeEnabled);
-    if (input === null) {
-      return;
-    }
-    const admission = this.captureAdmission();
-    const sessionId = await this.openChat();
-    await this.compare({
-      admission,
-      content: input.content,
-      contextMode: contextModeForCommand(
-        judgeEnabled ? 'clawAI.judgeResponses' : 'clawAI.compareModels',
-      ),
-      modelKeys: input.modelKeys,
+  compareModels = (judgeEnabled = false): Promise<void> =>
+    compareModels(
+      { state: this.state, captureAdmission: () => this.captureAdmission() },
+      { openChat: () => this.openChat(), compare: (input) => this.compare(input) },
       judgeEnabled,
-      requestId: randomUUID(),
-      ...(sessionId === undefined ? {} : { sessionId }),
-    });
-  }
+    );
 
   ask = (contextMode: ContextMode): Promise<void> => this.workflowActions.ask(contextMode);
 
-  async runReadOnlyWorkflow(kind: WorkflowKind, contextMode: ContextMode): Promise<void> {
-    await this.workflowActions.runReadOnly(kind, contextMode);
-  }
+  runReadOnlyWorkflow = (kind: WorkflowKind, contextMode: ContextMode): Promise<void> =>
+    this.workflowActions.runReadOnly(kind, contextMode);
 
-  async runEditWorkflow(kind: WorkflowKind, contextMode: ContextMode): Promise<void> {
-    await this.workflowActions.runEdit(kind, contextMode);
-  }
+  runEditWorkflow = (kind: WorkflowKind, contextMode: ContextMode): Promise<void> =>
+    this.workflowActions.runEdit(kind, contextMode);
 
-  async selectModel(modelKey?: string): Promise<void> {
-    await applyModelSelection(modelKey, this.state, this.configuration, () =>
-      pickModelKey(this.state.snapshot.models),
-    );
-  }
+  readonly commands = coordinatorCommands({
+    connection: () => this.connection,
+    initializer: () => this.initializer,
+    conversations: () => this.conversations,
+    state: () => this.state,
+    safeEdits: () => this.safeEdits,
+    undoDepth: () => this.runtimeStudio.undoDepth,
+    journals: () => this.runtimeStudio.journals,
+    findings: () => this.runtimeStudio.stores.findings,
+    view: () => this.view,
+    configuration: () => this.configuration,
+    backend: () => this.backend,
+    refreshHistory: () => this.refreshConversations(),
+    sessionControls: () => this.sessionControls,
+    outputStyles: () => this.outputStyles,
+    sideQuestions: () => this.sideQuestions,
+    checkpoints: () => this.checkpoints,
+    summarize: () => (threadId, instruction) =>
+      summarizeThread(
+        this.backend,
+        this.configuration.read(),
+        this.state.snapshot.models,
+        threadId,
+        instruction,
+      ),
+    startContinuation: () => (seed) =>
+      continueInNewConversation(
+        (input) => this.runAgent(input),
+        () => this.openChat(),
+        seed,
+      ),
+  });
 
-  refreshModels = (): Promise<void> => this.connection.refresh();
+  /** What the panel reports and this side resolves: tokens, and dropped files. */
+  private readonly panel = panelReports({
+    snapshot: () => this.state.snapshot,
+    configuration: () => this.configuration.read(),
+    workspaceRoot: () => this.workspaceScope.selectedFolder().uri.fsPath,
+    appendToComposer: async (text) => this.view?.appendToComposer(text),
+    compact: () => this.commands.compactConversation(),
+    compactSilently: () => this.commands.compactConversationUnattended(),
+  });
 
-  initializeWorkspace = (): Promise<void> => this.initializer.promptAndInitialize();
+  conversationTokens = (threadId: string, tokens: number): Promise<void> =>
+    this.panel.conversationTokens(threadId, tokens);
 
-  async undoLastEdit(): Promise<void> {
-    if (await this.safeEdits.undoLast()) {
-      await this.view?.postNotice(vscode.l10n.t('ClawAI changes were undone.'));
-    }
-  }
+  dropUris = (uriList: string, shiftKey: boolean): Promise<void> =>
+    this.panel.dropUris(uriList, shiftKey);
+
+  private readonly refreshConversations = conversationRefresher(() => ({
+    backend: this.backend,
+    historyLimit: this.configuration.read().historyLimit,
+    state: this.state,
+    accountEpoch: this.accountEpoch,
+    refreshEpoch: this.dataRefreshEpoch,
+  }));
 
   async cancel(requestId?: string): Promise<void> {
     await cancelCoordinator({
@@ -521,8 +523,7 @@ export class AgentCoordinator implements vscode.Disposable {
 
   removeQueued = (requestId: string): void => void this.generations.remove(requestId);
 
-  resolveApproval = (requestId: string, approved: boolean): void =>
-    void this.approvals.resolve(requestId, approved);
+  readonly interruptions = coordinatorInterruptions(() => this.approvals);
 
   captureAdmission(threadId?: string): RequestAdmission {
     if (!this.state.snapshot.connected) {

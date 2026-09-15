@@ -37,6 +37,7 @@ interface PromptExecutionDependencies {
     mode: ChatPromptInput['contextMode'],
     configuration: ReturnType<ConfigurationService['read']>,
     session: SessionControlPort,
+    promptText: string,
     signal: AbortSignal,
   ): Promise<CollectedContext>;
   configuration: ConfigurationService;
@@ -80,6 +81,7 @@ export class PromptExecutionService {
           input.contextMode,
           configuration,
           session,
+          input.content,
           signal,
         );
         signal.throwIfAborted();
@@ -167,6 +169,7 @@ export class PromptExecutionService {
           input.contextMode,
           configuration,
           session,
+          input.content,
           signal,
         );
         signal.throwIfAborted();
@@ -254,6 +257,7 @@ export class PromptExecutionService {
           contextMode,
           configuration,
           session,
+          request,
           signal,
         );
         signal.throwIfAborted();

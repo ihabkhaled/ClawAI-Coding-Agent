@@ -49,10 +49,14 @@ export async function refreshAgentData(
   const epoch = accountEpoch.capture();
   const refresh = beginRefresh(refreshEpoch);
   const settings = configuration.read();
-  const [models, usage, history] = await Promise.all([
+  const [models, usage, history, organizationPolicy] = await Promise.all([
     modelService.refresh(),
     backend.getUsage(),
     backend.listThreads(settings.historyLimit),
+    // Fetched with the rest of the account data rather than on demand: a policy
+    // consulted lazily is a policy that has not applied yet the first time it
+    // matters.
+    backend.getOrganizationPolicy(),
   ]);
   if (
     !accountEpoch.isCurrent(epoch) ||
@@ -74,8 +78,38 @@ export async function refreshAgentData(
     history,
     modelWarnings: models.warnings,
     models: models.catalog,
+    organizationPolicy,
     routingMode: useAuto ? 'AUTO' : current.routingMode,
     selectedModel: useAuto ? '' : current.selectedModel,
     usage,
   });
+}
+
+/**
+ * A conversation refresh bound to collaborators that are read at call time.
+ *
+ * Read late rather than captured, because the history limit is a setting the
+ * user can change under a long-lived coordinator, and a refresher holding the
+ * value from construction would quietly go on using the old one.
+ */
+export function conversationRefresher(
+  parts: () => {
+    backend: BackendClient;
+    historyLimit: number;
+    state: ExtensionState;
+    accountEpoch: AccountEpoch;
+    refreshEpoch: AccountEpoch;
+  },
+): (signal?: AbortSignal) => Promise<void> {
+  return async (signal) => {
+    const current = parts();
+    await refreshConversationData(
+      current.backend,
+      current.historyLimit,
+      current.state,
+      current.accountEpoch,
+      signal,
+      current.refreshEpoch,
+    );
+  };
 }

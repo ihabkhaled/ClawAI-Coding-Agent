@@ -1,3 +1,6 @@
+import { selectedModelRunsTools } from '../core/model-tools';
+import { visibleThreads } from '../core/thread-list';
+
 import type { ExtensionSnapshot } from '../core/extension-state';
 import type { RuntimeSnapshot } from '../core/runtime/runtime-event-reducer';
 
@@ -134,7 +137,9 @@ export function toPublicChatState(snapshot: ExtensionSnapshot) {
     agentRun: snapshot.agentRun,
     agentRuns: snapshot.agentRuns,
     agentMode: snapshot.agentMode,
+    viewDensity: snapshot.viewDensity,
     approvalRequest: snapshot.approvalRequest,
+    questionRequest: snapshot.questionRequest,
     backendStatus: snapshot.backendStatus,
     backendCustomUrl: snapshot.backendCustomUrl,
     backendEnvironment: snapshot.backendEnvironment,
@@ -146,7 +151,7 @@ export function toPublicChatState(snapshot: ExtensionSnapshot) {
     frontendUrl: snapshot.frontendUrl,
     contextReceipt: snapshot.contextReceipt,
     generationQueue: snapshot.generationQueue,
-    history: snapshot.history.map((thread) => ({
+    history: visibleThreads(snapshot.history).map((thread) => ({
       createdAt: publicDate(thread.createdAt),
       id: thread.id,
       messageCount: thread._count?.messages ?? 0,
@@ -165,6 +170,11 @@ export function toPublicChatState(snapshot: ExtensionSnapshot) {
           },
     lastError: snapshot.lastError,
     modelWarnings: snapshot.modelWarnings,
+    // A model that cannot call a tool cannot run the agent, and the panel had
+    // no way to say so. A flag rather than a sentence, because this projection
+    // is deliberately free of the extension host and its translator: a test
+    // proves it can be imported without one.
+    modelRunsTools: selectedModelRunsTools(snapshot),
     models: snapshot.models,
     effortMode: snapshot.effortMode,
     speedMode: snapshot.speedMode,

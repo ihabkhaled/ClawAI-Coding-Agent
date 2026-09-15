@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 import { z } from 'zod';
 
+import { deliveredArtifactsFromReceipt } from '../core/delivered-artifact';
 import { fileTransactionSchema } from '../core/file-transaction';
 import { normalizeTransactionEncoding } from '../core/file-transaction-encoding';
 import {
@@ -13,8 +14,22 @@ import {
   isSafeWorkspaceDirectoryPath,
   normalizeWorkspaceDirectoryPath,
 } from '../core/workspace-path-policy';
+import {
+  compileSearchMatcher,
+  findMultilineMatches,
+  matchesFileTypes,
+  resolveFileTypeExtensions,
+} from '../core/workspace-search-query';
+
+import {
+  WORKSPACE_SCAN_EXCLUDE_GLOB,
+  WORKSPACE_SEARCH_MAX_CANDIDATE_FILES,
+  WORKSPACE_SEARCH_MAX_SCANNED_BYTES,
+} from './workspace-scan.constants';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
+import type { SearchHit } from './vscode-filesystem-tool-executor.types';
+import type { DeliveredArtifact } from '../core/delivered-artifact';
 import type { FileTransaction } from '../core/file-transaction';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { FileTransactionService } from '../services/file-transaction-service';
@@ -101,7 +116,89 @@ const globSchema = z
 const searchSchema = globSchema.extend({
   query: z.string().min(1).max(10_000),
   pattern: z.string().min(1).max(1_000).default('**/*'),
+  regex: z.boolean().default(false),
+  ignoreCase: z.boolean().default(false),
+  // Capped low deliberately: three lines either side is usually enough to
+  // judge a match, and the result cap is shared, so generous context spends
+  // the answer on fewer matches.
+  contextLines: z.number().int().min(0).max(10).default(0),
+  // A pattern that spans lines answers a question a per-line search cannot:
+  // "where is this signature", not "which lines mention this word".
+  multiline: z.boolean().default(false),
+  // Named languages, or bare extensions. Scoping by type is what makes a
+  // common word searchable at all in a repository that also carries a lockfile.
+  fileTypes: z.array(z.string().min(1).max(20)).max(20).default([]),
 });
+
+const MAX_SEARCH_LINE_CHARS = 2_000;
+
+/**
+ * The lines either side of a match.
+ *
+ * Surrounding lines are what turn "this file mentions the symbol" into "this
+ * is the definition", and reading them here saves the separate file read the
+ * model otherwise makes for every hit worth judging.
+ */
+function contextAround(
+  lines: readonly string[],
+  index: number,
+  radius: number,
+): { before: string[]; after: string[] } {
+  const bounded = (line: string): string => line.slice(0, 500);
+  return {
+    before: lines.slice(Math.max(0, index - radius), index).map(bounded),
+    after: lines.slice(index + 1, index + 1 + radius).map(bounded),
+  };
+}
+
+function lineMatches(
+  text: string,
+  matcher: RegExp,
+  path: string,
+  contextLines: number,
+): SearchHit[] {
+  const lines = text.split(/\r?\n/u);
+  const hits: SearchHit[] = [];
+  for (const [index, line] of lines.entries()) {
+    // A caller-supplied regex runs against a bounded prefix. An unbounded line
+    // is the input that turns a nested quantifier into a hang, and no useful
+    // match is lost: the preview never showed more than this either.
+    if (matcher.test(line.slice(0, MAX_SEARCH_LINE_CHARS))) {
+      hits.push({
+        path,
+        line: index + 1,
+        preview: line.slice(0, 500),
+        ...(contextLines === 0 ? {} : { context: contextAround(lines, index, contextLines) }),
+      });
+    }
+  }
+  return hits;
+}
+
+/**
+ * Every place one file matched, in the shape the result list uses.
+ *
+ * A multiline pattern is a different question, not a different flag: it asks
+ * where a span is, so it runs over the text and reports the line the span
+ * starts on. Context lines are a per-line idea and are left out of it, because
+ * the match already carries its own span.
+ */
+function fileMatches(
+  text: string,
+  matcher: RegExp,
+  path: string,
+  multiline: boolean,
+  contextLines: number,
+): SearchHit[] {
+  if (!multiline) {
+    return lineMatches(text, matcher, path, contextLines);
+  }
+  return findMultilineMatches(text, matcher).map((match) => ({
+    path,
+    line: match.line,
+    preview: match.preview,
+  }));
+}
 
 export const workspaceFilesystemToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',
@@ -119,6 +216,11 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'for the first opened folder, then "workspace-2"; most use only "workspace-1". Paths are ' +
     'relative. List the root with path "". List/glob/search return at most 100 results; narrow ' +
     'truncated results. After one targeted search and read, act; do not rediscover unchanged files. ' +
+    'SEARCH matches a literal query by default; pass regex:true for a JavaScript pattern and ' +
+    'ignoreCase:true to fold case, and contextLines:N for N lines either side. ' +
+    'multiline:true spans lines; fileTypes:["ts"] scopes by language. It reports ' +
+    'scannedFiles and skips dependency and build output. ' +
+    'Only treat an empty result as absence when truncated is false. ' +
     // Writing was undiscoverable: every mutation goes through a nested
     // transaction whose shape the catalog reports as an empty object, so a
     // model had to guess it and no model ever did. Spelling it out here is the
@@ -194,10 +296,16 @@ function assertSingleMatchingOperation(transaction: FileTransaction, operation: 
     );
 }
 
+/** Where delivered artifacts are recorded so something can offer to open them. */
+export interface DeliveredArtifactSink {
+  record(delivered: readonly DeliveredArtifact[]): unknown;
+}
+
 export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
   constructor(
     private readonly adapter: VscodeFileTransactionAdapter,
     private readonly transactions: FileTransactionService,
+    private readonly artifacts: DeliveredArtifactSink,
   ) {}
 
   async execute(
@@ -225,7 +333,30 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     assertSingleMatchingOperation(transaction, invocation.operation);
     const preview = await this.transactions.preview(transaction, signal);
     const receipt = await this.transactions.apply(preview, signal);
+    // An artifact is written for the user, not for the tree. Recording it here
+    // is what turns a file nobody was told about into one the Artifacts view
+    // can open.
+    this.artifacts.record(
+      deliveredArtifactsFromReceipt(receipt, (rootKey, path) =>
+        this.resolveArtifactPath(rootKey, path),
+      ),
+    );
     return { structured: { receipt } };
+  }
+
+  /**
+   * Resolves an artifact to an absolute path, or to nothing.
+   *
+   * A root that no longer resolves is not an error here: the artifact was
+   * written, the transaction succeeded, and the only thing lost is the ability
+   * to offer a link to it.
+   */
+  private resolveArtifactPath(rootKey: string, path: string): string | undefined {
+    try {
+      return vscode.Uri.joinPath(this.adapter.workspaceRootUri(rootKey), path).fsPath;
+    } catch {
+      return undefined;
+    }
   }
 
   private async read(candidate: unknown): Promise<RuntimeToolExecutionOutput> {
@@ -327,9 +458,14 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
   private async glob(candidate: unknown): Promise<RuntimeToolExecutionOutput> {
     const input = globSchema.parse(candidate);
     const root = this.adapter.rootUri(input.rootKey);
+    // Build and dependency output used to fill the answer. `findFiles` does not
+    // read `.gitignore`, so a bare `**/*.ts` returned the first hundred paths
+    // the walker happened to reach — on this repository, files under
+    // `.worktrees/`, which holds a checkout per in-flight branch. The exclusion
+    // that fixed the intelligence index never reached the tool the model calls.
     const matches = await vscode.workspace.findFiles(
       new vscode.RelativePattern(root, input.pattern),
-      undefined,
+      WORKSPACE_SCAN_EXCLUDE_GLOB,
       input.maxResults,
     );
     const boundedMatches = matches.slice(0, input.maxResults);
@@ -347,38 +483,63 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
   ): Promise<RuntimeToolExecutionOutput> {
     const input = searchSchema.parse(candidate);
     const root = this.adapter.rootUri(input.rootKey);
+    const matcher = compileSearchMatcher(
+      input.query,
+      input.regex,
+      input.ignoreCase,
+      input.multiline,
+    );
+    const extensions = resolveFileTypeExtensions(input.fileTypes);
     const files = await vscode.workspace.findFiles(
       new vscode.RelativePattern(root, input.pattern),
-      undefined,
-      input.maxResults,
+      WORKSPACE_SCAN_EXCLUDE_GLOB,
+      WORKSPACE_SEARCH_MAX_CANDIDATE_FILES,
     );
-    const candidateSetTruncated = files.length >= input.maxResults;
-    const results: { path: string; line: number; preview: string }[] = [];
-    for (const uri of files.slice(0, input.maxResults)) {
+    const candidateSetTruncated = files.length >= WORKSPACE_SEARCH_MAX_CANDIDATE_FILES;
+    const results: SearchHit[] = [];
+    let scannedFiles = 0;
+    let scannedBytes = 0;
+    let budgetExhausted = false;
+    for (const uri of files) {
       signal?.throwIfAborted();
       if (results.length >= input.maxResults) break;
+      // Filtered here rather than folded into the glob: the caller's pattern is
+      // arbitrary, and rewriting it to carry extensions is how a search quietly
+      // stops matching what the caller asked for.
+      if (!matchesFileTypes(uri.path, extensions)) continue;
+      if (scannedBytes >= WORKSPACE_SEARCH_MAX_SCANNED_BYTES) {
+        budgetExhausted = true;
+        break;
+      }
       let text: string;
       try {
-        text = new TextDecoder('utf-8', { fatal: true }).decode(
-          await vscode.workspace.fs.readFile(uri),
-        );
+        const bytes = await vscode.workspace.fs.readFile(uri);
+        scannedBytes += bytes.byteLength;
+        text = new TextDecoder('utf-8', { fatal: true }).decode(bytes);
       } catch {
+        // Binary or unreadable. It was still opened, so it still counts as work
+        // done, but it is not a file the query could have matched.
         continue;
       }
-      for (const [index, line] of text.split(/\r?\n/u).entries()) {
-        if (line.includes(input.query))
-          results.push({
-            path: vscode.workspace.asRelativePath(uri, false),
-            line: index + 1,
-            preview: line.slice(0, 500),
-          });
-        if (results.length >= input.maxResults) break;
-      }
+      scannedFiles += 1;
+      results.push(
+        ...fileMatches(
+          text,
+          matcher,
+          vscode.workspace.asRelativePath(uri, false),
+          input.multiline,
+          input.contextLines,
+        ).slice(0, input.maxResults - results.length),
+      );
     }
     return {
       structured: {
         results,
-        truncated: candidateSetTruncated || results.length >= input.maxResults,
+        scannedFiles,
+        // Three different things end a search early, and the model has to be
+        // able to tell "no matches here" from "stopped looking". Absence is
+        // only evidence when this is false.
+        truncated: candidateSetTruncated || budgetExhausted || results.length >= input.maxResults,
       },
     };
   }

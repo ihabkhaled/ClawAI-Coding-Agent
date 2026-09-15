@@ -1,7 +1,7 @@
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
+import type { GitToolPort } from './git-tool-executor.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
-import type { GitAgentService } from '../services/git-agent-service';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
@@ -24,8 +24,10 @@ export const gitToolDefinition: ToolDefinition = {
     'conflicts',
     'submodules',
     'topology',
+    'pr-readiness',
     'create-branch',
     'create-worktree',
+    'remove-worktree',
     'stage',
     'unstage',
     'commit',
@@ -45,7 +47,7 @@ export const gitToolDefinition: ToolDefinition = {
 };
 
 export class GitToolExecutor implements RuntimeToolExecutorPort {
-  constructor(private readonly git: GitAgentService) {}
+  constructor(private readonly git: GitToolPort) {}
 
   async execute(
     invocation: ToolInvocation,

@@ -10,7 +10,7 @@ export function subAgentTask(
   taskId: string,
   dependencies: readonly string[],
   writeSet: readonly string[],
-  role: 'explorer' | 'implementer',
+  role: SubAgentTask['role'],
 ): SubAgentTask {
   return {
     taskId,
@@ -30,6 +30,7 @@ export function subAgentTask(
     budget: { maxTokens: 1_000, maxToolCalls: 10, maxRuntimeMs: 10_000, maxRetries: 0 },
     tools: ['workspace.files'],
     riskCeiling: 'R3',
+    inherit: 'none' as const,
     acceptanceChecks: ['Task completes'],
     epochs: subAgentEpochs,
   };
@@ -43,6 +44,7 @@ export function successfulOutcome(taskId: string): SubAgentOutcome {
     tokens: 1,
     toolCalls: 1,
     artifacts: [],
+    findings: [],
   };
 }
 
@@ -54,6 +56,7 @@ export function failedOutcome(taskId: string, blocker: string): SubAgentOutcome 
     tokens: 1,
     toolCalls: 1,
     artifacts: [],
+    findings: [],
     blocker,
   };
 }

@@ -14,11 +14,17 @@ import type { ExtensionSnapshot } from '../../src/core/extension-state';
 function snapshot(patch: Partial<ExtensionSnapshot> = {}): ExtensionSnapshot {
   return {
     agentMode: 'AUTO',
+    viewDensity: 'full',
     effortMode: 'ULTRA',
     speedMode: '1X',
     agentRun: undefined,
     agentRuns: {},
     approvalRequest: undefined,
+    questionRequest: undefined,
+    findings: [],
+    tasks: [],
+    artifacts: [],
+    organizationPolicy: undefined,
     backendStatus: 'disconnected',
     backendUrl: 'https://claw.local',
     busy: false,

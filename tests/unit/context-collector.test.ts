@@ -1,6 +1,11 @@
 import { describe, expect, it } from 'vitest';
 
-import { collectContext, type ContextCandidate } from '../../src/core/context-collector';
+import {
+  collectContext,
+  mergeCollectedContext,
+  type CollectedContext,
+  type ContextCandidate,
+} from '../../src/core/context-collector';
 
 const candidates: ContextCandidate[] = [
   {
@@ -108,5 +113,67 @@ describe('context collection', () => {
     expect(result.receipt.excluded).toEqual(
       sensitivePaths.map((path) => ({ path, reason: 'sensitive' })),
     );
+  });
+});
+
+describe('mergeCollectedContext', () => {
+  const base: CollectedContext = {
+    files: [{ path: 'src/index.ts', content: 'whole file\n' }],
+    receipt: {
+      included: [{ path: 'src/index.ts' }],
+      excluded: [{ path: '.env', reason: 'sensitive' }],
+      totalBytes: 11,
+      truncated: false,
+    },
+  };
+
+  it('appends a reference to a different file', () => {
+    const additional: CollectedContext = {
+      files: [{ path: 'src/other.ts', content: 'ranged\n', startLine: 3, endLine: 3 }],
+      receipt: {
+        included: [{ path: 'src/other.ts', startLine: 3, endLine: 3 }],
+        excluded: [],
+        totalBytes: 7,
+        truncated: false,
+      },
+    };
+
+    const merged = mergeCollectedContext(base, additional);
+
+    expect(merged.files.map((file) => file.path)).toEqual(['src/index.ts', 'src/other.ts']);
+    expect(merged.receipt.included).toEqual([
+      { path: 'src/index.ts' },
+      { path: 'src/other.ts', startLine: 3, endLine: 3 },
+    ]);
+    expect(merged.receipt.excluded).toEqual([{ path: '.env', reason: 'sensitive' }]);
+    expect(merged.receipt.totalBytes).toBe(18);
+    expect(merged.receipt.truncated).toBe(false);
+  });
+
+  it('skips a reference to a path the base already includes', () => {
+    const additional: CollectedContext = {
+      files: [{ path: 'src/index.ts', content: 'a range of it', startLine: 1, endLine: 1 }],
+      receipt: {
+        included: [{ path: 'src/index.ts', startLine: 1, endLine: 1 }],
+        excluded: [],
+        totalBytes: 13,
+        truncated: false,
+      },
+    };
+
+    const merged = mergeCollectedContext(base, additional);
+
+    expect(merged.files).toEqual(base.files);
+    expect(merged.receipt.included).toEqual(base.receipt.included);
+    expect(merged.receipt.totalBytes).toBe(base.receipt.totalBytes);
+  });
+
+  it('carries truncation forward from either side', () => {
+    const truncatedAdditional: CollectedContext = {
+      files: [],
+      receipt: { included: [], excluded: [], totalBytes: 0, truncated: true },
+    };
+
+    expect(mergeCollectedContext(base, truncatedAdditional).receipt.truncated).toBe(true);
   });
 });

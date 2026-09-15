@@ -1,0 +1,117 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clawai.dev/schemas/clawai-policy.schema.json",
+  "title": "ClawAI project policy",
+  "description": "Mirrors projectPolicySchema in src/core/policy-v2.ts. Every field narrows what the agent may do; none widens it, because this file is untrusted workspace content. See docs/CLAWAI_FOLDER_SPEC.md.",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "effectKind": {
+      "enum": [
+        "read",
+        "workspace-write",
+        "local-mutation",
+        "network-write",
+        "publication",
+        "elevation",
+        "production",
+        "destructive"
+      ]
+    },
+    "riskClass": {
+      "enum": ["R0", "R1", "R2", "R3", "R4"]
+    },
+    "policyRule": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Matches on at least one of tool, operation, pathGlob, commandGlob or domainGlob.",
+      "properties": {
+        "tool": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "operation": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 80
+        },
+        "pathGlob": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "commandGlob": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 1000
+        },
+        "outcome": {
+          "enum": ["ask", "deny"]
+        },
+        "reason": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 500
+        },
+        "domainGlob": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 253
+        }
+      },
+      "required": ["outcome", "reason"],
+      "anyOf": [
+        {
+          "required": ["tool"]
+        },
+        {
+          "required": ["operation"]
+        },
+        {
+          "required": ["pathGlob"]
+        },
+        {
+          "required": ["commandGlob"]
+        },
+        {
+          "required": ["domainGlob"]
+        }
+      ]
+    }
+  },
+  "properties": {
+    "deniedEffects": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/effectKind"
+      },
+      "maxItems": 8,
+      "default": []
+    },
+    "maximumRisk": {
+      "allOf": [
+        {
+          "$ref": "#/definitions/riskClass"
+        }
+      ],
+      "default": "R4"
+    },
+    "requireApproval": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/effectKind"
+      },
+      "maxItems": 8,
+      "default": []
+    },
+    "rules": {
+      "type": "array",
+      "items": {
+        "$ref": "#/definitions/policyRule"
+      },
+      "maxItems": 200,
+      "default": []
+    }
+  }
+}

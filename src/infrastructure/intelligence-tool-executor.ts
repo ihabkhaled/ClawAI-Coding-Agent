@@ -1,6 +1,9 @@
 import { z } from 'zod';
 
+import { MAX_RUNTIME_JSON_ENTRIES } from '../core/runtime/runtime-json-value';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
+import { DIAGNOSTIC_SEVERITIES } from '../core/workspace-diagnostics';
+import { isSymbolQueryKind } from '../core/workspace-symbols';
 
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
@@ -14,12 +17,58 @@ export const intelligenceToolDefinition: ToolDefinition = {
   name: 'workspace.intelligence',
   version: '2.0.0',
   description:
-    'Build and query a bounded evidence graph without making indexed content model-visible.',
-  operations: ['refresh', 'query', 'estimate-context', 'invalidate'],
+    'Build and query a bounded evidence graph without making indexed content model-visible. ' +
+    'diagnostics returns the problems the editor already computed for this workspace — no gate ' +
+    'run needed. Optional path narrows to a file or directory; minimumSeverity is error, ' +
+    'warning, information or hint and defaults to warning. Errors sort first, and counts and ' +
+    'total describe every match even when the list is truncated. definition, references, ' +
+    'implementations and hover ask the real language servers about one position: pass rootKey, ' +
+    'path, line and column, both one-based. Use these instead of searching for a name.',
+  operations: [
+    'refresh',
+    'query',
+    'estimate-context',
+    'invalidate',
+    'diagnostics',
+    'definition',
+    'references',
+    'implementations',
+    'hover',
+  ],
   riskClasses: ['inspect'],
   targetIds: ['target:workspace'],
   inputSchema: runtimeToolInputSchemas.intelligence,
 };
+
+// `warning` by default: errors and warnings are what a model acts on, and
+// including hints unasked buries them under formatter noise in a capped list.
+const diagnosticsQuerySchema = z
+  .object({
+    path: z.string().min(1).max(4_096).optional(),
+    minimumSeverity: z.enum(DIAGNOSTIC_SEVERITIES).default('warning'),
+    maxResults: z
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_RUNTIME_JSON_ENTRIES)
+      .default(MAX_RUNTIME_JSON_ENTRIES),
+  })
+  .strip();
+
+const symbolQuerySchema = z
+  .object({
+    rootKey: z.string().min(1).max(100).default('workspace-1'),
+    path: z.string().min(1).max(4_096),
+    line: z.number().int().min(1).max(1_000_000),
+    column: z.number().int().min(1).max(100_000).default(1),
+    maxResults: z
+      .number()
+      .int()
+      .min(1)
+      .max(MAX_RUNTIME_JSON_ENTRIES)
+      .default(MAX_RUNTIME_JSON_ENTRIES),
+  })
+  .strip();
 
 const identitySchema = z
   .object({
@@ -55,6 +104,33 @@ export class IntelligenceToolExecutor implements RuntimeToolExecutorPort {
         .max(5_000)
         .parse(invocation.arguments.nodeIds);
       return { structured: { estimate: this.intelligence.contextEstimate(nodeIds) } };
+    }
+    if (invocation.operation === 'diagnostics') {
+      const { path, ...query } = diagnosticsQuerySchema.parse(invocation.arguments);
+      return {
+        structured: {
+          ...this.intelligence.diagnostics({ ...query, ...(path === undefined ? {} : { path }) }),
+        },
+      };
+    }
+    if (isSymbolQueryKind(invocation.operation)) {
+      const { maxResults, ...query } = symbolQuerySchema.parse(invocation.arguments);
+      const selection = await this.intelligence.locations(
+        { ...query, kind: invocation.operation },
+        maxResults,
+      );
+      return { structured: { ...selection } };
+    }
+    if (invocation.operation === 'hover') {
+      const parsed = symbolQuerySchema.parse(invocation.arguments);
+      const hover = await this.intelligence.hover({
+        rootKey: parsed.rootKey,
+        path: parsed.path,
+        line: parsed.line,
+        column: parsed.column,
+        kind: 'definition',
+      });
+      return { structured: { hover: hover ?? null, found: hover !== undefined } };
     }
     if (invocation.operation === 'invalidate') {
       const paths = z

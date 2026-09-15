@@ -45,13 +45,17 @@ function entitlement(
   };
 }
 
-function backendFor(entitlements: ReturnType<typeof entitlement>): ModelBackendPort {
+function backendFor(
+  entitlements: ReturnType<typeof entitlement>,
+  organizationPolicy?: { allowedModels: string[] },
+): ModelBackendPort {
   return {
     getRouterModels: vi.fn(async () => [routerModel]),
     getConnectorModels: vi.fn(async () => []),
     getLocalOllamaModels: vi.fn(async () => []),
     getLocalFrontierModels: vi.fn(async () => []),
     getEntitlements: vi.fn(async () => entitlements),
+    getOrganizationPolicy: vi.fn(async () => organizationPolicy as never),
   };
 }
 
@@ -182,6 +186,62 @@ describe('ModelService', () => {
     await expect(new ModelService(backend).refresh()).resolves.toMatchObject({
       catalog: [{ key: 'OLLAMA:qwen3-coder' }],
       warnings: ['ollama', 'llamacpp'],
+    });
+  });
+
+  // The entitlement filter exempts local models on purpose — a local model
+  // costs nothing, so entitlements have no opinion on it. An organization
+  // allowlist answers a different question, what a member is permitted to use,
+  // and an unvetted local model is exactly what an organization forbids. So
+  // this filter must reach local models where the entitlement one does not.
+  it('applies an organization allowlist to local models too', async () => {
+    const backend = backendFor(entitlement({ isAdmin: true }), {
+      allowedModels: ['ANTHROPIC:claude-sonnet'],
+    });
+
+    await expect(new ModelService(backend).refresh()).resolves.toMatchObject({ catalog: [] });
+  });
+
+  it('treats an empty organization allowlist as every model permitted', async () => {
+    const backend = backendFor(entitlement({ isAdmin: true }), { allowedModels: [] });
+
+    await expect(new ModelService(backend).refresh()).resolves.toMatchObject({
+      catalog: [{ key: 'OLLAMA:qwen3-coder' }],
+    });
+  });
+
+  it('changes nothing when the backend has no organization policy', async () => {
+    const backend = backendFor(entitlement({ isAdmin: true }));
+
+    await expect(new ModelService(backend).refresh()).resolves.toMatchObject({
+      catalog: [{ key: 'OLLAMA:qwen3-coder' }],
+    });
+  });
+
+  // Both filters apply: an organization allowlist narrows further than
+  // entitlements, it never widens past them.
+  it('intersects the organization allowlist with what entitlements already permit', async () => {
+    const backend = backendFor(
+      entitlement({
+        allowedProviders: ['OLLAMA'],
+        allowedModels: [
+          {
+            provider: 'OLLAMA',
+            model: 'qwen3-coder',
+            isAllowed: true,
+            allowAsPrimary: true,
+            allowAsFallback: true,
+            allowAsJudge: true,
+            allowInCompare: true,
+            dailyTokenLimitOverride: null,
+          },
+        ],
+      }),
+      { allowedModels: ['OLLAMA:qwen3-coder'] },
+    );
+
+    await expect(new ModelService(backend).refresh()).resolves.toMatchObject({
+      catalog: [{ key: 'OLLAMA:qwen3-coder' }],
     });
   });
 });

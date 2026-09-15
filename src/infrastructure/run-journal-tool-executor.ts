@@ -33,8 +33,22 @@ export class RunJournalToolExecutor implements RuntimeToolExecutorPort {
       return { structured: { saved: true } };
     }
     if (invocation.operation === 'search') {
-      const query = z.string().max(500).default('').parse(invocation.arguments.query);
-      return { structured: { journals: await this.journals.search(query) } };
+      // The facets are read from the same arguments bag as the query, so a
+      // caller that only knows about `query` keeps working unchanged.
+      const journals = await this.journals.search({
+        query: z.string().max(500).default('').parse(invocation.arguments.query),
+        ...(invocation.arguments.lifecycle === undefined
+          ? {}
+          : { lifecycle: invocation.arguments.lifecycle }),
+        ...(invocation.arguments.label === undefined ? {} : { label: invocation.arguments.label }),
+        ...(invocation.arguments.pinned === undefined
+          ? {}
+          : { pinned: invocation.arguments.pinned }),
+        ...(invocation.arguments.updatedSince === undefined
+          ? {}
+          : { updatedSince: invocation.arguments.updatedSince }),
+      });
+      return { structured: { journals } };
     }
     const runId = runIdSchema.parse(invocation.arguments.runId);
     if (invocation.operation === 'load') {

@@ -2,6 +2,8 @@ import { mkdirSync, readdirSync, readFileSync, statSync, writeFileSync } from 'n
 import { join, relative } from 'node:path';
 import { cwd, stdout } from 'node:process';
 
+import { authorizationPageTranslations } from './authorization-page-translations.mjs';
+
 const root = cwd();
 const localeNames = {
   ar: 'العربية',
@@ -1919,8 +1921,2766 @@ const composerTranslations = {
     'Web research': '网络检索',
   },
 };
+const mentionTranslations = {
+  ar: {
+    '{count} workspace files match': 'تطابق {count} من ملفات مساحة العمل',
+    'Workspace files': 'ملفات مساحة العمل',
+  },
+  de: {
+    '{count} workspace files match': '{count} Arbeitsbereichsdateien stimmen überein',
+    'Workspace files': 'Arbeitsbereichsdateien',
+  },
+  es: {
+    '{count} workspace files match': '{count} archivos del espacio de trabajo coinciden',
+    'Workspace files': 'Archivos del espacio de trabajo',
+  },
+  fa: {
+    '{count} workspace files match': '{count} فایل فضای کاری مطابقت دارد',
+    'Workspace files': 'فایل‌های فضای کاری',
+  },
+  fr: {
+    '{count} workspace files match': '{count} fichiers de l’espace de travail correspondent',
+    'Workspace files': 'Fichiers de l’espace de travail',
+  },
+  hi: {
+    '{count} workspace files match': '{count} वर्कस्पेस फ़ाइलें मेल खाती हैं',
+    'Workspace files': 'वर्कस्पेस फ़ाइलें',
+  },
+  it: {
+    '{count} workspace files match': '{count} file dell’area di lavoro corrispondono',
+    'Workspace files': 'File dell’area di lavoro',
+  },
+  ja: {
+    '{count} workspace files match': '{count} 件のワークスペースファイルが一致',
+    'Workspace files': 'ワークスペースのファイル',
+  },
+  pt: {
+    '{count} workspace files match': '{count} arquivos do espaço de trabalho correspondem',
+    'Workspace files': 'Arquivos do espaço de trabalho',
+  },
+  ru: {
+    '{count} workspace files match': 'Совпадений в рабочей области: {count}',
+    'Workspace files': 'Файлы рабочей области',
+  },
+  th: {
+    '{count} workspace files match': 'ไฟล์ในเวิร์กสเปซตรงกัน {count} รายการ',
+    'Workspace files': 'ไฟล์ในเวิร์กสเปซ',
+  },
+  zh: {
+    '{count} workspace files match': '{count} 个工作区文件匹配',
+    'Workspace files': '工作区文件',
+  },
+};
+
+const sessionTabTranslations = {
+  ar: {
+    'No recently closed ClawAI chat to reopen.': 'لا توجد محادثة ClawAI مغلقة مؤخراً لإعادة فتحها.',
+    'Reopen Closed Chat': 'إعادة فتح المحادثة المغلقة',
+  },
+  de: {
+    'No recently closed ClawAI chat to reopen.':
+      'Kein kürzlich geschlossener ClawAI-Chat zum erneuten Öffnen.',
+    'Reopen Closed Chat': 'Geschlossenen Chat erneut öffnen',
+  },
+  es: {
+    'No recently closed ClawAI chat to reopen.':
+      'No hay ningún chat de ClawAI cerrado recientemente para reabrir.',
+    'Reopen Closed Chat': 'Reabrir chat cerrado',
+  },
+  fa: {
+    'No recently closed ClawAI chat to reopen.':
+      'هیچ گفتگوی ClawAI که اخیراً بسته شده باشد برای بازکردن وجود ندارد.',
+    'Reopen Closed Chat': 'بازکردن دوباره گفتگوی بسته‌شده',
+  },
+  fr: {
+    'No recently closed ClawAI chat to reopen.':
+      'Aucune conversation ClawAI récemment fermée à rouvrir.',
+    'Reopen Closed Chat': 'Rouvrir la conversation fermée',
+  },
+  hi: {
+    'No recently closed ClawAI chat to reopen.':
+      'फिर से खोलने के लिए हाल में बंद की गई कोई ClawAI चैट नहीं है।',
+    'Reopen Closed Chat': 'बंद चैट फिर से खोलें',
+  },
+  it: {
+    'No recently closed ClawAI chat to reopen.':
+      'Nessuna chat ClawAI chiusa di recente da riaprire.',
+    'Reopen Closed Chat': 'Riapri la chat chiusa',
+  },
+  ja: {
+    'No recently closed ClawAI chat to reopen.':
+      '再度開ける、最近閉じた ClawAI チャットはありません。',
+    'Reopen Closed Chat': '閉じたチャットを再度開く',
+  },
+  pt: {
+    'No recently closed ClawAI chat to reopen.':
+      'Nenhuma conversa do ClawAI fechada recentemente para reabrir.',
+    'Reopen Closed Chat': 'Reabrir conversa fechada',
+  },
+  ru: {
+    'No recently closed ClawAI chat to reopen.':
+      'Нет недавно закрытых чатов ClawAI для повторного открытия.',
+    'Reopen Closed Chat': 'Открыть закрытый чат заново',
+  },
+  th: {
+    'No recently closed ClawAI chat to reopen.': 'ไม่มีแชท ClawAI ที่เพิ่งปิดให้เปิดอีกครั้ง',
+    'Reopen Closed Chat': 'เปิดแชทที่ปิดไปอีกครั้ง',
+  },
+  zh: {
+    'No recently closed ClawAI chat to reopen.': '没有最近关闭的 ClawAI 对话可以重新打开。',
+    'Reopen Closed Chat': '重新打开已关闭的对话',
+  },
+};
+
+const threadOrganizationTranslations = {
+  ar: {
+    'A conversation needs a name.': 'المحادثة تحتاج إلى اسم.',
+    'A name you will recognise a week from now.': 'اسم ستتعرف عليه بعد أسبوع من الآن.',
+    'Archive Conversation': 'أرشفة المحادثة',
+    'Archive conversation': 'أرشفة المحادثة',
+    'No conversations are archived.': 'لا توجد محادثات مؤرشفة.',
+    'Rename Conversation': 'إعادة تسمية المحادثة',
+    'Rename conversation': 'إعادة تسمية المحادثة',
+    'Restore Archived Conversation': 'استعادة محادثة مؤرشفة',
+    'Restore archived conversation': 'استعادة محادثة مؤرشفة',
+    'There are no conversations to archive.': 'لا توجد محادثات لأرشفتها.',
+    'There are no conversations to rename.': 'لا توجد محادثات لإعادة تسميتها.',
+  },
+  de: {
+    'A conversation needs a name.': 'Eine Unterhaltung braucht einen Namen.',
+    'A name you will recognise a week from now.':
+      'Ein Name, den Sie in einer Woche noch wiedererkennen.',
+    'Archive Conversation': 'Unterhaltung archivieren',
+    'Archive conversation': 'Unterhaltung archivieren',
+    'No conversations are archived.': 'Es sind keine Unterhaltungen archiviert.',
+    'Rename Conversation': 'Unterhaltung umbenennen',
+    'Rename conversation': 'Unterhaltung umbenennen',
+    'Restore Archived Conversation': 'Archivierte Unterhaltung wiederherstellen',
+    'Restore archived conversation': 'Archivierte Unterhaltung wiederherstellen',
+    'There are no conversations to archive.': 'Es gibt keine Unterhaltungen zum Archivieren.',
+    'There are no conversations to rename.': 'Es gibt keine Unterhaltungen zum Umbenennen.',
+  },
+  es: {
+    'A conversation needs a name.': 'Una conversación necesita un nombre.',
+    'A name you will recognise a week from now.': 'Un nombre que reconocerás dentro de una semana.',
+    'Archive Conversation': 'Archivar conversación',
+    'Archive conversation': 'Archivar conversación',
+    'No conversations are archived.': 'No hay conversaciones archivadas.',
+    'Rename Conversation': 'Renombrar conversación',
+    'Rename conversation': 'Renombrar conversación',
+    'Restore Archived Conversation': 'Restaurar conversación archivada',
+    'Restore archived conversation': 'Restaurar conversación archivada',
+    'There are no conversations to archive.': 'No hay conversaciones para archivar.',
+    'There are no conversations to rename.': 'No hay conversaciones para renombrar.',
+  },
+  fa: {
+    'A conversation needs a name.': 'گفتگو به یک نام نیاز دارد.',
+    'A name you will recognise a week from now.': 'نامی که یک هفته بعد هم آن را بشناسید.',
+    'Archive Conversation': 'بایگانی گفتگو',
+    'Archive conversation': 'بایگانی گفتگو',
+    'No conversations are archived.': 'هیچ گفتگویی بایگانی نشده است.',
+    'Rename Conversation': 'تغییر نام گفتگو',
+    'Rename conversation': 'تغییر نام گفتگو',
+    'Restore Archived Conversation': 'بازیابی گفتگوی بایگانی‌شده',
+    'Restore archived conversation': 'بازیابی گفتگوی بایگانی‌شده',
+    'There are no conversations to archive.': 'گفتگویی برای بایگانی وجود ندارد.',
+    'There are no conversations to rename.': 'گفتگویی برای تغییر نام وجود ندارد.',
+  },
+  fr: {
+    'A conversation needs a name.': 'Une conversation a besoin d’un nom.',
+    'A name you will recognise a week from now.': 'Un nom que vous reconnaîtrez dans une semaine.',
+    'Archive Conversation': 'Archiver la conversation',
+    'Archive conversation': 'Archiver la conversation',
+    'No conversations are archived.': 'Aucune conversation n’est archivée.',
+    'Rename Conversation': 'Renommer la conversation',
+    'Rename conversation': 'Renommer la conversation',
+    'Restore Archived Conversation': 'Restaurer une conversation archivée',
+    'Restore archived conversation': 'Restaurer une conversation archivée',
+    'There are no conversations to archive.': 'Aucune conversation à archiver.',
+    'There are no conversations to rename.': 'Aucune conversation à renommer.',
+  },
+  hi: {
+    'A conversation needs a name.': 'बातचीत को एक नाम चाहिए।',
+    'A name you will recognise a week from now.': 'ऐसा नाम जिसे आप एक सप्ताह बाद भी पहचान लें।',
+    'Archive Conversation': 'बातचीत संग्रहित करें',
+    'Archive conversation': 'बातचीत संग्रहित करें',
+    'No conversations are archived.': 'कोई बातचीत संग्रहित नहीं है।',
+    'Rename Conversation': 'बातचीत का नाम बदलें',
+    'Rename conversation': 'बातचीत का नाम बदलें',
+    'Restore Archived Conversation': 'संग्रहित बातचीत पुनर्स्थापित करें',
+    'Restore archived conversation': 'संग्रहित बातचीत पुनर्स्थापित करें',
+    'There are no conversations to archive.': 'संग्रहित करने के लिए कोई बातचीत नहीं है।',
+    'There are no conversations to rename.': 'नाम बदलने के लिए कोई बातचीत नहीं है।',
+  },
+  it: {
+    'A conversation needs a name.': 'Una conversazione ha bisogno di un nome.',
+    'A name you will recognise a week from now.': 'Un nome che riconoscerai tra una settimana.',
+    'Archive Conversation': 'Archivia conversazione',
+    'Archive conversation': 'Archivia conversazione',
+    'No conversations are archived.': 'Nessuna conversazione è archiviata.',
+    'Rename Conversation': 'Rinomina conversazione',
+    'Rename conversation': 'Rinomina conversazione',
+    'Restore Archived Conversation': 'Ripristina conversazione archiviata',
+    'Restore archived conversation': 'Ripristina conversazione archiviata',
+    'There are no conversations to archive.': 'Non ci sono conversazioni da archiviare.',
+    'There are no conversations to rename.': 'Non ci sono conversazioni da rinominare.',
+  },
+  ja: {
+    'A conversation needs a name.': '会話には名前が必要です。',
+    'A name you will recognise a week from now.': '1 週間後でも見分けられる名前。',
+    'Archive Conversation': '会話をアーカイブ',
+    'Archive conversation': '会話をアーカイブ',
+    'No conversations are archived.': 'アーカイブされた会話はありません。',
+    'Rename Conversation': '会話の名前を変更',
+    'Rename conversation': '会話の名前を変更',
+    'Restore Archived Conversation': 'アーカイブした会話を復元',
+    'Restore archived conversation': 'アーカイブした会話を復元',
+    'There are no conversations to archive.': 'アーカイブできる会話はありません。',
+    'There are no conversations to rename.': '名前を変更できる会話はありません。',
+  },
+  pt: {
+    'A conversation needs a name.': 'Uma conversa precisa de um nome.',
+    'A name you will recognise a week from now.':
+      'Um nome que você reconhecerá daqui a uma semana.',
+    'Archive Conversation': 'Arquivar conversa',
+    'Archive conversation': 'Arquivar conversa',
+    'No conversations are archived.': 'Nenhuma conversa está arquivada.',
+    'Rename Conversation': 'Renomear conversa',
+    'Rename conversation': 'Renomear conversa',
+    'Restore Archived Conversation': 'Restaurar conversa arquivada',
+    'Restore archived conversation': 'Restaurar conversa arquivada',
+    'There are no conversations to archive.': 'Não há conversas para arquivar.',
+    'There are no conversations to rename.': 'Não há conversas para renomear.',
+  },
+  ru: {
+    'A conversation needs a name.': 'Беседе нужно имя.',
+    'A name you will recognise a week from now.': 'Имя, которое вы узнаете и через неделю.',
+    'Archive Conversation': 'Архивировать беседу',
+    'Archive conversation': 'Архивировать беседу',
+    'No conversations are archived.': 'Архивных бесед нет.',
+    'Rename Conversation': 'Переименовать беседу',
+    'Rename conversation': 'Переименовать беседу',
+    'Restore Archived Conversation': 'Восстановить архивную беседу',
+    'Restore archived conversation': 'Восстановить архивную беседу',
+    'There are no conversations to archive.': 'Нет бесед для архивирования.',
+    'There are no conversations to rename.': 'Нет бесед для переименования.',
+  },
+  th: {
+    'A conversation needs a name.': 'การสนทนาต้องมีชื่อ',
+    'A name you will recognise a week from now.': 'ชื่อที่คุณจะจำได้ในอีกหนึ่งสัปดาห์',
+    'Archive Conversation': 'เก็บการสนทนาเข้าคลัง',
+    'Archive conversation': 'เก็บการสนทนาเข้าคลัง',
+    'No conversations are archived.': 'ไม่มีการสนทนาที่ถูกเก็บไว้',
+    'Rename Conversation': 'เปลี่ยนชื่อการสนทนา',
+    'Rename conversation': 'เปลี่ยนชื่อการสนทนา',
+    'Restore Archived Conversation': 'กู้คืนการสนทนาที่เก็บไว้',
+    'Restore archived conversation': 'กู้คืนการสนทนาที่เก็บไว้',
+    'There are no conversations to archive.': 'ไม่มีการสนทนาให้เก็บเข้าคลัง',
+    'There are no conversations to rename.': 'ไม่มีการสนทนาให้เปลี่ยนชื่อ',
+  },
+  zh: {
+    'A conversation needs a name.': '对话需要一个名称。',
+    'A name you will recognise a week from now.': '一周后你仍能认出的名称。',
+    'Archive Conversation': '归档对话',
+    'Archive conversation': '归档对话',
+    'No conversations are archived.': '没有已归档的对话。',
+    'Rename Conversation': '重命名对话',
+    'Rename conversation': '重命名对话',
+    'Restore Archived Conversation': '恢复已归档的对话',
+    'Restore archived conversation': '恢复已归档的对话',
+    'There are no conversations to archive.': '没有可归档的对话。',
+    'There are no conversations to rename.': '没有可重命名的对话。',
+  },
+};
+
+const focusViewTranslations = {
+  ar: {
+    'Focus view': 'وضع التركيز',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'إظهار الواجهة كاملة، أو المحادثة ومربع الكتابة فقط.',
+    'Toggle Focus View': 'تبديل وضع التركيز',
+  },
+  de: {
+    'Focus view': 'Fokusansicht',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Das gesamte Cockpit anzeigen oder nur Unterhaltung und Eingabefeld.',
+    'Toggle Focus View': 'Fokusansicht umschalten',
+  },
+  es: {
+    'Focus view': 'Vista de enfoque',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Mostrar todo el panel, o solo la conversación y el editor.',
+    'Toggle Focus View': 'Alternar vista de enfoque',
+  },
+  fa: {
+    'Focus view': 'نمای تمرکز',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'نمایش کل کابین، یا فقط گفتگو و کادر نوشتن.',
+    'Toggle Focus View': 'تغییر نمای تمرکز',
+  },
+  fr: {
+    'Focus view': 'Vue focalisée',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Afficher tout le cockpit, ou seulement la conversation et le champ de saisie.',
+    'Toggle Focus View': 'Basculer la vue focalisée',
+  },
+  hi: {
+    'Focus view': 'फ़ोकस दृश्य',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'पूरा कॉकपिट दिखाएँ, या केवल बातचीत और लेखन बॉक्स।',
+    'Toggle Focus View': 'फ़ोकस दृश्य टॉगल करें',
+  },
+  it: {
+    'Focus view': 'Vista focus',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Mostra tutto il pannello, o solo la conversazione e il campo di scrittura.',
+    'Toggle Focus View': 'Attiva/disattiva vista focus',
+  },
+  ja: {
+    'Focus view': 'フォーカス表示',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'すべてのパネルを表示するか、会話と入力欄だけを表示します。',
+    'Toggle Focus View': 'フォーカス表示の切り替え',
+  },
+  pt: {
+    'Focus view': 'Modo foco',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Mostrar todo o painel, ou apenas a conversa e o campo de escrita.',
+    'Toggle Focus View': 'Alternar modo foco',
+  },
+  ru: {
+    'Focus view': 'Режим фокуса',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'Показывать всю панель или только беседу и поле ввода.',
+    'Toggle Focus View': 'Переключить режим фокуса',
+  },
+  th: {
+    'Focus view': 'มุมมองโฟกัส',
+    'Show the whole cockpit, or only the conversation and composer.':
+      'แสดงแผงทั้งหมด หรือแสดงเฉพาะการสนทนาและช่องพิมพ์',
+    'Toggle Focus View': 'สลับมุมมองโฟกัส',
+  },
+  zh: {
+    'Focus view': '专注视图',
+    'Show the whole cockpit, or only the conversation and composer.':
+      '显示完整面板，或仅显示对话与输入框。',
+    'Toggle Focus View': '切换专注视图',
+  },
+};
+
+const onboardingTranslations = {
+  ar: {
+    'Do this next': 'الخطوة التالية',
+    'Getting Started': 'البداية',
+    'Load the model catalog': 'تحميل كتالوج النماذج',
+    'Open a project folder': 'فتح مجلد مشروع',
+    'Sign in to ClawAI': 'تسجيل الدخول إلى ClawAI',
+    'Trust this workspace': 'الوثوق بمساحة العمل هذه',
+  },
+  de: {
+    'Do this next': 'Als Nächstes',
+    'Getting Started': 'Erste Schritte',
+    'Load the model catalog': 'Modellkatalog laden',
+    'Open a project folder': 'Projektordner öffnen',
+    'Sign in to ClawAI': 'Bei ClawAI anmelden',
+    'Trust this workspace': 'Diesem Arbeitsbereich vertrauen',
+  },
+  es: {
+    'Do this next': 'Haz esto ahora',
+    'Getting Started': 'Primeros pasos',
+    'Load the model catalog': 'Carga el catálogo de modelos',
+    'Open a project folder': 'Abre una carpeta de proyecto',
+    'Sign in to ClawAI': 'Inicia sesión en ClawAI',
+    'Trust this workspace': 'Confía en este espacio de trabajo',
+  },
+  fa: {
+    'Do this next': 'گام بعدی',
+    'Getting Started': 'شروع کار',
+    'Load the model catalog': 'بارگذاری فهرست مدل‌ها',
+    'Open a project folder': 'باز کردن پوشه پروژه',
+    'Sign in to ClawAI': 'ورود به ClawAI',
+    'Trust this workspace': 'اعتماد به این فضای کاری',
+  },
+  fr: {
+    'Do this next': 'Étape suivante',
+    'Getting Started': 'Prise en main',
+    'Load the model catalog': 'Charger le catalogue de modèles',
+    'Open a project folder': 'Ouvrir un dossier de projet',
+    'Sign in to ClawAI': 'Se connecter à ClawAI',
+    'Trust this workspace': 'Faire confiance à cet espace de travail',
+  },
+  hi: {
+    'Do this next': 'अगला यह करें',
+    'Getting Started': 'शुरू करें',
+    'Load the model catalog': 'मॉडल कैटलॉग लोड करें',
+    'Open a project folder': 'प्रोजेक्ट फ़ोल्डर खोलें',
+    'Sign in to ClawAI': 'ClawAI में साइन इन करें',
+    'Trust this workspace': 'इस वर्कस्पेस पर भरोसा करें',
+  },
+  it: {
+    'Do this next': 'Passaggio successivo',
+    'Getting Started': 'Per iniziare',
+    'Load the model catalog': 'Carica il catalogo dei modelli',
+    'Open a project folder': 'Apri una cartella di progetto',
+    'Sign in to ClawAI': 'Accedi a ClawAI',
+    'Trust this workspace': 'Considera attendibile questa area di lavoro',
+  },
+  ja: {
+    'Do this next': '次はこれ',
+    'Getting Started': 'はじめに',
+    'Load the model catalog': 'モデルカタログを読み込む',
+    'Open a project folder': 'プロジェクトフォルダーを開く',
+    'Sign in to ClawAI': 'ClawAI にサインイン',
+    'Trust this workspace': 'このワークスペースを信頼する',
+  },
+  pt: {
+    'Do this next': 'Faça isto a seguir',
+    'Getting Started': 'Primeiros passos',
+    'Load the model catalog': 'Carregar o catálogo de modelos',
+    'Open a project folder': 'Abrir uma pasta de projeto',
+    'Sign in to ClawAI': 'Entrar no ClawAI',
+    'Trust this workspace': 'Confiar neste espaço de trabalho',
+  },
+  ru: {
+    'Do this next': 'Следующий шаг',
+    'Getting Started': 'Начало работы',
+    'Load the model catalog': 'Загрузить каталог моделей',
+    'Open a project folder': 'Открыть папку проекта',
+    'Sign in to ClawAI': 'Войти в ClawAI',
+    'Trust this workspace': 'Доверять этой рабочей области',
+  },
+  th: {
+    'Do this next': 'ทำสิ่งนี้ต่อไป',
+    'Getting Started': 'เริ่มต้นใช้งาน',
+    'Load the model catalog': 'โหลดแคตตาล็อกโมเดล',
+    'Open a project folder': 'เปิดโฟลเดอร์โปรเจกต์',
+    'Sign in to ClawAI': 'ลงชื่อเข้าใช้ ClawAI',
+    'Trust this workspace': 'เชื่อถือเวิร์กสเปซนี้',
+  },
+  zh: {
+    'Do this next': '下一步',
+    'Getting Started': '快速开始',
+    'Load the model catalog': '加载模型目录',
+    'Open a project folder': '打开项目文件夹',
+    'Sign in to ClawAI': '登录 ClawAI',
+    'Trust this workspace': '信任此工作区',
+  },
+};
+
+const turnNavigationTranslations = {
+  ar: {
+    '{who}, turn {position} of {total}': '{who}، الدور {position} من {total}',
+  },
+  de: {
+    '{who}, turn {position} of {total}': '{who}, Beitrag {position} von {total}',
+  },
+  es: {
+    '{who}, turn {position} of {total}': '{who}, turno {position} de {total}',
+  },
+  fa: {
+    '{who}, turn {position} of {total}': '{who}، نوبت {position} از {total}',
+  },
+  fr: {
+    '{who}, turn {position} of {total}': '{who}, tour {position} sur {total}',
+  },
+  hi: {
+    '{who}, turn {position} of {total}': '{who}, बारी {position} / {total}',
+  },
+  it: {
+    '{who}, turn {position} of {total}': '{who}, turno {position} di {total}',
+  },
+  ja: {
+    '{who}, turn {position} of {total}': '{who}、{total} 件中 {position} 件目',
+  },
+  pt: {
+    '{who}, turn {position} of {total}': '{who}, turno {position} de {total}',
+  },
+  ru: {
+    '{who}, turn {position} of {total}': '{who}, реплика {position} из {total}',
+  },
+  th: {
+    '{who}, turn {position} of {total}': '{who} ลำดับที่ {position} จาก {total}',
+  },
+  zh: {
+    '{who}, turn {position} of {total}': '{who}，第 {position} 条，共 {total} 条',
+  },
+};
+
+const statusLineTranslations = {
+  ar: {
+    Running: 'قيد التشغيل',
+    'Running, {0} queued': 'قيد التشغيل، {0} في الانتظار',
+    'Waiting for you': 'في انتظارك',
+    '{0} queued': '{0} في الانتظار',
+  },
+  de: {
+    Running: 'Läuft',
+    'Running, {0} queued': 'Läuft, {0} in der Warteschlange',
+    'Waiting for you': 'Wartet auf Sie',
+    '{0} queued': '{0} in der Warteschlange',
+  },
+  es: {
+    Running: 'En ejecución',
+    'Running, {0} queued': 'En ejecución, {0} en cola',
+    'Waiting for you': 'Esperándote',
+    '{0} queued': '{0} en cola',
+  },
+  fa: {
+    Running: 'در حال اجرا',
+    'Running, {0} queued': 'در حال اجرا، {0} در صف',
+    'Waiting for you': 'در انتظار شما',
+    '{0} queued': '{0} در صف',
+  },
+  fr: {
+    Running: 'En cours',
+    'Running, {0} queued': 'En cours, {0} en file',
+    'Waiting for you': 'En attente de vous',
+    '{0} queued': '{0} en file',
+  },
+  hi: {
+    Running: 'चल रहा है',
+    'Running, {0} queued': 'चल रहा है, {0} कतार में',
+    'Waiting for you': 'आपकी प्रतीक्षा में',
+    '{0} queued': '{0} कतार में',
+  },
+  it: {
+    Running: 'In esecuzione',
+    'Running, {0} queued': 'In esecuzione, {0} in coda',
+    'Waiting for you': 'In attesa di te',
+    '{0} queued': '{0} in coda',
+  },
+  ja: {
+    Running: '実行中',
+    'Running, {0} queued': '実行中、{0} 件待機',
+    'Waiting for you': '応答待ち',
+    '{0} queued': '{0} 件待機',
+  },
+  pt: {
+    Running: 'Em execução',
+    'Running, {0} queued': 'Em execução, {0} na fila',
+    'Waiting for you': 'Aguardando você',
+    '{0} queued': '{0} na fila',
+  },
+  ru: {
+    Running: 'Выполняется',
+    'Running, {0} queued': 'Выполняется, в очереди: {0}',
+    'Waiting for you': 'Ожидает вас',
+    '{0} queued': 'В очереди: {0}',
+  },
+  th: {
+    Running: 'กำลังทำงาน',
+    'Running, {0} queued': 'กำลังทำงาน รออีก {0}',
+    'Waiting for you': 'กำลังรอคุณ',
+    '{0} queued': 'รออยู่ {0}',
+  },
+  zh: {
+    Running: '运行中',
+    'Running, {0} queued': '运行中，{0} 个排队',
+    'Waiting for you': '等待你的操作',
+    '{0} queued': '{0} 个排队',
+  },
+};
+
+const coreSurfaceTranslations = {
+  ar: {
+    'A title is required.': 'العنوان مطلوب.',
+    Agent: 'الوكيل',
+    'Agent status': 'حالة الوكيل',
+    'Agent workspace folder': 'مجلد مساحة عمل الوكيل',
+    'Allow output here': 'السماح بالإخراج هنا',
+    Allowed: 'مسموح',
+    Answer: 'إجابة',
+    'Applied file changes': 'طبقت تغييرات الملفات',
+    'Apply file changes': 'تطبيق تغييرات الملفات',
+    'Approval required': 'مطلوب موافقة',
+    Approve: 'موافقة',
+    'Approve agent effect': 'الموافقة على أثر الوكيل',
+    'Approve browser navigation': 'الموافقة على تنقل المتصفح',
+    'Ask ClawAI': 'اسأل ClawAI',
+    'Automatic routing': 'التوجيه التلقائي',
+    Backend: 'الخادم',
+    'Bug report': 'تقرير خطأ',
+    Cancelled: 'ألغي',
+    'Changes rejected': 'رفضت التغييرات',
+    Chat: 'محادثة',
+  },
+  de: {
+    'A title is required.': 'Ein Titel ist erforderlich.',
+    Agent: 'Agent',
+    'Agent status': 'Agentenstatus',
+    'Agent workspace folder': 'Arbeitsbereichsordner des Agenten',
+    'Allow output here': 'Ausgabe hier erlauben',
+    Allowed: 'Erlaubt',
+    Answer: 'Antworten',
+    'Applied file changes': 'Dateianderungen angewendet',
+    'Apply file changes': 'Dateianderungen anwenden',
+    'Approval required': 'Genehmigung erforderlich',
+    Approve: 'Genehmigen',
+    'Approve agent effect': 'Agentenaktion genehmigen',
+    'Approve browser navigation': 'Browsernavigation genehmigen',
+    'Ask ClawAI': 'ClawAI fragen',
+    'Automatic routing': 'Automatisches Routing',
+    Backend: 'Backend',
+    'Bug report': 'Fehlerbericht',
+    Cancelled: 'Abgebrochen',
+    'Changes rejected': 'Anderungen abgelehnt',
+    Chat: 'Chat',
+  },
+  es: {
+    'A title is required.': 'Se requiere un titulo.',
+    Agent: 'Agente',
+    'Agent status': 'Estado del agente',
+    'Agent workspace folder': 'Carpeta de trabajo del agente',
+    'Allow output here': 'Permitir salida aqui',
+    Allowed: 'Permitido',
+    Answer: 'Responder',
+    'Applied file changes': 'Cambios de archivos aplicados',
+    'Apply file changes': 'Aplicar cambios de archivos',
+    'Approval required': 'Se requiere aprobacion',
+    Approve: 'Aprobar',
+    'Approve agent effect': 'Aprobar el efecto del agente',
+    'Approve browser navigation': 'Aprobar la navegacion del navegador',
+    'Ask ClawAI': 'Pregunta a ClawAI',
+    'Automatic routing': 'Enrutamiento automatico',
+    Backend: 'Backend',
+    'Bug report': 'Informe de error',
+    Cancelled: 'Cancelado',
+    'Changes rejected': 'Cambios rechazados',
+    Chat: 'Chat',
+  },
+  fa: {
+    'A title is required.': 'عنوان الزامی است.',
+    Agent: 'عامل',
+    'Agent status': 'وضعیت عامل',
+    'Agent workspace folder': 'پوشه فضای کاری عامل',
+    'Allow output here': 'اجازه خروجی در اینجا',
+    Allowed: 'مجاز',
+    Answer: 'پاسخ',
+    'Applied file changes': 'تغییرات فایل اعمال شد',
+    'Apply file changes': 'اعمال تغییرات فایل',
+    'Approval required': 'نیازمند تأیید',
+    Approve: 'تأیید',
+    'Approve agent effect': 'تأیید اثر عامل',
+    'Approve browser navigation': 'تأیید پیمایش مرورگر',
+    'Ask ClawAI': 'از ClawAI بپرسید',
+    'Automatic routing': 'مسیریابی خودکار',
+    Backend: 'سرویس پشتیبان',
+    'Bug report': 'گزارش اشکال',
+    Cancelled: 'لغو شد',
+    'Changes rejected': 'تغییرات رد شد',
+    Chat: 'گفتگو',
+  },
+  fr: {
+    'A title is required.': 'Un titre est requis.',
+    Agent: 'Agent',
+    'Agent status': 'Etat de l agent',
+    'Agent workspace folder': 'Dossier de travail de l agent',
+    'Allow output here': 'Autoriser la sortie ici',
+    Allowed: 'Autorise',
+    Answer: 'Repondre',
+    'Applied file changes': 'Modifications appliquees',
+    'Apply file changes': 'Appliquer les modifications',
+    'Approval required': 'Approbation requise',
+    Approve: 'Approuver',
+    'Approve agent effect': 'Approuver l action de l agent',
+    'Approve browser navigation': 'Approuver la navigation',
+    'Ask ClawAI': 'Demander a ClawAI',
+    'Automatic routing': 'Routage automatique',
+    Backend: 'Backend',
+    'Bug report': 'Rapport de bogue',
+    Cancelled: 'Annule',
+    'Changes rejected': 'Modifications refusees',
+    Chat: 'Discussion',
+  },
+  hi: {
+    'A title is required.': 'शीर्षक आवश्यक है।',
+    Agent: 'एजेंट',
+    'Agent status': 'एजेंट की स्थिति',
+    'Agent workspace folder': 'एजेंट वर्कस्पेस फ़ोल्डर',
+    'Allow output here': 'यहाँ आउटपुट की अनुमति दें',
+    Allowed: 'अनुमत',
+    Answer: 'उत्तर दें',
+    'Applied file changes': 'फ़ाइल परिवर्तन लागू किए गए',
+    'Apply file changes': 'फ़ाइल परिवर्तन लागू करें',
+    'Approval required': 'अनुमोदन आवश्यक',
+    Approve: 'अनुमोदित करें',
+    'Approve agent effect': 'एजेंट प्रभाव अनुमोदित करें',
+    'Approve browser navigation': 'ब्राउज़र नेविगेशन अनुमोदित करें',
+    'Ask ClawAI': 'ClawAI से पूछें',
+    'Automatic routing': 'स्वचालित रूटिंग',
+    Backend: 'बैकएंड',
+    'Bug report': 'बग रिपोर्ट',
+    Cancelled: 'रद्द किया गया',
+    'Changes rejected': 'परिवर्तन अस्वीकृत',
+    Chat: 'चैट',
+  },
+  it: {
+    'A title is required.': 'E richiesto un titolo.',
+    Agent: 'Agente',
+    'Agent status': 'Stato agente',
+    'Agent workspace folder': 'Cartella di lavoro dell agente',
+    'Allow output here': 'Consenti output qui',
+    Allowed: 'Consentito',
+    Answer: 'Rispondi',
+    'Applied file changes': 'Modifiche ai file applicate',
+    'Apply file changes': 'Applica le modifiche ai file',
+    'Approval required': 'Approvazione richiesta',
+    Approve: 'Approva',
+    'Approve agent effect': 'Approva l effetto dell agente',
+    'Approve browser navigation': 'Approva la navigazione',
+    'Ask ClawAI': 'Chiedi a ClawAI',
+    'Automatic routing': 'Instradamento automatico',
+    Backend: 'Backend',
+    'Bug report': 'Segnalazione di bug',
+    Cancelled: 'Annullato',
+    'Changes rejected': 'Modifiche rifiutate',
+    Chat: 'Chat',
+  },
+  ja: {
+    'A title is required.': 'タイトルが必要です。',
+    Agent: 'エージェント',
+    'Agent status': 'エージェントの状態',
+    'Agent workspace folder': 'エージェントのワークスペースフォルダー',
+    'Allow output here': 'ここへの出力を許可',
+    Allowed: '許可済み',
+    Answer: '回答',
+    'Applied file changes': 'ファイルの変更を適用しました',
+    'Apply file changes': 'ファイルの変更を適用',
+    'Approval required': '承認が必要です',
+    Approve: '承認',
+    'Approve agent effect': 'エージェントの操作を承認',
+    'Approve browser navigation': 'ブラウザーの遷移を承認',
+    'Ask ClawAI': 'ClawAI に質問',
+    'Automatic routing': '自動ルーティング',
+    Backend: 'バックエンド',
+    'Bug report': 'バグ報告',
+    Cancelled: 'キャンセル済み',
+    'Changes rejected': '変更は却下されました',
+    Chat: 'チャット',
+  },
+  pt: {
+    'A title is required.': 'E necessario um titulo.',
+    Agent: 'Agente',
+    'Agent status': 'Status do agente',
+    'Agent workspace folder': 'Pasta de trabalho do agente',
+    'Allow output here': 'Permitir saida aqui',
+    Allowed: 'Permitido',
+    Answer: 'Responder',
+    'Applied file changes': 'Alteracoes de arquivos aplicadas',
+    'Apply file changes': 'Aplicar alteracoes de arquivos',
+    'Approval required': 'Aprovacao necessaria',
+    Approve: 'Aprovar',
+    'Approve agent effect': 'Aprovar o efeito do agente',
+    'Approve browser navigation': 'Aprovar a navegacao do navegador',
+    'Ask ClawAI': 'Perguntar ao ClawAI',
+    'Automatic routing': 'Roteamento automatico',
+    Backend: 'Backend',
+    'Bug report': 'Relatorio de erro',
+    Cancelled: 'Cancelado',
+    'Changes rejected': 'Alteracoes rejeitadas',
+    Chat: 'Conversa',
+  },
+  ru: {
+    'A title is required.': 'Требуется заголовок.',
+    Agent: 'Агент',
+    'Agent status': 'Состояние агента',
+    'Agent workspace folder': 'Папка рабочей области агента',
+    'Allow output here': 'Разрешить вывод сюда',
+    Allowed: 'Разрешено',
+    Answer: 'Ответить',
+    'Applied file changes': 'Изменения файлов применены',
+    'Apply file changes': 'Применить изменения файлов',
+    'Approval required': 'Требуется подтверждение',
+    Approve: 'Подтвердить',
+    'Approve agent effect': 'Подтвердить действие агента',
+    'Approve browser navigation': 'Подтвердить переход в браузере',
+    'Ask ClawAI': 'Спросить ClawAI',
+    'Automatic routing': 'Автоматическая маршрутизация',
+    Backend: 'Бэкенд',
+    'Bug report': 'Сообщение об ошибке',
+    Cancelled: 'Отменено',
+    'Changes rejected': 'Изменения отклонены',
+    Chat: 'Чат',
+  },
+  th: {
+    'A title is required.': 'ต้องระบุชื่อเรื่อง',
+    Agent: 'เอเจนต์',
+    'Agent status': 'สถานะเอเจนต์',
+    'Agent workspace folder': 'โฟลเดอร์เวิร์กสเปซของเอเจนต์',
+    'Allow output here': 'อนุญาตให้เขียนผลลัพธ์ที่นี่',
+    Allowed: 'อนุญาตแล้ว',
+    Answer: 'ตอบ',
+    'Applied file changes': 'ใช้การเปลี่ยนแปลงไฟล์แล้ว',
+    'Apply file changes': 'ใช้การเปลี่ยนแปลงไฟล์',
+    'Approval required': 'ต้องได้รับการอนุมัติ',
+    Approve: 'อนุมัติ',
+    'Approve agent effect': 'อนุมัติการกระทำของเอเจนต์',
+    'Approve browser navigation': 'อนุมัติการนำทางของเบราว์เซอร์',
+    'Ask ClawAI': 'ถาม ClawAI',
+    'Automatic routing': 'การกำหนดเส้นทางอัตโนมัติ',
+    Backend: 'แบ็กเอนด์',
+    'Bug report': 'รายงานข้อบกพร่อง',
+    Cancelled: 'ยกเลิกแล้ว',
+    'Changes rejected': 'ปฏิเสธการเปลี่ยนแปลงแล้ว',
+    Chat: 'แชท',
+  },
+  zh: {
+    'A title is required.': '需要标题。',
+    Agent: '智能体',
+    'Agent status': '智能体状态',
+    'Agent workspace folder': '智能体工作区文件夹',
+    'Allow output here': '允许输出到此处',
+    Allowed: '已允许',
+    Answer: '回答',
+    'Applied file changes': '已应用文件更改',
+    'Apply file changes': '应用文件更改',
+    'Approval required': '需要批准',
+    Approve: '批准',
+    'Approve agent effect': '批准智能体操作',
+    'Approve browser navigation': '批准浏览器导航',
+    'Ask ClawAI': '询问 ClawAI',
+    'Automatic routing': '自动路由',
+    Backend: '后端',
+    'Bug report': '错误报告',
+    Cancelled: '已取消',
+    'Changes rejected': '更改已拒绝',
+    Chat: '对话',
+  },
+};
+
+const outputStyleTranslations = {
+  ar: {
+    Concise: 'موجز',
+    Default: 'افتراضي',
+    'Defined by this project': 'معرف بواسطة هذا المشروع',
+    Explanatory: 'تفسيري',
+    'How should answers be written?': 'كيف ينبغي كتابة الإجابات؟',
+    Learning: 'تعليمي',
+    'Select Output Style': 'اختيار أسلوب الإخراج',
+  },
+  de: {
+    Concise: 'Knapp',
+    Default: 'Standard',
+    'Defined by this project': 'Von diesem Projekt definiert',
+    Explanatory: 'Erklärend',
+    'How should answers be written?': 'Wie sollen Antworten geschrieben werden?',
+    Learning: 'Lernmodus',
+    'Select Output Style': 'Ausgabestil wählen',
+  },
+  es: {
+    Concise: 'Conciso',
+    Default: 'Predeterminado',
+    'Defined by this project': 'Definido por este proyecto',
+    Explanatory: 'Explicativo',
+    'How should answers be written?': '¿Cómo deben escribirse las respuestas?',
+    Learning: 'Aprendizaje',
+    'Select Output Style': 'Seleccionar estilo de respuesta',
+  },
+  fa: {
+    Concise: 'مختصر',
+    Default: 'پیش‌فرض',
+    'Defined by this project': 'تعریف‌شده توسط این پروژه',
+    Explanatory: 'توضیحی',
+    'How should answers be written?': 'پاسخ‌ها چگونه نوشته شوند؟',
+    Learning: 'یادگیری',
+    'Select Output Style': 'انتخاب سبک خروجی',
+  },
+  fr: {
+    Concise: 'Concis',
+    Default: 'Par défaut',
+    'Defined by this project': 'Défini par ce projet',
+    Explanatory: 'Explicatif',
+    'How should answers be written?': 'Comment les réponses doivent-elles être écrites ?',
+    Learning: 'Apprentissage',
+    'Select Output Style': 'Choisir le style de réponse',
+  },
+  hi: {
+    Concise: 'संक्षिप्त',
+    Default: 'डिफ़ॉल्ट',
+    'Defined by this project': 'इस प्रोजेक्ट द्वारा परिभाषित',
+    Explanatory: 'व्याख्यात्मक',
+    'How should answers be written?': 'उत्तर कैसे लिखे जाएँ?',
+    Learning: 'सीखने वाला',
+    'Select Output Style': 'आउटपुट शैली चुनें',
+  },
+  it: {
+    Concise: 'Conciso',
+    Default: 'Predefinito',
+    'Defined by this project': 'Definito da questo progetto',
+    Explanatory: 'Esplicativo',
+    'How should answers be written?': 'Come devono essere scritte le risposte?',
+    Learning: 'Apprendimento',
+    'Select Output Style': 'Seleziona stile di risposta',
+  },
+  ja: {
+    Concise: '簡潔',
+    Default: '既定',
+    'Defined by this project': 'このプロジェクトで定義',
+    Explanatory: '解説重視',
+    'How should answers be written?': '回答の書き方は？',
+    Learning: '学習向け',
+    'Select Output Style': '出力スタイルを選択',
+  },
+  pt: {
+    Concise: 'Conciso',
+    Default: 'Padrão',
+    'Defined by this project': 'Definido por este projeto',
+    Explanatory: 'Explicativo',
+    'How should answers be written?': 'Como as respostas devem ser escritas?',
+    Learning: 'Aprendizado',
+    'Select Output Style': 'Selecionar estilo de resposta',
+  },
+  ru: {
+    Concise: 'Кратко',
+    Default: 'По умолчанию',
+    'Defined by this project': 'Определено этим проектом',
+    Explanatory: 'С пояснениями',
+    'How should answers be written?': 'Как писать ответы?',
+    Learning: 'Обучение',
+    'Select Output Style': 'Выбрать стиль ответа',
+  },
+  th: {
+    Concise: 'กระชับ',
+    Default: 'ค่าเริ่มต้น',
+    'Defined by this project': 'กำหนดโดยโปรเจกต์นี้',
+    Explanatory: 'อธิบายละเอียด',
+    'How should answers be written?': 'ควรเขียนคำตอบอย่างไร',
+    Learning: 'เพื่อการเรียนรู้',
+    'Select Output Style': 'เลือกรูปแบบคำตอบ',
+  },
+  zh: {
+    Concise: '简洁',
+    Default: '默认',
+    'Defined by this project': '由本项目定义',
+    Explanatory: '讲解式',
+    'How should answers be written?': '答案应该怎么写？',
+    Learning: '教学式',
+    'Select Output Style': '选择输出风格',
+  },
+};
+
+const settingDescriptionTranslations = {
+  ar: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'أوامر تُشغَّل عند نقاط في التشغيل. تُضبط هنا وليس في `.clawai` عن قصد: الخطاف يشغل أمراً، وقراءته من محتوى مساحة العمل تجعل استنساخ مستودع كافياً لتنفيذ التعليمات البرمجية. الخطاف من نوع `before-tool` الموسوم بـ `blocking` وحده يمكنه إيقاف الاستدعاء؛ وكل ما عداه إرشادي.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'كيفية كتابة الإجابات: افتراضي، موجز، تفسيري، تعليمي، أو أسلوب تعرّفه مساحة العمل هذه.',
+  },
+  de: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'Befehle, die an Punkten eines Laufs ausgeführt werden. Absichtlich hier statt in `.clawai` konfiguriert: ein Hook fuehrt einen Befehl aus, und ihn aus Arbeitsbereichsinhalten zu lesen würde bedeuten, dass das Klonen eines Repositorys zum Ausfuehren von Code genügt. Nur ein als `blocking` markierter `before-tool`-Hook kann einen Aufruf stoppen; alles andere ist beratend.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Wie Antworten geschrieben werden: Standard, knapp, erklärend, Lernmodus oder ein von diesem Arbeitsbereich definierter Stil.',
+  },
+  es: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'Comandos que se ejecutan en puntos de una ejecución. Se configuran aquí y no en `.clawai` a propósito: un hook ejecuta un comando, y leerlo del contenido del espacio de trabajo haría que clonar un repositorio bastara para ejecutar código. Solo un hook `before-tool` marcado como `blocking` puede detener una llamada; todo lo demas es informativo.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Cómo se escriben las respuestas: predeterminado, conciso, explicativo, aprendizaje o un estilo que defina este espacio de trabajo.',
+  },
+  fa: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'فرمان‌هایی که در نقاطی از اجرا اجرا می‌شوند. عمداً به جای `.clawai` اینجا تنظیم می‌شوند: یک قلاب فرمان اجرا می‌کند و خواندن آن از محتوای فضای کاری یعنی کلون‌کردن یک مخزن برای اجرای کد کافی است. تنها قلاب `before-tool` با نشان `blocking` می‌تواند یک فراخوانی را متوقف کند؛ بقیه صرفاً اطلاع‌رسانی‌اند.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'نحوه نوشتن پاسخ‌ها: پیش‌فرض، مختصر، توضیحی، یادگیری، یا سبکی که این فضای کاری تعریف می‌کند.',
+  },
+  fr: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      "Commandes exécutées à certains moments d'une exécution. Configurees ici plutôt que dans `.clawai` à dessein : un hook exécute une commande, et le lire depuis le contenu de l'espace de travail signifierait que cloner un depot suffit à exécuter du code. Seul un hook `before-tool` marque `blocking` peut arrêter un appel ; tout le reste est consultatif.",
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Comment les réponses sont écrites : par défaut, concis, explicatif, apprentissage, ou un style défini par cet espace de travail.',
+  },
+  hi: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'रन के कुछ बिंदुओं पर चलने वाले कमांड। इन्हें `.clawai` के बजाय यहाँ जानबूझकर कॉन्फ़िगर किया जाता है: एक हुक कमांड चलाता है, और उसे वर्कस्पेस सामग्री से पढ़ने का अर्थ होगा कि रिपॉज़िटरी क्लोन करना ही कोड चलाने के लिए पर्याप्त है। केवल `blocking` चिह्नित `before-tool` हुक ही किसी कॉल को रोक सकता है; बाकी सब सलाहकारी है।',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'उत्तर कैसे लिखे जाते हैं: डिफ़ॉल्ट, संक्षिप्त, व्याख्यात्मक, सीखने वाला, या इस वर्कस्पेस द्वारा परिभाषित शैली।',
+  },
+  it: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      "Comandi eseguiti in punti di una esecuzione. Configurati qui e non in `.clawai` di propósito: un hook esegue un comando, e leggerlo dal contenuto dell'area di lavoro significherebbe che clonare un repository basta a eseguire codice. Solo un hook `before-tool` contrassegnato `blocking` può fermare una chiamata; tutto il resto è consultivo.",
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Come vengono scritte le risposte: predefinito, conciso, esplicativo, apprendimento o uno stile definito da questa area di lavoro.',
+  },
+  ja: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      '実行中の特定の時点で走らせるコマンド。`.clawai` ではなくここで設定するのは意図的です。フックはコマンドを実行するため、ワークスペースの内容から読み込むと、リポジトリを複製するだけでコードが実行できてしまいます。呼び出しを止められるのは `blocking` を付けた `before-tool` フックだけで、それ以外は助言的です。',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      '回答の書き方: 既定、簡潔、解説重視、学習向け、またはこのワークスペースが定義したスタイル。',
+  },
+  pt: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'Comandos executados em pontos de uma execução. Configurados aquí e não em `.clawai` de propósito: um hook executa um comando, e lê-lo do conteudo do espaço de trabalho faria com que clonar um repositorio bastasse para executar código. Apenas um hook `before-tool` marcado como `blocking` pode parar uma chamada; todo o resto è consultivo.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Como as respostas são escritas: padrão, conciso, explicativo, aprendizado ou um estilo definido por este espaço de trabalho.',
+  },
+  ru: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'Команды, запускаемые в определённых точках выполнения. Настраиваются здесь, а не в `.clawai`, намеренно: хук запускает команду, и чтение его из содержимого рабочей области означало бы, что клонирования репозитория достаточно для выполнения кода. Остановить вызов может только хук `before-tool` с пометкой `blocking`; всё остальное носит рекомендательный характер.',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'Как пишутся ответы: по умолчанию, кратко, с пояснениями, обучение или стиль, заданный этой рабочей областью.',
+  },
+  th: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      'คำสั่งที่รัน ณ จุดต่าง ๆ ของการทำงาน ตั้งค่าที่นี่แทนที่จะเป็นใน `.clawai` โดยเจตนา เพราะฮุกจะรันคำสั่ง และการอ่านฮุกจากเนื้อหาในเวิร์กสเปซจะทำให้แค่โคลนรีโพก็รันโค้ดได้ มีเพียงฮุก `before-tool` ที่ทำเครื่องหมาย `blocking` เท่านั้นที่หยุดการเรียกได้ ส่วนที่เหลือเป็นเพียงคำแนะนำ',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      'รูปแบบการเขียนคำตอบ: ค่าเริ่มต้น กระชับ อธิบายละเอียด เพื่อการเรียนรู้ หรือรูปแบบที่เวิร์กสเปซนี้กำหนด',
+  },
+  zh: {
+    'Commands to run at points in a run. Configured here rather than in `.clawai` on purpose: a hook runs a command, and reading one from workspace content would make cloning a repository enough to execute code. Only a `before-tool` hook marked `blocking` can stop a call; everything else is advisory.':
+      '在运行的特定时刻执行的命令。特意配置在这里而不是 `.clawai`：钩子会执行命令，若从工作区内容读取，克隆一个仓库就足以执行代码。只有标记为 `blocking` 的 `before-tool` 钩子才能阻止调用，其余均为提示性质。',
+    'How answers are written: default, concise, explanatory, learning, or a style this workspace defines.':
+      '答案的书写方式：默认、简洁、讲解式、教学式，或本工作区自定义的风格。',
+  },
+};
+
+const attachmentTranslations = {
+  ar: {
+    '{0} was not sent: the image is too large to read.': 'لم يُرسل {0}: الصورة أكبر من أن تُقرأ.',
+    '{0} was not sent: the selected model cannot read images.':
+      'لم يُرسل {0}: النموذج المحدد لا يمكنه قراءة الصور.',
+    '{0} was not sent: this message already carries enough images.':
+      'لم يُرسل {0}: هذه الرسالة تحمل صوراً كافية بالفعل.',
+  },
+  de: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} wurde nicht gesendet: das Bild ist zu groß zum Lesen.',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} wurde nicht gesendet: das gewählte Modell kann keine Bilder lesen.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} wurde nicht gesendet: diese Nachricht enthält bereits genug Bilder.',
+  },
+  es: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} no se envió: la imagen es demasiado grande para leerla.',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} no se envió: el modelo seleccionado no puede leer imágenes.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} no se envió: este mensaje ya lleva suficientes imágenes.',
+  },
+  fa: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} ارسال نشد: تصویر برای خواندن بیش از حد بزرگ است.',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} ارسال نشد: مدل انتخاب‌شده نمی‌تواند تصویر بخواند.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} ارسال نشد: این پیام هم‌اکنون تصاویر کافی دارد.',
+  },
+  fr: {
+    '{0} was not sent: the image is too large to read.':
+      "{0} n'a pas été envoyé : l'image est trop grande pour être lue.",
+    '{0} was not sent: the selected model cannot read images.':
+      "{0} n'a pas été envoyé : le modèle sélectionné ne peut pas lire les images.",
+    '{0} was not sent: this message already carries enough images.':
+      "{0} n'a pas été envoyé : ce message contient déjà assez d'images.",
+  },
+  hi: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} नहीं भेजा गया: छवि पढ़ने के लिए बहुत बड़ी है।',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} नहीं भेजा गया: चयनित मॉडल छवियाँ नहीं पढ़ सकता।',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} नहीं भेजा गया: इस संदेश में पहले से पर्याप्त छवियाँ हैं।',
+  },
+  it: {
+    '{0} was not sent: the image is too large to read.':
+      "{0} non è stato inviato: l'immagine è troppo grande da leggere.",
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} non è stato inviato: il modello selezionato non può leggere immagini.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} non è stato inviato: questo messaggio contiene già abbastanza immagini.',
+  },
+  ja: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} は送信されませんでした。画像が大きすぎて読めません。',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} は送信されませんでした。選択中のモデルは画像を読めません。',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} は送信されませんでした。このメッセージには既に十分な画像があります。',
+  },
+  pt: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} não foi enviado: a imagem é grande demais para ser lida.',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} não foi enviado: o modelo selecionado não consegue ler imagens.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} não foi enviado: esta mensagem já carrega imagens suficientes.',
+  },
+  ru: {
+    '{0} was not sent: the image is too large to read.':
+      '{0} не отправлен: изображение слишком большое.',
+    '{0} was not sent: the selected model cannot read images.':
+      '{0} не отправлен: выбранная модель не читает изображения.',
+    '{0} was not sent: this message already carries enough images.':
+      '{0} не отправлен: в этом сообщении уже достаточно изображений.',
+  },
+  th: {
+    '{0} was not sent: the image is too large to read.':
+      'ไม่ได้ส่ง {0} เพราะรูปภาพใหญ่เกินกว่าจะอ่านได้',
+    '{0} was not sent: the selected model cannot read images.':
+      'ไม่ได้ส่ง {0} เพราะโมเดลที่เลือกอ่านรูปภาพไม่ได้',
+    '{0} was not sent: this message already carries enough images.':
+      'ไม่ได้ส่ง {0} เพราะข้อความนี้มีรูปภาพมากพอแล้ว',
+  },
+  zh: {
+    '{0} was not sent: the image is too large to read.': '未发送 {0}：图像过大，无法读取。',
+    '{0} was not sent: the selected model cannot read images.':
+      '未发送 {0}：所选模型无法读取图像。',
+    '{0} was not sent: this message already carries enough images.':
+      '未发送 {0}：这条消息已经包含足够多的图像。',
+  },
+};
+
+const contextWarningTranslations = {
+  ar: {
+    'Nearly out of room. The next message may not fit.':
+      'أوشكت المساحة على النفاد. قد لا تتسع الرسالة التالية.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'لن تتسع هذه الرسالة. سيُسقط أقدم جزء من المحادثة.',
+  },
+  de: {
+    'Nearly out of room. The next message may not fit.':
+      'Fast kein Platz mehr. Die nächste Nachricht passt möglicherweise nicht.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Diese Nachricht passt nicht. Das Älteste der Unterhaltung wird verworfen.',
+  },
+  es: {
+    'Nearly out of room. The next message may not fit.':
+      'Casi sin espacio. El próximo mensaje puede no caber.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Este mensaje no cabe. Se descartará lo más antiguo de la conversación.',
+  },
+  fa: {
+    'Nearly out of room. The next message may not fit.':
+      'فضا رو به اتمام است. ممکن است پیام بعدی جا نشود.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'این پیام جا نمی‌شود. قدیمی‌ترین بخش گفتگو حذف خواهد شد.',
+  },
+  fr: {
+    'Nearly out of room. The next message may not fit.':
+      'Presque plus de place. Le prochain message pourrait ne pas tenir.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Ce message ne tient pas. Le plus ancien de la conversation sera supprimé.',
+  },
+  hi: {
+    'Nearly out of room. The next message may not fit.': 'जगह लगभग समाप्त। अगला संदेश शायद न समाए।',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'यह संदेश नहीं समाएगा। बातचीत का सबसे पुराना हिस्सा हटा दिया जाएगा।',
+  },
+  it: {
+    'Nearly out of room. The next message may not fit.':
+      'Quasi senza spazio. Il prossimo messaggio potrebbe non entrare.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Questo messaggio non entra. La parte più vecchia della conversazione verrà scartata.',
+  },
+  ja: {
+    'Nearly out of room. The next message may not fit.':
+      '残り容量がわずかです。次のメッセージは収まらないかもしれません。',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'このメッセージは収まりません。会話の最も古い部分が削除されます。',
+  },
+  pt: {
+    'Nearly out of room. The next message may not fit.':
+      'Quase sem espaço. A próxima mensagem pode não caber.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Esta mensagem não cabe. A parte mais antiga da conversa será descartada.',
+  },
+  ru: {
+    'Nearly out of room. The next message may not fit.':
+      'Места почти нет. Следующее сообщение может не поместиться.',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'Это сообщение не поместится. Самая старая часть беседы будет отброшена.',
+  },
+  th: {
+    'Nearly out of room. The next message may not fit.': 'พื้นที่ใกล้เต็มแล้ว ข้อความถัดไปอาจไม่พอ',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      'ข้อความนี้ใหญ่เกินไป ส่วนที่เก่าที่สุดของการสนทนาจะถูกตัดออก',
+  },
+  zh: {
+    'Nearly out of room. The next message may not fit.': '空间快用完了，下一条消息可能放不下。',
+    'This message will not fit. The oldest of the conversation will be dropped.':
+      '这条消息放不下，对话中最早的部分将被丢弃。',
+  },
+};
+
+const compactionTranslations = {
+  ar: {
+    'Compact Conversation': 'ضغط المحادثة',
+    'Open a conversation before compacting it.': 'افتح محادثة قبل ضغطها.',
+    'Summarize and continue': 'التلخيص والمتابعة',
+    'Summarize this conversation and continue in a new one?':
+      'تلخيص هذه المحادثة والمتابعة في محادثة جديدة؟',
+    'Summarizing…': 'جارٍ التلخيص…',
+    'The original conversation is kept and stays in your history.':
+      'تُحفظ المحادثة الأصلية وتبقى في سجلك.',
+    'The summary came back empty, so nothing was changed.': 'عاد الملخص فارغاً، لذا لم يتغير شيء.',
+  },
+  de: {
+    'Compact Conversation': 'Unterhaltung verdichten',
+    'Open a conversation before compacting it.':
+      'Öffnen Sie eine Unterhaltung, bevor Sie sie verdichten.',
+    'Summarize and continue': 'Zusammenfassen und fortsetzen',
+    'Summarize this conversation and continue in a new one?':
+      'Diese Unterhaltung zusammenfassen und in einer neuen fortsetzen?',
+    'Summarizing…': 'Wird zusammengefasst…',
+    'The original conversation is kept and stays in your history.':
+      'Die ursprüngliche Unterhaltung bleibt erhalten und in Ihrem Verlauf.',
+    'The summary came back empty, so nothing was changed.':
+      'Die Zusammenfassung kam leer zurück, daher wurde nichts geändert.',
+  },
+  es: {
+    'Compact Conversation': 'Compactar conversación',
+    'Open a conversation before compacting it.': 'Abre una conversación antes de compactarla.',
+    'Summarize and continue': 'Resumir y continuar',
+    'Summarize this conversation and continue in a new one?':
+      '¿Resumir esta conversación y continuar en una nueva?',
+    'Summarizing…': 'Resumiendo…',
+    'The original conversation is kept and stays in your history.':
+      'La conversación original se conserva y permanece en tu historial.',
+    'The summary came back empty, so nothing was changed.':
+      'El resumen llegó vacío, así que no se cambió nada.',
+  },
+  fa: {
+    'Compact Conversation': 'فشرده‌سازی گفتگو',
+    'Open a conversation before compacting it.': 'پیش از فشرده‌سازی، یک گفتگو باز کنید.',
+    'Summarize and continue': 'خلاصه‌سازی و ادامه',
+    'Summarize this conversation and continue in a new one?':
+      'این گفتگو خلاصه شود و در گفتگوی جدیدی ادامه یابد؟',
+    'Summarizing…': 'در حال خلاصه‌سازی…',
+    'The original conversation is kept and stays in your history.':
+      'گفتگوی اصلی نگه داشته می‌شود و در تاریخچه می‌ماند.',
+    'The summary came back empty, so nothing was changed.':
+      'خلاصه خالی بازگشت، بنابراین چیزی تغییر نکرد.',
+  },
+  fr: {
+    'Compact Conversation': 'Compacter la conversation',
+    'Open a conversation before compacting it.': 'Ouvrez une conversation avant de la compacter.',
+    'Summarize and continue': 'Résumer et continuer',
+    'Summarize this conversation and continue in a new one?':
+      'Résumer cette conversation et continuer dans une nouvelle ?',
+    'Summarizing…': 'Résumé en cours…',
+    'The original conversation is kept and stays in your history.':
+      "La conversation d'origine est conservée et reste dans votre historique.",
+    'The summary came back empty, so nothing was changed.':
+      "Le résumé est revenu vide, rien n'a donc été changé.",
+  },
+  hi: {
+    'Compact Conversation': 'बातचीत संक्षिप्त करें',
+    'Open a conversation before compacting it.': 'संक्षिप्त करने से पहले कोई बातचीत खोलें।',
+    'Summarize and continue': 'सारांश बनाकर जारी रखें',
+    'Summarize this conversation and continue in a new one?':
+      'इस बातचीत का सारांश बनाकर नई बातचीत में जारी रखें?',
+    'Summarizing…': 'सारांश बन रहा है…',
+    'The original conversation is kept and stays in your history.':
+      'मूल बातचीत सुरक्षित रहती है और आपके इतिहास में बनी रहती है।',
+    'The summary came back empty, so nothing was changed.': 'सारांश खाली आया, इसलिए कुछ नहीं बदला।',
+  },
+  it: {
+    'Compact Conversation': 'Compatta la conversazione',
+    'Open a conversation before compacting it.': 'Apri una conversazione prima di compattarla.',
+    'Summarize and continue': 'Riassumi e continua',
+    'Summarize this conversation and continue in a new one?':
+      'Riassumere questa conversazione e continuare in una nuova?',
+    'Summarizing…': 'Riassunto in corso…',
+    'The original conversation is kept and stays in your history.':
+      'La conversazione originale viene conservata e resta nella cronologia.',
+    'The summary came back empty, so nothing was changed.':
+      'Il riassunto è tornato vuoto, quindi nulla è stato cambiato.',
+  },
+  ja: {
+    'Compact Conversation': '会話を圧縮',
+    'Open a conversation before compacting it.': '圧縮する前に会話を開いてください。',
+    'Summarize and continue': '要約して続ける',
+    'Summarize this conversation and continue in a new one?':
+      'この会話を要約して新しい会話で続けますか？',
+    'Summarizing…': '要約しています…',
+    'The original conversation is kept and stays in your history.':
+      '元の会話はそのまま履歴に残ります。',
+    'The summary came back empty, so nothing was changed.':
+      '要約が空で返ってきたため、何も変更していません。',
+  },
+  pt: {
+    'Compact Conversation': 'Compactar conversa',
+    'Open a conversation before compacting it.': 'Abra uma conversa antes de compactá-la.',
+    'Summarize and continue': 'Resumir e continuar',
+    'Summarize this conversation and continue in a new one?':
+      'Resumir esta conversa e continuar em uma nova?',
+    'Summarizing…': 'Resumindo…',
+    'The original conversation is kept and stays in your history.':
+      'A conversa original é mantida e permanece no seu histórico.',
+    'The summary came back empty, so nothing was changed.':
+      'O resumo voltou vazio, então nada foi alterado.',
+  },
+  ru: {
+    'Compact Conversation': 'Сжать беседу',
+    'Open a conversation before compacting it.': 'Откройте беседу, прежде чем сжимать её.',
+    'Summarize and continue': 'Подвести итог и продолжить',
+    'Summarize this conversation and continue in a new one?':
+      'Подвести итог беседы и продолжить в новой?',
+    'Summarizing…': 'Подведение итога…',
+    'The original conversation is kept and stays in your history.':
+      'Исходная беседа сохраняется и остаётся в истории.',
+    'The summary came back empty, so nothing was changed.':
+      'Итог вернулся пустым, поэтому ничего не изменилось.',
+  },
+  th: {
+    'Compact Conversation': 'ย่อการสนทนา',
+    'Open a conversation before compacting it.': 'เปิดการสนทนาก่อนย่อ',
+    'Summarize and continue': 'สรุปแล้วดำเนินต่อ',
+    'Summarize this conversation and continue in a new one?':
+      'สรุปการสนทนานี้แล้วดำเนินต่อในการสนทนาใหม่หรือไม่',
+    'Summarizing…': 'กำลังสรุป…',
+    'The original conversation is kept and stays in your history.':
+      'การสนทนาเดิมจะถูกเก็บไว้ในประวัติ',
+    'The summary came back empty, so nothing was changed.':
+      'ได้สรุปเป็นค่าว่าง จึงไม่มีการเปลี่ยนแปลง',
+  },
+  zh: {
+    'Compact Conversation': '压缩对话',
+    'Open a conversation before compacting it.': '请先打开一个对话再压缩。',
+    'Summarize and continue': '总结并继续',
+    'Summarize this conversation and continue in a new one?': '总结这段对话并在新对话中继续？',
+    'Summarizing…': '正在总结…',
+    'The original conversation is kept and stays in your history.':
+      '原对话会保留并留在历史记录中。',
+    'The summary came back empty, so nothing was changed.': '总结返回为空，因此未做任何更改。',
+  },
+};
+
+const newWindowTranslations = {
+  ar: {
+    'Open Conversation in New Window': 'فتح المحادثة في نافذة جديدة',
+    'Open a conversation before moving it to a new window.':
+      'افتح محادثة قبل نقلها إلى نافذة جديدة.',
+    'Open a folder before opening a conversation in a new window.':
+      'افتح مجلداً قبل فتح محادثة في نافذة جديدة.',
+  },
+  de: {
+    'Open Conversation in New Window': 'Unterhaltung in neuem Fenster öffnen',
+    'Open a conversation before moving it to a new window.':
+      'Öffnen Sie eine Unterhaltung, bevor Sie sie in ein neues Fenster verschieben.',
+    'Open a folder before opening a conversation in a new window.':
+      'Öffnen Sie einen Ordner, bevor Sie eine Unterhaltung in einem neuen Fenster öffnen.',
+  },
+  es: {
+    'Open Conversation in New Window': 'Abrir la conversación en una ventana nueva',
+    'Open a conversation before moving it to a new window.':
+      'Abre una conversación antes de moverla a una ventana nueva.',
+    'Open a folder before opening a conversation in a new window.':
+      'Abre una carpeta antes de abrir una conversación en una ventana nueva.',
+  },
+  fa: {
+    'Open Conversation in New Window': 'باز کردن گفتگو در پنجره جدید',
+    'Open a conversation before moving it to a new window.':
+      'پیش از انتقال به پنجره جدید، یک گفتگو باز کنید.',
+    'Open a folder before opening a conversation in a new window.':
+      'پیش از باز کردن گفتگو در پنجره جدید، یک پوشه باز کنید.',
+  },
+  fr: {
+    'Open Conversation in New Window': 'Ouvrir la conversation dans une nouvelle fenêtre',
+    'Open a conversation before moving it to a new window.':
+      'Ouvrez une conversation avant de la déplacer dans une nouvelle fenêtre.',
+    'Open a folder before opening a conversation in a new window.':
+      "Ouvrez un dossier avant d'ouvrir une conversation dans une nouvelle fenêtre.",
+  },
+  hi: {
+    'Open Conversation in New Window': 'बातचीत नई विंडो में खोलें',
+    'Open a conversation before moving it to a new window.':
+      'नई विंडो में ले जाने से पहले कोई बातचीत खोलें।',
+    'Open a folder before opening a conversation in a new window.':
+      'नई विंडो में बातचीत खोलने से पहले कोई फ़ोल्डर खोलें।',
+  },
+  it: {
+    'Open Conversation in New Window': 'Apri la conversazione in una nuova finestra',
+    'Open a conversation before moving it to a new window.':
+      'Apri una conversazione prima di spostarla in una nuova finestra.',
+    'Open a folder before opening a conversation in a new window.':
+      'Apri una cartella prima di aprire una conversazione in una nuova finestra.',
+  },
+  ja: {
+    'Open Conversation in New Window': '会話を新しいウィンドウで開く',
+    'Open a conversation before moving it to a new window.':
+      '新しいウィンドウに移す前に会話を開いてください。',
+    'Open a folder before opening a conversation in a new window.':
+      '新しいウィンドウで会話を開く前にフォルダーを開いてください。',
+  },
+  pt: {
+    'Open Conversation in New Window': 'Abrir conversa em nova janela',
+    'Open a conversation before moving it to a new window.':
+      'Abra uma conversa antes de movê-la para uma nova janela.',
+    'Open a folder before opening a conversation in a new window.':
+      'Abra uma pasta antes de abrir uma conversa em uma nova janela.',
+  },
+  ru: {
+    'Open Conversation in New Window': 'Открыть беседу в новом окне',
+    'Open a conversation before moving it to a new window.':
+      'Откройте беседу, прежде чем переносить её в новое окно.',
+    'Open a folder before opening a conversation in a new window.':
+      'Откройте папку, прежде чем открывать беседу в новом окне.',
+  },
+  th: {
+    'Open Conversation in New Window': 'เปิดการสนทนาในหน้าต่างใหม่',
+    'Open a conversation before moving it to a new window.': 'เปิดการสนทนาก่อนย้ายไปหน้าต่างใหม่',
+    'Open a folder before opening a conversation in a new window.':
+      'เปิดโฟลเดอร์ก่อนเปิดการสนทนาในหน้าต่างใหม่',
+  },
+  zh: {
+    'Open Conversation in New Window': '在新窗口中打开对话',
+    'Open a conversation before moving it to a new window.': '请先打开一个对话再移动到新窗口。',
+    'Open a folder before opening a conversation in a new window.':
+      '在新窗口中打开对话前请先打开一个文件夹。',
+  },
+};
+
+const threadGroupTranslations = {
+  ar: {
+    'A short label you will recognise in the sidebar.':
+      'تسمية قصيرة ستتعرف عليها في الشريط الجانبي.',
+    'Group Conversation': 'تجميع المحادثة',
+    'Name the group': 'تسمية المجموعة',
+    'New group…': 'مجموعة جديدة…',
+    'No group': 'بدون مجموعة',
+    'There are no conversations to group.': 'لا توجد محادثات لتجميعها.',
+    'Which conversation?': 'أي محادثة؟',
+    'Which group?': 'أي مجموعة؟',
+  },
+  de: {
+    'A short label you will recognise in the sidebar.':
+      'Eine kurze Bezeichnung, die Sie in der Seitenleiste wiedererkennen.',
+    'Group Conversation': 'Unterhaltung gruppieren',
+    'Name the group': 'Gruppe benennen',
+    'New group…': 'Neue Gruppe…',
+    'No group': 'Keine Gruppe',
+    'There are no conversations to group.': 'Es gibt keine Unterhaltungen zum Gruppieren.',
+    'Which conversation?': 'Welche Unterhaltung?',
+    'Which group?': 'Welche Gruppe?',
+  },
+  es: {
+    'A short label you will recognise in the sidebar.':
+      'Una etiqueta corta que reconocerás en la barra lateral.',
+    'Group Conversation': 'Agrupar conversación',
+    'Name the group': 'Nombra el grupo',
+    'New group…': 'Grupo nuevo…',
+    'No group': 'Sin grupo',
+    'There are no conversations to group.': 'No hay conversaciones para agrupar.',
+    'Which conversation?': '¿Qué conversación?',
+    'Which group?': '¿Qué grupo?',
+  },
+  fa: {
+    'A short label you will recognise in the sidebar.':
+      'برچسبی کوتاه که در نوار کناری آن را بشناسید.',
+    'Group Conversation': 'گروه‌بندی گفتگو',
+    'Name the group': 'نام گروه',
+    'New group…': 'گروه جدید…',
+    'No group': 'بدون گروه',
+    'There are no conversations to group.': 'گفتگویی برای گروه‌بندی وجود ندارد.',
+    'Which conversation?': 'کدام گفتگو؟',
+    'Which group?': 'کدام گروه؟',
+  },
+  fr: {
+    'A short label you will recognise in the sidebar.':
+      'Une courte étiquette que vous reconnaîtrez dans la barre latérale.',
+    'Group Conversation': 'Grouper la conversation',
+    'Name the group': 'Nommer le groupe',
+    'New group…': 'Nouveau groupe…',
+    'No group': 'Aucun groupe',
+    'There are no conversations to group.': 'Aucune conversation à grouper.',
+    'Which conversation?': 'Quelle conversation ?',
+    'Which group?': 'Quel groupe ?',
+  },
+  hi: {
+    'A short label you will recognise in the sidebar.':
+      'एक छोटा लेबल जिसे आप साइडबार में पहचान लेंगे।',
+    'Group Conversation': 'बातचीत समूहित करें',
+    'Name the group': 'समूह का नाम दें',
+    'New group…': 'नया समूह…',
+    'No group': 'कोई समूह नहीं',
+    'There are no conversations to group.': 'समूहित करने के लिए कोई बातचीत नहीं है।',
+    'Which conversation?': 'कौन सी बातचीत?',
+    'Which group?': 'कौन सा समूह?',
+  },
+  it: {
+    'A short label you will recognise in the sidebar.':
+      'Una breve etichetta che riconoscerai nella barra laterale.',
+    'Group Conversation': 'Raggruppa la conversazione',
+    'Name the group': 'Assegna un nome al gruppo',
+    'New group…': 'Nuovo gruppo…',
+    'No group': 'Nessun gruppo',
+    'There are no conversations to group.': 'Non ci sono conversazioni da raggruppare.',
+    'Which conversation?': 'Quale conversazione?',
+    'Which group?': 'Quale gruppo?',
+  },
+  ja: {
+    'A short label you will recognise in the sidebar.': 'サイドバーで見分けられる短いラベル。',
+    'Group Conversation': '会話をグループ化',
+    'Name the group': 'グループ名',
+    'New group…': '新しいグループ…',
+    'No group': 'グループなし',
+    'There are no conversations to group.': 'グループ化できる会話はありません。',
+    'Which conversation?': 'どの会話ですか？',
+    'Which group?': 'どのグループですか？',
+  },
+  pt: {
+    'A short label you will recognise in the sidebar.':
+      'Um rótulo curto que você reconhecerá na barra lateral.',
+    'Group Conversation': 'Agrupar conversa',
+    'Name the group': 'Nomeie o grupo',
+    'New group…': 'Novo grupo…',
+    'No group': 'Sem grupo',
+    'There are no conversations to group.': 'Não há conversas para agrupar.',
+    'Which conversation?': 'Qual conversa?',
+    'Which group?': 'Qual grupo?',
+  },
+  ru: {
+    'A short label you will recognise in the sidebar.':
+      'Короткая метка, которую вы узнаете на боковой панели.',
+    'Group Conversation': 'Сгруппировать беседу',
+    'Name the group': 'Назовите группу',
+    'New group…': 'Новая группа…',
+    'No group': 'Без группы',
+    'There are no conversations to group.': 'Нет бесед для группировки.',
+    'Which conversation?': 'Какая беседа?',
+    'Which group?': 'Какая группа?',
+  },
+  th: {
+    'A short label you will recognise in the sidebar.': 'ป้ายสั้น ๆ ที่คุณจะจำได้ในแถบด้านข้าง',
+    'Group Conversation': 'จัดกลุ่มการสนทนา',
+    'Name the group': 'ตั้งชื่อกลุ่ม',
+    'New group…': 'กลุ่มใหม่…',
+    'No group': 'ไม่มีกลุ่ม',
+    'There are no conversations to group.': 'ไม่มีการสนทนาให้จัดกลุ่ม',
+    'Which conversation?': 'การสนทนาใด',
+    'Which group?': 'กลุ่มใด',
+  },
+  zh: {
+    'A short label you will recognise in the sidebar.': '你在侧栏中能认出的简短标签。',
+    'Group Conversation': '将对话分组',
+    'Name the group': '为分组命名',
+    'New group…': '新建分组…',
+    'No group': '不分组',
+    'There are no conversations to group.': '没有可分组的对话。',
+    'Which conversation?': '哪个对话？',
+    'Which group?': '哪个分组？',
+  },
+};
+
+const terminalTranslations = {
+  ar: {
+    'Attach Terminal Output': 'إرفاق مخرجات الطرفية',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'تلك الطرفية ليس لها مخرجات قابلة للقراءة. يجب تفعيل تكامل الصدفة كي يقرأها ClawAI.',
+    'There are no open terminals.': 'لا توجد طرفيات مفتوحة.',
+    'Which terminal?': 'أي طرفية؟',
+  },
+  de: {
+    'Attach Terminal Output': 'Terminalausgabe anhängen',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'Dieses Terminal hat keine lesbare Ausgabe. Die Shell-Integration muss aktiv sein, damit ClawAI sie lesen kann.',
+    'There are no open terminals.': 'Es sind keine Terminals geöffnet.',
+    'Which terminal?': 'Welches Terminal?',
+  },
+  es: {
+    'Attach Terminal Output': 'Adjuntar salida del terminal',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'Ese terminal no tiene salida legible. La integración del shell debe estar activa para que ClawAI la lea.',
+    'There are no open terminals.': 'No hay terminales abiertos.',
+    'Which terminal?': '¿Qué terminal?',
+  },
+  fa: {
+    'Attach Terminal Output': 'پیوست خروجی ترمینال',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'آن ترمینال خروجی قابل خواندن ندارد. برای خواندن، یکپارچگی شل باید فعال باشد.',
+    'There are no open terminals.': 'هیچ ترمینال بازی وجود ندارد.',
+    'Which terminal?': 'کدام ترمینال؟',
+  },
+  fr: {
+    'Attach Terminal Output': 'Joindre la sortie du terminal',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      "Ce terminal n'a pas de sortie lisible. L'intégration du shell doit être active pour que ClawAI la lise.",
+    'There are no open terminals.': 'Aucun terminal ouvert.',
+    'Which terminal?': 'Quel terminal ?',
+  },
+  hi: {
+    'Attach Terminal Output': 'टर्मिनल आउटपुट संलग्न करें',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'उस टर्मिनल का आउटपुट पढ़ा नहीं जा सकता। ClawAI के पढ़ने के लिए शेल इंटीग्रेशन सक्रिय होना चाहिए।',
+    'There are no open terminals.': 'कोई टर्मिनल खुला नहीं है।',
+    'Which terminal?': 'कौन सा टर्मिनल?',
+  },
+  it: {
+    'Attach Terminal Output': 'Allega output del terminale',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      "Quel terminale non ha output leggibile. L'integrazione della shell deve essere attiva perché ClawAI possa leggerlo.",
+    'There are no open terminals.': 'Non ci sono terminali aperti.',
+    'Which terminal?': 'Quale terminale?',
+  },
+  ja: {
+    'Attach Terminal Output': 'ターミナル出力を添付',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'そのターミナルには読み取れる出力がありません。ClawAI が読むにはシェル統合が有効である必要があります。',
+    'There are no open terminals.': '開いているターミナルはありません。',
+    'Which terminal?': 'どのターミナルですか？',
+  },
+  pt: {
+    'Attach Terminal Output': 'Anexar saída do terminal',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'Esse terminal não tem saída legível. A integração do shell precisa estar ativa para o ClawAI ler.',
+    'There are no open terminals.': 'Não há terminais abertos.',
+    'Which terminal?': 'Qual terminal?',
+  },
+  ru: {
+    'Attach Terminal Output': 'Прикрепить вывод терминала',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'У этого терминала нет читаемого вывода. Для чтения должна быть активна интеграция с оболочкой.',
+    'There are no open terminals.': 'Нет открытых терминалов.',
+    'Which terminal?': 'Какой терминал?',
+  },
+  th: {
+    'Attach Terminal Output': 'แนบผลลัพธ์จากเทอร์มินัล',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      'เทอร์มินัลนั้นไม่มีผลลัพธ์ที่อ่านได้ ต้องเปิดใช้ shell integration เพื่อให้ ClawAI อ่านได้',
+    'There are no open terminals.': 'ไม่มีเทอร์มินัลที่เปิดอยู่',
+    'Which terminal?': 'เทอร์มินัลใด',
+  },
+  zh: {
+    'Attach Terminal Output': '附加终端输出',
+    'That terminal has no readable output. Shell integration must be active for ClawAI to read it.':
+      '该终端没有可读取的输出。需要启用 shell 集成，ClawAI 才能读取。',
+    'There are no open terminals.': '没有打开的终端。',
+    'Which terminal?': '哪个终端？',
+  },
+};
+
+const sideQuestionTranslations = {
+  ar: {
+    'Answered outside the conversation, without its context.':
+      'تتم الإجابة خارج المحادثة، دون سياقها.',
+    'Ask a Side Question': 'طرح سؤال جانبي',
+    'Ask a side question': 'اطرح سؤالاً جانبياً',
+    'Asking…': 'جارٍ السؤال…',
+  },
+  de: {
+    'Answered outside the conversation, without its context.':
+      'Wird außerhalb der Unterhaltung beantwortet, ohne deren Kontext.',
+    'Ask a Side Question': 'Nebenfrage stellen',
+    'Ask a side question': 'Nebenfrage stellen',
+    'Asking…': 'Wird gefragt…',
+  },
+  es: {
+    'Answered outside the conversation, without its context.':
+      'Se responde fuera de la conversación, sin su contexto.',
+    'Ask a Side Question': 'Hacer una pregunta aparte',
+    'Ask a side question': 'Haz una pregunta aparte',
+    'Asking…': 'Preguntando…',
+  },
+  fa: {
+    'Answered outside the conversation, without its context.':
+      'خارج از گفتگو و بدون زمینه آن پاسخ داده می‌شود.',
+    'Ask a Side Question': 'پرسیدن سوال جانبی',
+    'Ask a side question': 'یک سوال جانبی بپرسید',
+    'Asking…': 'در حال پرسیدن…',
+  },
+  fr: {
+    'Answered outside the conversation, without its context.':
+      'Répondu en dehors de la conversation, sans son contexte.',
+    'Ask a Side Question': 'Poser une question à part',
+    'Ask a side question': 'Poser une question à part',
+    'Asking…': 'Question en cours…',
+  },
+  hi: {
+    'Answered outside the conversation, without its context.':
+      'बातचीत के बाहर, उसके संदर्भ के बिना उत्तर दिया जाता है।',
+    'Ask a Side Question': 'अलग से एक प्रश्न पूछें',
+    'Ask a side question': 'अलग से एक प्रश्न पूछें',
+    'Asking…': 'पूछा जा रहा है…',
+  },
+  it: {
+    'Answered outside the conversation, without its context.':
+      'Risposta fuori dalla conversazione, senza il suo contesto.',
+    'Ask a Side Question': 'Fai una domanda a parte',
+    'Ask a side question': 'Fai una domanda a parte',
+    'Asking…': 'Domanda in corso…',
+  },
+  ja: {
+    'Answered outside the conversation, without its context.':
+      '会話の外で、その文脈なしに回答します。',
+    'Ask a Side Question': '別の質問をする',
+    'Ask a side question': '別の質問をする',
+    'Asking…': '質問しています…',
+  },
+  pt: {
+    'Answered outside the conversation, without its context.':
+      'Respondido fora da conversa, sem o contexto dela.',
+    'Ask a Side Question': 'Fazer uma pergunta à parte',
+    'Ask a side question': 'Faça uma pergunta à parte',
+    'Asking…': 'Perguntando…',
+  },
+  ru: {
+    'Answered outside the conversation, without its context.':
+      'Ответ вне беседы, без её контекста.',
+    'Ask a Side Question': 'Задать отдельный вопрос',
+    'Ask a side question': 'Задайте отдельный вопрос',
+    'Asking…': 'Отправка вопроса…',
+  },
+  th: {
+    'Answered outside the conversation, without its context.':
+      'ตอบนอกการสนทนา โดยไม่ใช้บริบทของการสนทนา',
+    'Ask a Side Question': 'ถามคำถามแยกต่างหาก',
+    'Ask a side question': 'ถามคำถามแยกต่างหาก',
+    'Asking…': 'กำลังถาม…',
+  },
+  zh: {
+    'Answered outside the conversation, without its context.': '在对话之外回答，不带对话的上下文。',
+    'Ask a Side Question': '提一个旁问',
+    'Ask a side question': '提一个旁问',
+    'Asking…': '正在提问…',
+  },
+};
+
+const checkpointTranslations = {
+  ar: {
+    'Create Checkpoint': 'إنشاء نقطة حفظ',
+    'Name this checkpoint': 'تسمية نقطة الحفظ',
+    'Restore Checkpoint': 'استعادة نقطة حفظ',
+    'Restore which checkpoint?': 'أي نقطة حفظ تريد استعادتها؟',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'لم يغيّر الوكيل أي ملفات بعد، لذا لا يوجد ما يُحفظ.',
+    'There are no checkpoints yet.': 'لا توجد نقاط حفظ بعد.',
+    'These changes are too large to checkpoint.': 'هذه التغييرات أكبر من أن تُحفظ كنقطة.',
+    '{0} files': '{0} ملفات',
+    '{0} files will be remembered as they are now.': 'سيتم تذكّر {0} ملفات كما هي الآن.',
+  },
+  de: {
+    'Create Checkpoint': 'Prüfpunkt erstellen',
+    'Name this checkpoint': 'Prüfpunkt benennen',
+    'Restore Checkpoint': 'Prüfpunkt wiederherstellen',
+    'Restore which checkpoint?': 'Welchen Prüfpunkt wiederherstellen?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'Der Agent hat noch keine Dateien geändert, es gibt also nichts zu sichern.',
+    'There are no checkpoints yet.': 'Es gibt noch keine Prüfpunkte.',
+    'These changes are too large to checkpoint.':
+      'Diese Änderungen sind zu groß für einen Prüfpunkt.',
+    '{0} files': '{0} Dateien',
+    '{0} files will be remembered as they are now.':
+      '{0} Dateien werden so gespeichert, wie sie jetzt sind.',
+  },
+  es: {
+    'Create Checkpoint': 'Crear punto de control',
+    'Name this checkpoint': 'Nombra este punto de control',
+    'Restore Checkpoint': 'Restaurar punto de control',
+    'Restore which checkpoint?': '¿Qué punto de control restaurar?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'El agente aún no ha cambiado ningún archivo, así que no hay nada que guardar.',
+    'There are no checkpoints yet.': 'Aún no hay puntos de control.',
+    'These changes are too large to checkpoint.':
+      'Estos cambios son demasiado grandes para un punto de control.',
+    '{0} files': '{0} archivos',
+    '{0} files will be remembered as they are now.':
+      'Se recordarán {0} archivos tal como están ahora.',
+  },
+  fa: {
+    'Create Checkpoint': 'ایجاد نقطه بازیابی',
+    'Name this checkpoint': 'نام این نقطه بازیابی',
+    'Restore Checkpoint': 'بازیابی نقطه بازیابی',
+    'Restore which checkpoint?': 'کدام نقطه بازیابی بازگردانده شود؟',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'عامل هنوز فایلی را تغییر نداده است، پس چیزی برای ذخیره وجود ندارد.',
+    'There are no checkpoints yet.': 'هنوز نقطه بازیابی وجود ندارد.',
+    'These changes are too large to checkpoint.':
+      'این تغییرات برای ایجاد نقطه بازیابی بیش از حد بزرگ‌اند.',
+    '{0} files': '{0} فایل',
+    '{0} files will be remembered as they are now.':
+      '{0} فایل به همین شکل کنونی به خاطر سپرده می‌شود.',
+  },
+  fr: {
+    'Create Checkpoint': 'Créer un point de restauration',
+    'Name this checkpoint': 'Nommer ce point de restauration',
+    'Restore Checkpoint': 'Restaurer un point de restauration',
+    'Restore which checkpoint?': 'Quel point de restauration restaurer ?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      "L'agent n'a encore modifié aucun fichier, il n'y a donc rien à enregistrer.",
+    'There are no checkpoints yet.': "Il n'y a pas encore de points de restauration.",
+    'These changes are too large to checkpoint.':
+      'Ces modifications sont trop volumineuses pour un point de restauration.',
+    '{0} files': '{0} fichiers',
+    '{0} files will be remembered as they are now.': '{0} fichiers seront mémorisés tels quels.',
+  },
+  hi: {
+    'Create Checkpoint': 'चेकपॉइंट बनाएँ',
+    'Name this checkpoint': 'इस चेकपॉइंट का नाम दें',
+    'Restore Checkpoint': 'चेकपॉइंट पुनर्स्थापित करें',
+    'Restore which checkpoint?': 'कौन सा चेकपॉइंट पुनर्स्थापित करें?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'एजेंट ने अभी तक कोई फ़ाइल नहीं बदली, इसलिए सहेजने को कुछ नहीं है।',
+    'There are no checkpoints yet.': 'अभी तक कोई चेकपॉइंट नहीं है।',
+    'These changes are too large to checkpoint.': 'ये परिवर्तन चेकपॉइंट के लिए बहुत बड़े हैं।',
+    '{0} files': '{0} फ़ाइलें',
+    '{0} files will be remembered as they are now.':
+      '{0} फ़ाइलें अभी की स्थिति में याद रखी जाएँगी।',
+  },
+  it: {
+    'Create Checkpoint': 'Crea punto di controllo',
+    'Name this checkpoint': 'Assegna un nome a questo punto',
+    'Restore Checkpoint': 'Ripristina punto di controllo',
+    'Restore which checkpoint?': 'Quale punto di controllo ripristinare?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      "L'agente non ha ancora modificato alcun file, quindi non c'è nulla da salvare.",
+    'There are no checkpoints yet.': 'Non ci sono ancora punti di controllo.',
+    'These changes are too large to checkpoint.':
+      'Queste modifiche sono troppo grandi per un punto di controllo.',
+    '{0} files': '{0} file',
+    '{0} files will be remembered as they are now.': '{0} file verranno ricordati come sono ora.',
+  },
+  ja: {
+    'Create Checkpoint': 'チェックポイントを作成',
+    'Name this checkpoint': 'このチェックポイントの名前',
+    'Restore Checkpoint': 'チェックポイントを復元',
+    'Restore which checkpoint?': 'どのチェックポイントを復元しますか？',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'エージェントはまだファイルを変更していないため、保存するものがありません。',
+    'There are no checkpoints yet.': 'まだチェックポイントがありません。',
+    'These changes are too large to checkpoint.':
+      'この変更はチェックポイントにするには大きすぎます。',
+    '{0} files': '{0} 件のファイル',
+    '{0} files will be remembered as they are now.': '{0} 件のファイルを現在の状態で記憶します。',
+  },
+  pt: {
+    'Create Checkpoint': 'Criar ponto de restauração',
+    'Name this checkpoint': 'Nomeie este ponto de restauração',
+    'Restore Checkpoint': 'Restaurar ponto de restauração',
+    'Restore which checkpoint?': 'Qual ponto de restauração restaurar?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'O agente ainda não alterou nenhum arquivo, então não há nada para salvar.',
+    'There are no checkpoints yet.': 'Ainda não há pontos de restauração.',
+    'These changes are too large to checkpoint.':
+      'Estas alterações são grandes demais para um ponto de restauração.',
+    '{0} files': '{0} arquivos',
+    '{0} files will be remembered as they are now.':
+      '{0} arquivos serão lembrados como estao agora.',
+  },
+  ru: {
+    'Create Checkpoint': 'Создать контрольную точку',
+    'Name this checkpoint': 'Назовите эту контрольную точку',
+    'Restore Checkpoint': 'Восстановить контрольную точку',
+    'Restore which checkpoint?': 'Какую контрольную точку восстановить?',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'Агент ещё не изменил ни одного файла, сохранять нечего.',
+    'There are no checkpoints yet.': 'Контрольных точек пока нет.',
+    'These changes are too large to checkpoint.':
+      'Эти изменения слишком велики для контрольной точки.',
+    '{0} files': 'Файлов: {0}',
+    '{0} files will be remembered as they are now.': 'Файлов будет сохранено в текущем виде: {0}.',
+  },
+  th: {
+    'Create Checkpoint': 'สร้างจุดบันทึก',
+    'Name this checkpoint': 'ตั้งชื่อจุดบันทึกนี้',
+    'Restore Checkpoint': 'กู้คืนจุดบันทึก',
+    'Restore which checkpoint?': 'กู้คืนจุดบันทึกใด',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      'เอเจนต์ยังไม่ได้แก้ไขไฟล์ใด จึงไม่มีอะไรให้บันทึก',
+    'There are no checkpoints yet.': 'ยังไม่มีจุดบันทึก',
+    'These changes are too large to checkpoint.':
+      'การเปลี่ยนแปลงเหล่านี้ใหญ่เกินกว่าจะสร้างจุดบันทึก',
+    '{0} files': '{0} ไฟล์',
+    '{0} files will be remembered as they are now.': 'จะจดจำไฟล์ {0} ไฟล์ตามสถานะปัจจุบัน',
+  },
+  zh: {
+    'Create Checkpoint': '创建检查点',
+    'Name this checkpoint': '为该检查点命名',
+    'Restore Checkpoint': '恢复检查点',
+    'Restore which checkpoint?': '恢复哪个检查点？',
+    'The agent has not changed any files yet, so there is nothing to checkpoint.':
+      '智能体尚未修改任何文件，没有可保存的内容。',
+    'There are no checkpoints yet.': '目前还没有检查点。',
+    'These changes are too large to checkpoint.': '这些更改太大，无法创建检查点。',
+    '{0} files': '{0} 个文件',
+    '{0} files will be remembered as they are now.': '将按当前状态记住 {0} 个文件。',
+  },
+};
+
+const reasoningVisibilityTranslations = {
+  ar: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'يعرض ClawAI مقدار تفكير النموذج، لا محتوى ذلك التفكير.',
+    '{0} steps · {1} tokens': '{0} خطوات · {1} رمز',
+  },
+  de: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI meldet, wie viel das Modell nachgedacht hat, niemals worüber.',
+    '{0} steps · {1} tokens': '{0} Schritte · {1} Token',
+  },
+  es: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI informa cuánto pensó el modelo, nunca qué pensó.',
+    '{0} steps · {1} tokens': '{0} pasos · {1} tokens',
+  },
+  fa: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI فقط میزان تفکر مدل را گزارش می‌کند، نه محتوای آن را.',
+    '{0} steps · {1} tokens': '{0} گام · {1} توکن',
+  },
+  fr: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI indique combien le modèle a réfléchi, jamais à quoi.',
+    '{0} steps · {1} tokens': '{0} étapes · {1} jetons',
+  },
+  hi: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI बताता है कि मॉडल ने कितना सोचा, यह कभी नहीं कि उसने क्या सोचा।',
+    '{0} steps · {1} tokens': '{0} चरण · {1} टोकन',
+  },
+  it: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI riporta quanto ha ragionato il modello, mai che cosa ha pensato.',
+    '{0} steps · {1} tokens': '{0} passaggi · {1} token',
+  },
+  ja: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI はモデルがどれだけ考えたかだけを示し、何を考えたかは示しません。',
+    '{0} steps · {1} tokens': '{0} ステップ · {1} トークン',
+  },
+  pt: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'O ClawAI informa quanto o modelo pensou, nunca o que ele pensou.',
+    '{0} steps · {1} tokens': '{0} etapas · {1} tokens',
+  },
+  ru: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI сообщает, сколько модель размышляла, но никогда — о чём.',
+    '{0} steps · {1} tokens': '{0} шагов · {1} токенов',
+  },
+  th: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI รายงานว่าโมเดลคิดมากเพียงใด ไม่เคยรายงานว่าคิดอะไร',
+    '{0} steps · {1} tokens': '{0} ขั้นตอน · {1} โทเค็น',
+  },
+  zh: {
+    'ClawAI reports how much the model thought, never what it thought.':
+      'ClawAI 只报告模型思考了多少，绝不报告它思考了什么。',
+    '{0} steps · {1} tokens': '{0} 步 · {1} 个词元',
+  },
+};
+
+const runTerminalTranslations = {
+  ar: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'هناك تشغيل جارٍ بالفعل. اضغط Ctrl+C لإيقافه أولاً.',
+    'ClawAI run failed.': 'فشل تشغيل ClawAI.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'طرفية تشغيل ClawAI. اكتب طلبك ثم اضغط Enter. Ctrl+C يوقف التشغيل.',
+    'Open Run Terminal': 'فتح طرفية التشغيل',
+    'Run stopped.': 'تم إيقاف التشغيل.',
+  },
+  de: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Es läuft bereits ein Durchlauf. Drücken Sie zuerst Strg+C, um ihn zu stoppen.',
+    'ClawAI run failed.': 'ClawAI-Durchlauf fehlgeschlagen.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'ClawAI-Ausführungsterminal. Geben Sie eine Anfrage ein und drücken Sie die Eingabetaste. Strg+C stoppt einen Durchlauf.',
+    'Open Run Terminal': 'Ausführungsterminal öffnen',
+    'Run stopped.': 'Durchlauf gestoppt.',
+  },
+  es: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Ya hay una ejecución en curso. Pulsa Ctrl+C para detenerla primero.',
+    'ClawAI run failed.': 'La ejecución de ClawAI ha fallado.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'Terminal de ejecución de ClawAI. Escribe una petición y pulsa Intro. Ctrl+C detiene una ejecución.',
+    'Open Run Terminal': 'Abrir terminal de ejecución',
+    'Run stopped.': 'Ejecución detenida.',
+  },
+  fa: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'یک اجرا در حال انجام است. ابتدا با Ctrl+C آن را متوقف کنید.',
+    'ClawAI run failed.': 'اجرای ClawAI ناموفق بود.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'پایانه اجرای ClawAI. درخواست خود را بنویسید و Enter را بزنید. Ctrl+C اجرا را متوقف می‌کند.',
+    'Open Run Terminal': 'باز کردن پایانه اجرا',
+    'Run stopped.': 'اجرا متوقف شد.',
+  },
+  fr: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Une exécution est déjà en cours. Appuyez d’abord sur Ctrl+C pour l’arrêter.',
+    'ClawAI run failed.': 'L’exécution ClawAI a échoué.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'Terminal d’exécution ClawAI. Saisissez une demande et appuyez sur Entrée. Ctrl+C arrête une exécution.',
+    'Open Run Terminal': 'Ouvrir le terminal d’exécution',
+    'Run stopped.': 'Exécution arrêtée.',
+  },
+  hi: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'एक रन पहले से चल रहा है। पहले उसे रोकने के लिए Ctrl+C दबाएँ।',
+    'ClawAI run failed.': 'ClawAI रन विफल रहा।',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'ClawAI रन टर्मिनल। अनुरोध लिखें और Enter दबाएँ। Ctrl+C रन रोक देता है।',
+    'Open Run Terminal': 'रन टर्मिनल खोलें',
+    'Run stopped.': 'रन रोक दिया गया।',
+  },
+  it: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Un’esecuzione è già in corso. Premi prima Ctrl+C per interromperla.',
+    'ClawAI run failed.': 'Esecuzione ClawAI non riuscita.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'Terminale di esecuzione ClawAI. Scrivi una richiesta e premi Invio. Ctrl+C interrompe un’esecuzione.',
+    'Open Run Terminal': 'Apri terminale di esecuzione',
+    'Run stopped.': 'Esecuzione interrotta.',
+  },
+  ja: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      '実行中のランがあります。まず Ctrl+C で停止してください。',
+    'ClawAI run failed.': 'ClawAI の実行に失敗しました。',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'ClawAI 実行ターミナル。要求を入力して Enter を押してください。Ctrl+C で実行を停止します。',
+    'Open Run Terminal': '実行ターミナルを開く',
+    'Run stopped.': '実行を停止しました。',
+  },
+  pt: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Já há uma execução em andamento. Pressione Ctrl+C para pará-la primeiro.',
+    'ClawAI run failed.': 'A execução do ClawAI falhou.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'Terminal de execução do ClawAI. Escreva um pedido e pressione Enter. Ctrl+C interrompe uma execução.',
+    'Open Run Terminal': 'Abrir terminal de execução',
+    'Run stopped.': 'Execução interrompida.',
+  },
+  ru: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'Запуск уже выполняется. Сначала остановите его клавишами Ctrl+C.',
+    'ClawAI run failed.': 'Запуск ClawAI не удался.',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'Терминал запусков ClawAI. Введите запрос и нажмите Enter. Ctrl+C останавливает запуск.',
+    'Open Run Terminal': 'Открыть терминал запусков',
+    'Run stopped.': 'Запуск остановлен.',
+  },
+  th: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      'มีการรันอยู่แล้ว กด Ctrl+C เพื่อหยุดก่อน',
+    'ClawAI run failed.': 'การรัน ClawAI ล้มเหลว',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'เทอร์มินัลการรันของ ClawAI พิมพ์คำขอแล้วกด Enter กด Ctrl+C เพื่อหยุดการรัน',
+    'Open Run Terminal': 'เปิดเทอร์มินัลการรัน',
+    'Run stopped.': 'หยุดการรันแล้ว',
+  },
+  zh: {
+    'A run is already going. Press Ctrl+C to stop it first.':
+      '已有运行在进行中。请先按 Ctrl+C 停止。',
+    'ClawAI run failed.': 'ClawAI 运行失败。',
+    'ClawAI run terminal. Type a request and press Enter. Ctrl+C stops a run.':
+      'ClawAI 运行终端。输入请求后按 Enter。按 Ctrl+C 停止运行。',
+    'Open Run Terminal': '打开运行终端',
+    'Run stopped.': '运行已停止。',
+  },
+};
+
+const attentionQueueTranslations = {
+  ar: {
+    'Open chat': 'فتح المحادثة',
+    'Finished badly': 'انتهى بشكل سيئ',
+    'Needs You': 'يحتاج إليك',
+    'Nothing is waiting for you': 'لا شيء بانتظارك',
+    'Still going': 'ما زال يعمل',
+    'Waiting for an answer': 'بانتظار إجابة',
+    'Waiting for approval': 'بانتظار الموافقة',
+    'Waiting its turn': 'بانتظار دوره',
+    '{0} things are waiting for you': '{0} عناصر بانتظارك',
+    '{0} · {1} minutes so far': '{0} · {1} دقيقة حتى الآن',
+  },
+  de: {
+    'Open chat': 'Chat öffnen',
+    'Finished badly': 'Schlecht geendet',
+    'Needs You': 'Braucht Sie',
+    'Nothing is waiting for you': 'Nichts wartet auf Sie',
+    'Still going': 'Läuft noch',
+    'Waiting for an answer': 'Wartet auf eine Antwort',
+    'Waiting for approval': 'Wartet auf Genehmigung',
+    'Waiting its turn': 'Wartet auf seinen Platz',
+    '{0} things are waiting for you': '{0} Dinge warten auf Sie',
+    '{0} · {1} minutes so far': '{0} · bisher {1} Minuten',
+  },
+  es: {
+    'Open chat': 'Abrir chat',
+    'Finished badly': 'Terminó mal',
+    'Needs You': 'Te necesita',
+    'Nothing is waiting for you': 'Nada te está esperando',
+    'Still going': 'Todavía en curso',
+    'Waiting for an answer': 'Esperando una respuesta',
+    'Waiting for approval': 'Esperando aprobación',
+    'Waiting its turn': 'Esperando su turno',
+    '{0} things are waiting for you': '{0} cosas te están esperando',
+    '{0} · {1} minutes so far': '{0} · {1} minutos hasta ahora',
+  },
+  fa: {
+    'Open chat': 'باز کردن گفتگو',
+    'Finished badly': 'با شکست پایان یافت',
+    'Needs You': 'به شما نیاز دارد',
+    'Nothing is waiting for you': 'چیزی در انتظار شما نیست',
+    'Still going': 'هنوز در حال اجرا',
+    'Waiting for an answer': 'در انتظار پاسخ',
+    'Waiting for approval': 'در انتظار تأیید',
+    'Waiting its turn': 'در انتظار نوبت',
+    '{0} things are waiting for you': '{0} مورد در انتظار شماست',
+    '{0} · {1} minutes so far': '{0} · تاکنون {1} دقیقه',
+  },
+  fr: {
+    'Open chat': 'Ouvrir le chat',
+    'Finished badly': 'S’est mal terminé',
+    'Needs You': 'Requiert votre attention',
+    'Nothing is waiting for you': 'Rien ne vous attend',
+    'Still going': 'Toujours en cours',
+    'Waiting for an answer': 'En attente d’une réponse',
+    'Waiting for approval': 'En attente d’approbation',
+    'Waiting its turn': 'Attend son tour',
+    '{0} things are waiting for you': '{0} éléments vous attendent',
+    '{0} · {1} minutes so far': '{0} · {1} minutes jusqu’ici',
+  },
+  hi: {
+    'Open chat': 'चैट खोलें',
+    'Finished badly': 'गड़बड़ी के साथ समाप्त',
+    'Needs You': 'आपकी ज़रूरत है',
+    'Nothing is waiting for you': 'कुछ भी आपका इंतज़ार नहीं कर रहा',
+    'Still going': 'अब भी चल रहा है',
+    'Waiting for an answer': 'उत्तर की प्रतीक्षा में',
+    'Waiting for approval': 'अनुमोदन की प्रतीक्षा में',
+    'Waiting its turn': 'अपनी बारी की प्रतीक्षा में',
+    '{0} things are waiting for you': '{0} चीज़ें आपका इंतज़ार कर रही हैं',
+    '{0} · {1} minutes so far': '{0} · अब तक {1} मिनट',
+  },
+  it: {
+    'Open chat': 'Apri chat',
+    'Finished badly': 'Finito male',
+    'Needs You': 'Richiede la tua attenzione',
+    'Nothing is waiting for you': 'Nulla ti sta aspettando',
+    'Still going': 'Ancora in corso',
+    'Waiting for an answer': 'In attesa di una risposta',
+    'Waiting for approval': 'In attesa di approvazione',
+    'Waiting its turn': 'In attesa del proprio turno',
+    '{0} things are waiting for you': '{0} elementi ti stanno aspettando',
+    '{0} · {1} minutes so far': '{0} · {1} minuti finora',
+  },
+  ja: {
+    'Open chat': 'チャットを開く',
+    'Finished badly': '失敗して終了',
+    'Needs You': '要対応',
+    'Nothing is waiting for you': '待っているものはありません',
+    'Still going': '実行中',
+    'Waiting for an answer': '回答待ち',
+    'Waiting for approval': '承認待ち',
+    'Waiting its turn': '順番待ち',
+    '{0} things are waiting for you': '{0} 件があなたを待っています',
+    '{0} · {1} minutes so far': '{0} · これまで {1} 分',
+  },
+  pt: {
+    'Open chat': 'Abrir chat',
+    'Finished badly': 'Terminou mal',
+    'Needs You': 'Precisa de você',
+    'Nothing is waiting for you': 'Nada está esperando por você',
+    'Still going': 'Ainda em andamento',
+    'Waiting for an answer': 'Aguardando uma resposta',
+    'Waiting for approval': 'Aguardando aprovação',
+    'Waiting its turn': 'Aguardando sua vez',
+    '{0} things are waiting for you': '{0} itens estão esperando por você',
+    '{0} · {1} minutes so far': '{0} · {1} minutos até agora',
+  },
+  ru: {
+    'Open chat': 'Открыть чат',
+    'Finished badly': 'Завершилось неудачно',
+    'Needs You': 'Требует вас',
+    'Nothing is waiting for you': 'Вас ничто не ждёт',
+    'Still going': 'Ещё выполняется',
+    'Waiting for an answer': 'Ожидает ответа',
+    'Waiting for approval': 'Ожидает подтверждения',
+    'Waiting its turn': 'Ожидает очереди',
+    '{0} things are waiting for you': '{0} элементов ждут вас',
+    '{0} · {1} minutes so far': '{0} · {1} мин. на данный момент',
+  },
+  th: {
+    'Open chat': 'เปิดแชต',
+    'Finished badly': 'จบลงไม่ดี',
+    'Needs You': 'ต้องการคุณ',
+    'Nothing is waiting for you': 'ไม่มีอะไรรอคุณอยู่',
+    'Still going': 'ยังทำงานอยู่',
+    'Waiting for an answer': 'รอคำตอบ',
+    'Waiting for approval': 'รอการอนุมัติ',
+    'Waiting its turn': 'รอคิว',
+    '{0} things are waiting for you': 'มี {0} รายการรอคุณอยู่',
+    '{0} · {1} minutes so far': '{0} · {1} นาทีจนถึงตอนนี้',
+  },
+  zh: {
+    'Open chat': '打开聊天',
+    'Finished badly': '结束得不顺利',
+    'Needs You': '需要你处理',
+    'Nothing is waiting for you': '没有等你处理的事项',
+    'Still going': '仍在进行',
+    'Waiting for an answer': '等待回答',
+    'Waiting for approval': '等待批准',
+    'Waiting its turn': '排队等待',
+    '{0} things are waiting for you': '有 {0} 项在等你处理',
+    '{0} · {1} minutes so far': '{0} · 目前已 {1} 分钟',
+  },
+};
+
+const routingStrategyTranslations = {
+  ar: {
+    'Fastest reply': 'أسرع رد',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'كيف تختار الخدمة الخلفية النموذج: تلقائيًا، أو باستراتيجية مسماة، أو نموذج تختاره بنفسك.',
+    'Local models only': 'النماذج المحلية فقط',
+    'Lowest cost': 'أقل تكلفة',
+    'Privacy first': 'الخصوصية أولاً',
+    'Strongest reasoning': 'أقوى استدلال',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'النموذج المحدد لا يستطيع استدعاء الأدوات، لذا لن يعدّل تشغيل الوكيل أي ملفات.',
+  },
+  de: {
+    'Fastest reply': 'Schnellste Antwort',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Wie das Backend ein Modell wählt: automatisch, nach benannter Strategie oder von Ihnen selbst gewählt.',
+    'Local models only': 'Nur lokale Modelle',
+    'Lowest cost': 'Geringste Kosten',
+    'Privacy first': 'Datenschutz zuerst',
+    'Strongest reasoning': 'Stärkstes Reasoning',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'Das gewählte Modell kann keine Tools aufrufen, daher ändert ein Agentenlauf keine Dateien.',
+  },
+  es: {
+    'Fastest reply': 'Respuesta más rápida',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Cómo elige el backend un modelo: automáticamente, con una estrategia con nombre o uno que elijas tú.',
+    'Local models only': 'Solo modelos locales',
+    'Lowest cost': 'Menor coste',
+    'Privacy first': 'Privacidad primero',
+    'Strongest reasoning': 'Razonamiento más potente',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'El modelo seleccionado no puede llamar a herramientas, así que una ejecución del agente no editará archivos.',
+  },
+  fa: {
+    'Fastest reply': 'سریع‌ترین پاسخ',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'روش انتخاب مدل توسط بک‌اند: خودکار، یک راهبرد نام‌گذاری‌شده، یا مدلی که خودتان انتخاب می‌کنید.',
+    'Local models only': 'فقط مدل‌های محلی',
+    'Lowest cost': 'کمترین هزینه',
+    'Privacy first': 'حریم خصوصی در اولویت',
+    'Strongest reasoning': 'قوی‌ترین استدلال',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'مدل انتخاب‌شده نمی‌تواند ابزارها را فراخوانی کند، بنابراین اجرای عامل هیچ فایلی را ویرایش نمی‌کند.',
+  },
+  fr: {
+    'Fastest reply': 'Réponse la plus rapide',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Comment le backend choisit un modèle : automatiquement, selon une stratégie nommée, ou celui que vous choisissez.',
+    'Local models only': 'Modèles locaux uniquement',
+    'Lowest cost': 'Coût le plus bas',
+    'Privacy first': 'Confidentialité d’abord',
+    'Strongest reasoning': 'Raisonnement le plus puissant',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'Le modèle sélectionné ne peut pas appeler d’outils, donc une exécution de l’agent ne modifiera aucun fichier.',
+  },
+  hi: {
+    'Fastest reply': 'सबसे तेज़ उत्तर',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'बैकएंड मॉडल कैसे चुनता है: स्वचालित रूप से, किसी नामित रणनीति से, या आपके द्वारा चुना गया।',
+    'Local models only': 'केवल स्थानीय मॉडल',
+    'Lowest cost': 'सबसे कम लागत',
+    'Privacy first': 'गोपनीयता पहले',
+    'Strongest reasoning': 'सबसे मज़बूत तर्क',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'चयनित मॉडल टूल नहीं बुला सकता, इसलिए एजेंट रन कोई फ़ाइल संपादित नहीं करेगा।',
+  },
+  it: {
+    'Fastest reply': 'Risposta più rapida',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Come il backend sceglie un modello: automaticamente, con una strategia denominata o uno scelto da te.',
+    'Local models only': 'Solo modelli locali',
+    'Lowest cost': 'Costo più basso',
+    'Privacy first': 'Privacy prima di tutto',
+    'Strongest reasoning': 'Ragionamento più forte',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'Il modello selezionato non può chiamare strumenti, quindi un’esecuzione dell’agente non modificherà file.',
+  },
+  ja: {
+    'Fastest reply': '最速の応答',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'バックエンドがモデルを選ぶ方法: 自動、名前付き戦略、または自分で選択。',
+    'Local models only': 'ローカルモデルのみ',
+    'Lowest cost': '最低コスト',
+    'Privacy first': 'プライバシー優先',
+    'Strongest reasoning': '最も強力な推論',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      '選択したモデルはツールを呼び出せないため、エージェント実行はファイルを編集しません。',
+  },
+  pt: {
+    'Fastest reply': 'Resposta mais rápida',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Como o backend escolhe um modelo: automaticamente, por uma estratégia nomeada ou um que você escolha.',
+    'Local models only': 'Apenas modelos locais',
+    'Lowest cost': 'Menor custo',
+    'Privacy first': 'Privacidade em primeiro lugar',
+    'Strongest reasoning': 'Raciocínio mais forte',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'O modelo selecionado não pode chamar ferramentas, portanto uma execução do agente não editará arquivos.',
+  },
+  ru: {
+    'Fastest reply': 'Самый быстрый ответ',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'Как бэкенд выбирает модель: автоматически, по названной стратегии или по вашему выбору.',
+    'Local models only': 'Только локальные модели',
+    'Lowest cost': 'Наименьшая стоимость',
+    'Privacy first': 'Приоритет конфиденциальности',
+    'Strongest reasoning': 'Самое сильное рассуждение',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'Выбранная модель не может вызывать инструменты, поэтому запуск агента не изменит файлы.',
+  },
+  th: {
+    'Fastest reply': 'ตอบเร็วที่สุด',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      'วิธีที่แบ็กเอนด์เลือกโมเดล: อัตโนมัติ กลยุทธ์ที่ระบุชื่อ หรือโมเดลที่คุณเลือกเอง',
+    'Local models only': 'เฉพาะโมเดลในเครื่อง',
+    'Lowest cost': 'ต้นทุนต่ำสุด',
+    'Privacy first': 'ความเป็นส่วนตัวมาก่อน',
+    'Strongest reasoning': 'การให้เหตุผลที่แข็งแกร่งที่สุด',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      'โมเดลที่เลือกเรียกใช้เครื่องมือไม่ได้ การรันเอเจนต์จึงจะไม่แก้ไขไฟล์',
+  },
+  zh: {
+    'Fastest reply': '最快回复',
+    'How the backend picks a model: automatic, a named strategy, or one you select yourself.':
+      '后端如何选择模型：自动、指定策略，或由你自己选择。',
+    'Local models only': '仅本地模型',
+    'Lowest cost': '成本最低',
+    'Privacy first': '隐私优先',
+    'Strongest reasoning': '最强推理',
+    'The selected model cannot call tools, so an agent run will not edit files.':
+      '所选模型无法调用工具，因此智能体运行不会修改任何文件。',
+  },
+};
+
+const autoCompactionTranslations = {
+  ar: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'ما الذي يحدث عندما تقترب المحادثة من الطول الأقصى: لا شيء، أو عرض تلخيصها، أو تلخيصها تلقائيًا.',
+  },
+  de: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'Was geschehen soll, wenn eine Unterhaltung fast zu lang zum Fortsetzen ist: nichts, eine Zusammenfassung anbieten oder automatisch zusammenfassen.',
+  },
+  es: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'Qué hacer cuando una conversación está casi demasiado larga para continuar: nada, ofrecer resumirla o resumirla automáticamente.',
+  },
+  fa: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'وقتی گفتگو تقریباً برای ادامه بیش از حد طولانی شد چه کند: هیچ کاری، پیشنهاد خلاصه‌سازی، یا خلاصه‌سازی خودکار.',
+  },
+  fr: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'Que faire lorsqu’une conversation devient trop longue pour continuer : rien, proposer de la résumer, ou la résumer automatiquement.',
+  },
+  hi: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'जब बातचीत जारी रखने के लिए लगभग बहुत लंबी हो जाए तो क्या करें: कुछ नहीं, सारांश बनाने का प्रस्ताव दें, या स्वतः सारांश बनाएँ।',
+  },
+  it: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'Cosa fare quando una conversazione è quasi troppo lunga per continuare: niente, proporre di riassumerla o riassumerla automaticamente.',
+  },
+  ja: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      '会話が続けるには長くなりすぎそうなときの動作: 何もしない、要約を提案する、または自動的に要約する。',
+  },
+  pt: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'O que fazer quando uma conversa fica quase longa demais para continuar: nada, oferecer resumi-la ou resumi-la automaticamente.',
+  },
+  ru: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'Что делать, когда беседа почти слишком длинная для продолжения: ничего, предложить сократить её или сокращать автоматически.',
+  },
+  th: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      'จะทำอย่างไรเมื่อการสนทนายาวเกินกว่าจะดำเนินต่อ: ไม่ทำอะไร เสนอให้สรุป หรือสรุปโดยอัตโนมัติ',
+  },
+  zh: {
+    'What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.':
+      '当对话长到几乎无法继续时的处理方式：不处理、提示是否总结，或自动总结。',
+  },
+};
+
+const contextFreshnessTranslations = {
+  ar: {
+    'changed since it was read': 'تغيّر منذ قراءته',
+    'no longer there': 'لم يعد موجودًا',
+  },
+  de: {
+    'changed since it was read': 'seit dem Lesen geändert',
+    'no longer there': 'nicht mehr vorhanden',
+  },
+  es: {
+    'changed since it was read': 'cambiado desde que se leyó',
+    'no longer there': 'ya no existe',
+  },
+  fa: {
+    'changed since it was read': 'از زمان خواندن تغییر کرده',
+    'no longer there': 'دیگر وجود ندارد',
+  },
+  fr: {
+    'changed since it was read': 'modifié depuis sa lecture',
+    'no longer there': 'n’existe plus',
+  },
+  hi: {
+    'changed since it was read': 'पढ़े जाने के बाद बदला',
+    'no longer there': 'अब मौजूद नहीं',
+  },
+  it: {
+    'changed since it was read': 'modificato da quando è stato letto',
+    'no longer there': 'non esiste più',
+  },
+  ja: {
+    'changed since it was read': '読み取り後に変更されました',
+    'no longer there': 'すでに存在しません',
+  },
+  pt: {
+    'changed since it was read': 'alterado desde que foi lido',
+    'no longer there': 'já não existe',
+  },
+  ru: {
+    'changed since it was read': 'изменено после чтения',
+    'no longer there': 'больше не существует',
+  },
+  th: {
+    'changed since it was read': 'เปลี่ยนแปลงหลังจากถูกอ่าน',
+    'no longer there': 'ไม่มีอยู่แล้ว',
+  },
+  zh: {
+    'changed since it was read': '读取后已更改',
+    'no longer there': '已不存在',
+  },
+};
+
+const fastModeTranslations = {
+  ar: {
+    'Fast mode is off.': 'الوضع السريع متوقف.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'الوضع السريع مُفعّل: يفضّل الموجّه نموذجًا سريعًا ويُجمع السياق بسرعة 2X.',
+    'Toggle Fast Mode': 'تبديل الوضع السريع',
+  },
+  de: {
+    'Fast mode is off.': 'Schnellmodus ist aus.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'Schnellmodus ist an: Der Router bevorzugt ein schnelles Modell und der Kontext wird mit 2X erfasst.',
+    'Toggle Fast Mode': 'Schnellmodus umschalten',
+  },
+  es: {
+    'Fast mode is off.': 'El modo rápido está desactivado.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'El modo rápido está activado: el enrutador prefiere un modelo rápido y el contexto se recopila a 2X.',
+    'Toggle Fast Mode': 'Alternar modo rápido',
+  },
+  fa: {
+    'Fast mode is off.': 'حالت سریع خاموش است.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'حالت سریع روشن است: مسیریاب مدلی سریع را ترجیح می‌دهد و زمینه با سرعت 2X جمع‌آوری می‌شود.',
+    'Toggle Fast Mode': 'تغییر وضعیت حالت سریع',
+  },
+  fr: {
+    'Fast mode is off.': 'Le mode rapide est désactivé.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'Le mode rapide est activé : le routeur préfère un modèle rapide et le contexte est collecté en 2X.',
+    'Toggle Fast Mode': 'Basculer le mode rapide',
+  },
+  hi: {
+    'Fast mode is off.': 'फ़ास्ट मोड बंद है।',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'फ़ास्ट मोड चालू है: राउटर तेज़ मॉडल पसंद करता है और संदर्भ 2X पर एकत्र होता है।',
+    'Toggle Fast Mode': 'फ़ास्ट मोड टॉगल करें',
+  },
+  it: {
+    'Fast mode is off.': 'La modalità rapida è disattivata.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'La modalità rapida è attiva: il router preferisce un modello veloce e il contesto viene raccolto a 2X.',
+    'Toggle Fast Mode': 'Attiva/disattiva modalità rapida',
+  },
+  ja: {
+    'Fast mode is off.': '高速モードはオフです。',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      '高速モードがオンです: ルーターは速いモデルを優先し、コンテキストは 2X で収集されます。',
+    'Toggle Fast Mode': '高速モードの切り替え',
+  },
+  pt: {
+    'Fast mode is off.': 'O modo rápido está desativado.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'O modo rápido está ativado: o roteador prefere um modelo rápido e o contexto é coletado a 2X.',
+    'Toggle Fast Mode': 'Alternar modo rápido',
+  },
+  ru: {
+    'Fast mode is off.': 'Быстрый режим выключен.',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'Быстрый режим включён: маршрутизатор предпочитает быструю модель, а контекст собирается на 2X.',
+    'Toggle Fast Mode': 'Переключить быстрый режим',
+  },
+  th: {
+    'Fast mode is off.': 'โหมดเร็วปิดอยู่',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      'โหมดเร็วเปิดอยู่: ตัวจัดเส้นทางจะเลือกโมเดลที่เร็วและเก็บบริบทที่ 2X',
+    'Toggle Fast Mode': 'สลับโหมดเร็ว',
+  },
+  zh: {
+    'Fast mode is off.': '快速模式已关闭。',
+    'Fast mode is on: the router prefers a quick model and context is gathered 2X.':
+      '快速模式已开启：路由器优先选择快速模型，并以 2X 收集上下文。',
+    'Toggle Fast Mode': '切换快速模式',
+  },
+};
+
+const browserOriginTranslations = {
+  ar: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'أصول مواقع إضافية يمكن لأداة المتصفح فتحها دون سؤال، مثل خادم التطوير الخاص بك. أصل الخدمة الخلفية والواجهة مسموح بها دائمًا ولا يمكن إزالتها هنا.',
+  },
+  de: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Zusätzliche Website-Origins, die das Browser-Tool ohne Nachfrage öffnen darf, etwa Ihr eigener Entwicklungsserver. Die Backend- und Frontend-Origins sind immer erlaubt und lassen sich hier nicht entfernen.',
+  },
+  es: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Orígenes de sitios adicionales que la herramienta de navegador puede abrir sin preguntar, como tu propio servidor de desarrollo. Los orígenes del backend y del frontend siempre están permitidos y no pueden quitarse aquí.',
+  },
+  fa: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'مبدأهای سایت اضافی که ابزار مرورگر می‌تواند بدون پرسش باز کند، مانند سرور توسعه خودتان. مبدأ بک‌اند و فرانت‌اند همیشه مجاز است و از اینجا حذف نمی‌شود.',
+  },
+  fr: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Origines de sites supplémentaires que l’outil de navigation peut ouvrir sans demander, comme votre propre serveur de développement. Les origines backend et frontend sont toujours autorisées et ne peuvent pas être retirées ici.',
+  },
+  hi: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'अतिरिक्त साइट ऑरिजिन जिन्हें ब्राउज़र टूल बिना पूछे खोल सकता है, जैसे आपका अपना डेवलपमेंट सर्वर। बैकएंड और फ़्रंटएंड ऑरिजिन हमेशा अनुमत हैं और यहाँ से हटाए नहीं जा सकते।',
+  },
+  it: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Origini di siti aggiuntive che lo strumento browser può aprire senza chiedere, come il tuo server di sviluppo. Le origini di backend e frontend sono sempre consentite e non possono essere rimosse qui.',
+  },
+  ja: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'ブラウザーツールが確認なしに開いてよい追加のサイトオリジン（自分の開発サーバーなど）。バックエンドとフロントエンドのオリジンは常に許可され、ここでは削除できません。',
+  },
+  pt: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Origens de sites adicionais que a ferramenta de navegador pode abrir sem perguntar, como o seu próprio servidor de desenvolvimento. As origens do backend e do frontend são sempre permitidas e não podem ser removidas aqui.',
+  },
+  ru: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'Дополнительные источники сайтов, которые инструмент браузера может открывать без запроса, например ваш собственный сервер разработки. Источники бэкенда и фронтенда разрешены всегда и здесь не удаляются.',
+  },
+  th: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      'ออริจินของเว็บไซต์เพิ่มเติมที่เครื่องมือเบราว์เซอร์เปิดได้โดยไม่ต้องถาม เช่น เซิร์ฟเวอร์สำหรับพัฒนาของคุณเอง ออริจินของแบ็กเอนด์และฟรอนต์เอนด์ได้รับอนุญาตเสมอและลบที่นี่ไม่ได้',
+  },
+  zh: {
+    'Extra site origins the browser tool may open without asking, such as your own development server. The backend and frontend origins are always allowed and cannot be removed here.':
+      '浏览器工具无需询问即可打开的额外站点来源，例如你自己的开发服务器。后端和前端来源始终被允许，且无法在此移除。',
+  },
+};
+
+const composerDropTranslations = {
+  ar: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'يمكن إسقاط الملفات الموجودة داخل المجلد المفتوح فقط في مربع الكتابة.',
+    'Open a folder before dropping files into the composer.':
+      'افتح مجلدًا قبل إسقاط الملفات في مربع الكتابة.',
+  },
+  de: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'Nur Dateien im geöffneten Ordner können in das Eingabefeld gezogen werden.',
+    'Open a folder before dropping files into the composer.':
+      'Öffnen Sie einen Ordner, bevor Sie Dateien in das Eingabefeld ziehen.',
+  },
+  es: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'Solo se pueden soltar en el editor los archivos que están dentro de la carpeta abierta.',
+    'Open a folder before dropping files into the composer.':
+      'Abre una carpeta antes de soltar archivos en el editor.',
+  },
+  fa: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'فقط فایل‌های داخل پوشه باز را می‌توان در کادر نوشتن رها کرد.',
+    'Open a folder before dropping files into the composer.':
+      'پیش از رها کردن فایل‌ها در کادر نوشتن، یک پوشه باز کنید.',
+  },
+  fr: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'Seuls les fichiers du dossier ouvert peuvent être déposés dans le champ de saisie.',
+    'Open a folder before dropping files into the composer.':
+      'Ouvrez un dossier avant de déposer des fichiers dans le champ de saisie.',
+  },
+  hi: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'केवल खुले फ़ोल्डर के अंदर की फ़ाइलें ही कंपोज़र में छोड़ी जा सकती हैं।',
+    'Open a folder before dropping files into the composer.':
+      'कंपोज़र में फ़ाइलें छोड़ने से पहले कोई फ़ोल्डर खोलें।',
+  },
+  it: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'Solo i file nella cartella aperta possono essere trascinati nel campo di scrittura.',
+    'Open a folder before dropping files into the composer.':
+      'Apri una cartella prima di trascinare file nel campo di scrittura.',
+  },
+  ja: {
+    'Only files inside the open folder can be dropped into the composer.':
+      '開いているフォルダー内のファイルだけを入力欄にドロップできます。',
+    'Open a folder before dropping files into the composer.':
+      '入力欄にファイルをドロップする前にフォルダーを開いてください。',
+  },
+  pt: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'Apenas arquivos dentro da pasta aberta podem ser soltos no campo de escrita.',
+    'Open a folder before dropping files into the composer.':
+      'Abra uma pasta antes de soltar arquivos no campo de escrita.',
+  },
+  ru: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'В поле ввода можно перетащить только файлы из открытой папки.',
+    'Open a folder before dropping files into the composer.':
+      'Откройте папку, прежде чем перетаскивать файлы в поле ввода.',
+  },
+  th: {
+    'Only files inside the open folder can be dropped into the composer.':
+      'วางได้เฉพาะไฟล์ที่อยู่ในโฟลเดอร์ที่เปิดอยู่เท่านั้น',
+    'Open a folder before dropping files into the composer.':
+      'เปิดโฟลเดอร์ก่อนวางไฟล์ลงในช่องพิมพ์',
+  },
+  zh: {
+    'Only files inside the open folder can be dropped into the composer.':
+      '只能将已打开文件夹内的文件拖放到输入框。',
+    'Open a folder before dropping files into the composer.':
+      '请先打开文件夹，再将文件拖放到输入框。',
+  },
+};
+
+const telemetryTranslations = {
+  ar: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'الترويسات المرسلة مع كل تصدير للقياسات، مثل ترويسة التفويض التي يطلبها مجمّعك.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'نقطة نهاية OTLP لإرسال مقاطع التتبع إليها، مثل مجمّعك الخاص. الفراغ يعني عدم إرسال أي شيء. يجب أن تكون HTTPS ما لم تكن على هذا الجهاز.',
+  },
+  de: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'Header, die bei jedem Telemetrie-Export gesendet werden, etwa ein Autorisierungsheader, den Ihr Collector verlangt.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'OTLP-Traces-Endpunkt, an den Lauf-Spans gesendet werden, etwa Ihr eigener Collector. Leer bedeutet, dass nichts gesendet wird. Muss HTTPS sein, sofern er nicht auf diesem Rechner läuft.',
+  },
+  es: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'Cabeceras enviadas con cada exportación de telemetría, como la cabecera de autorización que requiera tu colector.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'Endpoint de trazas OTLP al que enviar los spans de ejecución, como tu propio colector. Vacío significa que no se envía nada. Debe ser HTTPS salvo que esté en esta máquina.',
+  },
+  fa: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'هدرهایی که با هر ارسال تله‌متری فرستاده می‌شوند، مانند هدر مجوزی که جمع‌کننده شما نیاز دارد.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'نقطه پایانی OTLP برای ارسال اسپن‌های اجرا، مانند جمع‌کننده خودتان. خالی یعنی چیزی ارسال نمی‌شود. باید HTTPS باشد مگر روی همین دستگاه باشد.',
+  },
+  fr: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'En-têtes envoyés avec chaque export de télémétrie, par exemple l’en-tête d’autorisation exigé par votre collecteur.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'Point de terminaison OTLP où envoyer les spans d’exécution, par exemple votre propre collecteur. Vide signifie qu’aucune donnée n’est envoyée. Doit être HTTPS sauf s’il est sur cette machine.',
+  },
+  hi: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'प्रत्येक टेलीमेट्री निर्यात के साथ भेजे जाने वाले हेडर, जैसे आपके कलेक्टर के लिए आवश्यक प्राधिकरण हेडर।',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'रन स्पैन भेजने के लिए OTLP ट्रेस एंडपॉइंट, जैसे आपका अपना कलेक्टर। खाली का अर्थ है कुछ नहीं भेजा जाता। इस मशीन पर न होने पर HTTPS होना चाहिए।',
+  },
+  it: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'Intestazioni inviate con ogni esportazione di telemetria, ad esempio l’intestazione di autorizzazione richiesta dal tuo collector.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'Endpoint OTLP a cui inviare gli span delle esecuzioni, ad esempio il tuo collector. Vuoto significa che non viene inviato nulla. Deve essere HTTPS a meno che non sia su questa macchina.',
+  },
+  ja: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      '各テレメトリー送信に付与するヘッダー（コレクターが必要とする認可ヘッダーなど）。',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      '実行スパンの送信先となる OTLP トレースエンドポイント（自分のコレクターなど）。空の場合は何も送信されません。このマシン上でない限り HTTPS が必要です。',
+  },
+  pt: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'Cabeçalhos enviados a cada exportação de telemetria, como o cabeçalho de autorização exigido pelo seu coletor.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'Endpoint de traces OTLP para onde enviar os spans de execução, como o seu próprio coletor. Vazio significa que nada é enviado. Precisa ser HTTPS a menos que esteja nesta máquina.',
+  },
+  ru: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'Заголовки, отправляемые с каждой выгрузкой телеметрии, например заголовок авторизации, который требует ваш коллектор.',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'Конечная точка трасс OTLP, куда отправлять спаны запусков, например ваш собственный коллектор. Пусто — ничего не отправляется. Требуется HTTPS, если только это не текущая машина.',
+  },
+  th: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      'เฮดเดอร์ที่ส่งไปพร้อมการส่งออกเทเลเมทรีทุกครั้ง เช่น เฮดเดอร์การอนุญาตที่คอลเลกเตอร์ของคุณต้องการ',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      'ปลายทาง OTLP traces สำหรับส่งสแปนของการรัน เช่น คอลเลกเตอร์ของคุณเอง หากว่างจะไม่ส่งอะไรเลย ต้องเป็น HTTPS เว้นแต่จะอยู่บนเครื่องนี้',
+  },
+  zh: {
+    'Headers sent with each telemetry export, such as an authorization header your collector requires.':
+      '每次遥测导出时发送的请求头，例如采集器所需的授权头。',
+    'OTLP traces endpoint to send run spans to, such as your own collector. Empty means nothing is sent. Must be HTTPS unless it is on this machine.':
+      '发送运行跨度的 OTLP traces 端点，例如你自己的采集器。留空表示不发送任何内容。除非在本机，否则必须使用 HTTPS。',
+  },
+};
+
+const cachedTokenTranslations = {
+  ar: {
+    '{0} cached ({1}%)': '{0} من الذاكرة المؤقتة ({1}%)',
+  },
+  de: {
+    '{0} cached ({1}%)': '{0} aus dem Cache ({1}%)',
+  },
+  es: {
+    '{0} cached ({1}%)': '{0} en caché ({1}%)',
+  },
+  fa: {
+    '{0} cached ({1}%)': '{0} از حافظه پنهان ({1}%)',
+  },
+  fr: {
+    '{0} cached ({1}%)': '{0} en cache ({1}%)',
+  },
+  hi: {
+    '{0} cached ({1}%)': '{0} कैश से ({1}%)',
+  },
+  it: {
+    '{0} cached ({1}%)': '{0} dalla cache ({1}%)',
+  },
+  ja: {
+    '{0} cached ({1}%)': '{0} はキャッシュ ({1}%)',
+  },
+  pt: {
+    '{0} cached ({1}%)': '{0} em cache ({1}%)',
+  },
+  ru: {
+    '{0} cached ({1}%)': '{0} из кэша ({1}%)',
+  },
+  th: {
+    '{0} cached ({1}%)': '{0} จากแคช ({1}%)',
+  },
+  zh: {
+    '{0} cached ({1}%)': '{0} 来自缓存（{1}%）',
+  },
+};
+
 function translate(locale, message) {
   return (
+    authorizationPageTranslations[locale][message] ??
+    statusLineTranslations[locale][message] ??
+    turnNavigationTranslations[locale][message] ??
+    onboardingTranslations[locale][message] ??
+    focusViewTranslations[locale][message] ??
+    threadOrganizationTranslations[locale][message] ??
+    sessionTabTranslations[locale][message] ??
+    mentionTranslations[locale][message] ??
     composerTranslations[locale][message] ??
     administratorTranslations[locale][message] ??
     runtimeV2Translations[locale][message] ??
@@ -1931,7 +4691,29 @@ function translate(locale, message) {
     releaseTranslations[locale][message] ??
     routineApprovalTranslations[locale][message] ??
     exactTranslations[locale][message] ??
+    checkpointTranslations[locale][message] ??
+    sideQuestionTranslations[locale][message] ??
+    terminalTranslations[locale][message] ??
+    threadGroupTranslations[locale][message] ??
+    newWindowTranslations[locale][message] ??
+    compactionTranslations[locale][message] ??
+    contextWarningTranslations[locale][message] ??
+    attachmentTranslations[locale][message] ??
+    settingDescriptionTranslations[locale][message] ??
+    outputStyleTranslations[locale][message] ??
     sharedTranslations[locale][message] ??
+    coreSurfaceTranslations[locale][message] ??
+    reasoningVisibilityTranslations[locale][message] ??
+    runTerminalTranslations[locale][message] ??
+    attentionQueueTranslations[locale][message] ??
+    routingStrategyTranslations[locale][message] ??
+    autoCompactionTranslations[locale][message] ??
+    contextFreshnessTranslations[locale][message] ??
+    fastModeTranslations[locale][message] ??
+    browserOriginTranslations[locale][message] ??
+    composerDropTranslations[locale][message] ??
+    telemetryTranslations[locale][message] ??
+    cachedTokenTranslations[locale][message] ??
     message
   );
 }

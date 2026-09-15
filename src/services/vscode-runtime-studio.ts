@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+import extensionPackage from '../../package.json';
+import { WorkspaceMutationGate } from '../core/workspace-mutation-gate';
 import { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 import {
   BrowserToolExecutor,
@@ -14,7 +16,6 @@ import {
   databaseToolDefinition,
 } from '../infrastructure/database-tool-executor';
 import { DeterministicEvidenceArchive } from '../infrastructure/deterministic-evidence-archive';
-import { VscodeElevationVerificationAdapter } from '../infrastructure/elevation-tool-executor';
 import {
   VscodeFlagshipCheckpointReconciler,
   VscodeFlagshipCheckpointStore,
@@ -24,32 +25,11 @@ import {
   RuntimeIntegrationGitAdapter,
   RuntimeIntegrationQualityAdapter,
 } from '../infrastructure/integration-tool-executor';
-import {
-  IntelligenceToolExecutor,
-  intelligenceToolDefinition,
-} from '../infrastructure/intelligence-tool-executor';
-import { PackagedNativeElevationAdapter } from '../infrastructure/native-elevation-adapter';
-import {
-  PlanningToolExecutor,
-  planningToolDefinition,
-} from '../infrastructure/planning-tool-executor';
 import { PlaywrightBrowserDriver } from '../infrastructure/playwright-browser-driver';
-import {
-  ProcessSupervisorToolExecutor,
-  processSupervisorToolDefinition,
-} from '../infrastructure/process-supervisor-tool-executor';
 import {
   QualityToolExecutor,
   qualityToolDefinition,
 } from '../infrastructure/quality-tool-executor';
-import {
-  RunJournalToolExecutor,
-  runJournalToolDefinition,
-} from '../infrastructure/run-journal-tool-executor';
-import {
-  StructuredCommandToolExecutor,
-  structuredCommandToolDefinition,
-} from '../infrastructure/structured-command-tool-executor';
 import {
   SocketPortInspector,
   VscodeDevelopmentServiceAdapter,
@@ -57,10 +37,6 @@ import {
   VscodeServiceCheckpointStore,
 } from '../infrastructure/vscode-development-service-adapter';
 import { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
-import {
-  VscodeFilesystemToolExecutor,
-  workspaceFilesystemToolDefinition,
-} from '../infrastructure/vscode-filesystem-tool-executor';
 import { VscodeIntelligenceIndex } from '../infrastructure/vscode-intelligence-index';
 import { VscodeObservabilitySink } from '../infrastructure/vscode-observability-sink';
 import {
@@ -68,11 +44,14 @@ import {
   VscodeRunJournalStorage,
 } from '../infrastructure/vscode-run-journal-adapter';
 import { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-binding-store';
-import { VscodeSubAgentDiagnosticsSink } from '../infrastructure/vscode-sub-agent-diagnostics-sink';
-import { VscodeSubAgentWorktreeAdapter } from '../infrastructure/vscode-sub-agent-worktree-adapter';
+import { VscodeWorkspaceDiagnostics } from '../infrastructure/vscode-workspace-diagnostics';
+import { VscodeWorkspaceSymbols } from '../infrastructure/vscode-workspace-symbols';
 
+import { backendAdvisor } from './backend-advisor';
+import { backendWebResearch } from './backend-web-research';
 import { BrowserControllerService } from './browser-controller-service';
 import { ContainerEngineService } from './container-engine-service';
+import { conversationEndPort } from './conversation-end-service';
 import { DatabaseProfileVault } from './database-profile-vault';
 import {
   DatabaseWorkbenchService,
@@ -80,24 +59,25 @@ import {
   SqlCliDatabaseAdapter,
 } from './database-workbench-service';
 import { DevelopmentServiceManager } from './development-service-manager';
-import { ElevationBrokerService } from './elevation-broker-service';
 import { EvidenceBundleService } from './evidence-bundle-service';
 import { ExecutionTargetRegistry } from './execution-target-registry';
-import { FileLeaseManager } from './file-lease-manager';
 import { FileTransactionService } from './file-transaction-service';
 import { FlagshipDeliveryService } from './flagship-delivery-service';
 import { GitAgentService } from './git-agent-service';
 import { IntegrationCoordinatorService } from './integration-coordinator-service';
 import { LocalObservabilityService } from './observability-service';
+import { otlpSink } from './otlp-sink-factory';
 import { ProcessSupervisorService } from './process-supervisor-service';
 import { ProjectPolicyService } from './project-policy-service';
 import { RunJournalService } from './run-journal-service';
+import { parentRunContext, RunScopedContext } from './run-scoped-context';
 import { RuntimeEventStreamService } from './runtime-event-stream-service';
 import {
   CoordinatedFlagshipSubAgentPort,
   RuntimeFlagshipStageAdapter,
 } from './runtime-flagship-stage-adapter';
 import { RuntimePolicyV2Adapter } from './runtime-policy-v2-adapter';
+import { elevationBroker } from './runtime-studio-elevation';
 import { executeRuntimeStudio } from './runtime-studio-execution';
 import {
   approveRuntimeEffect,
@@ -107,16 +87,23 @@ import {
   runtimeFingerprint,
   runtimeFlagshipHostIdentityHash,
   steerRuntime,
+  forgetWorkspaceScopedState,
+  nextAccountEpoch,
+  nextWorkspaceEpoch,
 } from './runtime-studio-helpers';
-import { advancedToolRegistrations } from './runtime-studio-registrations';
-import { RuntimeSubAgentExecutor } from './runtime-sub-agent-executor';
+import {
+  advancedToolRegistrations,
+  analysisToolRegistrations,
+  workspaceToolRegistrations,
+} from './runtime-studio-registrations';
+import { createRunScopedStores, type RunScopedStores } from './runtime-studio-stores';
+import { assembleSubAgents } from './runtime-studio-sub-agents';
 import { RuntimeToolRouter } from './runtime-tool-router';
 import { ServerReadinessService } from './server-readiness-service';
-import { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
-import { SubAgentWorktreeService } from './sub-agent-worktree-service';
 import { vscodeRuntimeExecutionDependencies } from './vscode-runtime-execution';
 import { recoverVscodeRuntime } from './vscode-runtime-recovery';
 import { WorkspaceIntelligenceService } from './workspace-intelligence-service';
+import { workspaceLifecycleHooks } from './workspace-lifecycle-hooks';
 
 import type { ExternalOutputGrantStore } from './agent-coordinator.types';
 import type { ConfigurationService } from './configuration-service';
@@ -125,19 +112,30 @@ import type { RuntimeStudioInput } from './runtime-studio.types';
 import type { TargetAwareToolRouter } from './target-aware-tool-router';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { BackendClient } from '../backend/backend-client';
+import type { WebResearchPort } from '../backend/research-client';
 import type { RUNTIME_EFFECT_APPROVAL_KIND } from '../core/approval-broker';
 import type { ApprovalBroker } from '../core/approval-broker';
 import type { ExtensionState } from '../core/extension-state';
 import type { CapabilityManifest } from '../core/runtime/capability-manifest';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { AdvisorPort } from '../infrastructure/advisor-tool-executor.types';
 import type { OutputLogger } from '../infrastructure/output-logger';
 
 export class VscodeRuntimeStudio implements vscode.Disposable {
-  private readonly files: VscodeFileTransactionAdapter;
-  private readonly transactions: FileTransactionService;
+  readonly files: VscodeFileTransactionAdapter;
+  readonly transactions: FileTransactionService;
   private readonly processes = new ProcessSupervisorService();
   readonly transport: BackendRuntimeTransport;
   private readonly bindingStore: VscodeRuntimeBindingStore;
+
+  /**
+   * Hooks come from VS Code settings, never from `.clawai`: a hook runs a
+   * command, and project configuration here may only ever tighten.
+   */
+  readonly hooks: ReturnType<typeof workspaceLifecycleHooks>;
+
+  private readonly research: WebResearchPort;
+  private readonly advisor: AdvisorPort;
   readonly stream: RuntimeEventStreamService;
   readonly router: RuntimeToolRouter;
   private readonly targets: ExecutionTargetRegistry;
@@ -147,6 +145,8 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   readonly flagship: FlagshipDeliveryService;
   private readonly git: GitAgentService;
   readonly journals: RunJournalService;
+  /** Findings and tasks: run-scoped, cleared together on a workspace change. */
+  readonly stores: RunScopedStores;
   private active: RuntimeRunService | undefined;
   private activeRunId: string | undefined;
   private activeInput: RuntimeStudioInput | undefined;
@@ -164,11 +164,23 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     private readonly logger: OutputLogger,
   ) {
     this.files = new VscodeFileTransactionAdapter(externalOutputs);
-    this.transactions = new FileTransactionService(this.files);
+    this.transactions = new FileTransactionService(
+      this.files,
+      new WorkspaceMutationGate(),
+      () => this.configuration.read().autosave,
+    );
     this.bindingStore = new VscodeRuntimeBindingStore(context.workspaceState);
+    this.research = backendWebResearch(backend);
+    this.advisor = backendAdvisor(backend, this.state);
+    this.hooks = workspaceLifecycleHooks(workspaceScope, this.configuration, logger);
     this.transport = new BackendRuntimeTransport(backend, this.bindingStore);
     this.stream = new RuntimeEventStreamService(this.transport);
-    this.observability = new LocalObservabilityService(new VscodeObservabilitySink(logger));
+    // Off unless an endpoint is configured, and the configuration is the
+    // approval: telemetry that turns itself on is the thing people rightly
+    // object to, so there is no default endpoint to opt out of.
+    const remote = otlpSink(this.configuration.read(), logger, extensionPackage.version);
+    this.observability = new LocalObservabilityService(new VscodeObservabilitySink(logger), remote);
+    if (remote !== undefined) this.observability.setRemoteExport(true, true);
     this.targets = new ExecutionTargetRegistry({
       cancelTarget: async () => this.cancel(),
       cleanupOwnedProcesses: () => {
@@ -184,6 +196,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         workspaceRoot: () => this.workspaceScope.selectedFolder().uri.toString(),
         mode: () => this.configuration.read().permissionMode,
         workspaceTrusted: () => vscode.workspace.isTrusted,
+        organizationPolicy: () => this.state.snapshot.organizationPolicy,
         userPresent: () => vscode.window.state.focused,
         approve: (request, signal) =>
           approveRuntimeEffect(approvals, request, signal, this.activeInput?.onApproval),
@@ -277,7 +290,12 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       this.files,
       () => this.workspaceScope.snapshot().selectedFolderKey ?? 'workspace:missing',
     );
-    const intelligence = new WorkspaceIntelligenceService(this.intelligenceIndex);
+    const intelligence = new WorkspaceIntelligenceService(
+      this.intelligenceIndex,
+      new VscodeWorkspaceDiagnostics(),
+      new VscodeWorkspaceSymbols(this.files),
+    );
+    this.stores = createRunScopedStores(this.state);
     this.journals = new RunJournalService(
       new VscodeRunJournalStorage(context.globalStorageUri),
       new VscodeRunJournalKeyStore(context.secrets),
@@ -295,29 +313,34 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       new SocketPortInspector(),
       new VscodeServiceCheckpointStore(context.workspaceState),
     );
-    const runtimeSubAgent = new RuntimeSubAgentExecutor({
-      backend,
-      currentEpochs: () => this.epochs,
-      definitions: () => this.router.definitions(),
-      executor: { execute: (invocation, signal) => this.router.execute(invocation, signal) },
-      policy: this.policy,
-      stream: this.stream,
-      transport: this.transport,
+    const subAgentLane = assembleSubAgents({
+      runtime: {
+        backend,
+        currentEpochs: () => this.epochs,
+        definitions: () => this.router.definitions(),
+        executor: { execute: (invocation, signal) => this.router.execute(invocation, signal) },
+        policy: this.policy,
+        stream: this.stream,
+        transport: this.transport,
+        parentContext: () =>
+          parentRunContext(
+            this.activeInput?.prompt ?? '',
+            this.state.snapshot,
+            this.state.snapshot.agentRun,
+          ),
+        board: this.runContext.boardPort(),
+      },
+      files: this.files,
+      globalStorageUri: context.globalStorageUri,
+      selectedFolderKey: () =>
+        this.workspaceScope.snapshot().selectedFolderKey ?? 'workspace:missing',
+      epochs: () => this.epochs,
+      findings: this.stores.findings,
+      logger,
     });
-    const subAgentWorktreeAdapter = new VscodeSubAgentWorktreeAdapter(
-      this.files,
-      vscode.Uri.joinPath(context.globalStorageUri, 'agent-worktrees').fsPath,
-      () => this.workspaceScope.snapshot().selectedFolderKey ?? 'workspace:missing',
-    );
-    const subAgentWorktrees = new SubAgentWorktreeService(subAgentWorktreeAdapter);
-    const subAgents = new SubAgentCoordinatorService(
-      runtimeSubAgent,
-      new FileLeaseManager(),
-      () => this.epochs,
-      new VscodeSubAgentDiagnosticsSink(logger, context.globalStorageUri),
-      subAgentWorktrees,
-    );
-    const quality = new QualityToolExecutor(this.files);
+    const subAgentWorktreeAdapter = subAgentLane.worktreeAdapter;
+    const subAgents = subAgentLane.coordinator;
+    const quality = new QualityToolExecutor(this.files, this.stores.findings);
     const integration = new IntegrationCoordinatorService(
       new RuntimeIntegrationGitAdapter(this.git, subAgentWorktreeAdapter),
       new RuntimeIntegrationQualityAdapter(quality),
@@ -342,49 +365,15 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
           ),
       ),
     );
-    const elevation = new ElevationBrokerService(
-      new PackagedNativeElevationAdapter(
-        vscode.Uri.joinPath(context.extensionUri, 'resources', 'elevation-helper.mjs').fsPath,
-      ),
-      {
-        confirm: (recipe, signal) =>
-          approvals.request(
-            {
-              kind: 'runtimeEffect',
-              title: vscode.l10n.t('Approve administrator operation'),
-              message: recipe.explanation,
-              effect: {
-                purpose: recipe.recipeId,
-                target: `${recipe.command.executable} ${recipe.command.arguments.join(' ')}`,
-                risk: 'R4',
-                sideEffects: [
-                  vscode.l10n.t('Your operating system will show native administrator consent.'),
-                ],
-                reversibility: 'irreversible',
-              },
-            },
-            signal,
-          ),
-      },
-      new VscodeElevationVerificationAdapter(),
-    );
+    const elevation = elevationBroker(context.extensionUri, approvals);
     const registrations = [
-      {
-        definition: workspaceFilesystemToolDefinition,
-        executor: new VscodeFilesystemToolExecutor(this.files, this.transactions),
-      },
-      {
-        definition: structuredCommandToolDefinition,
-        executor: new StructuredCommandToolExecutor(this.files),
-      },
-      {
-        definition: processSupervisorToolDefinition,
-        executor: new ProcessSupervisorToolExecutor(
-          this.processes,
-          () => this.state.snapshot.user?.id ?? 'account:anonymous',
-          this.files,
-        ),
-      },
+      ...workspaceToolRegistrations({
+        files: this.files,
+        transactions: this.transactions,
+        artifacts: this.stores.artifacts,
+        processes: this.processes,
+        accountId: () => this.state.snapshot.user?.id ?? 'account:anonymous',
+      }),
       { definition: gitToolDefinition, executor: new GitToolExecutor(this.git) },
       { definition: containerToolDefinition, executor: new ContainerToolExecutor(containers) },
       {
@@ -393,12 +382,25 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       },
       { definition: qualityToolDefinition, executor: quality },
       { definition: browserToolDefinition, executor: new BrowserToolExecutor(browser, readiness) },
-      {
-        definition: intelligenceToolDefinition,
-        executor: new IntelligenceToolExecutor(intelligence),
-      },
-      { definition: planningToolDefinition, executor: new PlanningToolExecutor(this.transactions) },
-      { definition: runJournalToolDefinition, executor: new RunJournalToolExecutor(this.journals) },
+      ...analysisToolRegistrations({
+        questions: this.approvals,
+        conversationEnd: conversationEndPort({
+          state: this.state,
+          journals: this.journals,
+          activeRunId: () => this.activeRunId,
+          goal: () => this.runContext.goal(),
+        }),
+        goal: this.runContext.goalPort(),
+        findings: this.stores.findings,
+        currentEpochs: () => this.epochs,
+        intelligence,
+        transactions: this.transactions,
+        tasks: this.stores.tasks,
+        journals: this.journals,
+        research: this.research,
+        advisor: this.advisor,
+        files: this.files,
+      }),
       ...advancedToolRegistrations({
         evidence,
         files: this.files,
@@ -432,21 +434,28 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     if (this.active !== undefined) return false;
     const manifest = this.state.snapshot.runtime.capabilityManifest;
     if (manifest === undefined) return false;
-    return recoverVscodeRuntime(
-      {
-        bindings: this.bindingStore,
-        journals: this.journals,
-        logger: this.logger,
-        fingerprint: (signal) => this.fingerprint(signal),
-        setEpochs: (epochs) => {
-          this.epochs = epochs;
-        },
-        execution: (recoveryInput, recoveryManifest) =>
-          vscodeRuntimeExecutionDependencies(this, recoveryInput, recoveryManifest),
+    return recoverVscodeRuntime(this.recoveryDependencies(), input, manifest);
+  }
+
+  /**
+   * What recovery needs from the studio.
+   *
+   * Assembled in one place because every field is a different way of reaching
+   * back into this object, and a run being resumed must see the same journal,
+   * the same bindings and the same epochs as one being started.
+   */
+  private recoveryDependencies(): Parameters<typeof recoverVscodeRuntime>[0] {
+    return {
+      bindings: this.bindingStore,
+      journals: this.journals,
+      logger: this.logger,
+      fingerprint: (signal) => this.fingerprint(signal),
+      setEpochs: (epochs) => {
+        this.epochs = epochs;
       },
-      input,
-      manifest,
-    );
+      execution: (recoveryInput, recoveryManifest) =>
+        vscodeRuntimeExecutionDependencies(this, recoveryInput, recoveryManifest),
+    };
   }
 
   routeTargets(runtimeManifest: CapabilityManifest): TargetAwareToolRouter {
@@ -492,25 +501,35 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
 
   cancel = (): Promise<void> => this.active?.cancel() ?? Promise.resolve();
 
-  pause(): void {
+  pause = (): void => {
     this.flagship.pause();
-  }
+  };
 
-  resume(): void {
+  resume = (): void => {
     this.flagship.resume();
-  }
+  };
 
   async steer(message: string): Promise<void> {
     await steerRuntime(this.transport, this.active, this.activeRunId, this.epochs, message);
   }
 
+  /** The board and the goal this run accumulates, cleared together. */
+  private readonly runContext = new RunScopedContext();
+
   invalidateAccount(): void {
-    this.epochs = { ...this.epochs, account: this.epochs.account + 1 };
+    this.epochs = nextAccountEpoch(this.epochs);
     void this.cancel();
   }
 
+  /** How many applied transactions the workspace can still take back. */
+  get undoDepth(): number {
+    return this.transactions.undoDepth;
+  }
+
   invalidateWorkspace(): void {
-    this.epochs = { ...this.epochs, workspace: this.epochs.workspace + 1 };
+    this.epochs = nextWorkspaceEpoch(this.epochs);
+    forgetWorkspaceScopedState(this.transactions, this.stores);
+    this.runContext.clear();
     void this.cancel();
   }
 
