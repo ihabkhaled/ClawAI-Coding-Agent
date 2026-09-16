@@ -3263,3 +3263,33 @@ activation.
 
 62 inventory rows gained evidence. Status stays NOT RUN, because manifest
 correctness is not behaviour.
+
+### Batch 97 — a lane that drives the installed extension in real VS Code
+
+| Batch | Version | Status          | Evidence                                           |
+| ----- | ------- | --------------- | -------------------------------------------------- |
+| 97    | 1.59.0  | All lanes green | `npm run test:vscode`: 9 passed. 12 rows now PASS. |
+
+**Every browser test until now drove a fixture.** It proves the markup behaves
+and says nothing about the extension. A command never registered, a view
+provider that throws, a webview that fails its own CSP — all three look exactly
+like a passing fixture.
+
+**This installs the VSIX and asks a running editor.** All nine advertised views
+render their panes, the palette offers the commands, the chat view hosts a
+webview, and no ClawAI error notification follows activation.
+
+**Two traps cost most of the time, and neither would ever fail loudly.**
+
+`Code.exe` launched while an editor is already running hands its arguments to
+the existing instance and exits. The debugging port never opens, every flag is
+dropped, and the launch looks successful. The lane downloads its own VS Code
+instead.
+
+`ELECTRON_RUN_AS_NODE` is inherited from any Electron-hosted process — an agent
+host, a terminal inside VS Code. With it set, the editor starts as bare Node:
+it prints Node's version, calls every VS Code flag a bad option, and opens
+nothing. The harness strips it.
+
+**The first twelve rows leave NOT RUN.** Nine views and three commands are PASS
+on observation rather than on manifest correctness.

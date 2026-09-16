@@ -2,6 +2,29 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.59.0
+
+Minor: a lane that drives the installed extension inside real VS Code.
+
+- **Every browser test until now drove a fixture page** that imitates the
+  webview. That proves the markup behaves and says nothing about the extension:
+  a command never registered, a view provider that throws, or a webview that
+  fails its own CSP all look identical to a passing fixture.
+- `npm run test:vscode` installs the packaged VSIX into a throwaway profile,
+  launches an isolated VS Code, and asks the running editor questions.
+- **All nine advertised views render their panes** — Chat, Getting Started,
+  Model & Route, Context, History, Needs You, Tasks, Findings, Delivered Files.
+  A provider that never registers leaves its pane missing, which this catches.
+- The palette offers the commands, the chat view hosts a webview, and no
+  ClawAI error notification is showing after activation.
+- **It uses a downloaded VS Code, not the one on the machine.** Launching an
+  installed editor while one is running hands the arguments to the existing
+  instance and exits, so the debugging port never opens and every flag is
+  silently dropped — a launch that appears to succeed while nothing is tested.
+- **`ELECTRON_RUN_AS_NODE` is stripped before launching.** Inherited from any
+  Electron-hosted process, it makes the editor start as bare Node: it prints
+  Node's version, rejects every VS Code flag, and never opens a window.
+
 ## 1.58.0
 
 Minor: the release lane is green, and the reason it was not is worth recording.
