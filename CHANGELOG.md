@@ -2,6 +2,25 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.58.0
+
+Minor: the release lane is green, and the reason it was not is worth recording.
+
+- **Release assets were never committed.** The release workflow refuses to
+  publish without eight files beside the version in `builds/`: the VSIX, both
+  SBOMs, the provenance record and a sha256 for each. Ten releases bumped the
+  version without them.
+- **It was silent because two workflows run on the same push.** CI was green
+  every time, and only CI was being watched. A green tick is not "the gates
+  passed" when there is more than one gate.
+- `builds/` is gitignored on purpose — an untracked VSIX is fifty megabytes one
+  `git add -A` from the history — so the assets must be force-added, which is
+  exactly why forgetting them leaves no trace.
+- **A callback browser test raced its own page close.** The click closes the
+  popup, so Playwright's post-click wait found the target gone and reported an
+  error. The close event is the assertion; the click now says it expects no
+  page to remain.
+
 ## 1.57.0
 
 Minor: every contributed command, keybinding, menu entry and view is checked.
