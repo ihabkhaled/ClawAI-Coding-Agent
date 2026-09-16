@@ -3293,3 +3293,23 @@ nothing. The harness strips it.
 
 **The first twelve rows leave NOT RUN.** Nine views and three commands are PASS
 on observation rather than on manifest correctness.
+
+### Batch 98 — the chat panel's own document
+
+| Batch | Version | Status          | Evidence                                   |
+| ----- | ------- | --------------- | ------------------------------------------ |
+| 98    | 1.60.0  | All lanes green | `test:vscode`: 17 passed across two files. |
+
+**VS Code nests a webview twice**, and that is why the panel had never been
+checked from a running editor. An outer host frame holds a shell; the
+extension's document is a child of it. Asserting against the outer frame finds
+an empty shell and reports a working panel as broken, so the obvious test fails
+for the wrong reason and gets abandoned.
+
+**What the panel actually shows, from the shipped artifact:** the onboarding
+step, the local address it will use, all three backends, an enabled connect
+action, and the statement that authorization happens in the browser.
+
+**All three backends are asserted individually.** A build that silently drops
+one sends every user to whichever remains, and a test for "a backend is offered"
+would pass throughout.
