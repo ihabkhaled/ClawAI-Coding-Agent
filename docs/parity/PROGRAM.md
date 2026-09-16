@@ -3313,3 +3313,22 @@ action, and the statement that authorization happens in the browser.
 **All three backends are asserted individually.** A build that silently drops
 one sends every user to whichever remains, and a test for "a backend is offered"
 would pass throughout.
+
+### Batch 99 — pressing Connect, for real
+
+| Batch | Version | Status          | Evidence                  |
+| ----- | ------- | --------------- | ------------------------- |
+| 99    | 1.61.0  | All lanes green | `test:vscode`: 22 passed. |
+
+**A Connect button that silently does nothing looks exactly like one that
+works**, until the user waits. The lane presses it in the shipped artifact and
+requires something observable: the panel moves on, or a loopback callback server
+starts listening.
+
+**The panel's default backend is checked against the manifest default**, because
+a panel that defaults elsewhere sends a first run to the wrong host and nothing
+else would notice.
+
+**It stops short of a session, deliberately.** Signing in needs a browser and an
+account. What was never checked — that the button is wired to something real —
+is now checked; what remains needs a credential this lane should not hold.
