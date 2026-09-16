@@ -27,14 +27,18 @@ let extensionsDirectory: string;
 
 test.beforeAll(async () => {
   extensionsDirectory = mkdtempSync(path.join(tmpdir(), 'claw-e2e-ext-'));
-  installExtension(VSIX, extensionsDirectory);
+  await installExtension(VSIX, extensionsDirectory);
   session = await launchVscode({ extensionsDirectory, workspace: seedWorkspace() });
 });
 
 test.afterAll(async () => {
-  await session?.close();
-  if (extensionsDirectory !== undefined) {
+  await session.close();
+  // Best effort: the editor may still hold a handle, and a leftover temporary
+  // directory is not a test failure.
+  try {
     rmSync(extensionsDirectory, { force: true, recursive: true });
+  } catch {
+    // Nothing to do.
   }
 });
 
@@ -64,13 +68,39 @@ test.describe('installed extension inside real VS Code', () => {
     });
   });
 
-  test('the chat view renders its webview rather than an empty panel', async () => {
+  test('every advertised view renders its pane', async () => {
     await session.window.locator('.activitybar [aria-label*="ClawAI" i]').first().click();
-    // A view whose provider never registers renders an empty pane with no error,
-    // so the presence of the iframe is the thing worth asserting.
-    const frame = session.window.locator('.sidebar iframe.webview').first();
+    // Panes arrive as their providers register, so reading immediately catches
+    // a half-built sidebar and reports a working extension as broken.
+    const panes = session.window.locator('.sidebar .pane-header');
+    await expect.poll(async () => panes.count(), { timeout: 60_000 }).toBeGreaterThanOrEqual(9);
+    const headers = await panes.allInnerTexts();
+
+    // One pane per contributed view. A provider that never registers leaves a
+    // pane missing entirely, which is the failure this catches.
+    for (const expected of [
+      'Chat',
+      'Getting Started',
+      'Model & Route',
+      'Context',
+      'History',
+      'Needs You',
+      'Tasks',
+      'Findings',
+      'Delivered Files',
+    ]) {
+      expect(headers.join(' | ')).toContain(expected);
+    }
+  });
+
+  test('the chat view renders a webview rather than an empty panel', async () => {
+    await session.window.locator('.activitybar [aria-label*="ClawAI" i]').first().click();
+    // VS Code hosts a webview in a document-level overlay, not inside the pane
+    // element, so the pane being present proves nothing about the webview.
+    const frame = session.window.locator('iframe').first();
 
     await expect(frame).toBeAttached({ timeout: 60_000 });
+    expect(await session.window.locator('iframe').count()).toBeGreaterThan(0);
   });
 
   test('the palette offers the command that opens the chat', async () => {

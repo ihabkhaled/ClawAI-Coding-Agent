@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "1.58.0",
+  "version": "1.59.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -766,7 +766,7 @@
     "headless": "node dist/headless.mjs",
     "inventory:surface": "node scripts/generate-surface-inventory.mjs",
     "inventory:verify": "node scripts/generate-surface-inventory.mjs --check",
-    "test:vscode": "playwright test --config playwright.vscode.config.ts"
+    "test:vscode": "npm run package && playwright test --config playwright.vscode.config.ts"
   },
   "dependencies": {
     "@homebridge/node-pty-prebuilt-multiarch": "^0.14.1",
