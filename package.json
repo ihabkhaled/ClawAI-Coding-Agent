@@ -765,7 +765,8 @@
     "check:live": "node scripts/live-agent-check.mjs",
     "headless": "node dist/headless.mjs",
     "inventory:surface": "node scripts/generate-surface-inventory.mjs",
-    "inventory:verify": "node scripts/generate-surface-inventory.mjs --check"
+    "inventory:verify": "node scripts/generate-surface-inventory.mjs --check",
+    "test:vscode": "playwright test --config playwright.vscode.config.ts"
   },
   "dependencies": {
     "@homebridge/node-pty-prebuilt-multiarch": "^0.14.1",
