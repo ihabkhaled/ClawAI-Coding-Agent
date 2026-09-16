@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.60.0
+
+Minor: the chat panel's own document is now under test inside real VS Code.
+
+- **VS Code nests a webview twice.** An outer host frame holds a shell, and the
+  extension's document is a child of it. Asserting against the outer frame finds
+  an empty shell and calls a working panel broken, which is why the panel had
+  never been checked from a running editor.
+- The onboarding step renders, names the local address it will actually use,
+  and offers all three backends. A build that silently drops one sends every
+  user to whichever remains.
+- The connect action is present, enabled and pressable, and the panel still says
+  authorization happens in the browser.
+- The document carries real controls rather than a static error page, and shows
+  no unhandled error text.
+
 ## 1.59.0
 
 Minor: a lane that drives the installed extension inside real VS Code.
