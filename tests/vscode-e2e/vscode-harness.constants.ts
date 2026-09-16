@@ -1,18 +1,4 @@
 /**
- * Where VS Code usually installs itself, in the order worth trying.
- *
- * A user install comes first because that is what a developer machine normally
- * has, and a system install is the fallback. `CLAW_VSCODE_PATH` overrides both
- * for a machine that put it somewhere else.
- */
-export const VSCODE_CANDIDATE_PATHS: readonly string[] = [
-  'C:/Users/Ihab/AppData/Local/Programs/Microsoft VS Code/Code.exe',
-  'C:/Program Files/Microsoft VS Code/Code.exe',
-  '/usr/share/code/code',
-  '/Applications/Visual Studio Code.app/Contents/MacOS/Electron',
-];
-
-/**
  * Flags that make a launch reproducible rather than personal.
  *
  * Workspace Trust is disabled because the lane opens a throwaway folder and a

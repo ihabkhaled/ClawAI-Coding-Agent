@@ -1,15 +1,16 @@
-import { execFileSync, spawn } from 'node:child_process';
+import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { env } from 'node:process';
 
+import { downloadAndUnzipVSCode } from '@vscode/test-electron';
 import { chromium } from 'playwright';
 
-import { VSCODE_CANDIDATE_PATHS, VSCODE_LAUNCH_ARGUMENTS } from './vscode-harness.constants';
+import { VSCODE_LAUNCH_ARGUMENTS } from './vscode-harness.constants';
 
-import type { Browser, Page } from 'playwright';
 import type { ChildProcess } from 'node:child_process';
+import type { Browser, Page } from 'playwright';
 
 /**
  * Launches the real VS Code with the real packaged extension.
@@ -32,16 +33,19 @@ export interface VscodeSession {
   readonly close: () => Promise<void>;
 }
 
-export function vscodeExecutable(): string {
+/**
+ * An isolated VS Code build, downloaded once and cached.
+ *
+ * Not the editor already on the machine. Launching an installed VS Code while
+ * one is running hands the arguments to the existing instance and exits, so the
+ * debugging port never opens and every flag is silently dropped — the launch
+ * appears to succeed and nothing is under test. A separate build has no running
+ * instance to defer to.
+ */
+export async function vscodeExecutable(): Promise<string> {
   const configured = env.CLAW_VSCODE_PATH;
   if (configured !== undefined && existsSync(configured)) return configured;
-  const found = VSCODE_CANDIDATE_PATHS.find((candidate) => existsSync(candidate));
-  if (found === undefined) {
-    throw new Error(
-      'No VS Code executable found. Set CLAW_VSCODE_PATH to the Code binary to run this lane.',
-    );
-  }
-  return found;
+  return downloadAndUnzipVSCode('stable');
 }
 
 /**
@@ -52,12 +56,12 @@ export function vscodeExecutable(): string {
  * differ in exactly the ways that bite: what `.vscodeignore` dropped, and
  * whether `dist/` was rebuilt.
  */
-export function installExtension(vsix: string, extensionsDirectory: string): void {
+export async function installExtension(vsix: string, extensionsDirectory: string): Promise<void> {
   // Not `shell: true`: the CLI lives under "Microsoft VS Code", and a shell
   // splits that path at the space before anything else can go wrong. The .cmd
   // wrapper is what Windows needs, and execFileSync quotes it correctly when no
   // shell is involved.
-  const directory = path.dirname(vscodeExecutable());
+  const directory = path.dirname(await vscodeExecutable());
   const candidates = [path.join(directory, 'bin', 'code.cmd'), path.join(directory, 'bin', 'code')];
   const cli = candidates.find((candidate) => existsSync(candidate));
   if (cli === undefined) throw new Error(`No VS Code CLI beside ${directory}`);
@@ -71,13 +75,33 @@ export function installExtension(vsix: string, extensionsDirectory: string): voi
     // whole command is handed over pre-quoted and Node is told not to re-quote
     // it. Anything less loses the space in "Microsoft VS Code".
     const quoted = [cli, ...cliArguments].map((part) => `"${part}"`).join(' ');
-    execFileSync(env.ComSpec ?? 'cmd.exe', [`/d /s /c "${quoted}"`], {
+    const finished = spawnSync(env.ComSpec ?? 'cmd.exe', [`/d /s /c "${quoted}"`], {
       stdio: 'pipe',
       windowsVerbatimArguments: true,
+      env: editorEnvironment(),
     });
+    if (finished.status !== 0) {
+      throw new Error(`Installing the VSIX failed: ${String(finished.stderr)}`);
+    }
     return;
   }
-  execFileSync(cli, cliArguments, { stdio: 'pipe' });
+  execFileSync(cli, cliArguments, { stdio: 'pipe', env: editorEnvironment() });
+}
+
+/**
+ * The environment an editor must be launched with.
+ *
+ * `ELECTRON_RUN_AS_NODE` is set by any process that is itself an Electron app
+ * running Node — an agent host, a terminal inside VS Code — and it is inherited.
+ * With it set, `Code.exe` starts as a bare Node process: it prints Node's
+ * version, rejects every VS Code flag as a bad option, and never opens a
+ * window. The launch appears to work and nothing is under test, which is the
+ * worst way for a harness to fail.
+ */
+function editorEnvironment(): NodeJS.ProcessEnv {
+  const inherited = { ...env };
+  delete inherited.ELECTRON_RUN_AS_NODE;
+  return inherited;
 }
 
 /** A scratch project with enough in it for the agent to have something to read. */
@@ -109,7 +133,7 @@ export async function launchVscode(options: {
   // port and attaching over CDP drives the same window without that fight, and
   // is how VS Code itself is automated.
   const child = spawn(
-    vscodeExecutable(),
+    await vscodeExecutable(),
     [
       ...VSCODE_LAUNCH_ARGUMENTS,
       `--remote-debugging-port=${String(port)}`,
@@ -117,7 +141,7 @@ export async function launchVscode(options: {
       `--user-data-dir=${userData}`,
       options.workspace,
     ],
-    { stdio: 'ignore', detached: false },
+    { stdio: 'ignore', detached: false, env: editorEnvironment() },
   );
 
   const browser = await connectWhenReady(port);
@@ -131,7 +155,14 @@ export async function launchVscode(options: {
     close: async () => {
       await browser.close().catch(() => undefined);
       child.kill();
-      rmSync(userData, { force: true, recursive: true });
+      // The editor holds its profile open for a moment after the process is
+      // signalled, so deleting immediately fails on Windows and turns a passing
+      // suite red during teardown. The directory is disposable either way.
+      try {
+        rmSync(userData, { force: true, recursive: true });
+      } catch {
+        // A leftover temp profile is not a test failure.
+      }
     },
   };
 }
