@@ -14,6 +14,7 @@ import {
   type SteeringQueueSnapshot,
 } from '../core/runtime/runtime-steering-queue';
 import { parseToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import { toolOutcome } from '../core/tool-outcome';
 
 import { ExplicitScopeExecutor, parseExplicitRunScope } from './runtime-explicit-scope';
 import { recoverRuntimeRun } from './runtime-run-recovery';
@@ -110,6 +111,10 @@ function runtimeEvent(
     sensitivity: 'sensitive-redacted',
     payload: {
       invocationId: invocation.invocationId,
+      // Derived here because this is where the whole result is. The event
+      // carries the summary rather than the result itself: the result may hold
+      // workspace contents, and this event is read by the panel.
+      outcome: toolOutcome(result.structured),
       receipt: {
         durationMs: result.receipt.durationMs,
         outputBytes: result.receipt.outputBytes,

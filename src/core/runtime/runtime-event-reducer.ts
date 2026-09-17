@@ -11,6 +11,7 @@ import {
   withoutRuntimeRunIdentities,
   type RuntimeEventIdentity,
 } from './runtime-event-identity';
+import { outcomePayloadSchema } from './runtime-event-outcome.schema';
 import { compactProjectionBounds, compactTimeline } from './runtime-event-reducer-bounds';
 import {
   sameBudgetLimits,
@@ -135,6 +136,9 @@ const receiptPayloadSchema = z
 const completedPayloadSchema = z
   .object({
     invocationId: identifierSchema,
+    // Optional so an event written by an older build still validates. The
+    // receipt says how many bytes came back; this says what they were.
+    outcome: outcomePayloadSchema.optional(),
     receipt: receiptPayloadSchema,
     status: z.enum(['succeeded', 'failed', 'denied', 'cancelled', 'timed-out']),
   })
