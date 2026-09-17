@@ -2,6 +2,25 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.71.0
+
+Minor: the toolchain moves to TypeScript 6 and Vitest 5, and the suite stops
+re-transforming itself on every run.
+
+- TypeScript 6.0.3 and Vitest 5.0.1, with `@vitest/coverage-v8` moved in step —
+  it peers on the exact Vitest version, so leaving it behind fails resolution
+  rather than degrading quietly.
+- `src/vitest-globals.d.ts` supplies the global `describe`/`it`/`expect`/`vi`
+  types through a triple-slash reference. `typeRoots` here is restricted to
+  `@types` folders and `vitest/globals` is a package subpath, so it cannot
+  resolve that way; a reference uses ordinary module resolution, which finds it.
+- `fsModuleCache` cuts transforms from 54% of each run to 24%. The suite was
+  redoing every transform from scratch each time.
+- **`@swc/core` and `unplugin-swc` were staged and are not shipped.** With the
+  transform cache in place they would buy roughly a second, in exchange for a
+  native binary and an install-time script. An unwired dependency is not a
+  speed-up, it is surface.
+
 ## 1.70.0
 
 Minor: a finished tool call says what it did, not how many bytes it produced.
