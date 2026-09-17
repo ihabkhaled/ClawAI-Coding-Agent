@@ -207,6 +207,7 @@
   "Enterprise Locked": "Enterprise Locked",
   "Error": "Error",
   "estimated": "estimated",
+  "exit {0}": "終了コード {0}",
   "Explain": "Explain",
   "Explain the architecture of this workspace and identify the best starting points.": "Explain the architecture of this workspace and identify the best starting points.",
   "Explanatory": "解説重視",
