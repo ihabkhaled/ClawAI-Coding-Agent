@@ -4,7 +4,7 @@
     {
       "name": "clawai-coding-agent-1.62.0.vsix",
       "digest": {
-        "sha256": "ee6d207c301a4dff93a339b562a99cd1669f5383d0e5aa308b441ca129f58af7"
+        "sha256": "a3eae91214cca12192df573367a6c972ca984cb3e6f3e9ec4583a147943e3f10"
       }
     }
   ],
@@ -16,8 +16,8 @@
       "internalParameters": { "sourceDirty": false },
       "resolvedDependencies": [
         {
-          "uri": "git+https://github.com/ihabkhaled/ClawAI-Coding-Agent.git@04f37453f2d9eb463d188d21a76facc925a82fa9",
-          "digest": { "gitCommit": "04f37453f2d9eb463d188d21a76facc925a82fa9" }
+          "uri": "git+https://github.com/ihabkhaled/ClawAI-Coding-Agent.git@ccdcf2c01ae6f941b7a888c88ed63b0e8444b846",
+          "digest": { "gitCommit": "ccdcf2c01ae6f941b7a888c88ed63b0e8444b846" }
         },
         { "uri": "pkg:npm/clawai-coding-agent@1.62.0" },
         { "uri": "file:clawai-coding-agent-1.62.0.cdx.json" },
