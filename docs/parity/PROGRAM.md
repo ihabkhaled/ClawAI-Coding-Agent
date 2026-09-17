@@ -3390,3 +3390,32 @@ sometimes proves something is worse than no test at all.
 **Open question, recorded rather than guessed at:** what accumulates across
 editor restarts to make the twenty-third invocation fatal. Answering it needs
 the editor's own crash reporter rather than more black-box bisection.
+
+## 1.63.0 — what each view actually renders
+
+Every view row in the inventory said PASS on the strength of a pane existing.
+That is a weaker claim than it reads: a tree data provider whose
+`getChildren` throws renders an empty pane, logs to the extension host, and
+registers no failure anywhere a test can see. Nine panes existing was
+compatible with nine dead providers.
+
+`tests/vscode-e2e/view-behaviour.e2e.ts` asserts on the content instead. All
+eight tree views render a row from the installed VSIX, and each says the right
+thing while unconnected: Getting Started lists its four steps, Model & Route
+names the router, and the five empty views each explain their own emptiness
+("Nothing is waiting for you", "No findings reported") rather than rendering
+blank. An attention view that renders blank cannot be told apart from one
+hiding the approval a run is stalled on, which is why that sentence is now
+asserted rather than assumed.
+
+**A trap worth keeping.** A Monaco list injects its own `<style>` block into
+the pane body, so `.pane-body` `textContent` returns the visible rows followed
+by several kilobytes of CSS. An assertion like `toContain('list')` passes on
+the stylesheet. `bodyText()` truncates at `.monaco-list` before asserting.
+
+**Also established:** panes are already expanded on first open, so the probe's
+original click _collapsed_ them — and `innerText()` on a collapsed pane waits
+for visibility until the suite's timeout rather than returning empty. Read
+pane content with `textContent`, and check `aria-expanded` before clicking.
+
+Real-editor lane: 40 tests across five files.
