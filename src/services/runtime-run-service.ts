@@ -290,6 +290,11 @@ export class RuntimeRunService {
                 staged,
                 'tool.requested',
                 {
+                  // The whole invocation, not just its name. Without the
+                  // arguments the panel can only say which tool ran, so a run
+                  // reads as a list of "workspace.files · read" with no way to
+                  // tell which file, or that anything changed between calls.
+                  invocation: admitted,
                   invocationId: admitted.invocationId,
                   operation: admitted.operation,
                   toolName: admitted.toolName,

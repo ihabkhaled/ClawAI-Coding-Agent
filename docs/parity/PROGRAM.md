@@ -3518,3 +3518,34 @@ something in the data to tell them apart, set at the point of creation. Adding
 it later means every row already written is ambiguous — here the migration
 could default them all to `WEB` honestly, because every existing thread really
 was a web thread.
+
+## 1.68.0 — a trail you can actually read
+
+The panel already had a tool trail. It said `workspace.files · read` and
+nothing else, for every call, so a run of twenty reads looked exactly like one
+read repeated twenty times — and exactly like a hang.
+
+The data was never missing. `RuntimeToolDispatcher` holds the full invocation,
+arguments included, because the extension executes the tools itself; the
+`tool.requested` payload schema has always permitted an `invocation` field. It
+simply was not sent, so the boundary that renders the trail had only a name to
+render.
+
+**Subjects are read from argument names, not from a table of tools.** There are
+twenty-nine executors today. A hand-written table would describe all of them
+and then silently stop describing the thirtieth: the new tool falls to a
+default, the trail gets quieter, and no test fails. Reading `path`, `command`,
+`url`, `query` and their list forms in a fixed order means a tool added
+tomorrow is described the day it appears, and the order is the design — a call
+that names both a path and a query is about its path.
+
+**Two refusals worth keeping.** An unrecognised argument set yields an empty
+subject and the line still names the tool, because an invented placeholder
+reads as a fact. And `toolActivity` narrows its input before touching it: it
+runs on whatever the model produced, and a throw there would take down the
+stream that exists to show what the model is doing. The test for that caught a
+real crash on the first run.
+
+Still open, and the reason this is not yet what was asked for: the trail
+reports calls the runtime dispatches. Reasoning text, context reads and the
+agent's own narration between calls are separate surfaces.

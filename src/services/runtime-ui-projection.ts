@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { type RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
+import { toolActivity } from '../core/tool-activity';
 
 import { type RuntimeApprovalPhase } from './runtime-studio.types';
 
@@ -76,6 +77,23 @@ function receiptDetail(payload: Record<string, unknown>): string {
   return vscode.l10n.t('{0} bytes in {1} ms', bytes, duration);
 }
 
+/**
+ * What a requested call is about, ready to sit beside the tool's name.
+ *
+ * Falls back to "Requested" when the arguments name nothing recognisable —
+ * which is honest, and better than inventing a subject that looks like a fact.
+ */
+function requestedDetail(payload: Record<string, unknown>): string {
+  const activity = toolActivity(payload.invocation);
+  if (activity.subject.length === 0) {
+    return vscode.l10n.t('Requested');
+  }
+  if (activity.additional > 0) {
+    return vscode.l10n.t('{0} and {1} more', activity.subject, activity.additional);
+  }
+  return activity.subject;
+}
+
 export class RuntimeUiProjector {
   private answer = '';
   private terminal: TerminalKind | undefined;
@@ -143,7 +161,10 @@ export class RuntimeUiProjector {
       const operation = readText(event.payload, 'operation');
       const label = operation.length === 0 ? toolName : `${toolName} · ${operation}`;
       this.invocations.set(invocationId, label);
-      this.activity(label, vscode.l10n.t('Requested'));
+      // The subject is what makes the trail readable. A run of twenty calls
+      // that all say "workspace.files · read" tells a user only that something
+      // is happening; naming the file tells them what.
+      this.activity(label, requestedDetail(event.payload));
       return true;
     }
     const label = this.invocations.get(invocationId);

@@ -1,6 +1,7 @@
 {
   "{0} · {1} minutes so far": "{0} · {1} minutos até agora",
   "{0} ({1}/{2})": "{0} ({1}/{2})",
+  "{0} and {1} more": "{0} e mais {1}",
   "{0} bytes in {1} ms": "{0} bytes in {1} ms",
   "{0} cached ({1}%)": "{0} em cache ({1}%)",
   "{0} files": "{0} arquivos",

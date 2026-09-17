@@ -3647,6 +3647,7 @@ const checkpointTranslations = {
       'لم يغيّر الوكيل أي ملفات بعد، لذا لا يوجد ما يُحفظ.',
     'There are no checkpoints yet.': 'لا توجد نقاط حفظ بعد.',
     'These changes are too large to checkpoint.': 'هذه التغييرات أكبر من أن تُحفظ كنقطة.',
+    '{0} and {1} more': '{0} و{1} أخرى',
     '{0} files': '{0} ملفات',
     '{0} files will be remembered as they are now.': 'سيتم تذكّر {0} ملفات كما هي الآن.',
   },
@@ -3660,6 +3661,7 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': 'Es gibt noch keine Prüfpunkte.',
     'These changes are too large to checkpoint.':
       'Diese Änderungen sind zu groß für einen Prüfpunkt.',
+    '{0} and {1} more': '{0} und {1} weitere',
     '{0} files': '{0} Dateien',
     '{0} files will be remembered as they are now.':
       '{0} Dateien werden so gespeichert, wie sie jetzt sind.',
@@ -3674,6 +3676,7 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': 'Aún no hay puntos de control.',
     'These changes are too large to checkpoint.':
       'Estos cambios son demasiado grandes para un punto de control.',
+    '{0} and {1} more': '{0} y {1} más',
     '{0} files': '{0} archivos',
     '{0} files will be remembered as they are now.':
       'Se recordarán {0} archivos tal como están ahora.',
@@ -3688,6 +3691,7 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': 'هنوز نقطه بازیابی وجود ندارد.',
     'These changes are too large to checkpoint.':
       'این تغییرات برای ایجاد نقطه بازیابی بیش از حد بزرگ‌اند.',
+    '{0} and {1} more': '{0} و {1} مورد دیگر',
     '{0} files': '{0} فایل',
     '{0} files will be remembered as they are now.':
       '{0} فایل به همین شکل کنونی به خاطر سپرده می‌شود.',
@@ -3702,6 +3706,7 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': "Il n'y a pas encore de points de restauration.",
     'These changes are too large to checkpoint.':
       'Ces modifications sont trop volumineuses pour un point de restauration.',
+    '{0} and {1} more': '{0} et {1} autres',
     '{0} files': '{0} fichiers',
     '{0} files will be remembered as they are now.': '{0} fichiers seront mémorisés tels quels.',
   },
@@ -3714,6 +3719,7 @@ const checkpointTranslations = {
       'एजेंट ने अभी तक कोई फ़ाइल नहीं बदली, इसलिए सहेजने को कुछ नहीं है।',
     'There are no checkpoints yet.': 'अभी तक कोई चेकपॉइंट नहीं है।',
     'These changes are too large to checkpoint.': 'ये परिवर्तन चेकपॉइंट के लिए बहुत बड़े हैं।',
+    '{0} and {1} more': '{0} और {1} अन्य',
     '{0} files': '{0} फ़ाइलें',
     '{0} files will be remembered as they are now.':
       '{0} फ़ाइलें अभी की स्थिति में याद रखी जाएँगी।',
@@ -3728,6 +3734,7 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': 'Non ci sono ancora punti di controllo.',
     'These changes are too large to checkpoint.':
       'Queste modifiche sono troppo grandi per un punto di controllo.',
+    '{0} and {1} more': '{0} e altri {1}',
     '{0} files': '{0} file',
     '{0} files will be remembered as they are now.': '{0} file verranno ricordati come sono ora.',
   },
@@ -3741,6 +3748,7 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': 'まだチェックポイントがありません。',
     'These changes are too large to checkpoint.':
       'この変更はチェックポイントにするには大きすぎます。',
+    '{0} and {1} more': '{0} ほか {1} 件',
     '{0} files': '{0} 件のファイル',
     '{0} files will be remembered as they are now.': '{0} 件のファイルを現在の状態で記憶します。',
   },
@@ -3754,6 +3762,7 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': 'Ainda não há pontos de restauração.',
     'These changes are too large to checkpoint.':
       'Estas alterações são grandes demais para um ponto de restauração.',
+    '{0} and {1} more': '{0} e mais {1}',
     '{0} files': '{0} arquivos',
     '{0} files will be remembered as they are now.':
       '{0} arquivos serão lembrados como estao agora.',
@@ -3768,6 +3777,7 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': 'Контрольных точек пока нет.',
     'These changes are too large to checkpoint.':
       'Эти изменения слишком велики для контрольной точки.',
+    '{0} and {1} more': '{0} и ещё {1}',
     '{0} files': 'Файлов: {0}',
     '{0} files will be remembered as they are now.': 'Файлов будет сохранено в текущем виде: {0}.',
   },
@@ -3781,6 +3791,7 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': 'ยังไม่มีจุดบันทึก',
     'These changes are too large to checkpoint.':
       'การเปลี่ยนแปลงเหล่านี้ใหญ่เกินกว่าจะสร้างจุดบันทึก',
+    '{0} and {1} more': '{0} และอีก {1} รายการ',
     '{0} files': '{0} ไฟล์',
     '{0} files will be remembered as they are now.': 'จะจดจำไฟล์ {0} ไฟล์ตามสถานะปัจจุบัน',
   },
@@ -3793,6 +3804,7 @@ const checkpointTranslations = {
       '智能体尚未修改任何文件，没有可保存的内容。',
     'There are no checkpoints yet.': '目前还没有检查点。',
     'These changes are too large to checkpoint.': '这些更改太大，无法创建检查点。',
+    '{0} and {1} more': '{0} 及其他 {1} 个',
     '{0} files': '{0} 个文件',
     '{0} files will be remembered as they are now.': '将按当前状态记住 {0} 个文件。',
   },
