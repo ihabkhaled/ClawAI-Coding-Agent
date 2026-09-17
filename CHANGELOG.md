@@ -2,6 +2,23 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.63.0
+
+Minor: every view is asserted on what it renders, not on the pane existing.
+
+- **Nine panes existing was compatible with nine dead providers.** A tree data
+  provider whose `getChildren` throws renders an empty pane and registers no
+  failure anywhere a test can see, so every view marked delivered on the
+  strength of a pane appearing was a weaker claim than it read.
+- All eight tree views now render a row from the installed VSIX, and each says
+  the right thing while unconnected: Getting Started lists its four steps,
+  Model & Route names the router, and the five empty views each explain their
+  own emptiness rather than rendering blank. An attention view that renders
+  blank cannot be told apart from one hiding the approval a run is stalled on.
+- A Monaco list injects its own stylesheet into the pane body, so reading the
+  body's text returns the visible rows followed by kilobytes of CSS. Assertions
+  now truncate at that boundary instead of passing on a style rule.
+
 ## 1.62.0
 
 Minor: the unconnected first run is now observed, and commands are run rather
