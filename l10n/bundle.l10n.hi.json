@@ -390,6 +390,7 @@
   "Summarize and continue": "सारांश बनाकर जारी रखें",
   "Summarize this conversation and continue in a new one?": "इस बातचीत का सारांश बनाकर नई बातचीत में जारी रखें?",
   "Summarizing…": "सारांश बन रहा है…",
+  "Summary": "सारांश",
   "Test": "Test",
   "That ClawAI conversation is no longer available.": "That ClawAI conversation is no longer available.",
   "That run journal is no longer available.": "That run journal is no longer available.",
@@ -427,6 +428,7 @@
   "There are no open terminals.": "कोई टर्मिनल खुला नहीं है।",
   "There are no recorded ClawAI runs to recap yet.": "There are no recorded ClawAI runs to recap yet.",
   "These changes are too large to checkpoint.": "ये परिवर्तन चेकपॉइंट के लिए बहुत बड़े हैं।",
+  "Thinking": "सोच रहा है",
   "This becomes the ticket title.": "This becomes the ticket title.",
   "This conversation has no messages to export.": "This conversation has no messages to export.",
   "This file could not be attached.": "यह फ़ाइल संलग्न नहीं की जा सकी।",
@@ -498,5 +500,7 @@
   "Your browser kept this tab open. Close it using the tab close button or Ctrl+W (Command+W on Mac), then return to VS Code.": "आपके ब्राउज़र ने टैब खुला रखा। बंद करने वाले बटन या Ctrl+W (Mac पर Command+W) से इसे बंद करें, फिर VS Code पर लौटें।",
   "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue.",
   "Your identity was verified. Return to VS Code to start building.": "आपकी पहचान सत्यापित हो गई। काम शुरू करने के लिए VS Code पर लौटें।",
+  "Your message arrived too late": "आपका संदेश बहुत देर से आया",
+  "Your message was taken into account": "आपका संदेश ध्यान में लिया गया",
   "Your operating system will show native administrator consent.": "आपका ऑपरेटिंग सिस्टम मूल व्यवस्थापक सहमति संवाद दिखाएगा।"
 }

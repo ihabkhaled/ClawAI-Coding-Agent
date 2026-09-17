@@ -4,6 +4,7 @@ import { type RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import { toolActivity } from '../core/tool-activity';
 
 import { type RuntimeApprovalPhase } from './runtime-studio.types';
+import { RUNTIME_PHASE_EVENTS } from './runtime-ui-projection.constants';
 
 import type { OutputLogger } from '../infrastructure/output-logger';
 import type { ChatViewProvider } from '../webview/chat-view-provider';
@@ -141,8 +142,38 @@ export class RuntimeUiProjector {
       void this.view()?.postEvent({ type: 'CONTENT_DELTA', delta: text }, this.requestId);
       return;
     }
-    if (event.type === 'phase.changed' && typeof event.payload.phase === 'string') {
+    this.projectNarration(event);
+  }
+
+  /**
+   * What the panel says between tool calls, which is most of a run.
+   *
+   * Separate from `project` because these are all one question — "is anything
+   * happening, and what" — and because a run that goes quiet between calls is
+   * indistinguishable from one that has stalled.
+   */
+  private projectNarration(event: RuntimeEvent): void {
+    if (RUNTIME_PHASE_EVENTS.includes(event.type) && typeof event.payload.phase === 'string') {
       this.activity(event.payload.phase, '');
+      return;
+    }
+    if (event.type === 'model.turn.started') {
+      this.activity(vscode.l10n.t('Thinking'), '');
+      return;
+    }
+    if (event.type === 'model.summary' && typeof event.payload.summary === 'string') {
+      this.activity(vscode.l10n.t('Summary'), event.payload.summary);
+      return;
+    }
+    if (event.type === 'run.steering.applied') {
+      this.activity(vscode.l10n.t('Your message was taken into account'), '');
+      return;
+    }
+    if (event.type === 'run.steering.rejected') {
+      // The reason matters: "too late" and "the run already ended" are
+      // different things to a person who just typed something.
+      const reason = typeof event.payload.reason === 'string' ? event.payload.reason : '';
+      this.activity(vscode.l10n.t('Your message arrived too late'), reason);
     }
   }
 

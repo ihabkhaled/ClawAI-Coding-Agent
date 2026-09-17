@@ -390,6 +390,7 @@
   "Summarize and continue": "التلخيص والمتابعة",
   "Summarize this conversation and continue in a new one?": "تلخيص هذه المحادثة والمتابعة في محادثة جديدة؟",
   "Summarizing…": "جارٍ التلخيص…",
+  "Summary": "الملخص",
   "Test": "Test",
   "That ClawAI conversation is no longer available.": "That ClawAI conversation is no longer available.",
   "That run journal is no longer available.": "That run journal is no longer available.",
@@ -427,6 +428,7 @@
   "There are no open terminals.": "لا توجد طرفيات مفتوحة.",
   "There are no recorded ClawAI runs to recap yet.": "There are no recorded ClawAI runs to recap yet.",
   "These changes are too large to checkpoint.": "هذه التغييرات أكبر من أن تُحفظ كنقطة.",
+  "Thinking": "يفكر",
   "This becomes the ticket title.": "This becomes the ticket title.",
   "This conversation has no messages to export.": "This conversation has no messages to export.",
   "This file could not be attached.": "تعذر إرفاق هذا الملف.",
@@ -498,5 +500,7 @@
   "Your browser kept this tab open. Close it using the tab close button or Ctrl+W (Command+W on Mac), then return to VS Code.": "أبقى المتصفح العلامة مفتوحة. أغلقها بزر الإغلاق أو Ctrl+W (Command+W على Mac)، ثم عد إلى VS Code.",
   "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue.",
   "Your identity was verified. Return to VS Code to start building.": "تم التحقق من هويتك. عد إلى VS Code لبدء العمل.",
+  "Your message arrived too late": "وصلت رسالتك متأخرة",
+  "Your message was taken into account": "تم أخذ رسالتك في الاعتبار",
   "Your operating system will show native administrator consent.": "سيعرض نظام التشغيل نافذة الموافقة الأصلية للمسؤول."
 }
