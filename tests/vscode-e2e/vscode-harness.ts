@@ -1,5 +1,6 @@
 import { execFileSync, spawn, spawnSync } from 'node:child_process';
 import { existsSync, mkdtempSync, rmSync, writeFileSync, mkdirSync } from 'node:fs';
+import { createServer } from 'node:net';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { env } from 'node:process';
@@ -30,6 +31,17 @@ export interface VscodeSession {
   readonly process: ChildProcess;
   readonly window: Page;
   readonly workspace: string;
+  /** What the editor printed, so a dead window can explain itself. */
+  readonly diagnostics: () => string;
+  /**
+   * The workbench window again, after a reload replaced it.
+   *
+   * A reload destroys the page a test is holding without the editor exiting, so
+   * "the page closed" means "look again", not "it died". Re-acquiring keeps a
+   * suite running across a reload instead of reporting every later step as a
+   * casualty of the first.
+   */
+  readonly reacquire: () => Promise<Page>;
   readonly close: () => Promise<void>;
 }
 
@@ -126,7 +138,7 @@ export async function launchVscode(options: {
   readonly workspace: string;
 }): Promise<VscodeSession> {
   const userData = mkdtempSync(path.join(tmpdir(), 'claw-e2e-user-'));
-  const port = 9_000 + Math.floor(Math.random() * 1_000);
+  const port = await freePort();
 
   // Playwright's Electron launcher cannot bootstrap VS Code: it expects to own
   // the main process, and a packaged editor already does. Opening a debugging
@@ -141,8 +153,19 @@ export async function launchVscode(options: {
       `--user-data-dir=${userData}`,
       options.workspace,
     ],
-    { stdio: 'ignore', detached: false, env: editorEnvironment() },
+    { stdio: ['ignore', 'pipe', 'pipe'], detached: false, env: editorEnvironment() },
   );
+
+  // Kept so a window that dies can say why. Without this the harness reports
+  // "the page closed" and the editor's own explanation is thrown away.
+  const diagnostics: string[] = [];
+  child.stderr.on('data', (chunk: Buffer) => {
+    diagnostics.push(chunk.toString('utf8'));
+    if (diagnostics.length > 200) diagnostics.shift();
+  });
+  child.on('exit', (code, signal) => {
+    diagnostics.push(`EDITOR EXITED code=${String(code)} signal=${String(signal)}`);
+  });
 
   const browser = await connectWhenReady(port);
   const window = await workbenchPage(browser);
@@ -152,9 +175,25 @@ export async function launchVscode(options: {
     process: child,
     window,
     workspace: options.workspace,
+    diagnostics: () => diagnostics.join('').slice(-4_000),
+    reacquire: () => workbenchPage(browser),
     close: async () => {
       await browser.close().catch(() => undefined);
+      // Waited for, not just signalled. Returning while the editor is still
+      // shutting down lets the next launch reuse its port and attach to a
+      // process that is about to disappear.
+      const exited = new Promise<void>((resolve) => {
+        if (child.exitCode !== null) {
+          resolve();
+          return;
+        }
+        child.once('exit', () => {
+          resolve();
+        });
+        setTimeout(resolve, 15_000);
+      });
       child.kill();
+      await exited;
       // The editor holds its profile open for a moment after the process is
       // signalled, so deleting immediately fails on Windows and turns a passing
       // suite red during teardown. The directory is disposable either way.
@@ -165,6 +204,35 @@ export async function launchVscode(options: {
       }
     },
   };
+}
+
+/**
+ * A port nothing is listening on right now.
+ *
+ * Picking at random and hoping was enough until editors were launched back to
+ * back: a relaunch could reuse the port of an editor that had not finished
+ * exiting, attach to it, and then watch that window vanish. The failure looked
+ * like the extension replacing its own window, several commands later and in a
+ * different test.
+ */
+async function freePort(): Promise<number> {
+  for (let attempt = 0; attempt < 50; attempt += 1) {
+    const candidate = 9_000 + Math.floor(Math.random() * 1_000);
+    const free = await new Promise<boolean>((resolve) => {
+      const probe = createServer();
+      probe.once('error', () => {
+        resolve(false);
+      });
+      probe.once('listening', () => {
+        probe.close(() => {
+          resolve(true);
+        });
+      });
+      probe.listen(candidate, '127.0.0.1');
+    });
+    if (free) return candidate;
+  }
+  throw new Error('No free debugging port found');
 }
 
 /**
