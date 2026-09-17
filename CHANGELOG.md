@@ -2,6 +2,21 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.66.0
+
+Minor: every contributed keybinding is pressed in a real editor.
+
+- **A keybinding is a manifest entry until someone presses it.** Nothing in the
+  unit lane separates a working binding from one whose `when` clause never
+  matches, or one whose chord a default editor binding already owns: in both
+  cases the key does nothing and the manifest still reads correctly.
+- All eleven reach their handler. `ctrl+shift+a` opens a chat tab,
+  `ctrl+alt+m` offers the AUTO Router, `ctrl+alt+t` says there is nothing to
+  reopen, the five editor-scoped bindings each produce a picker or a run, and
+  `ctrl+alt+escape` and `ctrl+alt+z` are correctly quiet with nothing to act
+  on.
+- The inventory's NOT RUN rows fall from 64 to 53.
+
 ## 1.65.0
 
 Minor: every contributed command now runs in a real editor, not just appears in

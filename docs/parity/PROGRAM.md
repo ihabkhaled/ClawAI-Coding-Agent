@@ -3466,3 +3466,33 @@ from the list. A command missing from a sweep looks identical to one that was
 never contributed.
 
 Real-editor lane: 82 tests across six files.
+
+## 1.66.0 — pressing the keys, and three ways the lane lied first
+
+Every contributed keybinding now gets pressed in a running editor. Three
+false results came before the honest one, and each is a trap that will recur.
+
+**Asserting on the wrong surface.** `ctrl+shift+a` left the sidebar showing
+Explorer, which read as a dead binding on the extension's headline shortcut.
+It is not: `reveal()` calls `createEditorSession()`, so the chat opens as a tab
+in the editor area and the sidebar staying put is correct. The assertion is on
+`.tabs-container` containing "New ClawAI chat".
+
+**Focus stolen by a leftover toast.** Five bindings are gated on
+`editorTextFocus`. A notification left on screen by an earlier test holds
+focus, so the keypress reaches no editor and a working binding looks dead —
+intermittently, which is worse than never. Every press now clicks
+`.monaco-editor .view-lines` first.
+
+**Demanding one shape of evidence from five different commands.** Requiring a
+quick input from all five reported the workflow bindings as broken; they start
+a run that surfaces as a tab. `pressAndObserve` accepts a picker, a new tab or
+a toast and fails only on `nothing`, because the question is whether the press
+reached the extension, not which control it produced.
+
+The model picker is polled rather than pressed once: its catalogue is fetched
+when the picker opens, and a single press that lands at the wrong moment
+returns an empty list. Two consecutive full runs passed before this shipped.
+
+Real-editor lane: 88 tests across seven files. Inventory: 53 rows NOT RUN,
+down from 116.
