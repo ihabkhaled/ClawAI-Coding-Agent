@@ -3356,3 +3356,37 @@ afterwards — a crashed host empties it.
 Connect click ends with "ClawAI authorization timed out. Please try again."
 That is honest and correct for a lane with no browser, and it confirms the flow
 is real rather than a no-op.
+
+### Batch 101 — an attempted sweep of every command, and what it found
+
+| Batch | Version | Status                           | Evidence                  |
+| ----- | ------- | -------------------------------- | ------------------------- |
+| 101   | 1.62.0  | 30 e2e tests kept, sweep shelved | `test:vscode`: 30 passed. |
+
+**The goal was to invoke all forty contributed commands in a real editor.** It is
+not shipped, because it was not stable enough to trust, and a flaky test that
+sometimes proves something is worse than no test at all.
+
+**What the attempt established, which is worth keeping:**
+
+- Twenty-two commands run cleanly in one session with honest messages. Two of
+  them refuse with real sentences rather than silence: "There are no ClawAI
+  conversations to export yet" and "There are no recorded ClawAI runs to recap
+  yet."
+- **The failure is positional, not per-command.** The window stops responding at
+  the twenty-third invocation whichever commands those are. Removing the command
+  that sat at the boundary simply moved the boundary to its neighbour.
+- Each implicated command runs cleanly alone, and in halves of the sequence, and
+  repeated thirty times over. Thirty repeats of one benign command also survive,
+  so it is not palette wear.
+- It is not the harness flags: removing `--disable-gpu` and `--no-sandbox`
+  changes nothing. It is not port reuse: verifying the port is free and waiting
+  for the previous editor to exit changes nothing. Restarting the editor between
+  slices changes nothing either, which is the fact that rules out session state.
+- `clawAI.exportTranscript` leaves the window unresponsive to automation
+  afterwards, consistent with a native dialog the harness cannot dismiss. That
+  one is specific and reproducible.
+
+**Open question, recorded rather than guessed at:** what accumulates across
+editor restarts to make the twenty-third invocation fatal. Answering it needs
+the editor's own crash reporter rather than more black-box bisection.
