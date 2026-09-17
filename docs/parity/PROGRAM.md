@@ -3610,3 +3610,26 @@ could not already read; the localisation coverage test caught the placeholder
 seventeen schemas out and broke the import block; the second moved only the new
 one, which is also the only one nothing else in the reducer needs. The smaller
 edit was both the correct fix and the reversible one.
+
+## 1.71.0 — a staged toolchain upgrade, finished
+
+`apps/claw-coding-agent` in the parent checkout was four releases behind and
+carried uncommitted work: TypeScript 6.0.3, Vitest 5.0.1, a globals shim, and
+`@swc/core` with `unplugin-swc`. Finishing it meant syncing that worktree to
+1.70.0 first and re-applying on the feature branch, not committing on top of a
+stale tree.
+
+**`@vitest/coverage-v8` peers on the exact Vitest version.** Bumping Vitest
+alone fails `npm install` outright, which is the good case — a peer that warned
+instead would have left coverage silently running an older engine.
+
+**Two of the five dependencies were dropped.** Vitest's own advice — enable
+`fsModuleCache` — took transforms from 54% of each run to 24% and the warm run
+from 8.4s to 6.7s. `@swc/core` and `unplugin-swc` were never wired into
+`vitest.config.ts`, so as staged they were dead weight; with the cache in place
+they would buy about a second for a native binary and a postinstall script. The
+rule about dormant code applies to dependencies too, and a dependency is worse
+than dormant code because it is also somebody else's.
+
+301 files and 2468 tests pass under the new toolchain with no source change,
+which is the useful fact: the upgrade is a toolchain move, not a migration.

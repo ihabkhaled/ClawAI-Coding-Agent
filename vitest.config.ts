@@ -3,6 +3,10 @@ import { defineConfig } from 'vitest/config';
 export default defineConfig({
   test: {
     environment: 'node',
+    // Transforms were 54% of every run and were redone from scratch each time.
+    // Cached on disk they are paid for once per changed file, which is what
+    // makes the suite cheap enough to run on every batch rather than at the end.
+    fsModuleCache: true,
     globals: true,
     include: ['tests/{unit,integration}/**/*.test.ts'],
     coverage: {
