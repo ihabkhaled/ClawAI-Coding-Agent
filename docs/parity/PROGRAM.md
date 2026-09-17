@@ -3440,3 +3440,29 @@ dot-directory — a rule that covers `.husky`, `.vscode-test` and whatever tooli
 directory appears next, rather than naming the one that bit. `dist/` is
 gitignored too and must ship, so "no gitignored file" would have been the wrong
 rule; "no dot-directory" is the one that separates tooling from product.
+
+## 1.65.0 — running the command surface around the twenty-third-invocation wall
+
+The open question recorded above — a single editor stops responding at the
+twenty-third command invocation, whichever commands those are — had blocked the
+whole command sweep. It is still open. What changed is that it no longer has to
+be answered first: `tests/vscode-e2e/every-command.e2e.ts` cuts the commands
+into slices of twelve and gives each slice its own editor, well short of the
+boundary.
+
+That is a workaround and is labelled as one. It buys the forty-two commands
+real coverage today while the accumulation question waits for the editor's own
+crash reporter.
+
+**One assertion in there is load-bearing and easy to leave out.** Each test
+checks the palette still offers rows _before_ pressing Enter. A crashed
+extension host empties the palette of its commands, and Enter against an empty
+palette closes it and reports nothing — so without that check, the first
+command to kill the host would be the last honest result, and every command
+after it would pass for the wrong reason.
+
+`Export Transcript` is recorded BLOCKED with its reason rather than dropped
+from the list. A command missing from a sweep looks identical to one that was
+never contributed.
+
+Real-editor lane: 82 tests across six files.
