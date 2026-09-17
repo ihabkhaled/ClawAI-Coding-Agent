@@ -3549,3 +3549,30 @@ real crash on the first run.
 Still open, and the reason this is not yet what was asked for: the trail
 reports calls the runtime dispatches. Reasoning text, context reads and the
 agent's own narration between calls are separate surfaces.
+
+## 1.69.0 — a feature that never ran, and the test that agreed with it
+
+`RuntimeUiProjector.project` ended with a branch on `phase.changed`. No such
+event exists: the protocol emits `run.phase.changed`, which the reducer
+normalises to `run.phase`. So every phase the backend reported was dropped, and
+the panel stayed on whatever the last tool call had said.
+
+**The test asserted the same invented name.** `projector.project(event(
+'phase.changed', …))` constructs an event out of a string, so an event type
+that exists nowhere is as constructible as a real one. The test proved that
+the projection handles `phase.changed` — which it did, and which was worth
+nothing. A test that builds its own input from a literal cannot tell you the
+literal is wrong.
+
+The guard against the class of bug, not the instance: `RUNTIME_PHASE_EVENTS`
+lists both names the protocol may present, and the test iterates that constant
+rather than repeating a string. A name that drifts now breaks one place.
+
+Added alongside it: `model.turn.started` as "Thinking", `model.summary` as the
+model's own account of what it did, and both steering outcomes. A run is mostly
+not tool calls, and between them the panel had nothing to say — which reads
+exactly like a stall.
+
+`project` crossed the complexity ceiling once these landed, so the narration
+branch is its own method. That is the rule doing its job rather than an
+obstacle: the two halves answer different questions.
