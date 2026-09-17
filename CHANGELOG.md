@@ -2,6 +2,24 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.65.0
+
+Minor: every contributed command now runs in a real editor, not just appears in
+the palette.
+
+- **Forty-two of forty-three commands run from the palette against the
+  installed VSIX** and report no failure. Existing in the palette was already
+  proven; running is a different question, because a handler that throws shows
+  a toast and a handler that returns silently shows nothing, and a palette test
+  passes for both.
+- Each test also asserts the palette still offers rows before pressing Enter. A
+  dead extension host empties the palette, and Enter against an empty palette
+  would have reported a false pass for every command after the first casualty.
+- `Export Transcript` is recorded BLOCKED rather than skipped quietly: it opens
+  a native save dialog nothing in the page can dismiss, so the window stops
+  answering automation for the rest of the session.
+- The inventory's NOT RUN rows fall from 104 to 64.
+
 ## 1.64.0
 
 Patch-level in effect, minor by rule 5: the published artifact no longer carries
