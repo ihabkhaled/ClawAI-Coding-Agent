@@ -382,6 +382,9 @@ describe('BackendClient', () => {
 
     expect(requestBodies).toEqual([
       {
+        // Every thread this extension opens is a coding agent thread, which is
+        // what keeps the user's own chat list free of the agent's runs.
+        origin: 'CODING_AGENT',
         routingMode: 'MANUAL_MODEL',
         preferredProvider: 'OLLAMA',
         preferredModel: 'qwen2.5-coder:0.5b',
