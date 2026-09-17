@@ -3332,3 +3332,27 @@ else would notice.
 **It stops short of a session, deliberately.** Signing in needs a browser and an
 account. What was never checked — that the button is wired to something real —
 is now checked; what remains needs a credential this lane should not hold.
+
+### Batch 100 — the unconnected first run
+
+| Batch | Version | Status          | Evidence                  |
+| ----- | ------- | --------------- | ------------------------- |
+| 100   | 1.62.0  | All lanes green | `test:vscode`: 30 passed. |
+
+**Every first run begins unconnected and nobody had looked at that state.** An
+extension that starts silent leaves a user with a panel and no next step, and
+every test written so far would still pass.
+
+What the shipped artifact actually shows: a status bar naming the backend and
+its state, and a setup view whose first step is to sign in, with workspace trust
+raised as its own item.
+
+**Commands are now run, not only listed.** A handler that throws and a handler
+that silently returns are different failures, and a palette test passes for
+both. The cheapest real check is that the palette still holds commands
+afterwards — a crashed host empties it.
+
+**A finding from the snapshot, recorded rather than fixed here:** the earlier
+Connect click ends with "ClawAI authorization timed out. Please try again."
+That is honest and correct for a lane with no browser, and it confirms the flow
+is real rather than a no-op.

@@ -2,6 +2,26 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.62.0
+
+Minor: the unconnected first run is now observed, and commands are run rather
+than only listed.
+
+- **Every first run begins unconnected, and that state had never been looked
+  at.** An extension that starts silent leaves a user with a panel and no idea
+  what to do, and every earlier test would still pass.
+- The status bar names the backend it will use and reports the connection state.
+  A status element that shows only a name tells the user nothing new.
+- The setup view names the next thing to do, and raises workspace trust as its
+  own step — trust gates what the agent may touch, so it belongs in onboarding
+  rather than surfacing later as a refusal the user cannot explain.
+- Commands are executed from the palette. Existing and being registered was
+  already proven; a handler that throws and one that silently returns are
+  different failures, and a palette test passes for both.
+- **The cheapest real check is that the palette still has commands afterwards.**
+  A crashed extension host empties it, so this catches a handler that took the
+  extension down with it.
+
 ## 1.61.0
 
 Minor: pressing Connect in a real editor is now proven to start a real flow.
