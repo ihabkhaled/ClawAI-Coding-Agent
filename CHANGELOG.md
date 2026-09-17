@@ -2,6 +2,21 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.61.0
+
+Minor: pressing Connect in a real editor is now proven to start a real flow.
+
+- **A Connect button that silently does nothing looks exactly like one that
+  works** until the user waits. The lane presses it in the shipped artifact and
+  requires something observable: the panel moves on, or a loopback callback
+  server starts listening.
+- The panel's default backend is asserted against the manifest default. A panel
+  that defaults elsewhere sends a first run to the wrong host.
+- No extension error follows the attempt, and the panel stays usable.
+- **The lane stops short of a session**, because signing in needs a browser and
+  an account. It proves the button is wired to something real, which is the part
+  that was never checked.
+
 ## 1.60.0
 
 Minor: the chat panel's own document is now under test inside real VS Code.
