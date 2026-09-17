@@ -3419,3 +3419,24 @@ for visibility until the suite's timeout rather than returning empty. Read
 pane content with `textContent`, and check `aria-expanded` before clicking.
 
 Real-editor lane: 40 tests across five files.
+
+## 1.64.0 — why ten releases failed while every local gate was green
+
+The release workflow rebuilds the VSIX from the pushed commit and diffs it
+against the committed one. It had refused ten releases running, and the reason
+was not in any test: the package included `.husky/**`. That directory's `_`
+subdirectory is written by `npx husky` and gitignored, so it is present on a
+developer's machine and absent from a fresh CI checkout. The committed artifact
+carried nineteen hook files the rebuilt one did not.
+
+**The shape of this bug is worth remembering.** It cannot be caught by
+comparing two local builds, because both include the untracked directory and
+agree. It only appears when one side of the comparison is a clean checkout. Any
+generated-but-gitignored path that is not excluded from packaging reproduces it
+exactly.
+
+`package:audit` now runs `vsce ls` and refuses any packaged path inside a
+dot-directory — a rule that covers `.husky`, `.vscode-test` and whatever tooling
+directory appears next, rather than naming the one that bit. `dist/` is
+gitignored too and must ship, so "no gitignored file" would have been the wrong
+rule; "no dot-directory" is the one that separates tooling from product.
