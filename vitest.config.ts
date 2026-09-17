@@ -28,6 +28,7 @@ export default defineConfig({
         'src/core/runtime/runtime-event-identity.ts',
         'src/core/runtime/runtime-event-reducer-budget.ts',
         'src/core/runtime/runtime-event-reducer-bounds.ts',
+        'src/core/runtime/runtime-event-outcome.schema.ts',
         'src/core/runtime/runtime-event-reducer.ts',
         'src/core/runtime/runtime-event-stream.ts',
         'src/core/runtime/runtime-event-stream.types.ts',

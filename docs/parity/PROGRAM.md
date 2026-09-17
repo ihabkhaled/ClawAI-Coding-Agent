@@ -3576,3 +3576,37 @@ exactly like a stall.
 `project` crossed the complexity ceiling once these landed, so the narration
 branch is its own method. That is the rule doing its job rather than an
 obstacle: the two halves answer different questions.
+
+## 1.70.0 — what the call found, not how big the answer was
+
+`tool.completed` carried a receipt: bytes and milliseconds. Those describe the
+transfer, not the result. A failing `npm test` and a passing one differ by a
+line of output and a second of runtime, so the panel showed the same thing for
+both.
+
+`toolOutcome` reads the result's own shape, the same way `toolActivity` reads
+the arguments', and for the same reason: a table of the tools that exist today
+stops describing the next one silently. Exit status first — it is the single
+fact a byte count cannot imply — then the first list with its key, then a
+reason.
+
+**Three decisions that look small and are not.**
+
+`exitCode: 0` is reported, not treated as absent. A passing command and a
+command that reported no status are different facts, and falsy-checking the
+exit code would merge them.
+
+An empty list reports `0`. "Found 0 files" is an answer; silence is not.
+
+The count is rendered as `${value} ${label}` with no `l10n.t` call. The label
+is the result key the tool itself used — `services`, `discoveries` — and there
+is no word in that line to translate. Routing it through the message catalog
+would have added an entry per tool per language that said nothing a reader
+could not already read; the localisation coverage test caught the placeholder
+`{0} {1}` and was right to.
+
+**A ceiling did its job.** Adding the payload schema pushed
+`runtime-event-reducer.ts` past its 500-line limit. The first attempt moved all
+seventeen schemas out and broke the import block; the second moved only the new
+one, which is also the only one nothing else in the reducer needs. The smaller
+edit was both the correct fix and the reversible one.

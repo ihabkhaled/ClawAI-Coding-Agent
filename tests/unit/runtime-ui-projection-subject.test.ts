@@ -161,3 +161,107 @@ describe('the tool trail names what each call is about', () => {
     );
   });
 });
+
+/**
+ * What the panel says when a call finishes.
+ *
+ * It used to say "succeeded · 412 bytes in 38 ms" for everything. That pair
+ * cannot tell a failing build from a passing one — both produce output of much
+ * the same size in much the same time.
+ */
+describe('the tool trail says what a finished call did', () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  function completed(payload: Record<string, unknown>): RuntimeEvent {
+    return event('tool.completed', {
+      invocationId: 'invocation-0001',
+      receipt: { durationMs: 38, outputBytes: 412 },
+      status: 'succeeded',
+      ...payload,
+    });
+  }
+
+  it('reports the exit status of a command', () => {
+    const { projector, view } = harness();
+    projector.project(
+      requested({ toolName: 'workspace.command', operation: 'execute', arguments: {} }),
+    );
+    vi.clearAllMocks();
+
+    projector.project(
+      completed({
+        status: 'failed',
+        outcome: { kind: 'code', label: '', value: 1, reason: '' },
+      }),
+    );
+
+    expect(view.postEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'failed · exit 1' }),
+      REQUEST_ID,
+    );
+  });
+
+  it('reports how many things a call found, and what they were', () => {
+    const { projector, view } = harness();
+    projector.project(
+      requested({ toolName: 'workspace.services', operation: 'list', arguments: {} }),
+    );
+    vi.clearAllMocks();
+
+    projector.project(
+      completed({ outcome: { kind: 'count', label: 'services', value: 3, reason: '' } }),
+    );
+
+    expect(view.postEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'succeeded · 3 services' }),
+      REQUEST_ID,
+    );
+  });
+
+  it('shows the reason a call refused', () => {
+    const { projector, view } = harness();
+    projector.project(requested({ toolName: 'runtime.board', operation: 'post', arguments: {} }));
+    vi.clearAllMocks();
+
+    projector.project(
+      completed({
+        outcome: { kind: 'reason', label: '', value: 0, reason: 'the run already ended' },
+      }),
+    );
+
+    expect(view.postEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'succeeded · the run already ended' }),
+      REQUEST_ID,
+    );
+  });
+
+  it('falls back to the receipt when the outcome says nothing', () => {
+    // The old behaviour, kept for calls whose result really has nothing to
+    // report — rather than showing an empty detail.
+    const { projector, view } = harness();
+    projector.project(requested({ toolName: 'runtime.journal', operation: 'list', arguments: {} }));
+    vi.clearAllMocks();
+
+    projector.project(completed({ outcome: { kind: 'none', label: '', value: 0, reason: '' } }));
+
+    expect(view.postEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'succeeded · 412 bytes in 38 ms' }),
+      REQUEST_ID,
+    );
+  });
+
+  it('falls back to the receipt for an event carrying no outcome at all', () => {
+    const { projector, view } = harness();
+    projector.project(requested({ toolName: 'runtime.journal', operation: 'list', arguments: {} }));
+    vi.clearAllMocks();
+
+    projector.project(completed({}));
+
+    expect(view.postEvent).toHaveBeenCalledWith(
+      expect.objectContaining({ description: 'succeeded · 412 bytes in 38 ms' }),
+      REQUEST_ID,
+    );
+  });
+});

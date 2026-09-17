@@ -95,6 +95,36 @@ function requestedDetail(payload: Record<string, unknown>): string {
   return activity.subject;
 }
 
+/**
+ * What a finished call did, falling back to the receipt when nothing is known.
+ *
+ * The receipt answers "did anything come back". The outcome answers what — and
+ * for a command that is the exit status, which no byte count can imply.
+ */
+function completedDetail(payload: Record<string, unknown>): string {
+  const outcome = payload.outcome;
+  if (typeof outcome === 'object' && outcome !== null) {
+    const record = outcome as {
+      kind?: unknown;
+      label?: unknown;
+      value?: unknown;
+      reason?: unknown;
+    };
+    const value = typeof record.value === 'number' ? record.value : 0;
+    if (record.kind === 'code') return vscode.l10n.t('exit {0}', value);
+    if (record.kind === 'count') {
+      // Not routed through l10n: there is no word here to translate. The label
+      // is the result key the tool itself used — `services`, `discoveries` —
+      // and a translation table would have to grow an entry per tool per
+      // language to say nothing a reader could not already read.
+      const label = typeof record.label === 'string' ? record.label : '';
+      return `${String(value)} ${label}`.trim();
+    }
+    if (record.kind === 'reason' && typeof record.reason === 'string') return record.reason;
+  }
+  return receiptDetail(payload);
+}
+
 export class RuntimeUiProjector {
   private answer = '';
   private terminal: TerminalKind | undefined;
@@ -208,7 +238,10 @@ export class RuntimeUiProjector {
     }
     if (event.type === 'tool.completed') {
       const status = readText(event.payload, 'status');
-      const detail = receiptDetail(event.payload);
+      // What the call did comes first, and the receipt only when there is
+      // nothing better. Bytes and milliseconds are what the panel fell back on
+      // for every call, and they cannot tell a failing build from a passing one.
+      const detail = completedDetail(event.payload);
       this.activity(label, detail.length === 0 ? status : `${status} · ${detail}`);
       return true;
     }

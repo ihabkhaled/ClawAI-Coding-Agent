@@ -2,6 +2,22 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.70.0
+
+Minor: a finished tool call says what it did, not how many bytes it produced.
+
+- **Every completed call read "succeeded · 412 bytes in 38 ms".** That pair
+  answers "did anything come back" and nothing else — a failing build and a
+  passing one produce output of much the same size in much the same time.
+- A command now reports its exit status, a listing reports how many things it
+  found and what they were, and a refusal reports its reason. A tool that
+  declined and one that succeeded quietly both finish in milliseconds with
+  almost no output, so without the reason they read identically.
+- An empty list reports zero rather than falling silent: "found 0 files" is a
+  useful answer and a different one from "the call told us nothing".
+- The receipt is still shown when a result genuinely has nothing to report, and
+  for events written before this existed.
+
 ## 1.69.0
 
 Minor: the panel narrates the run between tool calls instead of going quiet.
