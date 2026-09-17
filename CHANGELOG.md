@@ -2,6 +2,25 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.68.0
+
+Minor: the tool trail says what each call is about, not only which tool ran.
+
+- **Every line used to read `workspace.files · read`,** whatever the agent was
+  reading. Twenty of those in a row is indistinguishable from a loop, and gives
+  a person watching no way to tell progress from a hang.
+- `tool.requested` now carries the whole invocation rather than just its name,
+  and the panel names the subject: the file read, the command run, the query
+  searched for, the url opened.
+- A transaction says how many further files it touches, so the most
+  consequential call in a run stops being the least informative line in the
+  stream.
+- Subjects come from the arguments rather than a table of the tools that exist
+  today. A table is right until someone adds a tool, and then it is silently
+  wrong — the new tool falls to a default and nothing fails to say so.
+- When the arguments name nothing recognisable the line still says which tool
+  ran. An invented subject would read as a fact.
+
 ## 1.67.0
 
 Minor: the agent's conversations stop appearing in the user's own chat list.
