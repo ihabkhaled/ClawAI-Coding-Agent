@@ -13,6 +13,4 @@ export const VSCODE_LAUNCH_ARGUMENTS: readonly string[] = [
   '--disable-updates',
   '--skip-welcome',
   '--skip-release-notes',
-  '--no-sandbox',
-  '--disable-gpu',
 ];
