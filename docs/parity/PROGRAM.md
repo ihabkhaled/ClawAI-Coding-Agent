@@ -3496,3 +3496,25 @@ returns an empty list. Two consecutive full runs passed before this shipped.
 
 Real-editor lane: 88 tests across seven files. Inventory: 53 rows NOT RUN,
 down from 116.
+
+## 1.67.0 — whose conversation is this
+
+The extension authenticates as the user and posts to the same `/chat-threads`
+the web app posts to. That is why the agent's runs had always appeared in the
+user's chat list: there was no difference between them to see.
+
+`ThreadOrigin` adds one. The extension sets `CODING_AGENT` on create and asks
+for it on list. Both halves matter and the second is the one easy to forget:
+the list endpoint defaults an unspecified origin to `WEB`, so an extension that
+tagged its threads but kept listing without a filter would show the user their
+own web conversations and none of its own runs — a failure that looks like data
+loss.
+
+The backend half is chat-service PR #222: the column, the default, a read-only
+`coding-agent-chats` module, and nginx refusing every write verb on that path.
+
+**The rule this follows.** Two clients sharing one API and one identity need
+something in the data to tell them apart, set at the point of creation. Adding
+it later means every row already written is ambiguous — here the migration
+could default them all to `WEB` honestly, because every existing thread really
+was a web thread.

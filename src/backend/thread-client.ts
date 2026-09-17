@@ -5,6 +5,7 @@ import {
   type ChatMessage,
   type ChatThread,
 } from './contracts';
+import { THREAD_ORIGIN } from './thread-client.constants';
 
 import type { RoutingMode } from '../core/configuration';
 import type { z } from 'zod';
@@ -65,7 +66,14 @@ export async function createThread(
   request: PostRequester,
   input: ThreadCreateInput,
 ): Promise<ChatThread> {
-  return request('/chat-threads', threadSchema, { body: input, method: 'POST' });
+  // Every thread this extension opens is a coding agent thread, so the origin
+  // is set here rather than asked of each caller. The backend defaults an
+  // omitted origin to WEB, which would put each run back in the user's own
+  // chat list beside conversations they had themselves.
+  return request('/chat-threads', threadSchema, {
+    body: { ...input, origin: THREAD_ORIGIN },
+    method: 'POST',
+  });
 }
 
 /**
@@ -76,8 +84,11 @@ export async function createThread(
  * request that both views read cannot disagree with itself; two requests can.
  */
 export async function listThreads(request: GetRequester, limit: number): Promise<ChatThread[]> {
+  // Asked for by origin, not filtered afterwards. The endpoint defaults to WEB,
+  // so a request that said nothing would list the user's own conversations and
+  // none of this extension's runs — the exact opposite of what is wanted here.
   const result = await request(
-    `/chat-threads?limit=${String(limit)}`,
+    `/chat-threads?limit=${String(limit)}&origin=${THREAD_ORIGIN}`,
     paginatedSchema(threadSchema),
   );
   return result.data;

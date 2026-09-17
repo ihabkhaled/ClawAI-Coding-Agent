@@ -2,6 +2,21 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.67.0
+
+Minor: the agent's conversations stop appearing in the user's own chat list.
+
+- **The extension talks to the same chat API as the web app, as the same
+  user.** Every run therefore showed up in the user's chat list beside
+  conversations they had held themselves, and nothing in the data said which
+  was which.
+- Threads this extension creates now carry `origin: CODING_AGENT`, and the
+  thread list asks the backend for that origin rather than filtering what comes
+  back. The backend defaults an omitted origin to WEB, so a request that said
+  nothing would return the user's own conversations and none of the runs.
+- The web app gets a read-only view of these conversations — a record of what
+  the agent did, with no way to reply into a finished run.
+
 ## 1.66.0
 
 Minor: every contributed keybinding is pressed in a real editor.
