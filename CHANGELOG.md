@@ -2,6 +2,21 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.69.0
+
+Minor: the panel narrates the run between tool calls instead of going quiet.
+
+- **Phase updates had never reached the panel at all.** The projection tested
+  for `phase.changed`, a name the protocol does not emit — it emits `run.phase`
+  — and the test asserted the same wrong name, so it passed and nothing said
+  the feature was dead.
+- A turn starting says "Thinking". The model's own summary of what it did is
+  shown. A message typed mid-run is confirmed as taken into account, or refused
+  with the reason: "too late" and "the run already ended" are different things
+  to someone waiting to see whether what they typed landed.
+- Events with nothing to say to a reader still produce no line. Narration that
+  fills the panel with empty rows is worse than silence.
+
 ## 1.68.0
 
 Minor: the tool trail says what each call is about, not only which tool ran.

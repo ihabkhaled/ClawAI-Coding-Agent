@@ -3648,6 +3648,10 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': 'لا توجد نقاط حفظ بعد.',
     'These changes are too large to checkpoint.': 'هذه التغييرات أكبر من أن تُحفظ كنقطة.',
     '{0} and {1} more': '{0} و{1} أخرى',
+    Thinking: 'يفكر',
+    Summary: 'الملخص',
+    'Your message was taken into account': 'تم أخذ رسالتك في الاعتبار',
+    'Your message arrived too late': 'وصلت رسالتك متأخرة',
     '{0} files': '{0} ملفات',
     '{0} files will be remembered as they are now.': 'سيتم تذكّر {0} ملفات كما هي الآن.',
   },
@@ -3662,6 +3666,10 @@ const checkpointTranslations = {
     'These changes are too large to checkpoint.':
       'Diese Änderungen sind zu groß für einen Prüfpunkt.',
     '{0} and {1} more': '{0} und {1} weitere',
+    Thinking: 'Denkt nach',
+    Summary: 'Zusammenfassung',
+    'Your message was taken into account': 'Ihre Nachricht wurde berücksichtigt',
+    'Your message arrived too late': 'Ihre Nachricht kam zu spät',
     '{0} files': '{0} Dateien',
     '{0} files will be remembered as they are now.':
       '{0} Dateien werden so gespeichert, wie sie jetzt sind.',
@@ -3677,6 +3685,10 @@ const checkpointTranslations = {
     'These changes are too large to checkpoint.':
       'Estos cambios son demasiado grandes para un punto de control.',
     '{0} and {1} more': '{0} y {1} más',
+    Thinking: 'Pensando',
+    Summary: 'Resumen',
+    'Your message was taken into account': 'Tu mensaje se tuvo en cuenta',
+    'Your message arrived too late': 'Tu mensaje llegó demasiado tarde',
     '{0} files': '{0} archivos',
     '{0} files will be remembered as they are now.':
       'Se recordarán {0} archivos tal como están ahora.',
@@ -3692,6 +3704,10 @@ const checkpointTranslations = {
     'These changes are too large to checkpoint.':
       'این تغییرات برای ایجاد نقطه بازیابی بیش از حد بزرگ‌اند.',
     '{0} and {1} more': '{0} و {1} مورد دیگر',
+    Thinking: 'در حال فکر کردن',
+    Summary: 'خلاصه',
+    'Your message was taken into account': 'پیام شما در نظر گرفته شد',
+    'Your message arrived too late': 'پیام شما خیلی دیر رسید',
     '{0} files': '{0} فایل',
     '{0} files will be remembered as they are now.':
       '{0} فایل به همین شکل کنونی به خاطر سپرده می‌شود.',
@@ -3707,6 +3723,10 @@ const checkpointTranslations = {
     'These changes are too large to checkpoint.':
       'Ces modifications sont trop volumineuses pour un point de restauration.',
     '{0} and {1} more': '{0} et {1} autres',
+    Thinking: 'Réflexion',
+    Summary: 'Résumé',
+    'Your message was taken into account': 'Votre message a été pris en compte',
+    'Your message arrived too late': 'Votre message est arrivé trop tard',
     '{0} files': '{0} fichiers',
     '{0} files will be remembered as they are now.': '{0} fichiers seront mémorisés tels quels.',
   },
@@ -3720,6 +3740,10 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': 'अभी तक कोई चेकपॉइंट नहीं है।',
     'These changes are too large to checkpoint.': 'ये परिवर्तन चेकपॉइंट के लिए बहुत बड़े हैं।',
     '{0} and {1} more': '{0} और {1} अन्य',
+    Thinking: 'सोच रहा है',
+    Summary: 'सारांश',
+    'Your message was taken into account': 'आपका संदेश ध्यान में लिया गया',
+    'Your message arrived too late': 'आपका संदेश बहुत देर से आया',
     '{0} files': '{0} फ़ाइलें',
     '{0} files will be remembered as they are now.':
       '{0} फ़ाइलें अभी की स्थिति में याद रखी जाएँगी।',
@@ -3735,6 +3759,10 @@ const checkpointTranslations = {
     'These changes are too large to checkpoint.':
       'Queste modifiche sono troppo grandi per un punto di controllo.',
     '{0} and {1} more': '{0} e altri {1}',
+    Thinking: 'Sta ragionando',
+    Summary: 'Riepilogo',
+    'Your message was taken into account': 'Il tuo messaggio è stato preso in considerazione',
+    'Your message arrived too late': 'Il tuo messaggio è arrivato troppo tardi',
     '{0} files': '{0} file',
     '{0} files will be remembered as they are now.': '{0} file verranno ricordati come sono ora.',
   },
@@ -3749,6 +3777,10 @@ const checkpointTranslations = {
     'These changes are too large to checkpoint.':
       'この変更はチェックポイントにするには大きすぎます。',
     '{0} and {1} more': '{0} ほか {1} 件',
+    Thinking: '思考中',
+    Summary: '要約',
+    'Your message was taken into account': 'メッセージが反映されました',
+    'Your message arrived too late': 'メッセージが間に合いませんでした',
     '{0} files': '{0} 件のファイル',
     '{0} files will be remembered as they are now.': '{0} 件のファイルを現在の状態で記憶します。',
   },
@@ -3763,6 +3795,10 @@ const checkpointTranslations = {
     'These changes are too large to checkpoint.':
       'Estas alterações são grandes demais para um ponto de restauração.',
     '{0} and {1} more': '{0} e mais {1}',
+    Thinking: 'Pensando',
+    Summary: 'Resumo',
+    'Your message was taken into account': 'A sua mensagem foi considerada',
+    'Your message arrived too late': 'A sua mensagem chegou tarde demais',
     '{0} files': '{0} arquivos',
     '{0} files will be remembered as they are now.':
       '{0} arquivos serão lembrados como estao agora.',
@@ -3778,6 +3814,10 @@ const checkpointTranslations = {
     'These changes are too large to checkpoint.':
       'Эти изменения слишком велики для контрольной точки.',
     '{0} and {1} more': '{0} и ещё {1}',
+    Thinking: 'Думает',
+    Summary: 'Сводка',
+    'Your message was taken into account': 'Ваше сообщение учтено',
+    'Your message arrived too late': 'Ваше сообщение пришло слишком поздно',
     '{0} files': 'Файлов: {0}',
     '{0} files will be remembered as they are now.': 'Файлов будет сохранено в текущем виде: {0}.',
   },
@@ -3792,6 +3832,10 @@ const checkpointTranslations = {
     'These changes are too large to checkpoint.':
       'การเปลี่ยนแปลงเหล่านี้ใหญ่เกินกว่าจะสร้างจุดบันทึก',
     '{0} and {1} more': '{0} และอีก {1} รายการ',
+    Thinking: 'กำลังคิด',
+    Summary: 'สรุป',
+    'Your message was taken into account': 'ข้อความของคุณถูกนำไปพิจารณาแล้ว',
+    'Your message arrived too late': 'ข้อความของคุณมาช้าเกินไป',
     '{0} files': '{0} ไฟล์',
     '{0} files will be remembered as they are now.': 'จะจดจำไฟล์ {0} ไฟล์ตามสถานะปัจจุบัน',
   },
@@ -3805,6 +3849,10 @@ const checkpointTranslations = {
     'There are no checkpoints yet.': '目前还没有检查点。',
     'These changes are too large to checkpoint.': '这些更改太大，无法创建检查点。',
     '{0} and {1} more': '{0} 及其他 {1} 个',
+    Thinking: '思考中',
+    Summary: '摘要',
+    'Your message was taken into account': '已采纳你的消息',
+    'Your message arrived too late': '你的消息来得太晚了',
     '{0} files': '{0} 个文件',
     '{0} files will be remembered as they are now.': '将按当前状态记住 {0} 个文件。',
   },

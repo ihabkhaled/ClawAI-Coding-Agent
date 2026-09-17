@@ -158,8 +158,11 @@ describe('runtime UI projection', () => {
   });
 
   it('projects a phase change as an activity label and ignores empty deltas', async () => {
+    // `run.phase` is the name the protocol actually emits. This test asserted
+    // `phase.changed`, a name that exists nowhere, and passed for it — so
+    // phase never reached the panel and nothing said so.
     const { projector, view } = harness();
-    projector.project(event('phase.changed', { phase: 'Reading workspace' }));
+    projector.project(event('run.phase', { phase: 'Reading workspace' }));
     projector.project(event('model.delta', { text: '' }));
     projector.project(event('model.delta', {}));
 

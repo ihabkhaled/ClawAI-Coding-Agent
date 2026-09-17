@@ -390,6 +390,7 @@
   "Summarize and continue": "总结并继续",
   "Summarize this conversation and continue in a new one?": "总结这段对话并在新对话中继续？",
   "Summarizing…": "正在总结…",
+  "Summary": "摘要",
   "Test": "Test",
   "That ClawAI conversation is no longer available.": "That ClawAI conversation is no longer available.",
   "That run journal is no longer available.": "That run journal is no longer available.",
@@ -427,6 +428,7 @@
   "There are no open terminals.": "没有打开的终端。",
   "There are no recorded ClawAI runs to recap yet.": "There are no recorded ClawAI runs to recap yet.",
   "These changes are too large to checkpoint.": "这些更改太大，无法创建检查点。",
+  "Thinking": "思考中",
   "This becomes the ticket title.": "This becomes the ticket title.",
   "This conversation has no messages to export.": "This conversation has no messages to export.",
   "This file could not be attached.": "无法附加此文件。",
@@ -498,5 +500,7 @@
   "Your browser kept this tab open. Close it using the tab close button or Ctrl+W (Command+W on Mac), then return to VS Code.": "浏览器保留了此标签页。请使用关闭按钮或 Ctrl+W（Mac 上为 Command+W）关闭它，然后返回 VS Code。",
   "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue.",
   "Your identity was verified. Return to VS Code to start building.": "您的身份已验证。返回 VS Code 开始工作。",
+  "Your message arrived too late": "你的消息来得太晚了",
+  "Your message was taken into account": "已采纳你的消息",
   "Your operating system will show native administrator consent.": "操作系统将显示原生管理员授权提示。"
 }

@@ -390,6 +390,7 @@
   "Summarize and continue": "Zusammenfassen und fortsetzen",
   "Summarize this conversation and continue in a new one?": "Diese Unterhaltung zusammenfassen und in einer neuen fortsetzen?",
   "Summarizing…": "Wird zusammengefasst…",
+  "Summary": "Zusammenfassung",
   "Test": "Test",
   "That ClawAI conversation is no longer available.": "That ClawAI conversation is no longer available.",
   "That run journal is no longer available.": "That run journal is no longer available.",
@@ -427,6 +428,7 @@
   "There are no open terminals.": "Es sind keine Terminals geöffnet.",
   "There are no recorded ClawAI runs to recap yet.": "There are no recorded ClawAI runs to recap yet.",
   "These changes are too large to checkpoint.": "Diese Änderungen sind zu groß für einen Prüfpunkt.",
+  "Thinking": "Denkt nach",
   "This becomes the ticket title.": "This becomes the ticket title.",
   "This conversation has no messages to export.": "This conversation has no messages to export.",
   "This file could not be attached.": "Diese Datei konnte nicht angehängt werden.",
@@ -498,5 +500,7 @@
   "Your browser kept this tab open. Close it using the tab close button or Ctrl+W (Command+W on Mac), then return to VS Code.": "Ihr Browser hat diesen Tab offen gelassen. Schließen Sie ihn mit der Tab-Schaltfläche oder Ctrl+W (Command+W auf dem Mac) und kehren Sie zu VS Code zurück.",
   "Your ClawAI session expired. Reconnect to continue.": "Your ClawAI session expired. Reconnect to continue.",
   "Your identity was verified. Return to VS Code to start building.": "Ihre Identität wurde bestätigt. Kehren Sie zu VS Code zurück, um loszulegen.",
+  "Your message arrived too late": "Ihre Nachricht kam zu spät",
+  "Your message was taken into account": "Ihre Nachricht wurde berücksichtigt",
   "Your operating system will show native administrator consent.": "Ihr Betriebssystem zeigt die native Administratorzustimmung an."
 }
