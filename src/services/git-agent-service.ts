@@ -58,7 +58,7 @@ export class GitAgentService {
       // question about the repository instead of changing or printing it.
       return this.pullRequestReceipt(root.fsPath, operation.baseBranch, before, signal);
     }
-    const output = await this.git(root.fsPath, this.arguments(operation), signal);
+    const output = await this.git(root.fsPath, this.arguments(operation, before.head), signal);
     // Only after the command actually succeeds: a worktree that failed to
     // create must not become addressable, and one that failed to remove
     // must stay addressable.
@@ -194,7 +194,15 @@ export class GitAgentService {
     }
   }
 
-  private arguments(operation: GitOperation): string[] {
+  private arguments(operation: GitOperation, head: string | null): string[] {
+    // A repository with no commit has no HEAD, and `git restore --staged`
+    // resolves against HEAD — so in a brand-new project, which is exactly
+    // where an agent starts most often, nothing could be unstaged. Removing
+    // the entries from the index is the same effect with no HEAD to consult,
+    // and `--cached` leaves the files on disk.
+    if (operation.operation === 'unstage' && head === null) {
+      return ['rm', '--cached', '--quiet', '-r', '--', ...operation.paths];
+    }
     const readOperations = new Set([
       'status',
       'diff',
@@ -249,7 +257,12 @@ export class GitAgentService {
   private simpleReadArguments(operation: GitOperation): string[] {
     switch (operation.operation) {
       case 'status':
-        return ['status', '--porcelain=v2', '--branch'];
+        // Every untracked file, not the directory that holds them. Git's
+        // default collapses a new folder to "? src/", so an agent that had
+        // just created three files could not see which — and "what did I
+        // change" is the first question before a commit. Ignored paths stay
+        // out either way, so this does not list node_modules.
+        return ['status', '--porcelain=v2', '--branch', '--untracked-files=all'];
       case 'branches':
         return ['branch', '--all', '--verbose', '--no-abbrev'];
       case 'tags':

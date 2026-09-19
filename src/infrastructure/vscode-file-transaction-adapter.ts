@@ -22,8 +22,35 @@ interface ExternalOutputResolver {
 
 const textDecoder = new TextDecoder('utf-8', { fatal: true });
 
+/**
+ * Writes documents the transaction edited in place to disk.
+ *
+ * `WorkspaceEdit.replace` changes the editor buffer and nothing else. Without
+ * this, an agent's edit left the file dirty and the disk unchanged while the
+ * receipt reported "applied" with the new hash — so the next command the
+ * agent ran, and the next commit it made, saw the old code. A tool that edits
+ * source for a program to run has not edited it until the disk says so.
+ *
+ * A document that will not save fails the transaction, which the caller rolls
+ * back. Reporting success for a change that never reached the disk is the
+ * failure this exists to prevent, so it is not skipped quietly.
+ */
+async function saveToDisk(uris: readonly vscode.Uri[]): Promise<void> {
+  for (const uri of uris) {
+    const document = vscode.workspace.textDocuments.find(
+      (candidate) => candidate.uri.toString() === uri.toString(),
+    );
+    if (document?.isDirty !== true) continue;
+    if (!(await document.save())) {
+      throw new Error(`VS Code could not save ${vscode.workspace.asRelativePath(uri)}`);
+    }
+  }
+}
+
 export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
   private readonly createdDirectories = new Map<string, vscode.Uri[]>();
+  /** Documents each transaction edited in place, so a rollback can save them too. */
+  private readonly editedDocuments = new Map<string, vscode.Uri[]>();
   private readonly committed = new Set<string>();
   private readonly runtimeRoots = new Map<string, vscode.Uri>();
 
@@ -153,6 +180,7 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
   ): Promise<void> {
     const edit = new vscode.WorkspaceEdit();
     const directories: vscode.Uri[] = [];
+    const replaced: vscode.Uri[] = [];
     for (const item of prepared) {
       signal?.throwIfAborted();
       const root = this.root(item.operation.rootKey, item.operation.kind);
@@ -186,6 +214,7 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
         const document = await vscode.workspace.openTextDocument(uri);
         const end = document.lineAt(document.lineCount - 1).rangeIncludingLineBreak.end;
         edit.replace(uri, new vscode.Range(new vscode.Position(0, 0), end), item.afterText ?? '');
+        replaced.push(uri);
       }
     }
     this.createdDirectories.set(transaction.transactionId, directories);
@@ -193,6 +222,10 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
     if (!(await vscode.workspace.applyEdit(edit)))
       throw new Error('VS Code rejected the file transaction');
     this.committed.add(transaction.transactionId);
+    this.editedDocuments.set(transaction.transactionId, replaced);
+    // Marked committed first, so a save that fails below is rolled back like
+    // any other failure of this transaction.
+    await saveToDisk(replaced);
   }
 
   async rollback(
@@ -208,7 +241,12 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
       }
       if (!(await vscode.workspace.applyEdit(inverse)))
         throw new Error('VS Code rejected the file transaction rollback');
+      // The forward edit was saved, so undoing it only in the buffer would
+      // leave the rolled-back content on disk and a dirty editor showing the
+      // opposite. Both halves of the transaction reach the disk or neither does.
+      await saveToDisk(this.editedDocuments.get(transaction.transactionId) ?? []);
     }
+    this.editedDocuments.delete(transaction.transactionId);
     for (const uri of [...directories].reverse()) {
       try {
         await vscode.workspace.fs.delete(uri, { recursive: false, useTrash: true });

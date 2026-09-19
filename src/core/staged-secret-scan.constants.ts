@@ -11,6 +11,13 @@ export const STAGED_SECRET_FORMAT_PATTERNS: readonly RegExp[] = [
   /\bgh[pousr]_[A-Za-z0-9]{36,}\b/u,
   /\bxox[abprs]-[A-Za-z0-9-]{10,}/u,
   /\b(?:sk|rk)_live_[A-Za-z0-9]{16,}\b/u,
+  // OpenAI (`sk-…`, `sk-proj-…`) and Anthropic (`sk-ant-…`) API keys. Absent
+  // until the host lane tried to commit one: on a platform whose purpose is
+  // calling these providers, a model key is the credential most likely to be
+  // pasted into source, and `const KEY = "sk-ant-…"` matched neither a format
+  // here nor a name in the assignment list below. Forty characters after the
+  // prefix keeps ordinary `sk-` identifiers out.
+  /\bsk-[A-Za-z0-9_-]{40,}/u,
   /\bAIza[0-9A-Za-z_-]{35}\b/u,
   /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/u,
 ];

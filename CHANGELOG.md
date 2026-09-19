@@ -2,6 +2,40 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.72.0
+
+Minor: the coding tools run for real inside VS Code, and doing so found four
+defects — one of them meant the agent's edits never reached the disk.
+
+- **An agent's edit left the file unchanged on disk.** `update` and `patch`
+  went through `WorkspaceEdit.replace`, which changes the editor buffer and
+  nothing else. The receipt said `applied` with the new hash while the disk
+  still held the old code — so the next `npm test` the agent ran, and the next
+  commit it made, saw the previous version. Edited documents are now saved as
+  part of the transaction, and a rollback saves too, so both halves of a
+  transaction reach the disk or neither does. A document that will not save
+  fails the transaction instead of being reported as applied.
+- **`git status` hid which files the agent had created.** Git collapses a new
+  folder to `? src/`. Status now lists every untracked file; ignored paths stay
+  out, so this does not list `node_modules`.
+- **Nothing could be unstaged in a brand-new repository.** `git restore
+--staged` resolves against HEAD, and a project with no commit has none —
+  which is where an agent starts most often. Unstage uses `git rm --cached`
+  when there is no HEAD.
+- **The staged-secret scan did not recognise OpenAI or Anthropic keys.**
+  `const KEY = "sk-ant-…"` matched no format and no assignment name. On a
+  platform whose purpose is calling these providers, that is the credential
+  most likely to be pasted into source.
+- The extension-host lane now drives create, read, update, patch, search,
+  delete, a real command, a failing command, git status, an unapproved commit,
+  the secret scan and unstage — each effect checked through `node:fs` or the
+  git binary, never through the tool's own report. It runs on every PR and
+  every release.
+- `activate` returns a small test API only when VS Code launched the extension
+  under a test runner (`ExtensionMode.Test`). An installed extension and a
+  developer's F5 session both get `undefined`; there is no setting or variable
+  that turns it on.
+
 ## 1.71.0
 
 Minor: the toolchain moves to TypeScript 6 and Vitest 5, and the suite stops

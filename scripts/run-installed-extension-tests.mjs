@@ -1,5 +1,5 @@
-import { existsSync, readFileSync } from 'node:fs';
-import { EOL } from 'node:os';
+import { cpSync, existsSync, mkdtempSync, readFileSync } from 'node:fs';
+import { EOL, tmpdir } from 'node:os';
 import { dirname, join } from 'node:path';
 import { argv, env, exit, stderr, stdout } from 'node:process';
 import { fileURLToPath, pathToFileURL, URL } from 'node:url';
@@ -20,7 +20,11 @@ import { runTests } from '@vscode/test-electron';
  * Usage: node scripts/run-installed-extension-tests.mjs <extensions-dir>
  */
 const root = join(dirname(fileURLToPath(import.meta.url)), '..');
-const fixture = fileURLToPath(new URL('../tests/fixtures/workspace/', import.meta.url));
+const source = fileURLToPath(new URL('../tests/fixtures/workspace/', import.meta.url));
+// A copy, not the committed fixture: the host suite drives real tools that
+// write files and initialise a git repository in the workspace it is given.
+const fixture = mkdtempSync(join(tmpdir(), 'claw-installed-ws-'));
+cpSync(source, fixture, { recursive: true });
 const extensionsDirectory = argv[2];
 
 if (extensionsDirectory === undefined) {

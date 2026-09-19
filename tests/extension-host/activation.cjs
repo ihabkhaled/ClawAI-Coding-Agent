@@ -1,0 +1,49 @@
+const assert = require('node:assert/strict');
+const { setTimeout: delay } = require('node:timers/promises');
+const vscode = require('vscode');
+const manifest = require('../../package.json');
+
+async function run() {
+  const extension = vscode.extensions.getExtension('clawai.clawai-coding-agent');
+  assert.ok(extension, 'ClawAI extension is installed in the test host');
+  assert.equal(
+    extension.packageJSON.version,
+    manifest.version,
+    `the v${manifest.version} release activates`,
+  );
+
+  const start = Date.now();
+  await extension.activate();
+  assert.ok(extension.isActive, 'ClawAI extension activates');
+  assert.ok(Date.now() - start < 2_000, 'activation stays below the 2 second host budget');
+
+  const commands = await vscode.commands.getCommands(true);
+  const contributed = extension.packageJSON.contributes.commands.map((entry) => entry.command);
+  const configuration = extension.packageJSON.contributes.configuration.properties;
+  assert.ok(contributed.length >= 20, 'the complete coding-agent command surface is contributed');
+  for (const command of contributed) {
+    assert.ok(commands.includes(command), `${command} is registered`);
+  }
+  assert.deepEqual(configuration['clawAI.agentMode'].enum, ['AUTO', 'PLAN']);
+  assert.deepEqual(configuration['clawAI.permissionMode'].enum, [
+    'PLAN',
+    'ASK',
+    'AUTO_EDIT',
+    'AUTONOMOUS_SCOPED',
+    'ENTERPRISE_LOCKED',
+  ]);
+  // Still true after the navigation-only URI handler landed: activation is
+  // already `onStartupFinished`, so the handler needs no `onUri` event, and
+  // authorization still never travels through a URI callback.
+  // See docs/adr/0001-uri-handler-navigation-only.md.
+  assert.ok(
+    !extension.packageJSON.activationEvents.includes('onUri'),
+    'loopback browser authorization does not expose a custom URI callback',
+  );
+
+  await vscode.commands.executeCommand('clawAI.openChat');
+  await delay(100);
+  assert.ok(extension.isActive, 'the installed workbench command keeps the extension active');
+}
+
+module.exports = { runActivation: run };
