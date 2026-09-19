@@ -326,6 +326,17 @@ export class AgentCoordinator implements vscode.Disposable {
     this.view = view;
   }
 
+  /**
+   * The router every runtime tool call goes through.
+   *
+   * Exposed read-only for the extension-host test API, which is the only lane
+   * that can drive the real executors against a real VS Code workspace. See
+   * `extension-test-api.ts` for why that API exists only under the test runner.
+   */
+  get toolRouter(): VscodeRuntimeStudio['router'] {
+    return this.runtimeStudio.router;
+  }
+
   async initialize(): Promise<void> {
     this.refreshWorkspaceReadiness();
     await vscode.commands.executeCommand(

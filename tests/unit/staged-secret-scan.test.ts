@@ -63,3 +63,37 @@ describe('findStagedSecret', () => {
     expect(findStagedSecret(diff)).toBe('aB3xK9pQ7mZ2wL5vR8tD');
   });
 });
+
+/**
+ * Model-provider keys, which the scan did not recognise at all.
+ *
+ * Found by the extension-host lane committing one. Built at runtime rather
+ * than written out: a key-shaped literal in this file would trip the secret
+ * scanners that guard the repository itself, including this one.
+ */
+describe('findStagedSecret — model provider keys', () => {
+  const body = 'A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8S9t0U1v2W3x4';
+
+  it.each([
+    ['a legacy OpenAI key', `sk-${body}`],
+    ['an OpenAI project key', `sk-proj-${body}`],
+    ['an Anthropic key', `sk-ant-api03-${body}`],
+  ])('refuses %s assigned to a name the assignment list does not know', (_label, key) => {
+    expect(findStagedSecret(added(`+const KEY = "${key}";`))).toBe(key);
+  });
+
+  it('refuses a model key that is not assigned to anything', () => {
+    // The format is the evidence. A key pasted into a comment leaks the same.
+    const key = `sk-ant-api03-${body}`;
+
+    expect(findStagedSecret(added(`+// debug with ${key}`))).toBe(key);
+  });
+
+  it.each([
+    ['a short sk- identifier', '+const sk-button = 1;'],
+    ['a CSS-like class name', '+  class="sk-spinner sk-fading-circle"'],
+    ['a kebab-case key under forty characters', '+const id = "sk-settings-panel-toggle";'],
+  ])('allows %s', (_label, line) => {
+    expect(findStagedSecret(added(line))).toBeUndefined();
+  });
+});

@@ -3633,3 +3633,59 @@ than dormant code because it is also somebody else's.
 
 301 files and 2468 tests pass under the new toolchain with no source change,
 which is the useful fact: the upgrade is a toolchain move, not a migration.
+
+## 1.72.0 — the tools, run for real, and what that found
+
+Every runtime tool already had a unit test, and the inventory still said NOT
+RUN for all of them. Marking them PASS from those tests would have satisfied
+rule 6 and proved nothing new, so this batch built the lane that could fail.
+
+**How the real executors are reached.** The file, command and git executors
+sit on `VscodeFileTransactionAdapter`, which needs a live extension host.
+`activate` now returns `testApiFor(context.extensionMode, …)` — the router,
+behind `ExtensionMode.Test`. VS Code sets that only when a runner launches the
+extension through `extensionTestsPath`; Production and Development get
+`undefined`. The API skips run admission, which is the point of it and also
+why that gate must stay the only way in.
+
+**The lane checks effects, not reports.** Every assertion reads the disk with
+`node:fs` or asks the `git` binary. The first run showed why that matters: the
+update receipt said `applied`, gave the new `afterHash`, and the file on disk
+was unchanged. The edit was in a dirty editor buffer. Only a check that ignored
+the tool's own account could see it.
+
+**Four defects, in the order the lane found them.**
+
+1. `update`/`patch` never saved. `WorkspaceEdit.replace` is a buffer edit. The
+   only save in the adapter was `saveIfDirty`, which runs _before_ an edit, to
+   flush the user's own pending changes under the `before-edit` policy — never
+   after the agent's. Nothing about leaving agent edits unsaved was a
+   deliberate review policy; no code or comment says so.
+2. `git status` used git's default untracked mode, collapsing new folders. The
+   service's own working-tree hash already used `--untracked-files=all`; only
+   the status shown to the agent did not.
+3. `unstage` in a repository with no commit failed with `could not resolve
+'HEAD'`.
+4. The staged-secret scan had no pattern for `sk-…` model keys. The host lane
+   found it by trying to commit one; the fixture now builds its key at runtime
+   so no key-shaped literal sits in the repository for push protection to flag.
+
+**The commit gate held, and the test says so.** A commit waits for a person to
+approve the staged diff. The host has nobody to click, so the first version of
+the lane hung for ten minutes — the same stall recorded in memory for headless
+runs. The fix was not to bypass the gate: `executeTool` takes an abort signal,
+the test abandons the commit after four seconds, and it asserts the repository
+still has zero commits. The secret scan runs _before_ the approval dialog, so a
+credential is refused without ever being one click from history.
+
+**Found, not fixed.**
+
+- `createdDirectories`, `committed` and the new `editedDocuments` in the file
+  adapter grow by one entry per successful transaction and are cleared only by
+  rollback. Undo can reach twenty transactions back, so entries must outlive
+  the apply, but nothing bounds them past that.
+- `src/core/autosave-policy.ts` is stored as UTF-16 (`file` reports `data`). It
+  compiles; grep and most tools cannot read it.
+
+Inventory: `workspace.files`, `workspace.command` and `workspace.git` promoted
+to PASS on `test:host`. 50 rows remain NOT RUN.

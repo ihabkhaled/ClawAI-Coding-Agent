@@ -8,6 +8,7 @@ import { ExternalOutputGrantStore } from './core/external-output-grants';
 import { createRuntimeSnapshot } from './core/runtime/runtime-event-reducer';
 import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
+import { testApiFor } from './extension-test-api';
 import { openAgentTerminal } from './infrastructure/agent-terminal';
 import { OutputLogger } from './infrastructure/output-logger';
 import { VscodeContextRangeReader } from './infrastructure/vscode-context-range-reader';
@@ -48,6 +49,7 @@ import { ChatViewProvider } from './webview/chat-view-provider';
 import type { FastModeSettings } from './core/fast-mode.types';
 import type { CapabilityManifest } from './core/runtime/capability-manifest';
 import type { WindowHandoff } from './core/window-handoff.types';
+import type { ClawTestApi } from './extension-test-api.types';
 import type { NewWindowDependencies } from './services/open-in-new-window.types';
 
 function registerCommands(
@@ -159,7 +161,7 @@ function registerChatParticipant(
  */
 const FAST_MODE_MEMORY_KEY = 'clawAI.fastMode.previous';
 
-export function activate(context: vscode.ExtensionContext): void {
+export function activate(context: vscode.ExtensionContext): ClawTestApi | undefined {
   const connectionConfiguration = new ConfigurationService();
   const configuration = connectionConfiguration.read();
   const workspaceScope = new WorkspaceScopeService();
@@ -480,6 +482,8 @@ export function activate(context: vscode.ExtensionContext): void {
   registerCommands(context, coordinator, logger, globalContext);
   registerChatParticipant(context, coordinator);
   void coordinator.initialize();
+  // Undefined everywhere except under the test runner. See extension-test-api.
+  return testApiFor(context.extensionMode, () => coordinator.toolRouter);
 }
 
 export function deactivate(): void {
