@@ -211,6 +211,15 @@ export function createWorkspace(files = {}) {
  * another and a shared workspace would let one scenario's files satisfy the
  * next one's assertion.
  */
+/**
+ * The longest page a tool result may carry.
+ *
+ * Runtime V2 caps any single string at 65,536 characters; the margin leaves
+ * room for the surrounding JSON so a page that is only just too long does not
+ * fail on the envelope instead.
+ */
+const WEB_FETCH_CONTENT_CEILING = 60_000;
+
 export function toolExecutor(workspace) {
   /** Refuses any path that would leave the scratch workspace. */
   const resolveInside = (relative) => {
@@ -322,11 +331,28 @@ export function toolExecutor(workspace) {
       );
     }
     if (operation === 'fetch') {
-      return api(
+      const page = await api(
         '/research/fetch',
         { method: 'POST', body: JSON.stringify({ url: args.url }) },
         token,
       );
+      // Reshaped and bounded exactly as the extension does, because a harness
+      // that posts a different payload tests a different product. Returning
+      // the research service's response verbatim sent `rawHtml` — a whole page
+      // of it — and every fetch round died on `400 Validation failed`, which
+      // reads as a product defect and is not one. Runtime V2 caps any single
+      // string in a tool result at 65,536 characters.
+      const content = String(page.content ?? '');
+      const truncated = content.length > WEB_FETCH_CONTENT_CEILING;
+      return {
+        url: page.url,
+        finalUrl: page.finalUrl,
+        httpStatus: page.httpStatus,
+        title: page.title ?? null,
+        content: truncated ? content.slice(0, WEB_FETCH_CONTENT_CEILING) : content,
+        truncated,
+        untrusted: true,
+      };
     }
     throw new Error(`Unsupported web operation ${operation}`);
   };
