@@ -52,10 +52,26 @@ const picked = flag('scenarios', '')
   .split(',')
   .map((entry) => entry.trim())
   .filter((entry) => entry.length > 0);
+/**
+ * Eight scenarios by default, not fifteen.
+ *
+ * A full matrix took long enough that it stopped being run after every change,
+ * and a lane that is skipped proves nothing. The core set keeps one scenario
+ * per capability — edit, command, git, end-to-end delivery, a markdown plan,
+ * memory within a thread and across threads, research, and the workspace
+ * boundary — preferring the composite scenario where one covers several, and
+ * keeping every currently-red scenario so no gap becomes invisible by being
+ * dropped from the default.
+ *
+ * `--scenarios=all` runs the full fifteen; name keys to run exactly those.
+ */
+const core = LIVE_ROUND_SCENARIOS.filter((scenario) => scenario.core === true);
 const scenarios =
   picked.length === 0
-    ? LIVE_ROUND_SCENARIOS
-    : LIVE_ROUND_SCENARIOS.filter((scenario) => picked.includes(scenario.key));
+    ? core
+    : picked.includes('all')
+      ? LIVE_ROUND_SCENARIOS
+      : LIVE_ROUND_SCENARIOS.filter((scenario) => picked.includes(scenario.key));
 const repeat = Number.parseInt(flag('repeat', '1'), 10);
 const jsonPath = flag('json', '');
 
