@@ -1,7 +1,13 @@
 import { rmSync, writeFileSync } from 'node:fs';
 import { argv, env, exit, stdout } from 'node:process';
 
-import { createWorkspace, runScenario, say, tokenProvider } from './live-agent-session.mjs';
+import {
+  createWorkspace,
+  runScenario,
+  say,
+  tokenProvider,
+  waitForBackend,
+} from './live-agent-session.mjs';
 import { LIVE_ROUND_SCENARIOS } from './live-rounds.scenarios.mjs';
 
 /**
@@ -53,6 +59,10 @@ const scenarios =
 const repeat = Number.parseInt(flag('repeat', '1'), 10);
 const jsonPath = flag('json', '');
 
+// The dev stack rebuilds on every source change and answers 502 while it
+// does. Waiting first turns what used to be a screenful of failed rounds into
+// a pause — those 502s said nothing about any model.
+await waitForBackend();
 // Re-authorises itself: a full matrix outlives one access token.
 const nextToken = tokenProvider(EMAIL, PASSWORD);
 await nextToken();
@@ -94,7 +104,27 @@ for (const model of models) {
         }
         verdict = scenario.assert(workspace);
       } catch (error) {
-        verdict = { ok: false, detail: `threw: ${String(error.message).slice(0, 160)}` };
+        const message = String(error.message);
+        // A backend that is restarting is not a result. Wait for it and run
+        // the round again rather than blaming the model for nginx.
+        if (/HTTP 50[0-9]/u.test(message) && (await waitForBackend())) {
+          try {
+            outcome = await runScenario({
+              token: await nextToken(),
+              provider: PROVIDER,
+              model,
+              workspace,
+              title: `Round: ${scenario.key}`,
+              prompt: scenario.prompts === undefined ? scenario.prompt : scenario.prompts[0],
+              verbose: false,
+            });
+            verdict = scenario.assert(workspace);
+          } catch (retryError) {
+            verdict = { ok: false, detail: `threw: ${String(retryError.message).slice(0, 160)}` };
+          }
+        } else {
+          verdict = { ok: false, detail: `threw: ${message.slice(0, 160)}` };
+        }
       }
       const durationMs = Date.now() - startedAt;
       const failedTools = outcome.toolLog.filter((entry) => entry.failed).length;
