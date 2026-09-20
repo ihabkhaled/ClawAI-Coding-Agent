@@ -3689,3 +3689,46 @@ credential is refused without ever being one click from history.
 
 Inventory: `workspace.files`, `workspace.command` and `workspace.git` promoted
 to PASS on `test:host`. 50 rows remain NOT RUN.
+
+## 1.73.0 — rounds, and what 200 of them said
+
+The gates prove the code is correct. They cannot prove the product works,
+because the product is a model choosing tools: it fails intermittently, it
+differs per model, and no unit test reaches it. `live-rounds.mjs` is the lane
+that does, and rule 53 makes it part of every release.
+
+**The first thing it found was the stack, not the agent.** `/models` answered
+502 because routing-service could not compile: another workspace had added
+`SessionRevocationGuard` to `@claw/shared-auth`, and the dev containers carry a
+baked copy of `packages/*/dist`. Building the shared packages and copying them
+into each container fixed seventeen services without touching anyone's source.
+The runbook is in `skills/run-coding-agent-release-rounds.md`, because this is
+the failure a round will hit most often.
+
+**Per model, over 200 rounds.** 10/10: `kimi-k2.6`, `kimi-k2.7-code`,
+`kimi-k3`, `qwen3.5:397b`. 9/10: `glm-5.2`, `gpt-oss:120b`, `minimax-m2.7`,
+`nemotron-3-super`, `nemotron-3-ultra`. Below that: `minimax-m3` 5/10,
+`mistral-large-3:675b` 1-2/10, `gpt-oss:20b` **0/10**.
+
+**The product's own failure messages are good, and they are the diagnosis.**
+`gpt-oss:20b` produces `Model gpt-oss:20b reasoned but produced no answer`, and
+the weak models produce `Model requested a tool outside the allowed set` after
+a repair attempt that was no better. Neither is a silent stop — which is worth
+saying, because a silent stop is what this lane was built to catch.
+
+**Open question for the owner.** Every one of these models is advertised
+`supportsTools: true` by the connector catalogue. A user can pick `gpt-oss:20b`
+and get a failure message every time. Whether the catalogue should carry an
+observed capability alongside the advertised one is a product decision, not a
+patch, so it is recorded rather than guessed.
+
+**Three harness defects, fixed, all of the same shape.** Each made a run look
+like a product failure when it was not: a token that expired mid-sweep, a
+refused tool result that abandoned the round, and a contentless write that
+emptied a file instead of refusing. The last is the instructive one — the
+shipped tool's schema requires `content`, so only the harness was permissive,
+and being _more_ permissive than production made the harness lie.
+
+**An intermittent failure is a finding.** `apply-markdown-plan` failed once with
+zero tool calls and passed three times on retry. The rate is the result; a
+green retry does not erase it.
