@@ -21,6 +21,28 @@ const node = (workspace, file) =>
 const git = (workspace, args) =>
   spawnSync('git', args, { cwd: workspace, encoding: 'utf8', timeout: 30_000 });
 
+/**
+ * A word this account has never said, and a value to go with it.
+ *
+ * The round that needs this was re-planting the same fact every time, which
+ * made its own search terms ordinary: after forty rounds "canary" was in 78 of
+ * the account's messages and "cohort" in 116, so retrieval classified both as
+ * filler — correctly. The round had turned its needle into hay.
+ *
+ * Nonsense on purpose, and lowercase on purpose: an all-caps hyphenated token
+ * would be read as a coined identifier and take the precise search path, which
+ * is the easy case. This tests the hard one — a fact referred to in ordinary
+ * words.
+ */
+const plantedFact = () => {
+  const syllables = ['ka', 'lo', 'mi', 'ru', 'ze', 'ta', 'vo', 'ni', 'sha', 'bre'];
+  const pick = () => syllables[Math.floor(Math.random() * syllables.length)];
+  return {
+    subject: `${pick()}${pick()}${pick()}`,
+    value: `${pick()}${pick()}-${String(Math.floor(Math.random() * 9000) + 1000)}`.toUpperCase(),
+  };
+};
+
 const read = (workspace, file) =>
   existsSync(path.join(workspace, file)) ? readFileSync(path.join(workspace, file), 'utf8') : '';
 
@@ -261,40 +283,46 @@ export const LIVE_ROUND_SCENARIOS = [
     key: 'remembers-another-thread',
     core: true,
     title: 'recalls a fact told in a different conversation',
-    // KNOWN GAP, kept red on purpose. Agent runs now reach cross-thread
-    // retrieval at all — they never did before, because the loop dropped the
-    // user's setting — and the retrieval still does not surface the fact.
-    // Candidate threads are chosen by lexical overlap on the prompt's salient
-    // words, so a fact stored in ordinary prose competes with every other
-    // thread that used the same common words. Fixing that is retrieval
-    // quality, not a wiring change, and it is the work recorded as context
-    // starvation. The round stays because deleting it would make the gap
-    // invisible again; it is reported separately rather than failing the run.
-    knownGap: 'cross-thread retrieval is lexical; the fact is not surfaced',
+    // Was red for months, and is green as of the six ranking defects fixed on
+    // 2026-09-20: a shared scan cap, terms chosen by word length, messages
+    // scored by how much they resembled the question, a blind stage vetoing a
+    // sighted one, rarity summed instead of maximised, and entity overlap
+    // silently eating 60% of the scale for any prompt without a coined
+    // identifier. It stays in the core set because it is the only round that
+    // exercises retrieval across conversations at all.
     files: { 'README.md': '# Cross thread' + '\n' },
+    // A fresh subject and value every round. The fixed pair it used before had
+    // been planted so many times that its own words became the account's
+    // filler, and an earlier round's thread was a valid place to find the
+    // answer — so the round could pass without cross-thread retrieval working
+    // for the pair under test.
+    plant: plantedFact,
     // The second turn opens a NEW thread. Nothing in it repeats the fact, so
     // answering requires cross-thread retrieval — the setting a user turns on
     // as "use relevant previous chats", which agent runs used to ignore.
-    prompts: [
+    prompts: ({ subject, value }) => [
       {
         prompt: [
-          'Remember this project fact for later conversations: the canary cohort',
-          'for ClawAI releases is PEREGRINE-7742. Acknowledge only, reply OK.',
+          `Remember this project fact for later conversations: the ${subject} cohort`,
+          `for ClawAI releases is ${value}. Acknowledge only, reply OK.`,
         ].join(' '),
       },
       {
         newThread: true,
         prompt: [
-          'In an earlier conversation I gave you the canary cohort codename for ClawAI',
-          'releases. Create COHORT.txt with workspace.file operation "create" containing',
-          'only that codename. If you genuinely do not have it, write UNKNOWN instead of',
-          'inventing one. Reply DONE.',
+          `In an earlier conversation I gave you the ${subject} cohort codename for`,
+          'ClawAI releases. Create COHORT.txt with workspace.file operation "create"',
+          'containing only that codename. If you genuinely do not have it, write',
+          'UNKNOWN instead of inventing one. Reply DONE.',
         ].join(' '),
       },
     ],
-    assert: (workspace) => {
-      const value = read(workspace, 'COHORT.txt').trim();
-      return { ok: /peregrine-7742/iu.test(value), detail: `COHORT.txt=${JSON.stringify(value)}` };
+    assert: (workspace, { value }) => {
+      const found = read(workspace, 'COHORT.txt').trim();
+      return {
+        ok: found.toUpperCase().includes(value),
+        detail: `COHORT.txt=${JSON.stringify(found)} wanted=${value}`,
+      };
     },
   },
   {
