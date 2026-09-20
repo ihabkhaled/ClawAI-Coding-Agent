@@ -3791,3 +3791,33 @@ cache later left three tracked files present in the index and absent on disk —
 which read as "main is broken" until `git checkout -- <paths>` restored them.
 Deploying to a dev container means editing the host tree, whether or not that
 was the intent.
+
+## 1.76.0 — the agent can research, and the page that proved it also broke it
+
+The ask was "the coding agent should crawl and research like chat does". The
+audit found it already could: `workspace.web` has existed with `search` and
+`fetch`, both through the research service. What had never happened was anyone
+running it.
+
+A round did, and it worked — the agent searched, picked the official
+`code.visualstudio.com` URL out of the results, fetched it, and listed
+`onLanguage`, `onCommand` and `onDebug` from the page. Then the same round
+failed on a retry with `400 Validation failed` after fourteen minutes.
+
+**The cause is a contract this repository has already been bitten by once.**
+Runtime V2 caps any single string in a tool result at 65,536 characters. The
+filesystem read carries a comment about exactly this: a large file produced a
+structurally invalid result and came back as `TOOL_OUTPUT_INVALID`, which is
+why reads are paged. The web fetch passed `page.content` straight through, so
+a long documentation page — the kind an agent is most likely to be sent to —
+killed the run that fetched it, and the error named no field.
+
+**Cut, not refused, and never silently.** A truncated page usually still
+answers the question; refusing outright sends the agent back with nothing. But
+a page cut without saying so is worse than either: the model reads it as the
+whole page and answers confidently about content that was never there. The
+notice tells it what happened and what to do instead.
+
+**What this says about the rest of the tool surface.** The same contract
+applies to every tool that returns text it did not generate. Two have now been
+caught by it. The others have not been run.
