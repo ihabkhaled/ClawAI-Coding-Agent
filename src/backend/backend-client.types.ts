@@ -36,6 +36,15 @@ export interface RuntimeStartRequest {
   readonly clientRequestId: string;
   readonly idempotencyKey: string;
   readonly prompt: string;
+  /**
+   * The files the user attached to this request.
+   *
+   * A run without them is the old behaviour and stays valid. Their absence was
+   * the whole bug: a file dropped into an agentic request was discarded, while
+   * the same file asked about conversationally reached the model, because that
+   * path posts an ordinary chat message and those have always carried files.
+   */
+  readonly fileIds?: readonly string[];
   readonly manifestHash: string;
   readonly toolCatalogHash: string;
   readonly toolDefinitions: readonly ToolDefinition[];

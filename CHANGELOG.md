@@ -2,6 +2,23 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.77.0
+
+Minor: attaching a file no longer costs you the agent.
+
+- **Any request carrying an attachment was routed down the legacy chat path.**
+  Runtime V2 had no carrier for files, so the extension fell back — silently,
+  and with the agent's tools left behind. Asking _about_ a file worked; asking
+  the agent to _do_ something with it quietly got a weaker system.
+- The run start now carries `fileIds`, so the file and the agent arrive
+  together. Research mode still forces the legacy path; it has no carrier yet.
+- The upload is a transaction: acquired before the run, accepted only once the
+  run settles without throwing, rolled back otherwise, so a failed run leaves
+  no orphan upload.
+- A run with no attachment sends no `fileIds` at all rather than an empty
+  array, which would make every ordinary run look like one that had
+  attachments and lost them.
+
 ## 1.76.0
 
 Minor: the agent researches the web for real, and a long page no longer kills

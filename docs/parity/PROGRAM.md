@@ -3821,3 +3821,33 @@ notice tells it what happened and what to do instead.
 **What this says about the rest of the tool surface.** The same contract
 applies to every tool that returns text it did not generate. Two have now been
 caught by it. The others have not been run.
+
+## 1.77.0 — the fallback that hid the missing feature
+
+The ask was "give the agent an image or a file to analyse". The audit said
+attachments were wired: the extension has attachment preparation, a lease, an
+upload path. Testing said otherwise, and the reason was three layers down.
+
+`run-queued-agent.ts` opened with a comment stating it plainly: _"Attachments
+and research mode force the legacy path. Runtime V2 has no carrier for either,
+so sending them down it would silently drop what the user attached."_ The
+workaround was honest, documented, and cost the user the entire agent. Attach a
+file and the request went to the legacy chat path — no tools, no runtime loop.
+
+**The carrier is four small pieces, and none of them is where the bug looked.**
+`runtimeStartSchema` gains an optional `fileIds`; the run service writes it to
+`metadata.fileIds` on the user message it creates, which is where the context
+assembler already looks; the extension's studio input carries it; and the
+queued runner acquires the lease before the run instead of handing the whole
+request to the legacy path.
+
+**The lease is the part to get right.** Files are uploaded before the run
+starts, because the run start needs their ids. So the upload is a transaction:
+accepted only once the run settles without throwing, rolled back otherwise. A
+run that fails after uploading would otherwise leave the user's file stranded
+on the server with nothing referencing it.
+
+**What this says about the audit.** "Wired" was true at every layer except the
+one that mattered, and the layer that mattered documented its own gap in a
+comment nobody had read in months. Grep for the feature, find it, and conclude
+it works — that is the third time this program has made that mistake.
