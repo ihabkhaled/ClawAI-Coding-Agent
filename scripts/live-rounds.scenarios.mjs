@@ -210,6 +210,88 @@ export const LIVE_ROUND_SCENARIOS = [
     },
   },
   {
+    key: 'remembers-earlier-turn',
+    title: 'remembers what it was told earlier in the same thread',
+    files: { 'README.md': '# Memory\n' },
+    // Two turns, one thread. The second never repeats the fact, so the only
+    // way to answer it is to have kept the first — which is exactly what a
+    // user expects and what a fresh thread per message cannot deliver.
+    prompts: [
+      [
+        'Remember this for later: the release captain for this project is Dana,',
+        'and the deploy window is Thursday 14:00 UTC.',
+        'Just acknowledge, do not create any file yet. Reply OK.',
+      ].join(' '),
+      [
+        'Now create CAPTAIN.txt with workspace.file operation "create".',
+        'Its content must be exactly the release captain name I gave you earlier,',
+        'nothing else. Reply DONE.',
+      ].join(' '),
+    ],
+    assert: (workspace) => {
+      const value = read(workspace, 'CAPTAIN.txt').trim();
+      return { ok: /^dana$/iu.test(value), detail: `CAPTAIN.txt=${JSON.stringify(value)}` };
+    },
+  },
+  {
+    key: 'remembers-across-many-turns',
+    title: 'still remembers after the tool trail has grown',
+    files: { 'README.md': '# Long thread\n' },
+    prompts: [
+      'Remember: the build token is 8841. Acknowledge only, reply OK.',
+      'Create a.txt containing the letter a. Reply DONE.',
+      'Create b.txt containing the letter b. Reply DONE.',
+      'Create c.txt containing the letter c. Reply DONE.',
+      [
+        'Create TOKEN.txt with workspace.file operation "create", containing only',
+        'the build token I gave you at the start. Digits only. Reply DONE.',
+      ].join(' '),
+    ],
+    assert: (workspace) => {
+      const value = read(workspace, 'TOKEN.txt').trim();
+      return { ok: value === '8841', detail: `TOKEN.txt=${JSON.stringify(value)}` };
+    },
+  },
+  {
+    key: 'remembers-another-thread',
+    title: 'recalls a fact told in a different conversation',
+    // KNOWN GAP, kept red on purpose. Agent runs now reach cross-thread
+    // retrieval at all — they never did before, because the loop dropped the
+    // user's setting — and the retrieval still does not surface the fact.
+    // Candidate threads are chosen by lexical overlap on the prompt's salient
+    // words, so a fact stored in ordinary prose competes with every other
+    // thread that used the same common words. Fixing that is retrieval
+    // quality, not a wiring change, and it is the work recorded as context
+    // starvation. The round stays because deleting it would make the gap
+    // invisible again; it is reported separately rather than failing the run.
+    knownGap: 'cross-thread retrieval is lexical; the fact is not surfaced',
+    files: { 'README.md': '# Cross thread' + '\n' },
+    // The second turn opens a NEW thread. Nothing in it repeats the fact, so
+    // answering requires cross-thread retrieval — the setting a user turns on
+    // as "use relevant previous chats", which agent runs used to ignore.
+    prompts: [
+      {
+        prompt: [
+          'Remember this project fact for later conversations: the canary cohort',
+          'for ClawAI releases is PEREGRINE-7742. Acknowledge only, reply OK.',
+        ].join(' '),
+      },
+      {
+        newThread: true,
+        prompt: [
+          'In an earlier conversation I gave you the canary cohort codename for ClawAI',
+          'releases. Create COHORT.txt with workspace.file operation "create" containing',
+          'only that codename. If you genuinely do not have it, write UNKNOWN instead of',
+          'inventing one. Reply DONE.',
+        ].join(' '),
+      },
+    ],
+    assert: (workspace) => {
+      const value = read(workspace, 'COHORT.txt').trim();
+      return { ok: /peregrine-7742/iu.test(value), detail: `COHORT.txt=${JSON.stringify(value)}` };
+    },
+  },
+  {
     key: 'refuse-outside-workspace',
     title: 'stays inside the workspace when asked to leave it',
     files: { 'README.md': '# Contained\n' },

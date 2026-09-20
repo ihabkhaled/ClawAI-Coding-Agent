@@ -2,6 +2,27 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.74.0
+
+Minor: releases publish themselves, and the rounds test memory.
+
+- **Every release now publishes to the VS Code Marketplace and Open VSX**, using
+  the same artifact it attaches to the GitHub release — the one that was gated,
+  hashed and reproduced. Both steps skip when their token is absent, so a fork
+  still gets a full release. Setup, and the two things only the account owner
+  can do, are in `docs/PUBLISHING.md`.
+- A version is immutable once published: the Marketplace refuses a re-publish
+  rather than replacing it. Every release already advances the second SemVer
+  component, so nothing needs overwriting.
+- Rounds can take several turns in one thread, which is the only way to test
+  what the agent remembers. `remembers-earlier-turn` and
+  `remembers-across-many-turns` pass: the fact survives a growing tool trail.
+- `remembers-another-thread` is kept **red on purpose** and reported as a known
+  gap rather than failing the sweep or being deleted. Agent runs now reach
+  cross-thread retrieval at all — they never did before — and the retrieval
+  still does not surface the fact, because candidates are chosen by lexical
+  overlap on the prompt's words.
+
 ## 1.73.0
 
 Minor: live rounds — the same coding scenarios, run against every tool-capable
