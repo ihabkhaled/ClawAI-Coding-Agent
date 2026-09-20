@@ -2,6 +2,36 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.73.0
+
+Minor: live rounds — the same coding scenarios, run against every tool-capable
+connector model, after every release.
+
+- **`npm run check:live` proved one model could do one thing.** It was a single
+  top-level script, so a second prompt or a second model meant copying it. The
+  run driver now lives in `scripts/live-agent-session.mjs`, shared by the
+  single check and by `scripts/live-rounds.mjs`, which runs a matrix.
+- Ten scenarios, each asserting on the workspace and never on the run's own
+  report: read a file, write exact content, edit without destroying the
+  neighbours, run a command and act on its output, make a real git commit,
+  deliver a feature with a passing test, apply a plan written as markdown,
+  repair a failing test, build several files that work together, stay inside
+  the workspace.
+- **200 rounds run against 14 models.** `kimi-k2.6`, `kimi-k2.7-code`,
+  `kimi-k3` and `qwen3.5:397b` scored 10/10. `gpt-oss:20b` scored 0/10 — it is
+  advertised as supporting tools and reasons without ever answering.
+- A sweep outlives one access token, so the last models were answered `401` and
+  recorded as failures. The runner now re-authorises from the token's own
+  `exp`, rather than a second copy of the backend's session length.
+- A tool-result POST refused with `422` no longer abandons the round: the
+  stream still delivers the real terminal event, which is the part worth
+  reporting.
+- A transaction that names no content is refused instead of writing an empty
+  file. A model that muddled the argument name used to destroy the file it was
+  asked to edit. The shipped `workspace.files` tool was never affected — its
+  schema requires `content` — but the round harness graded the wreckage as a
+  bad edit rather than reporting the mistake.
+
 ## 1.72.0
 
 Minor: the coding tools run for real inside VS Code, and doing so found four
