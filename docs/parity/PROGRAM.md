@@ -3732,3 +3732,40 @@ and being _more_ permissive than production made the harness lie.
 **An intermittent failure is a finding.** `apply-markdown-plan` failed once with
 zero tool calls and passed three times on retry. The rate is the result; a
 green retry does not erase it.
+
+## 1.74.0 — publishing, and the memory rounds
+
+**Publishing.** The release workflow already produced a gated, hashed,
+reproduced `.vsix` and attached it to a GitHub release; it now pushes that same
+file to the Marketplace and Open VSX. Two details are worth keeping: a step's
+`if` cannot read an env value the same step defines, and the `secrets` context
+is not available in a step condition at all — so the tokens are declared at job
+level and the condition tests `env`. And a published version is immutable, so
+"overwrite the release" is not a thing that exists; the answer is the version
+bump every release already makes.
+
+**Memory rounds.** A scenario can now run several prompts in one thread, and a
+prompt can ask for a fresh thread. Those two capabilities separate three
+questions that used to look like one: does the agent remember the last turn,
+does it still remember after a dozen tool calls, and does it remember a
+different conversation.
+
+The first two pass. The third does not, and it is recorded as a known gap
+rather than hidden: reported every run with its reason, excluded from the
+failure count so the sweep stays readable, and never softened. Deleting it
+would make the gap invisible again, which is how it survived this long.
+
+**What the third one actually proved.** Cross-thread retrieval now runs for
+agent runs — the repository logs `findCandidateThreads` where it previously
+logged nothing, because the loop had dropped the user's setting before it ever
+reached the assembler. Running is not finding: candidate threads are chosen by
+lexical overlap on the prompt's salient words, so a fact stored in ordinary
+prose competes with every thread that used the same common words. Two of three
+runs correctly wrote `UNKNOWN`; one invented a plausible answer, which is the
+worse failure and the reason the round asks for `UNKNOWN` explicitly.
+
+**A test that leaked its own answer.** The first version of that round put the
+codename in the recall prompt, and the model dutifully echoed it — a pass that
+proved nothing. The rewrite keeps the value out of every prompt after the
+first. A round whose prompt contains its own expected answer is worse than no
+round.

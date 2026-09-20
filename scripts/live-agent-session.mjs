@@ -327,12 +327,18 @@ export async function runScenario(options) {
   const toolLog = [];
   const rejectedResults = [];
 
-  const thread = await api(
-    '/chat-threads',
-    { method: 'POST', body: JSON.stringify({ title, routingMode: 'MANUAL_MODEL' }) },
-    token,
-  );
-  const threadId = thread.id ?? thread.data?.id;
+  // A caller may continue an existing thread. That is the only way to test
+  // whether the agent remembers the turn before this one: a fresh thread per
+  // prompt tests a fresh agent every time, which is not what a user has.
+  let threadId = options.threadId;
+  if (threadId === undefined) {
+    const thread = await api(
+      '/chat-threads',
+      { method: 'POST', body: JSON.stringify({ title, routingMode: 'MANUAL_MODEL' }) },
+      token,
+    );
+    threadId = thread.id ?? thread.data?.id;
+  }
 
   const ack = await api(
     '/chat-messages/runtime/runs',

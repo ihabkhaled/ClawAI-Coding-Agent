@@ -67,19 +67,31 @@ for (const model of models) {
     for (let attempt = 1; attempt <= repeat; attempt += 1) {
       const workspace = createWorkspace(scenario.files);
       const label = `${model} · ${scenario.key}${repeat > 1 ? ` #${String(attempt)}` : ''}`;
-      let outcome = { terminal: 'not-started', toolLog: [] };
+      let outcome = { terminal: 'not-started', toolLog: [], threadId: undefined };
       let verdict = { ok: false, detail: 'scenario did not run' };
       const startedAt = Date.now();
       try {
-        outcome = await runScenario({
-          token: await nextToken(),
-          provider: PROVIDER,
-          model,
-          workspace,
-          title: `Round: ${scenario.key}`,
-          prompt: scenario.prompt,
-          verbose: false,
-        });
+        // A scenario may take several turns in one thread. Everything the
+        // agent is supposed to remember is tested that way and no other: a new
+        // thread per prompt asks a fresh agent each time.
+        const prompts = scenario.prompts ?? [scenario.prompt];
+        for (const entry of prompts) {
+          // An entry may ask for a fresh thread. That is how cross-thread
+          // memory is tested: the fact is told in one conversation and asked
+          // for in another, which is a different question from remembering
+          // within a thread and needs a different retrieval path.
+          const step = typeof entry === 'string' ? { prompt: entry } : entry;
+          outcome = await runScenario({
+            token: await nextToken(),
+            provider: PROVIDER,
+            model,
+            workspace,
+            title: `Round: ${scenario.key}`,
+            prompt: step.prompt,
+            threadId: step.newThread === true ? undefined : outcome.threadId,
+            verbose: false,
+          });
+        }
         verdict = scenario.assert(workspace);
       } catch (error) {
         verdict = { ok: false, detail: `threw: ${String(error.message).slice(0, 160)}` };
@@ -91,6 +103,7 @@ for (const model of models) {
         scenario: scenario.key,
         attempt,
         ok: verdict.ok,
+        ...(scenario.knownGap === undefined ? {} : { knownGap: scenario.knownGap }),
         detail: verdict.detail,
         terminal: outcome.terminal,
         toolCalls: outcome.toolLog.length,
@@ -114,10 +127,15 @@ for (const model of models) {
   }
 }
 
-const failed = results.filter((entry) => !entry.ok);
+// A known gap is reported, never silently passed and never deleted. It does
+// not fail the sweep, because a permanently red suite stops being read — but
+// it is printed every time, with its reason, so it cannot quietly become
+// normal.
+const gaps = results.filter((entry) => !entry.ok && entry.knownGap !== undefined);
+const failed = results.filter((entry) => !entry.ok && entry.knownGap === undefined);
 say('');
 say(
-  `rounds: ${String(results.length)}  passed: ${String(results.length - failed.length)}  failed: ${String(failed.length)}`,
+  `rounds: ${String(results.length)}  passed: ${String(results.filter((entry) => entry.ok).length)}  failed: ${String(failed.length)}  known gaps: ${String(gaps.length)}`,
 );
 for (const model of models) {
   const mine = results.filter((entry) => entry.model === model);
@@ -138,6 +156,13 @@ if (failed.length > 0) {
     if (entry.toolCalls === 0 && typeof entry.answer === 'string' && entry.answer.length > 0) {
       say(`    called no tool; answered: ${entry.answer.replace(/\s+/gu, ' ').slice(0, 220)}`);
     }
+  }
+}
+if (gaps.length > 0) {
+  say('');
+  say(`known gaps (not counted as failures): ${String(gaps.length)}`);
+  for (const entry of gaps) {
+    say(`  ${entry.model} · ${entry.scenario} — ${entry.knownGap} · got ${entry.detail}`);
   }
 }
 if (jsonPath.length > 0) {

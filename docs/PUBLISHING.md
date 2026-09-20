@@ -56,3 +56,43 @@ Marketplace versions are immutable.
 Every push to `main` must carry a new package version. The Release workflow
 rejects an already-tagged version, runs the release gates, creates the matching
 `v<version>` GitHub Release, and attaches the versioned VSIX.
+
+## Automatic publishing from a GitHub release
+
+The release workflow publishes the same artifact it attaches to the GitHub
+release — the `.vsix` that was gated, hashed and reproduced — to the VS Code
+Marketplace and to Open VSX.
+
+Both steps are skipped when their token is absent, so a fork and this
+repository before the secrets exist still get a full release; only the registry
+push waits. The condition reads a **job-level** `env`, because a step's `if`
+cannot see an env value that same step defines and the `secrets` context is not
+available in a step condition at all.
+
+### The two things only the account owner can do
+
+1. **A Marketplace publisher named `clawai`**, created once at
+   <https://marketplace.visualstudio.com/manage>. It must match `publisher` in
+   `package.json`; a mismatch fails the publish with a 403 that does not
+   mention the name.
+2. **An Azure DevOps personal access token**, from
+   <https://dev.azure.com> → User settings → Personal access tokens, with
+   **Organization: All accessible organizations** and scope
+   **Marketplace → Manage**. Any narrower organisation setting fails
+   authentication even when the scope is right. Store it as the repository
+   secret `VSCE_PAT`.
+
+For the forks — VSCodium, Cursor, Windsurf — create a token at
+<https://open-vsx.org> and store it as `OVSX_PAT`. Optional; the Marketplace
+step does not depend on it.
+
+### What cannot be overwritten
+
+A version is immutable once published. The Marketplace refuses a re-publish of
+an existing version rather than replacing it, which is why every release
+already advances the second SemVer component — the release workflow refuses a
+push to `main` that does not.
+
+To withdraw a bad version, publish a higher one. Unpublishing is a manual
+action in the Marketplace UI and removes the extension for everyone on that
+version.

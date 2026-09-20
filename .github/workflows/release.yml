@@ -16,6 +16,12 @@ jobs:
   release:
     name: Gate and publish VSIX
     runs-on: ubuntu-latest
+    # Declared at job level because a step's `if` cannot read an env value the
+    # same step defines, and the `secrets` context is not available in a step
+    # condition at all. This is the documented way to make publishing optional.
+    env:
+      VSCE_PAT: ${{ secrets.VSCE_PAT }}
+      OVSX_PAT: ${{ secrets.OVSX_PAT }}
     steps:
       - uses: actions/checkout@v7
         with:
@@ -181,3 +187,24 @@ jobs:
             --target "${GITHUB_SHA}" \
             --title "ClawAI Coding Agent ${{ steps.version.outputs.version }}" \
             --notes-file "${RUNNER_TEMP}/release-notes.md"
+
+      # Publishing is skipped, not failed, when the token is absent. A fork, or
+      # this repository before the secret exists, still produces a GitHub
+      # release and its attested artifact; only the Marketplace step waits.
+      - name: Publish to the VS Code Marketplace
+        if: ${{ env.VSCE_PAT != '' }}
+        shell: bash
+        run: |
+          npx --yes @vscode/vsce publish \
+            --packagePath "builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix" \
+            --pat "${VSCE_PAT}"
+
+      # Open VSX serves VSCodium, Cursor, Windsurf and the other forks. Same
+      # artifact, different registry, and the same skip-when-absent rule.
+      - name: Publish to Open VSX
+        if: ${{ env.OVSX_PAT != '' }}
+        shell: bash
+        run: |
+          npx --yes ovsx publish \
+            "builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix" \
+            --pat "${OVSX_PAT}"
