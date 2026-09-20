@@ -2,6 +2,25 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.78.0
+
+Minor: twelve runtime tools proven reachable in a real editor.
+
+- **Twelve of the twenty-six NOT RUN tools now answer for real** in the
+  extension-host lane: planning, journal, workflows, services, quality,
+  intelligence, goal, scan, notebook and database. Each had a unit test, which
+  proves the code does what it was written to do and says nothing about
+  whether the tool is registered, reachable, or given a target it recognises.
+- An empty answer is the expected answer in a fresh workspace, so what these
+  assert is that a tool answers **in its own shape** — naming the collection it
+  owns — rather than refusing or failing to be registered.
+- Two refusals are asserted as behaviour, not accidents: `workspace.scan`
+  refuses a missing SARIF file _with a reason an agent can act on_, and
+  `workspace.database` refuses a workspace target because it does not own one.
+- **`runtime.board` is recorded BLOCKED, not failing.** It is registered only
+  for sub-agents and is unreachable from an ordinary run by design — the
+  inventory said NOT RUN, which read like an omission.
+
 ## 1.77.0
 
 Minor: attaching a file no longer costs you the agent.
