@@ -3769,3 +3769,25 @@ codename in the recall prompt, and the model dutifully echoed it — a pass that
 proved nothing. The rewrite keeps the value out of every prompt after the
 first. A round whose prompt contains its own expected answer is worse than no
 round.
+
+## 1.75.0 — a harness that does not blame the model for nginx
+
+Three sweeps in a row lost rounds to the stack rather than to any model: the
+dev containers rebuild whenever a file changes, nginx answers 502 through the
+gap, and every round in flight was recorded as a failure with a stack trace
+about `/chat-threads`. None of it said anything about an agent.
+
+The runner now waits for the backend before it starts and retries a round that
+hit a 5xx. **The probe is the part worth remembering**: it asks
+`/chat-threads`, not `/health`, because `/health` is served by a different
+service entirely and answered 200 the whole time chat-service was down. A 401
+from the chat path is a better readiness signal than a 200 from the health
+path — it proves the service that matters is up.
+
+**Also learned, the hard way.** `docker cp` into a dev container writes
+_through the bind mount_ into the host checkout. That is how a fix meant for a
+container ended up in another session's working tree, and how a stale stat
+cache later left three tracked files present in the index and absent on disk —
+which read as "main is broken" until `git checkout -- <paths>` restored them.
+Deploying to a dev container means editing the host tree, whether or not that
+was the intent.

@@ -5,10 +5,13 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { env, stdout } from 'node:process';
+import { setTimeout as delay } from 'node:timers/promises';
 import { URL, URLSearchParams } from 'node:url';
 import { TextDecoder } from 'node:util';
 
 import {
+  BACKEND_READY_POLL_MS,
+  BACKEND_READY_TIMEOUT_MS,
   LIVE_COMMAND_TIMEOUT_MS,
   TOKEN_ASSUMED_LIFETIME_MS,
   TOKEN_REFRESH_MARGIN_MS,
@@ -153,6 +156,41 @@ function expiryOf(token) {
   } catch {
     return Date.now() + TOKEN_ASSUMED_LIFETIME_MS;
   }
+}
+
+/**
+ * Waits until the backend answers, rather than recording its restart.
+ *
+ * The development stack rebuilds whenever a source file changes and serves 502
+ * while it does. Rounds run against it recorded those as model failures — a
+ * whole sweep once lost fifteen rounds to a restart, and none of them said
+ * anything about any model. Returns whether the backend came back.
+ */
+export async function waitForBackend() {
+  const deadline = Date.now() + BACKEND_READY_TIMEOUT_MS;
+  let announced = false;
+  while (Date.now() < deadline) {
+    try {
+      // The chat endpoint, not /health: that path is served by a different
+      // service, so it answered 200 while chat-service was still rebuilding
+      // and the wait returned immediately into another 502. A 401 is the
+      // right answer here — it proves the service is up and refusing an
+      // unauthenticated call.
+      const response = await fetch(`${BASE}/chat-threads`);
+      if (response.status !== 502 && response.status !== 503 && response.status !== 504) {
+        if (announced) say('backend is back');
+        return true;
+      }
+    } catch {
+      // Connection refused is the same condition as a 502 here: not ready.
+    }
+    if (!announced) {
+      say('waiting for the backend to come back...');
+      announced = true;
+    }
+    await delay(BACKEND_READY_POLL_MS);
+  }
+  return false;
 }
 
 /** A scratch project, with whatever seed files the scenario needs. */

@@ -67,3 +67,8 @@ export const TOKEN_REFRESH_MARGIN_MS = 120_000;
 
 /** Used only when a token carries no readable `exp`. */
 export const TOKEN_ASSUMED_LIFETIME_MS = 600_000;
+
+/** How long a sweep waits for a restarting backend before giving up on it. */
+export const BACKEND_READY_TIMEOUT_MS = 180_000;
+
+export const BACKEND_READY_POLL_MS = 3_000;

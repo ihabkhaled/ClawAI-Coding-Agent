@@ -2,6 +2,23 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.75.0
+
+Patch in effect, minor by rule 5: rounds stop blaming models for the stack.
+
+- **A restarting backend is no longer a result.** The dev stack rebuilds on
+  every source change and serves 502 while it does; rounds recorded those as
+  model failures, and one sweep lost fifteen that way. The runner waits for the
+  backend before starting and retries a round that hit a 5xx.
+- The readiness probe asks `/chat-threads`, not `/health`. That path is served
+  by a different service, so it answered 200 while chat-service was still
+  rebuilding and the wait returned straight into another 502. A 401 is the
+  right answer — it proves the service is up and refusing an unauthenticated
+  call.
+- Rounds can take several turns in one thread, and a turn can ask for a fresh
+  thread, which is what separates remembering a conversation from remembering
+  a different one.
+
 ## 1.74.0
 
 Minor: releases publish themselves, and the rounds test memory.
