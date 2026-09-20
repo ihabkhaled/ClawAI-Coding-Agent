@@ -3884,3 +3884,32 @@ deliberate scope.
 Runtime tools NOT RUN: 26 → 14. The remainder need a running container, a live
 process, a browser or a sub-agent, and each will take a fixture rather than a
 call.
+
+## 1.79.0 — a setting nothing reads looks exactly like one that works
+
+Twenty-four settings carried the same inventory note: schema and read path
+verified, behaviour not exercised. That note is precise and it is not evidence.
+Reading the manifest proves a default exists; only asking the extension what it
+resolved proves the value is consumed. The failure mode is invisible by
+construction — a setting that is contributed, documented and read by nothing
+renders in the settings UI exactly like one that works.
+
+The test API grew a `configuration()` reader, and the host lane now writes each
+setting into a real editor and asks the extension what it resolved.
+
+**Two assertions are worth more than the other nineteen.**
+`backendEnvironment: CUSTOM` must actually redirect `backendUrl` — it is the
+one setting a user can get wrong and go on silently talking to the wrong host.
+And `hooks` must be _parsed_ rather than stored: a malformed entry that
+survives into the run loop is a crash at the worst possible moment.
+
+**Scope was the interesting failure.** Writing `requestTimeoutMs` at workspace
+scope is refused by VS Code outright: it is `machine` scope, along with every
+connection setting. That looked like a test problem for a minute and is
+actually a security property — a repository must not be able to point a user's
+agent at a different backend by committing a settings file. The test now writes
+each setting at the scope it declares, and the split is recorded rather than
+worked around.
+
+Inventory: 97 PASS, 17 NOT RUN, 2 BLOCKED. The remaining seventeen need a
+container, a live process, a browser or a sub-agent.

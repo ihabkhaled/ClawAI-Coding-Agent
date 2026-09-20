@@ -2,6 +2,28 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.79.0
+
+Minor: every setting is proven to be consumed, not merely contributed.
+
+- **Twenty-one settings written into a real editor and read back** through the
+  extension. The inventory said "schema and read path verified; behaviour not
+  exercised" for all of them, which is the honest description of a manifest
+  entry: it proves a default exists and says nothing about whether anything
+  reads the value. A setting that is contributed, documented and never read
+  looks identical in the manifest to one that works.
+- `backendEnvironment: CUSTOM` is asserted to actually redirect `backendUrl`.
+  It is the one setting a user can get wrong and go on silently talking to the
+  wrong host.
+- Hooks are asserted to be **parsed**, not stored: a valid lifecycle hook
+  survives and a malformed one is refused before it can reach the run loop.
+- Each setting is written at the scope it declares. The connection settings are
+  `machine` scope and VS Code refuses to write them into a workspace at all —
+  which is the right call, since a repository must not be able to point a
+  user's agent at a different backend by committing a settings file.
+- Inventory: 97 of 116 rows PASS, 17 NOT RUN, up from 65 PASS a few releases
+  ago.
+
 ## 1.78.0
 
 Minor: twelve runtime tools proven reachable in a real editor.

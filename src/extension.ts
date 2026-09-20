@@ -483,7 +483,11 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
   registerChatParticipant(context, coordinator);
   void coordinator.initialize();
   // Undefined everywhere except under the test runner. See extension-test-api.
-  return testApiFor(context.extensionMode, () => coordinator.toolRouter);
+  return testApiFor(
+    context.extensionMode,
+    () => coordinator.toolRouter,
+    () => connectionConfiguration.read(),
+  );
 }
 
 export function deactivate(): void {
