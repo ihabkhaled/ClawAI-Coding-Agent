@@ -3,6 +3,7 @@ const vscode = require('vscode');
 
 const { runActivation } = require('./activation.cjs');
 const { runRealTools } = require('./real-tools.cjs');
+const { runRuntimeTools } = require('./runtime-tools.cjs');
 
 async function run() {
   await runActivation();
@@ -12,6 +13,7 @@ async function run() {
   // absence from an installed extension, are both part of the contract.
   assert.ok(api, 'the extension exposes its test API under the test runner');
   await runRealTools(api);
+  await runRuntimeTools(api);
 }
 
 module.exports = { run };

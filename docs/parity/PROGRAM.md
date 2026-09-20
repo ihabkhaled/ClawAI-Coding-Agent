@@ -3851,3 +3851,36 @@ on the server with nothing referencing it.
 one that mattered, and the layer that mattered documented its own gap in a
 comment nobody had read in months. Grep for the feature, find it, and conclude
 it works — that is the third time this program has made that mistake.
+
+## 1.78.0 — probing twenty-five tools, and what a good refusal looks like
+
+Twenty-six runtime tools carried an inventory row saying NOT RUN and a unit
+test each. That pair is honest and useless together: a unit test proves the
+code does what it was written to do, and says nothing about whether the tool is
+registered, reachable, or handed a target it recognises. Three features in a
+row had been wired everywhere except the layer that mattered.
+
+**The probe came first, as it did for the views.** Guessing an executor's
+argument names from its schema and being wrong reads exactly like the executor
+being broken, so a throwaway pass called each tool's most harmless operation
+and printed what came back. Nine answered immediately. Eight refused with a zod
+error — and once the probe printed the issue _paths_ instead of the raw JSON,
+every one of those named the exact argument it wanted. That is not eight broken
+tools; it is eight tools enforcing their contracts, which the probe could only
+see after it stopped printing a wall of braces.
+
+**Two refusals were promoted to assertions.** `workspace.scan` answers a
+missing SARIF file with `imported: false` and a reason, rather than throwing —
+the reason is what lets an agent correct itself instead of retrying. And
+`workspace.database` refuses `target:workspace` outright, which is the check
+that keeps a database tool off the filesystem.
+
+**One row was wrong rather than unproven.** `runtime.board` is not in the main
+catalogue at all; it is registered only for sub-agents. The probe reported it
+`NOT-REGISTERED`, which looked like a bug for about a minute. It is recorded
+BLOCKED with the reason, because NOT RUN reads like an omission and this is a
+deliberate scope.
+
+Runtime tools NOT RUN: 26 → 14. The remainder need a running container, a live
+process, a browser or a sub-agent, and each will take a fixture rather than a
+call.
