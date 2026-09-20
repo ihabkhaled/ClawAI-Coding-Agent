@@ -305,8 +305,37 @@ export function toolExecutor(workspace) {
     };
   };
 
-  return (toolName, operation, args) =>
-    toolName === 'workspace.command' ? runCommandTool(args) : runFileTool(operation, args);
+  /**
+   * The web tool goes through the research service, exactly as the extension's
+   * does: the provider credentials live there, and a client that searched
+   * directly would be a client holding a search key.
+   */
+  const runWebTool = async (operation, args, token) => {
+    if (operation === 'search') {
+      return api(
+        '/research/search',
+        {
+          method: 'POST',
+          body: JSON.stringify({ query: args.query, maxResults: args.maxResults ?? 5 }),
+        },
+        token,
+      );
+    }
+    if (operation === 'fetch') {
+      return api(
+        '/research/fetch',
+        { method: 'POST', body: JSON.stringify({ url: args.url }) },
+        token,
+      );
+    }
+    throw new Error(`Unsupported web operation ${operation}`);
+  };
+
+  return (toolName, operation, args, token) => {
+    if (toolName === 'workspace.command') return runCommandTool(args);
+    if (toolName === 'workspace.web') return runWebTool(operation, args, token);
+    return runFileTool(operation, args);
+  };
 }
 
 /** Builds the result the backend will verify, including the receipt it hashes. */
@@ -451,7 +480,7 @@ export async function runScenario(options) {
         let structured;
         let failure;
         try {
-          structured = execute(event.payload.toolName, event.payload.operation, args);
+          structured = await execute(event.payload.toolName, event.payload.operation, args, token);
         } catch (error) {
           failure = {
             code: 'TOOL_FAILED',

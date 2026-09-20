@@ -2,6 +2,25 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.76.0
+
+Minor: the agent researches the web for real, and a long page no longer kills
+the run that fetched it.
+
+- **`workspace.web` proven live.** In a round the agent searched, found the
+  official VS Code documentation URL, fetched the page and listed three
+  activation events from it. Search and fetch both go through the research
+  service, which holds the provider credentials.
+- **A page over 65,536 characters killed the run.** The Runtime V2 JSON
+  contract caps any single string at that length, and the fetched page was
+  passed through unbounded — so the backend refused the tool result with
+  `400 Validation failed` and the run died with nothing naming the field. The
+  filesystem read was fixed for this same contract; the web fetch never was.
+- The page is now cut rather than refused, with a notice the model can act on
+  and a `truncated` flag. Cutting silently would be worse than failing: the
+  model reads a truncated page as the whole page and answers confidently about
+  content that was never there.
+
 ## 1.75.0
 
 Patch in effect, minor by rule 5: rounds stop blaming models for the stack.

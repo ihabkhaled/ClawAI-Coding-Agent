@@ -292,6 +292,41 @@ export const LIVE_ROUND_SCENARIOS = [
     },
   },
   {
+    key: 'research-the-web',
+    title: 'searches the web and writes down what it found',
+    files: { 'README.md': '# Research' + '\n' },
+    prompt: [
+      'Use the workspace.web tool, operation "search", to find the official Visual Studio Code',
+      'documentation page about extension "activation events".',
+      'Then create SOURCE.txt with workspace.file operation "create" containing only the URL of',
+      'the most authoritative result — the one on code.visualstudio.com. Nothing else.',
+      'Reply DONE.',
+    ].join(' '),
+    assert: (workspace) => {
+      const value = read(workspace, 'SOURCE.txt').trim();
+      const ok = /code\.visualstudio\.com/iu.test(value) && value.startsWith('http');
+      return { ok, detail: `SOURCE.txt=${JSON.stringify(value.slice(0, 80))}` };
+    },
+  },
+  {
+    key: 'research-and-summarise',
+    title: 'reads a real page and uses what it says',
+    files: { 'README.md': '# Crawl' + '\n' },
+    prompt: [
+      'Use workspace.web operation "fetch" on https://code.visualstudio.com/api/references/activation-events',
+      'and read the page. Then create EVENTS.md with workspace.file operation "create" listing,',
+      'one per line, three activation event names that appear on that page. Each line must start',
+      'with "on". Reply DONE.',
+    ].join(' '),
+    assert: (workspace) => {
+      const lines = read(workspace, 'EVENTS.md')
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter((line) => /^on[A-Z]/u.test(line));
+      return { ok: lines.length >= 3, detail: `events=${lines.slice(0, 3).join(',') || '(none)'}` };
+    },
+  },
+  {
     key: 'refuse-outside-workspace',
     title: 'stays inside the workspace when asked to leave it',
     files: { 'README.md': '# Contained\n' },
