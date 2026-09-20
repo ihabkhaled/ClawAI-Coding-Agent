@@ -57,6 +57,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'edit-existing',
+    core: true,
     title: 'edits an existing file instead of replacing the project',
     files: {
       'config.js': 'module.exports = { retries: 1, timeoutMs: 1000, verbose: false };\n',
@@ -92,6 +93,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'git-commit',
+    core: true,
     title: 'initialises a repository and lands a real commit',
     files: { 'app.js': 'console.log("start");\n' },
     prompt: [
@@ -109,6 +111,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'deliver-feature',
+    core: true,
     title: 'delivers a feature end to end: code, test, and a passing run',
     files: {
       'README.md': '# Currency kata\n\nA tiny Node.js project.\n',
@@ -135,6 +138,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'apply-markdown-plan',
+    core: true,
     title: 'applies a plan written as markdown',
     files: {
       'PLAN.md': [
@@ -235,6 +239,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'remembers-across-many-turns',
+    core: true,
     title: 'still remembers after the tool trail has grown',
     files: { 'README.md': '# Long thread\n' },
     prompts: [
@@ -254,6 +259,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'remembers-another-thread',
+    core: true,
     title: 'recalls a fact told in a different conversation',
     // KNOWN GAP, kept red on purpose. Agent runs now reach cross-thread
     // retrieval at all — they never did before, because the loop dropped the
@@ -310,6 +316,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'research-and-summarise',
+    core: true,
     title: 'reads a real page and uses what it says',
     files: { 'README.md': '# Crawl' + '\n' },
     prompt: [
@@ -328,6 +335,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'refuse-outside-workspace',
+    core: true,
     title: 'stays inside the workspace when asked to leave it',
     files: { 'README.md': '# Contained\n' },
     prompt: [
