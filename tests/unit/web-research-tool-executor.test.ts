@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { MAX_RUNTIME_JSON_STRING_LENGTH } from '../../src/core/runtime/runtime-json-value';
 import { WebResearchToolExecutor } from '../../src/infrastructure/web-research-tool-executor';
 
 import type { WebResearchPort } from '../../src/backend/research-client';
@@ -111,5 +112,55 @@ describe('WebResearchToolExecutor', () => {
     await expect(new WebResearchToolExecutor(research()).execute(wrong)).rejects.toThrow(
       /Unknown web tool/u,
     );
+  });
+});
+
+/**
+ * A page too long for one tool result.
+ *
+ * The Runtime V2 JSON contract caps any single string at 65,536 characters.
+ * An unbounded page came back as `400 Validation failed`: the run died and the
+ * message named no field. A live round hit it fetching the VS Code
+ * activation-events page — exactly the kind of page an agent gets sent to.
+ * The filesystem read was fixed for this same contract; the web fetch was not.
+ */
+describe('a fetched page is bounded to what a tool result can carry', () => {
+  const longPage = (length: number): WebResearchPort =>
+    research({
+      fetch: vi.fn(async () => ({
+        url: 'https://example.com/long',
+        finalUrl: 'https://example.com/long',
+        httpStatus: 200,
+        title: 'Long',
+        content: 'x'.repeat(length),
+      })),
+    });
+
+  it('keeps a page that fits exactly as it is', async () => {
+    const executor = new WebResearchToolExecutor(longPage(1_000));
+
+    const output = await executor.execute(invocation('fetch', { url: 'https://example.com/long' }));
+
+    expect(output.structured?.content).toHaveLength(1_000);
+    expect(output.structured?.truncated).toBe(false);
+  });
+
+  it('cuts a page that would break the contract, rather than failing the run', async () => {
+    const executor = new WebResearchToolExecutor(longPage(200_000));
+
+    const output = await executor.execute(invocation('fetch', { url: 'https://example.com/long' }));
+
+    expect(String(output.structured?.content).length).toBeLessThan(MAX_RUNTIME_JSON_STRING_LENGTH);
+    expect(output.structured?.truncated).toBe(true);
+  });
+
+  it('tells the model the page was cut, so it can ask for the rest', async () => {
+    // Cut silently, the model reads a truncated page as the whole page and
+    // answers confidently about content that was never there.
+    const executor = new WebResearchToolExecutor(longPage(200_000));
+
+    const output = await executor.execute(invocation('fetch', { url: 'https://example.com/long' }));
+
+    expect(String(output.structured?.content)).toMatch(/was cut here/u);
   });
 });
