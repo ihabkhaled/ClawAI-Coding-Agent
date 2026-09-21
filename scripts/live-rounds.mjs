@@ -95,12 +95,23 @@ for (const model of models) {
       const label = `${model} · ${scenario.key}${repeat > 1 ? ` #${String(attempt)}` : ''}`;
       let outcome = { terminal: 'not-started', toolLog: [], threadId: undefined };
       let verdict = { ok: false, detail: 'scenario did not run' };
+      // A scenario that plants a fact must plant a DIFFERENT one each round.
+      // Re-planting the same words made them ordinary: after forty rounds
+      // "canary" appeared in 78 of this account's messages and "cohort" in
+      // 116, so retrieval correctly classified both as words the user says
+      // all the time — the round had made its own needle into hay. A fresh
+      // subject per round also stops an earlier round's thread from being a
+      // valid answer, which is a stricter test than the fixed one was.
+      const planted = scenario.plant === undefined ? {} : scenario.plant();
+      const prompts =
+        typeof scenario.prompts === 'function'
+          ? scenario.prompts(planted)
+          : (scenario.prompts ?? [scenario.prompt]);
       const startedAt = Date.now();
       try {
         // A scenario may take several turns in one thread. Everything the
         // agent is supposed to remember is tested that way and no other: a new
         // thread per prompt asks a fresh agent each time.
-        const prompts = scenario.prompts ?? [scenario.prompt];
         for (const entry of prompts) {
           // An entry may ask for a fresh thread. That is how cross-thread
           // memory is tested: the fact is told in one conversation and asked
@@ -118,7 +129,7 @@ for (const model of models) {
             verbose: false,
           });
         }
-        verdict = scenario.assert(workspace);
+        verdict = scenario.assert(workspace, planted);
       } catch (error) {
         const message = String(error.message);
         // A backend that is restarting is not a result. Wait for it and run
@@ -131,10 +142,10 @@ for (const model of models) {
               model,
               workspace,
               title: `Round: ${scenario.key}`,
-              prompt: scenario.prompts === undefined ? scenario.prompt : scenario.prompts[0],
+              prompt: prompts[0]?.prompt ?? prompts[0],
               verbose: false,
             });
-            verdict = scenario.assert(workspace);
+            verdict = scenario.assert(workspace, planted);
           } catch (retryError) {
             verdict = { ok: false, detail: `threw: ${String(retryError.message).slice(0, 160)}` };
           }
