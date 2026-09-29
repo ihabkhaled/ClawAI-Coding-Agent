@@ -386,11 +386,10 @@ export function toolExecutor(workspace) {
     // Whole pages until the budget is spent, as fitPdfPages does. A page larger
     // than the entire budget is cut rather than skipped, so nextPage never
     // points back at itself.
-    const encoder = new TextEncoder();
     const delivered = [];
     let spent = 0;
     for (const page of extracted.pages) {
-      const cost = encoder.encode(page.text).byteLength;
+      const cost = Buffer.byteLength(page.text, 'utf8');
       if (delivered.length > 0 && spent + cost > PDF_READ_BYTE_BUDGET) break;
       delivered.push(
         cost > PDF_READ_BYTE_BUDGET
