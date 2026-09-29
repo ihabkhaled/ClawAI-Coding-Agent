@@ -158,6 +158,12 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
       // restores; a goal that already carried the instruction would collect a
       // second copy of it on every resume.
       prompt: composePrompt({ agentMode, stylePreamble, content: input.prompt }),
+      // Omitted entirely when there are none: the field is optional on the
+      // wire, and sending an empty array would make every run look like one
+      // that had attachments and lost them.
+      ...(input.fileIds === undefined || input.fileIds.length === 0
+        ? {}
+        : { fileIds: [...input.fileIds] }),
       manifestHash: dependencies.hash(manifest),
       toolCatalogHash: dependencies.hash(definitions),
       provider: input.provider ?? 'AUTO',

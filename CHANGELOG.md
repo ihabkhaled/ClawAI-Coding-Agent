@@ -2,6 +2,100 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.79.0
+
+Minor: every setting is proven to be consumed, not merely contributed.
+
+- **Twenty-one settings written into a real editor and read back** through the
+  extension. The inventory said "schema and read path verified; behaviour not
+  exercised" for all of them, which is the honest description of a manifest
+  entry: it proves a default exists and says nothing about whether anything
+  reads the value. A setting that is contributed, documented and never read
+  looks identical in the manifest to one that works.
+- `backendEnvironment: CUSTOM` is asserted to actually redirect `backendUrl`.
+  It is the one setting a user can get wrong and go on silently talking to the
+  wrong host.
+- Hooks are asserted to be **parsed**, not stored: a valid lifecycle hook
+  survives and a malformed one is refused before it can reach the run loop.
+- Each setting is written at the scope it declares. The connection settings are
+  `machine` scope and VS Code refuses to write them into a workspace at all —
+  which is the right call, since a repository must not be able to point a
+  user's agent at a different backend by committing a settings file.
+- Inventory: 97 of 116 rows PASS, 17 NOT RUN, up from 65 PASS a few releases
+  ago.
+
+## 1.78.0
+
+Minor: twelve runtime tools proven reachable in a real editor.
+
+- **Twelve of the twenty-six NOT RUN tools now answer for real** in the
+  extension-host lane: planning, journal, workflows, services, quality,
+  intelligence, goal, scan, notebook and database. Each had a unit test, which
+  proves the code does what it was written to do and says nothing about
+  whether the tool is registered, reachable, or given a target it recognises.
+- An empty answer is the expected answer in a fresh workspace, so what these
+  assert is that a tool answers **in its own shape** — naming the collection it
+  owns — rather than refusing or failing to be registered.
+- Two refusals are asserted as behaviour, not accidents: `workspace.scan`
+  refuses a missing SARIF file _with a reason an agent can act on_, and
+  `workspace.database` refuses a workspace target because it does not own one.
+- **`runtime.board` is recorded BLOCKED, not failing.** It is registered only
+  for sub-agents and is unreachable from an ordinary run by design — the
+  inventory said NOT RUN, which read like an omission.
+
+## 1.77.0
+
+Minor: attaching a file no longer costs you the agent.
+
+- **Any request carrying an attachment was routed down the legacy chat path.**
+  Runtime V2 had no carrier for files, so the extension fell back — silently,
+  and with the agent's tools left behind. Asking _about_ a file worked; asking
+  the agent to _do_ something with it quietly got a weaker system.
+- The run start now carries `fileIds`, so the file and the agent arrive
+  together. Research mode still forces the legacy path; it has no carrier yet.
+- The upload is a transaction: acquired before the run, accepted only once the
+  run settles without throwing, rolled back otherwise, so a failed run leaves
+  no orphan upload.
+- A run with no attachment sends no `fileIds` at all rather than an empty
+  array, which would make every ordinary run look like one that had
+  attachments and lost them.
+
+## 1.76.0
+
+Minor: the agent researches the web for real, and a long page no longer kills
+the run that fetched it.
+
+- **`workspace.web` proven live.** In a round the agent searched, found the
+  official VS Code documentation URL, fetched the page and listed three
+  activation events from it. Search and fetch both go through the research
+  service, which holds the provider credentials.
+- **A page over 65,536 characters killed the run.** The Runtime V2 JSON
+  contract caps any single string at that length, and the fetched page was
+  passed through unbounded — so the backend refused the tool result with
+  `400 Validation failed` and the run died with nothing naming the field. The
+  filesystem read was fixed for this same contract; the web fetch never was.
+- The page is now cut rather than refused, with a notice the model can act on
+  and a `truncated` flag. Cutting silently would be worse than failing: the
+  model reads a truncated page as the whole page and answers confidently about
+  content that was never there.
+
+## 1.75.0
+
+Patch in effect, minor by rule 5: rounds stop blaming models for the stack.
+
+- **A restarting backend is no longer a result.** The dev stack rebuilds on
+  every source change and serves 502 while it does; rounds recorded those as
+  model failures, and one sweep lost fifteen that way. The runner waits for the
+  backend before starting and retries a round that hit a 5xx.
+- The readiness probe asks `/chat-threads`, not `/health`. That path is served
+  by a different service, so it answered 200 while chat-service was still
+  rebuilding and the wait returned straight into another 502. A 401 is the
+  right answer — it proves the service is up and refusing an unauthenticated
+  call.
+- Rounds can take several turns in one thread, and a turn can ask for a fresh
+  thread, which is what separates remembering a conversation from remembering
+  a different one.
+
 ## 1.74.0
 
 Minor: releases publish themselves, and the rounds test memory.

@@ -60,6 +60,15 @@ export type RuntimeApprovalPhase = 'waiting' | 'approved' | 'rejected';
 
 export interface RuntimeStudioInput {
   readonly prompt: string;
+  /**
+   * The files the user attached to this request.
+   *
+   * Carried through to the run so an agentic request sees them. Without it a
+   * dropped file reached the model only when the request happened to be
+   * conversational, because that path posts an ordinary chat message and
+   * those have always carried attachments.
+   */
+  readonly fileIds?: readonly string[];
   readonly threadId: string;
   readonly requestId: string;
   readonly provider?: string;
