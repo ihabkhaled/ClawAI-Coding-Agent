@@ -58,7 +58,7 @@ function rank(severity: FindingSeverity): number {
  * rather than on the whole record means the same claim collapses even when two
  * reviewers phrased their detail differently, which is the normal case.
  */
-function identity(finding: Finding): string {
+export function findingIdentity(finding: Finding): string {
   return `${finding.path}:${String(finding.line ?? 0)}:${finding.title.toLowerCase()}`;
 }
 
@@ -85,7 +85,7 @@ export function mergeFindings(
   const byIdentity = new Map<string, Finding>();
   let duplicatesRemoved = 0;
   for (const finding of batches.flat()) {
-    const key = identity(finding);
+    const key = findingIdentity(finding);
     const existing = byIdentity.get(key);
     if (existing === undefined) {
       byIdentity.set(key, finding);

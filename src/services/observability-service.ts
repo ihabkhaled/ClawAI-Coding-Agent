@@ -1,4 +1,5 @@
 import type { EvidenceBundle } from '../core/evidence-bundle';
+import type { RunUsage } from '../core/run-telemetry.types';
 
 export interface ObservabilitySpan {
   readonly name: string;
@@ -14,6 +15,8 @@ export interface ObservabilitySpan {
 export interface ObservabilitySinkPort {
   emit(span: ObservabilitySpan): void;
   emitMetrics(runId: string, metrics: EvidenceBundle['metrics']): void;
+  /** A finished run's counts. Optional: only an exporting sink has a use for them. */
+  emitUsage?(usage: RunUsage): void;
 }
 
 export class LocalObservabilityService {
@@ -39,5 +42,10 @@ export class LocalObservabilityService {
   emitMetrics(runId: string, metrics: EvidenceBundle['metrics']): void {
     this.local.emitMetrics(runId, metrics);
     if (this.remoteEnabled) this.remote?.emitMetrics(runId, metrics);
+  }
+
+  emitUsage(usage: RunUsage): void {
+    this.local.emitUsage?.(usage);
+    if (this.remoteEnabled) this.remote?.emitUsage?.(usage);
   }
 }

@@ -47,6 +47,7 @@ import {
 import { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-binding-store';
 import { VscodeWorkspaceDiagnostics } from '../infrastructure/vscode-workspace-diagnostics';
 import { VscodeWorkspaceSymbols } from '../infrastructure/vscode-workspace-symbols';
+import { workspaceRepositoryReader } from '../infrastructure/workspace-repository-identity';
 
 import { backendAdvisor } from './backend-advisor';
 import { backendToolPorts } from './backend-tool-ports';
@@ -66,6 +67,7 @@ import { FileTransactionService } from './file-transaction-service';
 import { FlagshipDeliveryService } from './flagship-delivery-service';
 import { GitAgentService } from './git-agent-service';
 import { IntegrationCoordinatorService } from './integration-coordinator-service';
+import { mcpToolRegistration } from './mcp-registration';
 import { LocalObservabilityService } from './observability-service';
 import { otlpSink } from './otlp-sink-factory';
 import { ProcessSupervisorService } from './process-supervisor-service';
@@ -97,6 +99,7 @@ import {
   nextAccountEpoch,
   nextWorkspaceEpoch,
 } from './runtime-studio-helpers';
+import { assemblePullRequests, reviewToolRegistration } from './runtime-studio-pull-requests';
 import {
   advancedToolRegistrations,
   analysisToolRegistrations,
@@ -116,6 +119,7 @@ import type { ExternalOutputGrantStore } from './agent-coordinator.types';
 import type { BackendToolPorts } from './backend-tool-ports';
 import type { ConfigurationService } from './configuration-service';
 import type { RuntimeRunService } from './runtime-run-service';
+import type { RuntimeStudioPullRequests } from './runtime-studio-pull-requests.types';
 import type { RuntimeStudioInput } from './runtime-studio.types';
 import type { TargetAwareToolRouter } from './target-aware-tool-router';
 import type { WorkspaceScopeService } from './workspace-scope-service';
@@ -151,6 +155,8 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   readonly observability: LocalObservabilityService;
   readonly flagship: FlagshipDeliveryService;
   private readonly git: GitAgentService;
+  /** Opens pull requests and watches their checks; "fix it" is bound by the coordinator. */
+  readonly pullRequests: RuntimeStudioPullRequests;
   /** Timed and recurring runs; started by the coordinator, which owns starting a run. */
   readonly schedules: ScheduledTaskService;
   readonly journals: RunJournalService;
@@ -185,7 +191,12 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     this.bindingStore = new VscodeRuntimeBindingStore(context.workspaceState);
     this.backendTools = backendToolPorts(backend);
     this.advisor = backendAdvisor(backend, this.state);
-    this.hooks = workspaceLifecycleHooks(workspaceScope, this.configuration, logger);
+    this.hooks = workspaceLifecycleHooks(
+      workspaceScope,
+      this.configuration,
+      logger,
+      context.globalStorageUri,
+    );
     this.transport = new BackendRuntimeTransport(backend, this.bindingStore);
     this.stream = new RuntimeEventStreamService(this.transport);
     // Off unless an endpoint is configured, and the configuration is the
@@ -210,6 +221,9 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         mode: () => this.configuration.read().permissionMode,
         workspaceTrusted: () => vscode.workspace.isTrusted,
         organizationPolicy: () => this.state.snapshot.organizationPolicy,
+        repository: workspaceRepositoryReader(
+          () => this.workspaceScope.selectedFolder().uri.fsPath,
+        ),
         userPresent: () => vscode.window.state.focused,
         approve: (request, signal) =>
           approveRuntimeEffect(approvals, request, signal, this.activeInput?.onApproval),
@@ -217,6 +231,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       new ProjectPolicyService(this.workspaceScope),
     );
     this.git = new GitAgentService(this.files, gitCommitApproval(approvals));
+    this.pullRequests = assemblePullRequests({ files: this.files, git: this.git, approvals });
     const containers = new ContainerEngineService(
       this.files,
       () => this.state.snapshot.user?.id ?? 'account:anonymous',
@@ -338,6 +353,8 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         pdfText: this.backendTools.pdfText,
       }),
       { definition: gitToolDefinition, executor: new GitToolExecutor(this.git) },
+      this.pullRequests.registration,
+      reviewToolRegistration({ git: this.git, agents: subAgents, findings: this.stores.findings }),
       { definition: containerToolDefinition, executor: new ContainerToolExecutor(containers) },
       {
         definition: databaseToolDefinition,
@@ -345,6 +362,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       },
       { definition: qualityToolDefinition, executor: quality },
       { definition: browserToolDefinition, executor: new BrowserToolExecutor(browser, readiness) },
+      mcpToolRegistration(context, this.workspaceScope, this.state, this.configuration),
       ...analysisToolRegistrations({
         questions: this.approvals,
         conversationEnd: conversationEndPort({
@@ -355,6 +373,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         }),
         goal: this.runContext.goalPort(),
         schedule: this.schedules,
+        remoteJobs: this.backendTools.remoteJobs,
         git: this.git,
         mailbox: this.runContext.mailboxPort(),
         findings: this.stores.findings,
@@ -367,6 +386,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         artifacts: this.backendTools.artifacts,
         advisor: this.advisor,
         files: this.files,
+        toolSearch: this.transport,
       }),
       ...advancedToolRegistrations({
         evidence,
@@ -503,6 +523,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   dispose(): void {
     void this.cancel();
     this.schedules.dispose();
+    this.pullRequests.monitor.dispose();
     this.processes.dispose();
     this.intelligenceIndex.dispose();
   }

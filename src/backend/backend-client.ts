@@ -2,11 +2,10 @@ import { z } from 'zod';
 
 import { accessTokenNeedsRefresh } from '../core/access-token-expiry';
 import { ACCESS_TOKEN_REFRESH_SKEW_MS } from '../core/access-token-expiry.constants';
-import { backendErrorReason } from '../core/backend-error-body';
 import { joinApiUrl, normalizeBackendUrl } from '../core/configuration';
-import { redactText } from '../core/redaction';
 import { type SessionVault, type TokenPair } from '../core/session-vault';
 
+import { type AgentKeyRequester } from './agent-remote-client';
 import {
   BackendRequestError,
   BackendSessionChangedError,
@@ -14,6 +13,7 @@ import {
   bindBackendSession,
   isBackendSessionBoundaryError,
 } from './backend-errors';
+import { parseBackendResponse, throwBackendResponseError } from './backend-response';
 import { BackendRuntimeClient } from './backend-runtime-client';
 import {
   entitlementsSchema,
@@ -38,25 +38,23 @@ import {
 } from './contracts';
 import { submitFeedback, type FeedbackSubmission } from './feedback-client';
 import { deleteFile, uploadFile } from './file-client';
+import { type IntegrationRequester } from './integration-contracts';
 import { modelCatalogClient, type Requester } from './model-catalog-client';
 import { fetchOrganizationPolicy } from './organization-policy-client';
+import { type RemoteRequester } from './remote-session-client';
 import { type ResearchRequester } from './research-client';
-import {
-  discardResponseBody,
-  readBoundedResponseText,
-  ResponseBodyLimitError,
-  responseWithIdleTimeout,
-  type ResponseLease,
-} from './response-lease';
+import { discardResponseBody, responseWithIdleTimeout, type ResponseLease } from './response-lease';
 import { SessionRefresher } from './session-refresher';
 import {
   createThread,
   listMessages,
   listThreads,
+  rewindThread,
   updateThread,
   type ThreadCreateInput,
   type ThreadPatch,
 } from './thread-client';
+import { retentionRequestHeaders } from './zero-retention-guard';
 
 import type {
   BackendClientOptions,
@@ -68,15 +66,13 @@ import type {
   RuntimeStartRequest,
 } from './backend-client.types';
 import type { ChatAttachment } from '../core/chat-attachment';
+import type { ThreadRewindResult } from '../core/conversation-rewind.types';
 import type { ToolResult } from '../core/runtime/runtime-tool-contracts';
 export {
   BackendRequestError,
   BackendSessionChangedError,
   BackendSessionExpiredError,
 } from './backend-errors';
-
-const MAX_ERROR_BODY_BYTES = 64_000;
-const MAX_SUCCESS_BODY_BYTES = 8_000_000;
 
 export class BackendClient {
   private readonly backendUrl: string;
@@ -121,7 +117,7 @@ export class BackendClient {
       method: 'POST',
       ...(signal === undefined ? {} : { signal }),
     });
-    return this.parse(response, vscodeAuthorizationInitResultSchema);
+    return parseBackendResponse(response, vscodeAuthorizationInitResultSchema);
   }
 
   async exchangeVscodeAuthorization(
@@ -135,7 +131,7 @@ export class BackendClient {
       method: 'POST',
       ...(signal === undefined ? {} : { signal }),
     });
-    const result = await this.parse(response, refreshResultSchema);
+    const result = await parseBackendResponse(response, refreshResultSchema);
     return result.tokens;
   }
 
@@ -165,7 +161,7 @@ export class BackendClient {
       method: 'POST',
     });
     if (!response.response.ok && response.response.status !== 401) {
-      await this.throwResponseError(response);
+      await throwBackendResponseError(response);
       return;
     }
     await discardResponseBody(response);
@@ -185,7 +181,7 @@ export class BackendClient {
       method: 'GET',
       ...(signal === undefined ? {} : { signal }),
     });
-    return this.parse(response, userProfileSchema);
+    return parseBackendResponse(response, userProfileSchema);
   }
 
   async getEntitlements(): Promise<Entitlements> {
@@ -229,6 +225,9 @@ export class BackendClient {
     return this.runtime.cancel(binding, idempotencyKey, signal);
   }
 
+  readonly loadRuntimeTools: BackendRuntimeClient['loadTools'] = (...args) =>
+    this.runtime.loadTools(...args);
+
   async openRuntimeStream(
     binding: RuntimeCommandBinding,
     after: number,
@@ -253,8 +252,32 @@ export class BackendClient {
   readonly artifactPost: ResearchRequester = (path, schema, options) =>
     this.request(path, schema, options);
 
+  /**
+   * Agent-runtime seam: authenticates with an agent session key, or with none
+   * for the public pairing routes. See `agent-remote-client`.
+   */
+  readonly agentKeyRequest: AgentKeyRequester = async (path, schema, sessionKey, options) =>
+    parseBackendResponse(
+      await this.send(path, {
+        auth: false,
+        ...(sessionKey === null ? {} : { accessToken: sessionKey }),
+        method: options?.method ?? 'GET',
+        ...(options?.body === undefined ? {} : { body: options.body }),
+        ...(options?.signal === undefined ? {} : { signal: options.signal }),
+      }),
+      schema,
+    );
+
   /** POST seam for file-service reads that store nothing. See `pdf-text-client`. */
   readonly filesPost: ResearchRequester = (path, schema, options) =>
+    this.request(path, schema, options);
+
+  /** Routines and review-comment seam. See `routine-client` and `review-action-client`. */
+  /** Seam for threads and runner sessions started elsewhere. See `remote-session-client`. */
+  readonly remoteRequest: RemoteRequester = (path, schema, options) =>
+    this.request(path, schema, options);
+
+  readonly integrationRequest: IntegrationRequester = (path, schema, options) =>
     this.request(path, schema, options);
 
   async getRouterModels(): Promise<RouterModel[]> {
@@ -287,6 +310,15 @@ export class BackendClient {
       (path, schema, options) => this.request(path, schema, options),
       threadId,
       patch,
+    );
+  }
+
+  /** See `rewindThread` for the server contract. */
+  async rewindThread(threadId: string, afterMessageId: string): Promise<ThreadRewindResult> {
+    return rewindThread(
+      (path, schema, options) => this.request(path, schema, options),
+      threadId,
+      afterMessageId,
     );
   }
 
@@ -368,7 +400,7 @@ export class BackendClient {
       });
     }
     if (!response.response.ok) {
-      await this.throwResponseError(response);
+      await throwBackendResponseError(response);
     }
     const streamResponse = responseWithIdleTimeout(response.response, this.timeoutMs, signal);
     response.release();
@@ -399,7 +431,7 @@ export class BackendClient {
       await this.refresher.run(options.signal);
       response = await this.send(path, attempt);
     }
-    return this.parse(response, schema);
+    return parseBackendResponse(response, schema);
   }
 
   /**
@@ -466,7 +498,7 @@ export class BackendClient {
         method: 'POST',
         signal,
       });
-      const result = await this.parse(response, refreshResultSchema);
+      const result = await parseBackendResponse(response, refreshResultSchema);
       return result.tokens;
     } catch (error: unknown) {
       if (error instanceof BackendRequestError && error.status === 401) {
@@ -493,6 +525,7 @@ export class BackendClient {
   ): Promise<ResponseLease> {
     const headers: Record<string, string> = {
       Accept: options.accept ?? 'application/json',
+      ...retentionRequestHeaders(options.method, path),
     };
     if (options.body !== undefined) {
       headers['Content-Type'] = 'application/json';
@@ -538,48 +571,5 @@ export class BackendClient {
       const message = backendTransportFailureMessage(error, timeoutController.signal.aborted);
       throw new BackendRequestError(message, 0, true);
     }
-  }
-
-  private async parse<T>(lease: ResponseLease, schema: z.ZodType<T>): Promise<T> {
-    if (!lease.response.ok) {
-      await this.throwResponseError(lease);
-    }
-    if (lease.response.status === 204) {
-      lease.release();
-      return schema.parse(undefined);
-    }
-    const text = await this.readResponseBody(lease, MAX_SUCCESS_BODY_BYTES);
-    const body: unknown = JSON.parse(text);
-    return schema.parse(body);
-  }
-
-  private async readResponseBody(lease: ResponseLease, limitBytes: number): Promise<string> {
-    try {
-      return await readBoundedResponseText(lease, limitBytes);
-    } catch (error: unknown) {
-      lease.callerSignal?.throwIfAborted();
-      if (error instanceof ResponseBodyLimitError) {
-        throw new BackendRequestError(error.message, lease.response.status, false);
-      }
-      const message =
-        error instanceof Error ? redactText(error.message) : 'Backend response failed.';
-      throw new BackendRequestError(message, 0, true);
-    }
-  }
-
-  private async throwResponseError(lease: ResponseLease): Promise<never> {
-    const body = await this.readResponseBody(lease, MAX_ERROR_BODY_BYTES);
-    const safeBody = redactText(body).trim();
-    const statusMessage = `ClawAI request failed (${String(lease.response.status)}).`;
-    // A platform error carries its own reason and code; showing the raw JSON
-    // envelope around them made every backend failure unreadable in the panel.
-    const reason = backendErrorReason(safeBody);
-    throw new BackendRequestError(
-      reason ?? (safeBody.length === 0 ? statusMessage : `${statusMessage} ${safeBody}`),
-      lease.response.status,
-      lease.response.status === 408 ||
-        lease.response.status === 429 ||
-        lease.response.status >= 500,
-    );
   }
 }

@@ -2,7 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { canonicalJson, sha256 } from '../headless/headless-transport';
 
-import type { AgentToolkit } from './agent-sdk.types';
+import type { AgentToolCall, AgentToolkit, ToolAttempt } from './agent-sdk.types';
 import type { ToolRequestPayload } from '../headless/headless-main.types';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
 
@@ -20,12 +20,16 @@ import type { HeadlessStreamEvent } from '../headless/headless-session.types';
  * The model can read a failure and try something else; an exception out of the
  * loop only tells the operator that something went wrong somewhere.
  */
-export function toolResultFor(event: HeadlessStreamEvent, toolkit: AgentToolkit): unknown {
+export function toolResultFor(
+  event: HeadlessStreamEvent,
+  toolkit: AgentToolkit,
+  denial?: string,
+): unknown {
   const payload = (event.payload ?? {}) as ToolRequestPayload;
   const invocationId = payload.invocationId ?? 'invocation.unknown';
   const args = payload.invocation?.arguments ?? {};
   const startedAt = new Date().toISOString();
-  const attempt = attempt_(toolkit, payload, args);
+  const attempt = attemptFor(event, toolkit, denial);
   const modelText =
     attempt.structured === undefined ? null : JSON.stringify(attempt.structured).slice(0, 2_000);
   const canonical = canonicalJson({
@@ -57,19 +61,38 @@ export function toolResultFor(event: HeadlessStreamEvent, toolkit: AgentToolkit)
   };
 }
 
-function attempt_(
+/** The call a tool request names, as a toolkit receives it. */
+export function toolCallOf(event: HeadlessStreamEvent): AgentToolCall {
+  const payload = (event.payload ?? {}) as ToolRequestPayload;
+  return {
+    toolName: payload.toolName ?? '',
+    operation: payload.operation ?? '',
+    arguments: payload.invocation?.arguments ?? {},
+  };
+}
+
+/**
+ * A refused call is a result the model reads, not an exception. It can then
+ * try something it is allowed to do, rather than the run ending on a tool the
+ * operator deliberately withheld.
+ */
+function denied(message: string): ToolAttempt {
+  return {
+    failure: { code: 'PERMISSION_DENIED', message, retryable: false, redactionApplied: false },
+  };
+}
+
+function attemptFor(
+  event: HeadlessStreamEvent,
   toolkit: AgentToolkit,
-  payload: ToolRequestPayload,
-  args: Record<string, unknown>,
-): { structured?: unknown; failure?: unknown } {
+  denial: string | undefined,
+): ToolAttempt {
+  return denial === undefined ? attempt_(toolkit, toolCallOf(event)) : denied(denial);
+}
+
+function attempt_(toolkit: AgentToolkit, call: AgentToolCall): ToolAttempt {
   try {
-    return {
-      structured: toolkit.execute({
-        toolName: payload.toolName ?? '',
-        operation: payload.operation ?? '',
-        arguments: args,
-      }),
-    };
+    return { structured: toolkit.execute(call) };
   } catch (error) {
     return {
       failure: {

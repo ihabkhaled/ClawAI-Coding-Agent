@@ -27,29 +27,48 @@ import type { HeadlessOutcome } from '../core/headless-outcome.types';
  */
 export async function runHeadlessSession(ports: HeadlessSessionPorts): Promise<HeadlessRunReport> {
   const deadline = ports.now() + ports.deadlineMs;
-  let toolCalls = 0;
-  let terminal: string | undefined;
+  const state: { toolCalls: number; terminal?: string } = { toolCalls: 0 };
 
+  try {
+    await consume(ports, deadline, state);
+  } catch (error) {
+    // An aborted stream throws from inside the fetch. That exception is the
+    // cancel arriving, not a second failure, so it must not be reported as one.
+    if (ports.signal?.aborted !== true) throw error;
+  }
+
+  const outcome: HeadlessOutcome =
+    ports.signal?.aborted === true && state.terminal === undefined
+      ? 'cancelled'
+      : outcomeFor(state.terminal, ports.now() >= deadline);
+  return {
+    outcome,
+    toolCalls: state.toolCalls,
+    ...(state.terminal === undefined ? {} : { terminalEvent: state.terminal }),
+  };
+}
+
+async function consume(
+  ports: HeadlessSessionPorts,
+  deadline: number,
+  state: { toolCalls: number; terminal?: string },
+): Promise<void> {
   for await (const event of ports.events()) {
+    if (ports.signal?.aborted === true) return;
+    ports.onEvent?.(event);
     if (isToolRequest(event)) {
-      toolCalls += 1;
+      state.toolCalls += 1;
       await ports.answerTool(event);
     }
     if (HEADLESS_TERMINAL_EVENTS.includes(event.type)) {
-      terminal = event.type;
-      break;
+      state.terminal = event.type;
+      return;
     }
     // Checked after the event rather than before, so a run that finishes in the
     // same moment the deadline passes is reported as finished. A deadline is a
     // limit on waiting, not a reason to discard an answer already in hand.
-    if (ports.now() >= deadline) break;
+    if (ports.now() >= deadline) return;
   }
-
-  return {
-    outcome: outcomeFor(terminal, ports.now() >= deadline),
-    toolCalls,
-    ...(terminal === undefined ? {} : { terminalEvent: terminal }),
-  };
 }
 
 /**

@@ -338,13 +338,12 @@ export class AgentCoordinator implements vscode.Disposable {
     return this.runtimeStudio.router;
   }
 
+  /** The current client; replaced on sign-in, so read it per use, never cache it. */
+  readonly currentBackend = (): BackendClient => this.backend;
+
   async initialize(): Promise<void> {
-    this.refreshWorkspaceReadiness();
-    await vscode.commands.executeCommand(
-      'setContext',
-      'clawAI.workspaceTrusted',
-      vscode.workspace.isTrusted,
-    );
+    // Same readiness refresh and trust context key a trust change publishes.
+    await this.trustChanged();
     await this.connection.initialize();
     this.runtimeRecovery.start();
   }

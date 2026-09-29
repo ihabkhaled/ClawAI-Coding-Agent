@@ -1,9 +1,15 @@
 import * as vscode from 'vscode';
 
 import { statusLineActivity, statusLineModel, statusLineQueueDepth } from '../core/status-line';
+import {
+  zeroRetentionPosture,
+  type ZeroRetentionPostureStore,
+} from '../core/zero-retention-posture';
+import { ZERO_RETENTION_OFF } from '../core/zero-retention.constants';
 
 import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
 import type { StatusLineActivity } from '../core/status-line.types';
+import type { ZeroRetentionPosture } from '../core/zero-retention.types';
 
 function usageLabel(snapshot: ExtensionSnapshot): string {
   const day = snapshot.usage?.day;
@@ -40,43 +46,69 @@ function activityLabel(activity: StatusLineActivity, queued: number): string {
   return '';
 }
 
-export function statusBarText(snapshot: ExtensionSnapshot): string {
+/** Shown in the status line whenever zero data retention is on, so it is never on silently. */
+function retentionMarker(posture: ZeroRetentionPosture): string {
+  return posture.active ? ` · $(shield) ${vscode.l10n.t('Zero retention')}` : '';
+}
+
+export function retentionTooltip(posture: ZeroRetentionPosture): string {
+  if (posture.source === 'organization') {
+    return vscode.l10n.t('Zero data retention: on, required by your organization');
+  }
+  return posture.source === 'setting' ? vscode.l10n.t('Zero data retention: on') : '';
+}
+
+export function statusBarText(
+  snapshot: ExtensionSnapshot,
+  posture: ZeroRetentionPosture = ZERO_RETENTION_OFF,
+): string {
   const activity = statusLineActivity(snapshot);
   const queued = statusLineQueueDepth(snapshot);
   const label = activityLabel(activity, queued);
+  const marker = retentionMarker(posture);
   if (activity === 'disconnected' || activity === 'connecting') {
-    return `${ACTIVITY_ICONS[activity]} ClawAI · ${label}`;
+    return `${ACTIVITY_ICONS[activity]} ClawAI · ${label}${marker}`;
   }
   const model = statusLineModel(snapshot);
   const name = model.automatic ? vscode.l10n.t('Auto') : model.name;
   const parts = label.length === 0 ? [name] : [name, label];
-  return `${ACTIVITY_ICONS[activity]} ClawAI · ${parts.join(' · ')}`;
+  return `${ACTIVITY_ICONS[activity]} ClawAI · ${parts.join(' · ')}${marker}`;
 }
 
 export class StatusBarController implements vscode.Disposable {
   private readonly item = vscode.window.createStatusBarItem(vscode.StatusBarAlignment.Right, 90);
   private readonly unsubscribe: () => void;
+  private readonly unsubscribeRetention: () => void;
 
-  constructor(state: ExtensionState) {
+  constructor(
+    private readonly state: ExtensionState,
+    private readonly retention: ZeroRetentionPostureStore = zeroRetentionPosture,
+  ) {
     this.item.name = 'ClawAI';
     this.item.command = 'clawAI.openChat';
     this.unsubscribe = state.subscribe((snapshot) => {
       this.render(snapshot);
+    });
+    this.unsubscribeRetention = retention.subscribe(() => {
+      this.render(this.state.snapshot);
     });
     this.item.show();
   }
 
   dispose(): void {
     this.unsubscribe();
+    this.unsubscribeRetention();
     this.item.dispose();
   }
 
   private render(snapshot: ExtensionSnapshot): void {
-    this.item.text = statusBarText(snapshot);
+    const posture = this.retention.current();
+    this.item.text = statusBarText(snapshot, posture);
     this.item.tooltip = [
       `Backend: ${snapshot.backendUrl}`,
       `Status: ${snapshot.backendStatus}`,
       usageLabel(snapshot),
+      retentionTooltip(posture),
     ]
       .filter((part) => part.length > 0)
       .join('\n');

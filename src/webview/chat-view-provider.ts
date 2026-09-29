@@ -28,6 +28,7 @@ import { runPromptAdmissionFlow } from './prompt-admission-flow';
 import type { PlacementMemory } from './chat-placement.types';
 import type { ChatViewActions } from './chat-view-actions';
 import type { ChatMessage } from '../backend/contracts';
+import type { BrowserScreenshotAttachment } from '../core/browser-reference.types';
 import type { ClosedSession } from '../core/closed-session-stack.types';
 import type { ExtensionState } from '../core/extension-state';
 
@@ -209,6 +210,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     await this.broadcast({ type: 'appendToComposer', text });
   }
 
+  /** A host-made file (a browser screenshot) joins the composer's own attachments. */
+  async attachToComposer(attachment: BrowserScreenshotAttachment): Promise<void> {
+    await this.broadcast({ type: 'attachToComposer', attachment });
+  }
+
   dispose(): void {
     this.unsubscribe();
     this.sessions.dispose();
@@ -353,7 +359,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   ): Promise<void> {
     if (await this.handleRuntimeControl(request)) return;
     if (await this.handleSessionControl(request)) return;
-    if (await this.handlePanelReport(request)) return;
+    if (await this.handlePanelReport(request, sourceSessionId)) return;
     if (request.type === 'undo') {
       await this.actions.undo();
     } else if (request.type === 'newChat') {
@@ -379,13 +385,23 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
    * The messages the panel sends on its own, rather than because someone
    * clicked. Grouped so the click dispatcher stays one readable chain.
    */
-  private async handlePanelReport(request: ControlMessage): Promise<boolean> {
+  private async handlePanelReport(
+    request: ControlMessage,
+    sourceSessionId: string,
+  ): Promise<boolean> {
     if (request.type === 'conversationTokens') {
       await this.actions.conversationTokens(request.threadId, request.tokens);
     } else if (request.type === 'dropUris') {
       await this.actions.dropUris(request.uriList, request.shiftKey);
     } else if (request.type === 'dictationUnavailable') {
       await this.actions.dictationUnavailable(request.code);
+    } else if (request.type === 'rewindToMessage') {
+      await vscode.commands.executeCommand('clawAI.rewindConversation', {
+        sessionId: sourceSessionId,
+        messageId: request.messageId,
+      });
+    } else if (request.type === 'attachBrowserState') {
+      await vscode.commands.executeCommand('clawAI.attachBrowserState');
     } else if (request.type === 'openFolder') {
       await this.actions.openFolder();
     } else return false;

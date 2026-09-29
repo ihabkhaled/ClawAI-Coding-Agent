@@ -2,7 +2,9 @@ import { createHash, createHmac, randomBytes, timingSafeEqual } from 'node:crypt
 
 import { z } from 'zod';
 
-import { globMatches } from './glob-match';
+import { mcpServerPolicySchema } from './mcp/mcp-server-policy';
+import { organizationTrustDecision, organizationTrustSchema } from './organization-trust';
+import { ruleMatches } from './policy-rule-match';
 
 export const POLICY_MODES = [
   'PLAN',
@@ -57,6 +59,11 @@ export const policySubjectSchema = z
      * rule that was meant to be about the origin.
      */
     domains: z.array(z.string().max(253)).max(50).default([]),
+    /**
+     * The workspace's repository as `host/owner/name`, from its origin remote,
+     * for organization trust lists. Absent when there is no remote.
+     */
+    repository: z.string().max(512).optional(),
   })
   .strict();
 
@@ -117,6 +124,14 @@ export const projectPolicySchema = z
     maximumRisk: z.enum(RISK_CLASSES).default('R4'),
     requireApproval: z.array(z.enum(EFFECT_KINDS)).max(EFFECT_KINDS.length).default([]),
     rules: z.array(policyRuleSchema).max(200).default([]),
+    /** Which MCP servers may start. Deny wins; see `mcp/mcp-server-policy.ts`. */
+    mcpServers: mcpServerPolicySchema.optional(),
+    /**
+     * The only plugin marketplaces this project may install from. Absent means
+     * no restriction; present, even empty, refuses every marketplace it does
+     * not name. It can only narrow, like everything else in this file.
+     */
+    allowedPluginMarketplaces: z.array(z.string().min(1).max(2_048)).max(100).optional(),
   })
   .strict();
 
@@ -134,6 +149,10 @@ export const organizationPolicySchema = z
     maximumRisk: z.enum(RISK_CLASSES).default('R4'),
     deniedEffects: z.array(z.enum(EFFECT_KINDS)).max(EFFECT_KINDS.length).default([]),
     requireApproval: z.array(z.enum(EFFECT_KINDS)).max(EFFECT_KINDS.length).default([]),
+    /** Hard deny and ask rules, the same shape as project rules, from every organization. */
+    rules: z.array(policyRuleSchema).max(400).default([]),
+    /** Trusted repositories, domains and commands; see `organization-trust.ts`. */
+    trust: organizationTrustSchema.default({ repositories: [], domains: [], commands: [] }),
   })
   .loose();
 
@@ -178,33 +197,6 @@ function narrowedProjectDecision(
     risk: request.risk,
     immutable: false,
   };
-}
-
-function ruleMatches(rule: PolicyRule, subject: PolicySubject): boolean {
-  if (rule.tool !== undefined && rule.tool !== subject.tool) return false;
-  if (rule.operation !== undefined && rule.operation !== subject.operation) return false;
-  if (
-    rule.pathGlob !== undefined &&
-    !subject.paths.some((path) => globMatches(rule.pathGlob ?? '', path))
-  ) {
-    return false;
-  }
-  if (
-    rule.commandGlob !== undefined &&
-    (subject.command === undefined || !globMatches(rule.commandGlob, subject.command))
-  ) {
-    return false;
-  }
-  // A domain rule that names a host no call touched does not match. A call
-  // with no hosts at all can therefore never satisfy one, which is right: a
-  // rule about where requests may go says nothing about a file read.
-  if (
-    rule.domainGlob !== undefined &&
-    !subject.domains.some((domain) => globMatches(rule.domainGlob ?? '', domain))
-  ) {
-    return false;
-  }
-  return true;
 }
 
 /**
@@ -270,6 +262,8 @@ function organizationDecision(
       immutable: false,
     };
   }
+  const trusted = organizationTrustDecision(request, organization);
+  if (trusted !== undefined) return trusted;
   if (organization.requireApproval.includes(request.effect)) {
     return {
       outcome: 'ask',
@@ -285,6 +279,12 @@ function requiresExplicitApproval(request: PolicyRequest, project: ProjectPolicy
   return request.mode === 'ASK' || project.requireApproval.includes(request.effect);
 }
 
+function parseOrganization(candidate: unknown): OrganizationPolicyConstraints | undefined {
+  return candidate === undefined || candidate === null
+    ? undefined
+    : organizationPolicySchema.parse(candidate);
+}
+
 export function evaluatePolicyV2(
   candidate: unknown,
   projectCandidate?: unknown,
@@ -292,24 +292,23 @@ export function evaluatePolicyV2(
 ): PolicyV2Decision {
   const request = policyRequestSchema.parse(candidate);
   const project = projectPolicySchema.parse(projectCandidate ?? {});
-  const organization =
-    organizationCandidate === undefined || organizationCandidate === null
-      ? undefined
-      : organizationPolicySchema.parse(organizationCandidate);
+  const organization = parseOrganization(organizationCandidate);
   if (!request.workspaceTrusted) {
     return { outcome: 'deny', code: 'WORKSPACE_UNTRUSTED', risk: request.risk, immutable: true };
   }
   const immutableDecision = immutableRailDecision(request);
   if (immutableDecision !== undefined) return immutableDecision;
   const organizationOutcome = organizationDecision(request, organization);
-  if (organizationOutcome !== undefined) return organizationOutcome;
+  if (organizationOutcome?.outcome === 'deny') return organizationOutcome;
   const projectDecision = narrowedProjectDecision(request, project);
   if (projectDecision !== undefined) return projectDecision;
   // After the immutable rail, so a rule can never loosen a hard deny, and
   // before the mode defaults, so it can tighten one.
   const ruled = ruleDecision(request, project);
-  if (ruled !== undefined) return ruled;
-  return modeDecision(request, project);
+  // Every deny is collected before any ask, so an organization's "ask" can
+  // never mask a project's hard deny of the same call.
+  if (ruled?.outcome === 'deny') return ruled;
+  return organizationOutcome ?? ruled ?? modeDecision(request, project);
 }
 
 /**

@@ -2,23 +2,16 @@ import { createHash } from 'node:crypto';
 
 import { z } from 'zod';
 
+import { flagshipStageIdSchema } from './flagship-stage';
+import { flagshipStagePlanSchema } from './flagship-stage-plan';
 import { flagshipStrategySchema } from './flagship-strategy';
 import { subAgentGraphSchema, type SubAgentGraph } from './multi-agent-dag';
 import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
 
-export const flagshipStageSchema = z.enum([
-  'discover',
-  'plan',
-  'authorize',
-  'implement',
-  'integrate',
-  'verify',
-  'review',
-  'commit',
-  'publish-ready',
-  'report',
-]);
-export type FlagshipStage = z.infer<typeof flagshipStageSchema>;
+import type { FlagshipStageId } from './flagship-stage';
+
+export { flagshipStageSchema, flagshipStageIdSchema } from './flagship-stage';
+export type { FlagshipStage, FlagshipStageId, FlagshipStageDefinition } from './flagship-stage';
 export const flagshipTerminalSchema = z.enum(['done', 'partial', 'blocked', 'failed', 'cancelled']);
 
 export const flagshipEpochsSchema = z
@@ -58,6 +51,8 @@ export const flagshipRequestSchema = z
       .max(10_000)
       .default([]),
     acceptanceChecks: z.array(z.string().min(1).max(2_000)).max(1_000).default([]),
+    // The goal's own ordered stage list. Absent means the default ten.
+    stages: flagshipStagePlanSchema.optional(),
     mandatoryGateIds: z.array(z.string().min(3).max(200)).max(1_000).default([]),
     epochs: flagshipEpochsSchema.default({ account: 0, workspace: 0, target: 0, policy: 0 }),
     budget: z
@@ -84,6 +79,9 @@ export function flagshipRequestHash(request: FlagshipRequest): string {
     acceptanceChecks: request.acceptanceChecks,
     mandatoryGateIds: request.mandatoryGateIds,
     budget: request.budget,
+    // Only when declared, so every checkpoint written before stage lists
+    // existed keeps the identity it was saved under and still resumes.
+    ...(request.stages === undefined ? {} : { stages: request.stages }),
   };
   return `sha256:${createHash('sha256').update(JSON.stringify(identity)).digest('hex')}`;
 }
@@ -119,7 +117,7 @@ export type FlagshipTaskOutcome = z.infer<typeof flagshipTaskOutcomeSchema>;
 export const flagshipTaskAttemptSchema = z
   .object({
     taskId: z.string().min(2).max(200),
-    stage: flagshipStageSchema,
+    stage: flagshipStageIdSchema,
     attempt: z.number().int().positive().max(100),
     status: z.enum(['succeeded', 'recoverable-failure', 'blocked', 'failed']),
     evidenceReferences: z.array(z.string().min(1).max(2_000)).max(1_000),
@@ -129,7 +127,7 @@ export type FlagshipTaskAttempt = z.infer<typeof flagshipTaskAttemptSchema>;
 
 export const flagshipRecoveryRecordSchema = z
   .object({
-    stage: flagshipStageSchema,
+    stage: flagshipStageIdSchema,
     attempt: z.number().int().positive().max(100),
     strategy: z.string().min(1).max(200),
     evidenceReferences: z.array(z.string().min(1).max(2_000)).max(1_000),
@@ -199,15 +197,15 @@ export interface FlagshipSnapshot {
   readonly hostIdentityHash?: string | undefined;
   readonly hostInstanceId?: string | undefined;
   readonly epochs?: FlagshipEpochs | undefined;
-  readonly stage: FlagshipStage;
-  readonly nextStage?: FlagshipStage | undefined;
+  readonly stage: FlagshipStageId;
+  readonly nextStage?: FlagshipStageId | undefined;
   readonly lifecycle: 'running' | 'paused' | z.infer<typeof flagshipTerminalSchema>;
   readonly reconciliation?: 'required' | 'verified' | undefined;
-  readonly attempts: Readonly<Partial<Record<FlagshipStage, number>>>;
+  readonly attempts: Readonly<Partial<Record<FlagshipStageId, number>>>;
   readonly evidenceReferences: readonly string[];
   readonly unverifiedClaims: readonly string[];
   readonly steering: readonly string[];
-  readonly stageSummaries: Readonly<Partial<Record<FlagshipStage, string>>>;
+  readonly stageSummaries: Readonly<Partial<Record<FlagshipStageId, string>>>;
   readonly usage: {
     readonly modelTurns: number;
     readonly toolCalls: number;
@@ -233,15 +231,15 @@ export const flagshipSnapshotSchema = z
     hostIdentityHash: z.string().max(200).optional(),
     hostInstanceId: z.string().min(1).max(200).optional(),
     epochs: flagshipEpochsSchema.optional(),
-    stage: flagshipStageSchema,
-    nextStage: flagshipStageSchema.optional(),
+    stage: flagshipStageIdSchema,
+    nextStage: flagshipStageIdSchema.optional(),
     lifecycle: z.union([z.literal('running'), z.literal('paused'), flagshipTerminalSchema]),
     reconciliation: z.enum(['required', 'verified']).optional(),
-    attempts: z.partialRecord(flagshipStageSchema, z.number().int().nonnegative().max(100)),
+    attempts: z.partialRecord(flagshipStageIdSchema, z.number().int().nonnegative().max(100)),
     evidenceReferences: z.array(z.string().min(1).max(2_000)).max(10_000),
     unverifiedClaims: z.array(z.string().min(1).max(20_000)).max(10_000),
     steering: z.array(z.string().max(20_000)).max(10_000),
-    stageSummaries: z.partialRecord(flagshipStageSchema, z.string().max(20_000)),
+    stageSummaries: z.partialRecord(flagshipStageIdSchema, z.string().max(20_000)),
     usage: z
       .object({
         modelTurns: z.number().int().nonnegative().max(1_000_000),

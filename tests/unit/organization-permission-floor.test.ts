@@ -21,10 +21,11 @@ describe('clampToOrganizationFloor', () => {
     expect(clampToOrganizationFloor('PLAN', 'AUTONOMOUS_SCOPED')).toBe('PLAN');
   });
 
-  // ENTERPRISE_LOCKED is not a point on this scale. Clamping it would silently
-  // downgrade a mode the user chose for reasons this scale does not model.
-  it('never touches a mode outside the ranked scale', () => {
-    expect(clampToOrganizationFloor('ENTERPRISE_LOCKED', 'PLAN')).toBe('ENTERPRISE_LOCKED');
+  // ADR 0003 reversed this: ENTERPRISE_LOCKED ("Strict") can still edit, so
+  // leaving it unranked let it escape a PLAN ceiling. It now ranks between
+  // PLAN and ASK.
+  it('holds Strict under a Plan ceiling', () => {
+    expect(clampToOrganizationFloor('ENTERPRISE_LOCKED', 'PLAN')).toBe('PLAN');
   });
 
   it('clamps every legacy alias the same way once normalized', () => {

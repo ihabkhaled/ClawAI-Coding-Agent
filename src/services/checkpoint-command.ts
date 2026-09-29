@@ -9,6 +9,8 @@ import {
   dedupeCheckpointFiles,
 } from '../core/checkpoint';
 
+import { chooseRestoreScope } from './conversation-rewind-command';
+
 import type { CheckpointDependencies } from './checkpoint-command.types';
 
 /**
@@ -41,14 +43,22 @@ export async function createCheckpoint(dependencies: CheckpointDependencies): Pr
   if (typed === undefined) return;
   const label = checkpointLabelSchema.safeParse(typed).data;
   if (label === undefined) return;
-  await dependencies.save({ id: randomUUID(), label, createdAt: Date.now(), files: touched });
+  const conversation = await dependencies.conversationAnchor?.();
+  await dependencies.save({
+    id: randomUUID(),
+    label,
+    createdAt: Date.now(),
+    files: touched,
+    ...(conversation === undefined ? {} : { conversation }),
+  });
 }
 
 /**
  * Puts the files back the way a checkpoint remembers them.
  *
  * Restoring goes through the ordinary file transaction, so it is previewed,
- * approved and itself undoable. A restore that could not be undone would make
+ * approved and itself undoable. A checkpoint that recorded where its
+ * conversation stood can also rewind that conversation, or only that. A restore that could not be undone would make
  * the safety feature the most dangerous button in the extension.
  */
 export async function restoreCheckpoint(dependencies: CheckpointDependencies): Promise<void> {
@@ -67,5 +77,14 @@ export async function restoreCheckpoint(dependencies: CheckpointDependencies): P
     { title: vscode.l10n.t('Restore which checkpoint?') },
   );
   if (picked === undefined) return;
-  await dependencies.restore(picked.checkpoint);
+  const { checkpoint } = picked;
+  const scope =
+    dependencies.rewindConversation === undefined ? 'code' : await chooseRestoreScope(checkpoint);
+  if (scope === undefined) return;
+  // Code first: the restore re-checks every file and throws when one changed
+  // underneath it, and a failed restore must leave the conversation as it was.
+  if (scope !== 'conversation') await dependencies.restore(checkpoint);
+  if (scope !== 'code' && checkpoint.conversation !== undefined) {
+    await dependencies.rewindConversation?.(checkpoint.conversation);
+  }
 }

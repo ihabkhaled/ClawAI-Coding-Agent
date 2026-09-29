@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { VscodeHookRunner } from '../infrastructure/vscode-hook-runner';
 
 import { LifecycleHookService } from './lifecycle-hook-service';
+import { pluginHooks, workspacePluginStore } from './workspace-plugins';
 
 import type { ConfigurationService } from './configuration-service';
 import type { WorkspaceScopeService } from './workspace-scope-service';
@@ -20,14 +21,26 @@ export function workspaceLifecycleHooks(
   workspaceScope: WorkspaceScopeService,
   configuration: ConfigurationService,
   logger: OutputLogger,
+  globalStorageUri?: vscode.Uri,
 ): LifecycleHookService {
+  const folder = (): vscode.Uri | undefined =>
+    workspaceScope.refresh().selectedFolderKey === undefined
+      ? undefined
+      : workspaceScope.selectedFolder().uri;
+  // Plugin hooks join the settings hooks only when a person switched them on
+  // per plugin; the service's own trust check still applies to both.
+  const plugins =
+    globalStorageUri === undefined ? undefined : workspacePluginStore(globalStorageUri, folder);
   return new LifecycleHookService({
     runner: new VscodeHookRunner(() =>
       workspaceScope.refresh().selectedFolderKey === undefined
         ? undefined
         : workspaceScope.selectedFolder().uri.fsPath,
     ),
-    hooks: () => configuration.read().hooks,
+    hooks: async () => [
+      ...configuration.read().hooks,
+      ...(plugins === undefined ? [] : await pluginHooks(plugins)),
+    ],
     trusted: () => vscode.workspace.isTrusted,
     log: (command, error) => {
       logger.warn(`Hook failed to start: ${command}`, error);

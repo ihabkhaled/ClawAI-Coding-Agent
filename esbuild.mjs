@@ -22,6 +22,8 @@ const options = {
 const headlessOptions = {
   bundle: true,
   entryPoints: ['src/headless/headless-main.ts'],
+  // Runnable as the package's `clawai` bin, not only through `node`.
+  banner: { js: '#!/usr/bin/env node' },
   format: 'esm',
   logLevel: 'info',
   minify: false,

@@ -3,7 +3,14 @@ import { join, relative } from 'node:path';
 import { cwd, stdout } from 'node:process';
 
 import { authorizationPageTranslations } from './authorization-page-translations.mjs';
+import { conversationRewindTranslations } from './conversation-rewind-translations.mjs';
+import { integrationTranslations } from './integration-translations.mjs';
 import { parityComposerTranslations } from './parity-composer-translations.mjs';
+import { permissionModeTranslations } from './permission-mode-translations.mjs';
+import { pullRequestTranslations } from './pull-request-translations.mjs';
+import { remoteChannelTranslations } from './remote-channel-translations.mjs';
+import { remoteControlTranslations } from './remote-control-translations.mjs';
+import { remoteSessionTranslations } from './remote-session-translations.mjs';
 
 const root = cwd();
 const localeNames = {
@@ -4747,7 +4754,11 @@ const cachedTokenTranslations = {
 function translate(locale, message) {
   return (
     authorizationPageTranslations[locale][message] ??
+    conversationRewindTranslations[locale][message] ??
     parityComposerTranslations[locale][message] ??
+    permissionModeTranslations[locale][message] ??
+    pullRequestTranslations[locale][message] ??
+    remoteChannelTranslations[locale][message] ??
     statusLineTranslations[locale][message] ??
     turnNavigationTranslations[locale][message] ??
     onboardingTranslations[locale][message] ??
@@ -4788,6 +4799,9 @@ function translate(locale, message) {
     composerDropTranslations[locale][message] ??
     telemetryTranslations[locale][message] ??
     cachedTokenTranslations[locale][message] ??
+    remoteControlTranslations[locale][message] ??
+    remoteSessionTranslations[locale][message] ??
+    integrationTranslations[locale][message] ??
     message
   );
 }

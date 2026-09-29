@@ -13,7 +13,9 @@ import type { WebResearchPort } from './web-research.types';
 import type { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 import type { ArtifactPublisherPort } from '../backend/artifact-client';
 import type { PdfTextPort } from '../backend/pdf-text-client';
+import type { RemoteJobPort } from '../backend/remote-job.types';
 import type { AgentMailbox } from '../core/agent-mailbox.types';
+import type { DeferredToolLoaderPort } from '../core/runtime/runtime-deferred-tools.types';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { AdvisorPort } from '../infrastructure/advisor-tool-executor.types';
@@ -60,6 +62,8 @@ export interface RuntimeStudioAnalysisTools {
   readonly goal: RunGoalPort;
   /** Timed and recurring agent runs. */
   readonly schedule: SchedulePort;
+  /** Remote jobs on the user's paired devices, fired with an idempotency key. */
+  readonly remoteJobs: RemoteJobPort;
   /** Creates and removes the session worktree. */
   readonly git: GitToolPort;
   /** The workspace mailbox, addressed as the main session. */
@@ -72,6 +76,8 @@ export interface RuntimeStudioAnalysisTools {
   /** The epoch generation a loaded workflow must be re-stamped with. */
   readonly currentEpochs: () => ToolInvocation['epochs'];
   readonly files: VscodeFileTransactionAdapter;
+  /** F028: loads deferred tool schemas into the running run. */
+  readonly toolSearch: DeferredToolLoaderPort;
 }
 
 export type RuntimeApprovalPhase = 'waiting' | 'approved' | 'rejected';

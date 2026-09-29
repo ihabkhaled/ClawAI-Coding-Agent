@@ -169,6 +169,27 @@ export class ConversationSessionService {
     void this.view()?.updateSession(sessionId, { threadId });
   }
 
+  /**
+   * Reloads every open panel showing this thread, after its history changed
+   * underneath it. A rewind deletes messages the panel has already rendered,
+   * and a panel that kept showing them would invite a reply to a turn that no
+   * longer exists.
+   */
+  async reloadThread(threadId: string): Promise<void> {
+    const sessions = [...this.sessionThreads].filter(([, bound]) => bound === threadId);
+    await Promise.all(sessions.map(([sessionId]) => this.loadThread(sessionId, threadId)));
+  }
+
+  /** Whether a request is still writing into this thread. */
+  isThreadBusy(threadId: string): boolean {
+    for (const [requestId, target] of this.requestThreadTargets) {
+      if (target === threadId) return true;
+      const sessionId = this.requestSessions.get(requestId);
+      if (sessionId !== undefined && this.sessionThreads.get(sessionId) === threadId) return true;
+    }
+    return false;
+  }
+
   threadFor(sessionId: string | undefined): string | undefined {
     return sessionId === undefined ? undefined : this.sessionThreads.get(sessionId);
   }

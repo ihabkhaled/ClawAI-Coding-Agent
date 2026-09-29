@@ -27,7 +27,7 @@ export class LifecycleHookService {
 
   async run(event: HookEvent, toolName?: string, signal?: AbortSignal): Promise<HookDecision> {
     if (!this.dependencies.trusted()) return ALLOWED;
-    const hooks = hooksForEvent(this.dependencies.hooks(), event, toolName);
+    const hooks = hooksForEvent(await this.dependencies.hooks(), event, toolName);
     // The last thing worth reporting, not merely whether anything blocked. A
     // caller that only learned "allowed" could never tell the user their hook
     // failed or hung, which is the case they most need to hear about.

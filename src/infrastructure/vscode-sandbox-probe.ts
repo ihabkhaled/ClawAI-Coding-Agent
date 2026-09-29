@@ -18,7 +18,7 @@ const HELPERS: Readonly<Partial<Record<NodeJS.Platform, readonly string[]>>> = {
  * exists but cannot run is not a helper. The call is bounded and its output
  * discarded — the exit code is the whole answer.
  */
-function present(executable: string): boolean {
+export function present(executable: string): boolean {
   try {
     const result = spawnSync(executable, ['--version'], {
       timeout: 2_000,

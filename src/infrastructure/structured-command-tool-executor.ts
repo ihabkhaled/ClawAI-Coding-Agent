@@ -2,7 +2,10 @@ import { commandSpecSchema } from '../core/command-spec';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
 import { prepareBackgroundLaunch, runCommandSpec } from './bounded-command-runner';
+import { realPath } from './command-sandbox-host-probe';
+import { sandboxBackgroundLaunch } from './sandboxed-background-launch';
 
+import type { CommandSandboxPort } from './command-launch-plan.types';
 import type { BackgroundCommandPort } from './structured-command-tool-executor.types';
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -32,6 +35,7 @@ export class StructuredCommandToolExecutor implements RuntimeToolExecutorPort {
   constructor(
     private readonly files: VscodeFileTransactionAdapter,
     private readonly background?: BackgroundCommandPort,
+    private readonly sandbox?: CommandSandboxPort,
   ) {}
 
   async execute(
@@ -47,10 +51,22 @@ export class StructuredCommandToolExecutor implements RuntimeToolExecutorPort {
       ...invocation.arguments,
       targetId: invocation.targetId,
     });
-    this.files.workspaceRootUri(specification.cwdRootKey);
+    const rootUri = this.files.workspaceRootUri(specification.cwdRootKey);
     const cwdUri = await this.files.uriFor(specification.cwdRootKey, specification.cwd, 'update');
-    if (specification.background) return this.launchBackground(invocation, specification, cwdUri);
-    const result = await runCommandSpec(specification, cwdUri.fsPath, signal);
+    if (specification.background)
+      return this.launchBackground(invocation, specification, cwdUri, rootUri);
+    if (this.sandbox === undefined) {
+      const result = await runCommandSpec(specification, cwdUri.fsPath, signal);
+      return { structured: { ...result } };
+    }
+    const binding = this.sandbox.bind(rootUri.fsPath);
+    const result = await runCommandSpec(
+      specification,
+      realPath(cwdUri.fsPath),
+      signal,
+      {},
+      binding,
+    );
     return { structured: { ...result } };
   }
 
@@ -67,14 +83,20 @@ export class StructuredCommandToolExecutor implements RuntimeToolExecutorPort {
     invocation: ToolInvocation,
     specification: ReturnType<typeof commandSpecSchema.parse>,
     cwdUri: { readonly fsPath: string },
+    rootUri: { readonly fsPath: string },
   ): Promise<RuntimeToolExecutionOutput> {
     if (this.background === undefined)
       throw new Error('Background commands are not available in this host.');
-    const plan = await prepareBackgroundLaunch(specification);
+    const plan = await sandboxBackgroundLaunch(
+      await prepareBackgroundLaunch(specification),
+      specification,
+      cwdUri.fsPath,
+      this.sandbox?.bind(rootUri.fsPath),
+    );
     const receipt = await this.background.supervisor.create({
       executablePath: plan.executablePath,
       arguments: [...plan.arguments],
-      cwd: cwdUri.fsPath,
+      cwd: plan.cwd,
       environment: plan.environment,
       title: `${specification.executable} (background)`.slice(0, 200),
       ownerId: this.background.ownerId(),
@@ -85,6 +107,7 @@ export class StructuredCommandToolExecutor implements RuntimeToolExecutorPort {
       structured: {
         background: true,
         receipt: { ...receipt },
+        ...(plan.sandbox === undefined ? {} : { sandbox: plan.sandbox }),
         next: 'Use workspace.process inspect with this receipt to read output, join to wait, terminate to stop.',
       },
     };

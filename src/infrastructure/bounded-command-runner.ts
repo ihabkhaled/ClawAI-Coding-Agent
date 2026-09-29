@@ -10,8 +10,10 @@ import { inheritedEnvironment } from '../core/inherited-environment';
 import { INHERITED_ENVIRONMENT_KEYS } from '../core/inherited-environment.constants';
 import { redactText } from '../core/redaction';
 
+import { planCommandLaunch } from './command-launch-plan';
 import { terminateProcess } from './process-terminator';
 
+import type { CommandSandboxBinding } from './command-launch-plan.types';
 import type { ProcessTerminationHandle } from './process-terminator.types';
 import type { CommandExecutionResult } from '../services/agent-run-service.types';
 import type { ChildProcess, ChildProcessWithoutNullStreams } from 'node:child_process';
@@ -167,19 +169,31 @@ export async function runCommandSpec(
   cwd: string,
   signal?: AbortSignal,
   trustedEnvironment: Readonly<Record<string, string>> = {},
+  sandbox?: CommandSandboxBinding,
 ): Promise<CommandResult> {
   const specification = commandSpecSchema.parse(candidate);
   if (specification.elevation) throw new Error('ELEVATION_NOT_AVAILABLE');
   const environment = boundedEnvironment(specification.environment);
   for (const [key, value] of Object.entries(trustedEnvironment)) environment[key] = value;
-  const executablePath = await resolveExecutable(specification.executable, environment);
+  const launch = await planCommandLaunch(
+    {
+      executable: specification.executable,
+      arguments: shellArguments(specification),
+      cwd,
+      environment,
+      declaredEnvironment: specification.environment,
+      ...(sandbox === undefined ? {} : { sandbox }),
+    },
+    resolveExecutable,
+  );
+  const executablePath = launch.executablePath;
   const executableHash = `sha256:${createHash('sha256')
     .update(await readFile(executablePath))
     .digest('hex')}`;
   const startedAtMs = Date.now();
   const startedAt = new Date(startedAtMs).toISOString();
   return new Promise((resolve, reject) => {
-    const child = spawn(executablePath, shellArguments(specification), {
+    const child = spawn(launch.spawnPath, [...launch.spawnArguments], {
       cwd,
       env: environment,
       shell: false,
@@ -241,6 +255,7 @@ export async function runCommandSpec(
         cancelled,
         truncated: stdout.truncated || stderr.truncated,
         forciblyTerminated: termination?.wasForced() ?? false,
+        ...(launch.sandbox === undefined ? {} : { sandbox: launch.sandbox }),
       });
     });
     signal?.addEventListener('abort', aborted, { once: true });

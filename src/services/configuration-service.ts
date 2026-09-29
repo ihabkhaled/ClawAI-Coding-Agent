@@ -5,6 +5,7 @@ import {
   isAutosavePolicy,
   type AutosavePolicy,
 } from '../core/autosave-policy';
+import { COMMAND_SANDBOX_MODES } from '../core/command-sandbox.constants';
 import { normalizeAutoCompactionMode } from '../core/compaction-trigger';
 import {
   BACKEND_LOCAL_URL,
@@ -24,6 +25,7 @@ import { normalizeSpeedMode } from '../core/speed-mode';
 import { normalizeViewDensity } from '../core/view-density';
 
 import type { AgentMode } from '../core/agent-mode.types';
+import type { CommandSandboxMode, CommandSandboxSettings } from '../core/command-sandbox.types';
 import type { AutoCompactionMode } from '../core/compaction-trigger.types';
 import type { EffortMode } from '../core/effort-mode';
 import type { LifecycleHook } from '../core/lifecycle-hook.types';
@@ -115,7 +117,60 @@ function telemetrySettings(
   };
 }
 
+function sandboxMode(value: unknown): CommandSandboxMode {
+  return COMMAND_SANDBOX_MODES.find((mode) => mode === value) ?? 'off';
+}
+
+/**
+ * The command sandbox settings, read from user or machine scope only.
+ *
+ * `inspect` rather than `get`, because `get` merges workspace settings, and a
+ * cloned repository's `.vscode/settings.json` must not be able to switch the
+ * sandbox off, open the network, or pick the image its own commands run in.
+ */
+export function readCommandSandboxSettings(
+  configuration: vscode.WorkspaceConfiguration,
+): CommandSandboxSettings {
+  const userValue = (key: string): unknown => {
+    const inspected = configuration.inspect(key);
+    return inspected?.globalValue ?? inspected?.defaultValue;
+  };
+  const image = userValue('commandSandbox.dockerImage');
+  return {
+    mode: sandboxMode(userValue('commandSandbox.mode')),
+    dockerImage: typeof image === 'string' ? image : '',
+    allowNetwork: userValue('commandSandbox.allowNetwork') === true,
+  };
+}
+
 export class ConfigurationService {
+  /** The user-level setting only: a workspace `settings.json` is repository content. */
+  mcpServers(): unknown {
+    return vscode.workspace.getConfiguration('clawAI').inspect<unknown>('mcpServers')?.globalValue;
+  }
+
+  /** The marketplaces a user added; anything that is not a string is dropped. */
+  pluginMarketplaces(): string[] {
+    return (
+      vscode.workspace.getConfiguration('clawAI').get<unknown[]>('pluginMarketplaces') ?? []
+    ).filter((source): source is string => typeof source === 'string');
+  }
+
+  async savePluginMarketplaces(sources: readonly string[]): Promise<void> {
+    await vscode.workspace
+      .getConfiguration('clawAI')
+      .update('pluginMarketplaces', [...sources], vscode.ConfigurationTarget.Global);
+  }
+
+  /** Read per call so a settings change applies to the next command. */
+  commandSandbox(): CommandSandboxSettings {
+    return readCommandSandboxSettings(vscode.workspace.getConfiguration('clawAI'));
+  }
+
+  zeroDataRetention(): boolean {
+    return vscode.workspace.getConfiguration('clawAI').get<boolean>('zeroDataRetention', false);
+  }
+
   hasConfiguredBackendUrl(): boolean {
     const inspected = vscode.workspace.getConfiguration('clawAI').inspect<string>('backendUrl');
     return inspected?.globalValue !== undefined;

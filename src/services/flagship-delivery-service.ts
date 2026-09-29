@@ -5,22 +5,15 @@ import {
   type FlagshipEpochs,
   type FlagshipRequest,
   type FlagshipSnapshot,
-  type FlagshipStage,
   type FlagshipStageResult,
 } from '../core/flagship-delivery';
+import {
+  flagshipReplanIndex,
+  flagshipStageIndex,
+  resolveFlagshipStagePlan,
+} from '../core/flagship-stage-plan';
 
-const stages: readonly FlagshipStage[] = [
-  'discover',
-  'plan',
-  'authorize',
-  'implement',
-  'integrate',
-  'verify',
-  'review',
-  'commit',
-  'publish-ready',
-  'report',
-];
+import type { FlagshipStage, ResolvedFlagshipStage } from '../core/flagship-stage';
 
 export interface FlagshipStagePort {
   execute(
@@ -28,6 +21,7 @@ export interface FlagshipStagePort {
     request: FlagshipRequest,
     snapshot: FlagshipSnapshot,
     signal: AbortSignal,
+    definition?: ResolvedFlagshipStage,
   ): Promise<FlagshipStageResult>;
 }
 
@@ -75,6 +69,7 @@ export class FlagshipDeliveryService {
     const parsedRequest = flagshipRequestSchema.parse(candidate);
     const request =
       currentEpochs === undefined ? parsedRequest : { ...parsedRequest, epochs: currentEpochs };
+    const plan = resolveFlagshipStagePlan(request);
     const startedAtMs = this.now();
     const controller = new AbortController();
     const cancel = () => {
@@ -85,13 +80,14 @@ export class FlagshipDeliveryService {
       controller,
       snapshot: await this.initialSnapshot(
         request,
+        plan,
         startedAtMs,
         this.reconciler.hostIdentityHash(),
         this.reconciler.hostInstanceId(),
       ),
     };
     try {
-      await this.executeStages(request, startedAtMs, controller.signal);
+      await this.executeStages(request, plan, startedAtMs, controller.signal);
       if (this.requireActive().snapshot.lifecycle === 'running') {
         this.update({
           lifecycle:
@@ -125,52 +121,59 @@ export class FlagshipDeliveryService {
 
   private async executeStages(
     request: FlagshipRequest,
+    plan: readonly ResolvedFlagshipStage[],
     startedAtMs: number,
     signal: AbortSignal,
   ): Promise<void> {
-    const resumeIndex = stages.indexOf(this.requireActive().snapshot.nextStage ?? 'discover');
-    for (let index = Math.max(0, resumeIndex); index < stages.length; index += 1) {
-      const currentStage = stages[index];
+    const replanIndex = flagshipReplanIndex(plan);
+    const replanStage = plan[replanIndex];
+    const resumeIndex = flagshipStageIndex(plan, this.requireActive().snapshot.nextStage);
+    for (let index = resumeIndex; index < plan.length; index += 1) {
+      const currentStage = plan[index];
       if (currentStage === undefined) return;
       await this.waitIfPaused(signal);
       this.assertBudget(startedAtMs, request);
-      this.update({ stage: currentStage });
-      if (await this.executeStage(currentStage, request, signal)) {
-        this.update({ nextStage: 'plan' });
-        index = Math.max(-1, stages.indexOf('plan') - 1);
+      this.update({ stage: currentStage.id });
+      if (await this.executeStage(currentStage, request, signal, replanStage !== undefined)) {
+        this.update({ nextStage: replanStage?.id });
+        index = replanIndex - 1;
       } else if (this.requireActive().snapshot.lifecycle === 'running') {
-        const nextStage = stages[index + 1];
-        if (nextStage !== undefined) this.update({ nextStage });
+        const nextStage = plan[index + 1];
+        if (nextStage !== undefined) this.update({ nextStage: nextStage.id });
       }
       if (this.requireActive().snapshot.lifecycle !== 'running') return;
       await this.checkpoint();
     }
   }
 
+  // A replan returns to the plan stage. A goal whose stage list has none has
+  // nowhere to go back to, so the same stage is retried within its attempts.
   private async executeStage(
-    currentStage: FlagshipStage,
+    currentStage: ResolvedFlagshipStage,
     request: FlagshipRequest,
     signal: AbortSignal,
+    canReplan: boolean,
   ): Promise<boolean> {
     for (;;) {
       signal.throwIfAborted();
-      const attempts = (this.requireActive().snapshot.attempts[currentStage] ?? 0) + 1;
+      const attempts = (this.requireActive().snapshot.attempts[currentStage.id] ?? 0) + 1;
       this.update({
-        attempts: { ...this.requireActive().snapshot.attempts, [currentStage]: attempts },
+        attempts: { ...this.requireActive().snapshot.attempts, [currentStage.id]: attempts },
       });
       await this.checkpoint();
       const result = await this.stage.execute(
-        currentStage,
+        currentStage.kind,
         request,
         this.requireActive().snapshot,
         signal,
+        currentStage,
       );
       this.mergeResult(result);
       this.assertUsage(request);
       this.observer.update(this.requireActive().snapshot, result);
       if (result.status === 'succeeded') return false;
       if (result.status === 'recoverable-failure' && attempts < request.budget.maxStageAttempts) {
-        if (result.requiresReplan) return true;
+        if (result.requiresReplan === true && canReplan) return true;
         continue;
       }
       this.stopForResult(result);
@@ -363,6 +366,7 @@ export class FlagshipDeliveryService {
 
   private async initialSnapshot(
     request: FlagshipRequest,
+    plan: readonly ResolvedFlagshipStage[],
     startedAtMs: number,
     hostIdentityHash: string,
     hostInstanceId: string,
@@ -390,8 +394,8 @@ export class FlagshipDeliveryService {
       hostIdentityHash,
       hostInstanceId,
       epochs: request.epochs,
-      stage: 'discover',
-      nextStage: 'discover',
+      stage: plan[0]?.id ?? 'discover',
+      nextStage: plan[0]?.id ?? 'discover',
       lifecycle: 'running',
       reconciliation: 'required',
       attempts: {},

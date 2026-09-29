@@ -41,7 +41,7 @@ export interface RuntimeToolResultInput {
   readonly error?: ToolError;
 }
 
-function canonicalJson(value: unknown): string {
+export function canonicalJson(value: unknown): string {
   if (value === null || typeof value === 'boolean' || typeof value === 'number') {
     return JSON.stringify(value);
   }

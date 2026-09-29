@@ -17,8 +17,11 @@ export interface HookRunnerPort {
 /** What the hook service needs to reach. */
 export interface LifecycleHookDependencies {
   readonly runner: HookRunnerPort;
-  /** The configured hooks, read at call time so a settings edit takes effect. */
-  readonly hooks: () => readonly LifecycleHook[];
+  /**
+   * The configured hooks, read at call time so a settings edit takes effect.
+   * May be async: plugin hooks are read from disk.
+   */
+  readonly hooks: () => Promise<readonly LifecycleHook[]> | readonly LifecycleHook[];
   /** Whether VS Code considers this workspace trusted. */
   readonly trusted: () => boolean;
   readonly log: (command: string, error: unknown) => void;

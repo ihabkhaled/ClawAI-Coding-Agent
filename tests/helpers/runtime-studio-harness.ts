@@ -54,6 +54,7 @@ export function studioHarness(
       emit: (trace: Record<string, unknown>) => {
         capture.traces.push(trace);
       },
+      emitUsage: () => undefined,
     } as never,
     journals: {
       save: async (candidate: { budget: RunBudget; policySnapshotHash: string; goal: string }) => {

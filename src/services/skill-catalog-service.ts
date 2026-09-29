@@ -15,10 +15,21 @@ import type { SkillDefinition } from '../core/skill-definition.types';
  * over it would take every other skill down with it.
  */
 export class SkillCatalogService {
-  constructor(private readonly sources: SkillSourcePort) {}
+  /**
+   * `builtins` are the commands the extension ships, such as
+   * `/security-review`. They are listed first so a workspace or global skill of
+   * the same name replaces them: a team's own security checklist should win
+   * over a generic one.
+   */
+  constructor(
+    private readonly sources: SkillSourcePort,
+    private readonly builtins: readonly SkillDefinition[] = [],
+  ) {}
 
   async list(): Promise<SkillDefinition[]> {
-    const byName = new Map<string, SkillDefinition>();
+    const byName = new Map<string, SkillDefinition>(
+      this.builtins.map((skill) => [skill.name, skill]),
+    );
     for (const file of [...(await this.sources.global()), ...(await this.sources.project())]) {
       const skill = parseSkillFile(file.fileName, file.content);
       if (skill !== undefined) byName.set(skill.name, skill);

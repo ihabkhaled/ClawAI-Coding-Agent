@@ -2,6 +2,8 @@ import { z } from 'zod';
 
 import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
 
+import type { CommandSandboxReport } from './command-sandbox.types';
+
 const safeEnvironmentKey =
   /^(?!.*(?:KEY|TOKEN|SECRET|PASSWORD|CREDENTIAL|AUTH))[A-Z_][A-Z0-9_]{0,99}$/iu;
 export const COMMAND_EXPECTED_EFFECTS = [
@@ -74,6 +76,8 @@ export interface CommandResult {
   readonly truncated: boolean;
   /** Whether the process had to be killed rather than asked to stop. */
   readonly forciblyTerminated: boolean;
+  /** How the command was confined; absent only when no sandbox layer was consulted. */
+  readonly sandbox?: CommandSandboxReport;
 }
 
 export const commandRecipeSchema = z

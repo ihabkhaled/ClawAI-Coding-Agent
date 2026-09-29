@@ -175,3 +175,34 @@ exclusions.
 Profile-wide `global-rules.md` and `global-skills.md` are opened with their
 ClawAI commands and stored in VS Code extension global storage. They apply
 before project rules and are not copied into repositories.
+
+## `mcp.json`
+
+MCP servers the agent may use through the `runtime.mcp` tool (`servers`,
+`tools`, `call`). Schema: `schemas/clawai-mcp.schema.json`; validator:
+`mcpConfigFileSchema` in `src/core/mcp/mcp-config.ts`.
+
+```json
+{
+  "servers": {
+    "files": { "command": "npx", "args": ["-y", "@modelcontextprotocol/server-filesystem", "."] },
+    "tracker": {
+      "url": "https://mcp.example.com/mcp",
+      "oauth": { "clientId": "clawai", "scopes": ["read"] }
+    }
+  }
+}
+```
+
+- `mcpServers` is accepted as an alias for files written for other MCP clients.
+- User-level servers go in the `clawAI.mcpServers` setting (user settings only)
+  and win a name clash with this file.
+- Local (stdio) servers start only in a trusted workspace; `cwd` must stay
+  inside the workspace. Remote URLs must be `https` (or `http` on localhost).
+- `headers` may not carry `Authorization` or `Cookie`; OAuth tokens are kept in
+  SecretStorage (ADR 0002).
+- `tools` and `call` are R3: every one asks the user. Project rules can target a
+  server with `"tool": "runtime.mcp", "commandGlob": "mcp <server> *"`.
+- `policies/policy.json` may add `mcpServers: { "allow": [...], "deny": [...] }`
+  patterns (`name`, `command`, `url` globs); deny wins, and the organization
+  policy's `mcpServers` block applies the same way.

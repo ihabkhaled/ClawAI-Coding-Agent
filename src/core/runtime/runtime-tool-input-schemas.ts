@@ -1,5 +1,8 @@
+import { REVIEW_DIMENSIONS } from '../code-review.constants';
 import { COMMAND_EXPECTED_EFFECTS } from '../command-spec';
+import { CONVENTIONAL_TYPES } from '../pull-request.constants';
 
+import { flagshipStagesInputSchema } from './flagship-stage-input-schema';
 import { MAX_RUNTIME_JSON_ENTRIES } from './runtime-json-value';
 
 import type { RuntimeJsonObject } from './runtime-tool-contracts';
@@ -155,6 +158,7 @@ const flagshipRequest = strict(
     repositories: texts,
     writeSet: texts,
     acceptanceChecks: texts,
+    stages: flagshipStagesInputSchema,
     budget: flagshipBudget,
   },
   ['deliveryId', 'runId', 'goal', 'strategy', 'repositories', 'budget'],
@@ -200,6 +204,7 @@ export const runtimeToolInputSchemas = {
   board: strict({ kind: text, text: text, since: integer }, []),
   messages: strict({ to: text, text: text, since: integer }, []),
   scan: strict({ path: text }, ['path']),
+  dependencyAudit: strict({ scanner: text }, []),
   workflows: strict({ name: text, description: text, graph: subAgentGraph }, []),
   worktree: strict({ branch: text, startPoint: text, discard: flag }, []),
   schedule: strict(
@@ -215,6 +220,19 @@ export const runtimeToolInputSchemas = {
     [],
   ),
   goal: strict({ statement: text, checks: texts, checkId: text, state: text, evidence: text }, []),
+  remote: strict(
+    {
+      id: text,
+      idempotencyKey: text,
+      commandId: text,
+      deviceId: text,
+      name: text,
+      command: text,
+      intervalMinutes: integer,
+      workingDir: text,
+    },
+    [],
+  ),
   monitor: strict({ kind: text, path: text, pattern: text, timeoutMs: integer }, ['kind', 'path']),
   agents: strict({ graph: subAgentGraph }, ['graph']),
   ask: strict(
@@ -416,6 +434,7 @@ export const runtimeToolInputSchemas = {
     timeoutMs: integer,
     refresh: flag,
   }),
+  mcp: strict({ server: shortText, tool: shortText, arguments: opaque, timeoutMs: integer }),
   quality: strict({ rootKey: text, scope: text, projects: objects, gateId: text }),
   services: strict({
     rootKey: text,
@@ -423,4 +442,29 @@ export const runtimeToolInputSchemas = {
     serviceIds: texts,
     serviceId: text,
   }),
+  pullRequest: strict(
+    {
+      rootKey: text,
+      baseBranch: text,
+      title: text,
+      summary: text,
+      type: { type: 'string', enum: [...CONVENTIONAL_TYPES] },
+      draft: flag,
+      number: wideInteger,
+    },
+    ['rootKey'],
+  ),
+  review: strict(
+    {
+      rootKey: text,
+      baseBranch: text,
+      dimensions: {
+        type: 'array',
+        items: { type: 'string', enum: [...REVIEW_DIMENSIONS] },
+        minItems: 2,
+        maxItems: 4,
+      },
+    },
+    ['rootKey'],
+  ),
 } as const satisfies Readonly<Record<string, RuntimeJsonObject>>;

@@ -1,3 +1,5 @@
+import type { ConversationAnchor } from './conversation-rewind.types';
+
 /** One file's contents at the moment a checkpoint was taken. */
 export interface CheckpointFile {
   rootKey: string;
@@ -11,4 +13,6 @@ export interface Checkpoint {
   label: string;
   createdAt: number;
   files: CheckpointFile[];
+  /** Where the conversation stood, so a restore can rewind it too. */
+  conversation?: ConversationAnchor | undefined;
 }

@@ -331,6 +331,19 @@ export const organizationPolicySchema = z
     requireApproval: z.array(z.string().max(100)).max(20),
     maximumRetentionDays: z.number().int().min(0).max(3_650),
     minimumPermissionMode: z.enum(['PLAN', 'ASK', 'AUTO_EDIT', 'AUTONOMOUS_SCOPED']).nullable(),
+    /**
+     * MCP server allow and deny patterns. Unknown here on purpose and parsed by
+     * `readMcpServerPolicy`, which reads a malformed block as deny-everything:
+     * a strict shape here would instead drop the whole organization policy.
+     */
+    mcpServers: z.unknown().optional(),
+    /**
+     * F053 organization deny rules and trust lists. Unknown here for the same
+     * reason as `mcpServers`; `policy-v2.ts` parses them at evaluation, where
+     * a malformed block fails the call closed instead of dropping the policy.
+     */
+    rules: z.unknown().optional(),
+    trust: z.unknown().optional(),
   })
   .strict();
 
