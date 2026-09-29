@@ -83,9 +83,18 @@ assert.deepEqual(
   ],
   'Runtime V2 production dependencies must remain explicit and security-reviewed',
 );
+// Registration lives in extension.ts and in the command modules it wires up;
+// a command counts only if its id appears in a file that calls registerCommand.
+const registrationSource = [
+  extensionSource,
+  ...readdirSync(join(root, 'src'), { recursive: true, withFileTypes: true })
+    .filter((entry) => entry.isFile() && entry.name.endsWith('.ts'))
+    .map((entry) => readFileSync(join(entry.parentPath, entry.name), 'utf8'))
+    .filter((source) => source.includes('registerCommand')),
+].join('\n');
 for (const command of commands) {
   assert.match(
-    extensionSource,
+    registrationSource,
     new RegExp(`['"]${command.replace(/[.*+?^${}()|[\]\\]/gu, '\\$&')}['"]`, 'u'),
     `${command} is contributed but not registered`,
   );
