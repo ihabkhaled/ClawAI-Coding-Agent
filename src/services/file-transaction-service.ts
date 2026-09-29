@@ -45,6 +45,12 @@ export interface FileTransactionAdapter {
     signal?: AbortSignal,
   ): Promise<void>;
   rollback(transaction: FileTransaction, prepared: readonly PreparedFileOperation[]): Promise<void>;
+  /**
+   * The transaction can no longer be rolled back; release what was kept for it.
+   *
+   * Optional because only an adapter that holds per-transaction state needs it.
+   */
+  forget?(transactionId: string): void;
 }
 
 export interface FileTransactionPreview {
@@ -175,7 +181,13 @@ export class FileTransactionService {
         // Newest last, oldest dropped: an undo takes back the most recent
         // change, so the far end of the stack is the one worth forgetting.
         this.applied.push(preview);
-        if (this.applied.length > MAX_UNDO_DEPTH) this.applied.shift();
+        if (this.applied.length > MAX_UNDO_DEPTH) {
+          // Past the undo depth it can never be rolled back, so whatever the
+          // adapter kept to roll it back is now held for nothing. Left alone,
+          // that was one entry per transaction for the life of the session.
+          const dropped = this.applied.shift();
+          if (dropped !== undefined) this.adapter.forget?.(dropped.transaction.transactionId);
+        }
         return {
           transactionId: preview.transaction.transactionId,
           status: 'applied',
@@ -211,6 +223,7 @@ export class FileTransactionService {
    * is no longer the open one, which would write a stale file into a new tree.
    */
   forgetUndoHistory(): void {
+    for (const preview of this.applied) this.adapter.forget?.(preview.transaction.transactionId);
     this.applied.length = 0;
   }
 
