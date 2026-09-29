@@ -204,7 +204,12 @@ export function workspaceToolRegistrations(
   return [
     {
       definition: workspaceFilesystemToolDefinition,
-      executor: new VscodeFilesystemToolExecutor(parts.files, parts.transactions, parts.artifacts),
+      executor: new VscodeFilesystemToolExecutor(
+        parts.files,
+        parts.transactions,
+        parts.artifacts,
+        parts.pdfText,
+      ),
     },
     {
       definition: structuredCommandToolDefinition,

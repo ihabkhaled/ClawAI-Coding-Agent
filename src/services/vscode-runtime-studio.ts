@@ -48,7 +48,7 @@ import { VscodeWorkspaceDiagnostics } from '../infrastructure/vscode-workspace-d
 import { VscodeWorkspaceSymbols } from '../infrastructure/vscode-workspace-symbols';
 
 import { backendAdvisor } from './backend-advisor';
-import { backendWebResearch } from './backend-web-research';
+import { backendToolPorts } from './backend-tool-ports';
 import { BrowserControllerService } from './browser-controller-service';
 import { ContainerEngineService } from './container-engine-service';
 import { conversationEndPort } from './conversation-end-service';
@@ -106,13 +106,13 @@ import { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 import { workspaceLifecycleHooks } from './workspace-lifecycle-hooks';
 
 import type { ExternalOutputGrantStore } from './agent-coordinator.types';
+import type { BackendToolPorts } from './backend-tool-ports';
 import type { ConfigurationService } from './configuration-service';
 import type { RuntimeRunService } from './runtime-run-service';
 import type { RuntimeStudioInput } from './runtime-studio.types';
 import type { TargetAwareToolRouter } from './target-aware-tool-router';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { BackendClient } from '../backend/backend-client';
-import type { WebResearchPort } from '../backend/research-client';
 import type { RUNTIME_EFFECT_APPROVAL_KIND } from '../core/approval-broker';
 import type { ApprovalBroker } from '../core/approval-broker';
 import type { ExtensionState } from '../core/extension-state';
@@ -134,7 +134,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
    */
   readonly hooks: ReturnType<typeof workspaceLifecycleHooks>;
 
-  private readonly research: WebResearchPort;
+  private readonly backendTools: BackendToolPorts;
   private readonly advisor: AdvisorPort;
   readonly stream: RuntimeEventStreamService;
   readonly router: RuntimeToolRouter;
@@ -170,7 +170,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       () => this.configuration.read().autosave,
     );
     this.bindingStore = new VscodeRuntimeBindingStore(context.workspaceState);
-    this.research = backendWebResearch(backend);
+    this.backendTools = backendToolPorts(backend);
     this.advisor = backendAdvisor(backend, this.state);
     this.hooks = workspaceLifecycleHooks(workspaceScope, this.configuration, logger);
     this.transport = new BackendRuntimeTransport(backend, this.bindingStore);
@@ -373,6 +373,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         artifacts: this.stores.artifacts,
         processes: this.processes,
         accountId: () => this.state.snapshot.user?.id ?? 'account:anonymous',
+        pdfText: this.backendTools.pdfText,
       }),
       { definition: gitToolDefinition, executor: new GitToolExecutor(this.git) },
       { definition: containerToolDefinition, executor: new ContainerToolExecutor(containers) },
@@ -397,7 +398,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         transactions: this.transactions,
         tasks: this.stores.tasks,
         journals: this.journals,
-        research: this.research,
+        research: this.backendTools.research,
         advisor: this.advisor,
         files: this.files,
       }),
