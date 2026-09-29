@@ -7,6 +7,7 @@ import type { ChatService } from './chat-service';
 import type { ConfigurationService, RuntimeConfiguration } from './configuration-service';
 import type { ConversationSessionService } from './conversation-session-service';
 import type { SessionControlPort } from './session-control.types';
+import type { ChatAttachment } from '../core/chat-attachment';
 import type { ExtensionState } from '../core/extension-state';
 import type { ModelCatalogEntry, ResolvedModelSelection } from '../core/model-catalog';
 
@@ -49,6 +50,23 @@ function queuedAgentModelLabel(
 
 export class AgentWorkflowService {
   constructor(private readonly dependencies: AgentWorkflowDependencies) {}
+
+  /**
+   * Uploads the request's attachments and hands back the lease.
+   *
+   * Exposed because the Runtime V2 path drives its own transport and needs the
+   * file ids before the run starts, while still owing the same accept-or-roll
+   * back. Attachments used to force every request onto the legacy path for
+   * want of this; the run start now carries `fileIds`, so a file no longer
+   * costs the user the agent.
+   */
+  async acquireAttachments(
+    attachments: ChatAttachment[],
+    signal: AbortSignal,
+    requestId: string,
+  ): Promise<AttachmentLease> {
+    return this.dependencies.attachments.acquire(attachments, signal, requestId);
+  }
 
   async snapshot(input: AgentWorkflowInput): Promise<QueuedAgentWorkflowInput> {
     const admission = input.admission ?? this.dependencies.captureAdmission();

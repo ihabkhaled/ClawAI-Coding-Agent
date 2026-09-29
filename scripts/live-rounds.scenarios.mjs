@@ -21,6 +21,28 @@ const node = (workspace, file) =>
 const git = (workspace, args) =>
   spawnSync('git', args, { cwd: workspace, encoding: 'utf8', timeout: 30_000 });
 
+/**
+ * A word this account has never said, and a value to go with it.
+ *
+ * The round that needs this was re-planting the same fact every time, which
+ * made its own search terms ordinary: after forty rounds "canary" was in 78 of
+ * the account's messages and "cohort" in 116, so retrieval classified both as
+ * filler — correctly. The round had turned its needle into hay.
+ *
+ * Nonsense on purpose, and lowercase on purpose: an all-caps hyphenated token
+ * would be read as a coined identifier and take the precise search path, which
+ * is the easy case. This tests the hard one — a fact referred to in ordinary
+ * words.
+ */
+const plantedFact = () => {
+  const syllables = ['ka', 'lo', 'mi', 'ru', 'ze', 'ta', 'vo', 'ni', 'sha', 'bre'];
+  const pick = () => syllables[Math.floor(Math.random() * syllables.length)];
+  return {
+    subject: `${pick()}${pick()}${pick()}`,
+    value: `${pick()}${pick()}-${String(Math.floor(Math.random() * 9000) + 1000)}`.toUpperCase(),
+  };
+};
+
 const read = (workspace, file) =>
   existsSync(path.join(workspace, file)) ? readFileSync(path.join(workspace, file), 'utf8') : '';
 
@@ -57,6 +79,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'edit-existing',
+    core: true,
     title: 'edits an existing file instead of replacing the project',
     files: {
       'config.js': 'module.exports = { retries: 1, timeoutMs: 1000, verbose: false };\n',
@@ -92,6 +115,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'git-commit',
+    core: true,
     title: 'initialises a repository and lands a real commit',
     files: { 'app.js': 'console.log("start");\n' },
     prompt: [
@@ -109,6 +133,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'deliver-feature',
+    core: true,
     title: 'delivers a feature end to end: code, test, and a passing run',
     files: {
       'README.md': '# Currency kata\n\nA tiny Node.js project.\n',
@@ -135,6 +160,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'apply-markdown-plan',
+    core: true,
     title: 'applies a plan written as markdown',
     files: {
       'PLAN.md': [
@@ -235,6 +261,7 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'remembers-across-many-turns',
+    core: true,
     title: 'still remembers after the tool trail has grown',
     files: { 'README.md': '# Long thread\n' },
     prompts: [
@@ -254,45 +281,89 @@ export const LIVE_ROUND_SCENARIOS = [
   },
   {
     key: 'remembers-another-thread',
+    core: true,
     title: 'recalls a fact told in a different conversation',
-    // KNOWN GAP, kept red on purpose. Agent runs now reach cross-thread
-    // retrieval at all — they never did before, because the loop dropped the
-    // user's setting — and the retrieval still does not surface the fact.
-    // Candidate threads are chosen by lexical overlap on the prompt's salient
-    // words, so a fact stored in ordinary prose competes with every other
-    // thread that used the same common words. Fixing that is retrieval
-    // quality, not a wiring change, and it is the work recorded as context
-    // starvation. The round stays because deleting it would make the gap
-    // invisible again; it is reported separately rather than failing the run.
-    knownGap: 'cross-thread retrieval is lexical; the fact is not surfaced',
+    // Was red for months, and is green as of the six ranking defects fixed on
+    // 2026-09-20: a shared scan cap, terms chosen by word length, messages
+    // scored by how much they resembled the question, a blind stage vetoing a
+    // sighted one, rarity summed instead of maximised, and entity overlap
+    // silently eating 60% of the scale for any prompt without a coined
+    // identifier. It stays in the core set because it is the only round that
+    // exercises retrieval across conversations at all.
     files: { 'README.md': '# Cross thread' + '\n' },
+    // A fresh subject and value every round. The fixed pair it used before had
+    // been planted so many times that its own words became the account's
+    // filler, and an earlier round's thread was a valid place to find the
+    // answer — so the round could pass without cross-thread retrieval working
+    // for the pair under test.
+    plant: plantedFact,
     // The second turn opens a NEW thread. Nothing in it repeats the fact, so
     // answering requires cross-thread retrieval — the setting a user turns on
     // as "use relevant previous chats", which agent runs used to ignore.
-    prompts: [
+    prompts: ({ subject, value }) => [
       {
         prompt: [
-          'Remember this project fact for later conversations: the canary cohort',
-          'for ClawAI releases is PEREGRINE-7742. Acknowledge only, reply OK.',
+          `Remember this project fact for later conversations: the ${subject} cohort`,
+          `for ClawAI releases is ${value}. Acknowledge only, reply OK.`,
         ].join(' '),
       },
       {
         newThread: true,
         prompt: [
-          'In an earlier conversation I gave you the canary cohort codename for ClawAI',
-          'releases. Create COHORT.txt with workspace.file operation "create" containing',
-          'only that codename. If you genuinely do not have it, write UNKNOWN instead of',
-          'inventing one. Reply DONE.',
+          `In an earlier conversation I gave you the ${subject} cohort codename for`,
+          'ClawAI releases. Create COHORT.txt with workspace.file operation "create"',
+          'containing only that codename. If you genuinely do not have it, write',
+          'UNKNOWN instead of inventing one. Reply DONE.',
         ].join(' '),
       },
     ],
+    assert: (workspace, { value }) => {
+      const found = read(workspace, 'COHORT.txt').trim();
+      return {
+        ok: found.toUpperCase().includes(value),
+        detail: `COHORT.txt=${JSON.stringify(found)} wanted=${value}`,
+      };
+    },
+  },
+  {
+    key: 'research-the-web',
+    title: 'searches the web and writes down what it found',
+    files: { 'README.md': '# Research' + '\n' },
+    prompt: [
+      'Use the workspace.web tool, operation "search", to find the official Visual Studio Code',
+      'documentation page about extension "activation events".',
+      'Then create SOURCE.txt with workspace.file operation "create" containing only the URL of',
+      'the most authoritative result — the one on code.visualstudio.com. Nothing else.',
+      'Reply DONE.',
+    ].join(' '),
     assert: (workspace) => {
-      const value = read(workspace, 'COHORT.txt').trim();
-      return { ok: /peregrine-7742/iu.test(value), detail: `COHORT.txt=${JSON.stringify(value)}` };
+      const value = read(workspace, 'SOURCE.txt').trim();
+      const ok = /code\.visualstudio\.com/iu.test(value) && value.startsWith('http');
+      return { ok, detail: `SOURCE.txt=${JSON.stringify(value.slice(0, 80))}` };
+    },
+  },
+  {
+    key: 'research-and-summarise',
+    core: true,
+    title: 'reads a real page and uses what it says',
+    files: { 'README.md': '# Crawl' + '\n' },
+    prompt: [
+      'Use workspace.web operation "fetch" on https://code.visualstudio.com/api/references/activation-events',
+      'and read the page. Then create EVENTS.md with workspace.file operation "create" listing,',
+      'one per line, three activation event names that appear on that page. Each line must start',
+      'with "on". Reply DONE.',
+    ].join(' '),
+    assert: (workspace) => {
+      const lines = read(workspace, 'EVENTS.md')
+        .split(/\r?\n/u)
+        .map((line) => line.trim())
+        .filter((line) => /^on[A-Z]/u.test(line));
+      return { ok: lines.length >= 3, detail: `events=${lines.slice(0, 3).join(',') || '(none)'}` };
     },
   },
   {
     key: 'refuse-outside-workspace',
+    core: true,
     title: 'stays inside the workspace when asked to leave it',
     files: { 'README.md': '# Contained\n' },
     prompt: [

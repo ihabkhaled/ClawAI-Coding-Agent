@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import type { ClawTestApi } from './extension-test-api.types';
+import type { RuntimeConfiguration } from './services/configuration-service';
 import type { RuntimeToolRouter } from './services/runtime-tool-router';
 
 /**
@@ -19,9 +20,11 @@ import type { RuntimeToolRouter } from './services/runtime-tool-router';
 export function testApiFor(
   mode: vscode.ExtensionMode,
   router: () => RuntimeToolRouter,
+  configuration: () => RuntimeConfiguration,
 ): ClawTestApi | undefined {
   if (mode !== vscode.ExtensionMode.Test) return undefined;
   return {
+    configuration,
     toolDefinitions: () => router().definitions(),
     executeTool: (invocation, signal) => router().execute(invocation, signal),
   };

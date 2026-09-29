@@ -3769,3 +3769,147 @@ codename in the recall prompt, and the model dutifully echoed it — a pass that
 proved nothing. The rewrite keeps the value out of every prompt after the
 first. A round whose prompt contains its own expected answer is worse than no
 round.
+
+## 1.75.0 — a harness that does not blame the model for nginx
+
+Three sweeps in a row lost rounds to the stack rather than to any model: the
+dev containers rebuild whenever a file changes, nginx answers 502 through the
+gap, and every round in flight was recorded as a failure with a stack trace
+about `/chat-threads`. None of it said anything about an agent.
+
+The runner now waits for the backend before it starts and retries a round that
+hit a 5xx. **The probe is the part worth remembering**: it asks
+`/chat-threads`, not `/health`, because `/health` is served by a different
+service entirely and answered 200 the whole time chat-service was down. A 401
+from the chat path is a better readiness signal than a 200 from the health
+path — it proves the service that matters is up.
+
+**Also learned, the hard way.** `docker cp` into a dev container writes
+_through the bind mount_ into the host checkout. That is how a fix meant for a
+container ended up in another session's working tree, and how a stale stat
+cache later left three tracked files present in the index and absent on disk —
+which read as "main is broken" until `git checkout -- <paths>` restored them.
+Deploying to a dev container means editing the host tree, whether or not that
+was the intent.
+
+## 1.76.0 — the agent can research, and the page that proved it also broke it
+
+The ask was "the coding agent should crawl and research like chat does". The
+audit found it already could: `workspace.web` has existed with `search` and
+`fetch`, both through the research service. What had never happened was anyone
+running it.
+
+A round did, and it worked — the agent searched, picked the official
+`code.visualstudio.com` URL out of the results, fetched it, and listed
+`onLanguage`, `onCommand` and `onDebug` from the page. Then the same round
+failed on a retry with `400 Validation failed` after fourteen minutes.
+
+**The cause is a contract this repository has already been bitten by once.**
+Runtime V2 caps any single string in a tool result at 65,536 characters. The
+filesystem read carries a comment about exactly this: a large file produced a
+structurally invalid result and came back as `TOOL_OUTPUT_INVALID`, which is
+why reads are paged. The web fetch passed `page.content` straight through, so
+a long documentation page — the kind an agent is most likely to be sent to —
+killed the run that fetched it, and the error named no field.
+
+**Cut, not refused, and never silently.** A truncated page usually still
+answers the question; refusing outright sends the agent back with nothing. But
+a page cut without saying so is worse than either: the model reads it as the
+whole page and answers confidently about content that was never there. The
+notice tells it what happened and what to do instead.
+
+**What this says about the rest of the tool surface.** The same contract
+applies to every tool that returns text it did not generate. Two have now been
+caught by it. The others have not been run.
+
+## 1.77.0 — the fallback that hid the missing feature
+
+The ask was "give the agent an image or a file to analyse". The audit said
+attachments were wired: the extension has attachment preparation, a lease, an
+upload path. Testing said otherwise, and the reason was three layers down.
+
+`run-queued-agent.ts` opened with a comment stating it plainly: _"Attachments
+and research mode force the legacy path. Runtime V2 has no carrier for either,
+so sending them down it would silently drop what the user attached."_ The
+workaround was honest, documented, and cost the user the entire agent. Attach a
+file and the request went to the legacy chat path — no tools, no runtime loop.
+
+**The carrier is four small pieces, and none of them is where the bug looked.**
+`runtimeStartSchema` gains an optional `fileIds`; the run service writes it to
+`metadata.fileIds` on the user message it creates, which is where the context
+assembler already looks; the extension's studio input carries it; and the
+queued runner acquires the lease before the run instead of handing the whole
+request to the legacy path.
+
+**The lease is the part to get right.** Files are uploaded before the run
+starts, because the run start needs their ids. So the upload is a transaction:
+accepted only once the run settles without throwing, rolled back otherwise. A
+run that fails after uploading would otherwise leave the user's file stranded
+on the server with nothing referencing it.
+
+**What this says about the audit.** "Wired" was true at every layer except the
+one that mattered, and the layer that mattered documented its own gap in a
+comment nobody had read in months. Grep for the feature, find it, and conclude
+it works — that is the third time this program has made that mistake.
+
+## 1.78.0 — probing twenty-five tools, and what a good refusal looks like
+
+Twenty-six runtime tools carried an inventory row saying NOT RUN and a unit
+test each. That pair is honest and useless together: a unit test proves the
+code does what it was written to do, and says nothing about whether the tool is
+registered, reachable, or handed a target it recognises. Three features in a
+row had been wired everywhere except the layer that mattered.
+
+**The probe came first, as it did for the views.** Guessing an executor's
+argument names from its schema and being wrong reads exactly like the executor
+being broken, so a throwaway pass called each tool's most harmless operation
+and printed what came back. Nine answered immediately. Eight refused with a zod
+error — and once the probe printed the issue _paths_ instead of the raw JSON,
+every one of those named the exact argument it wanted. That is not eight broken
+tools; it is eight tools enforcing their contracts, which the probe could only
+see after it stopped printing a wall of braces.
+
+**Two refusals were promoted to assertions.** `workspace.scan` answers a
+missing SARIF file with `imported: false` and a reason, rather than throwing —
+the reason is what lets an agent correct itself instead of retrying. And
+`workspace.database` refuses `target:workspace` outright, which is the check
+that keeps a database tool off the filesystem.
+
+**One row was wrong rather than unproven.** `runtime.board` is not in the main
+catalogue at all; it is registered only for sub-agents. The probe reported it
+`NOT-REGISTERED`, which looked like a bug for about a minute. It is recorded
+BLOCKED with the reason, because NOT RUN reads like an omission and this is a
+deliberate scope.
+
+Runtime tools NOT RUN: 26 → 14. The remainder need a running container, a live
+process, a browser or a sub-agent, and each will take a fixture rather than a
+call.
+
+## 1.79.0 — a setting nothing reads looks exactly like one that works
+
+Twenty-four settings carried the same inventory note: schema and read path
+verified, behaviour not exercised. That note is precise and it is not evidence.
+Reading the manifest proves a default exists; only asking the extension what it
+resolved proves the value is consumed. The failure mode is invisible by
+construction — a setting that is contributed, documented and read by nothing
+renders in the settings UI exactly like one that works.
+
+The test API grew a `configuration()` reader, and the host lane now writes each
+setting into a real editor and asks the extension what it resolved.
+
+**Two assertions are worth more than the other nineteen.**
+`backendEnvironment: CUSTOM` must actually redirect `backendUrl` — it is the
+one setting a user can get wrong and go on silently talking to the wrong host.
+And `hooks` must be _parsed_ rather than stored: a malformed entry that
+survives into the run loop is a crash at the worst possible moment.
+
+**Scope was the interesting failure.** Writing `requestTimeoutMs` at workspace
+scope is refused by VS Code outright: it is `machine` scope, along with every
+connection setting. That looked like a test problem for a minute and is
+actually a security property — a repository must not be able to point a user's
+agent at a different backend by committing a settings file. The test now writes
+each setting at the scope it declares, and the split is recorded rather than
+worked around.
+
+Inventory: 97 PASS, 17 NOT RUN, 2 BLOCKED. The remaining seventeen need a
+container, a live process, a browser or a sub-agent.

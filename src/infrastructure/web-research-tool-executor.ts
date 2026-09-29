@@ -1,5 +1,11 @@
+import { MAX_RUNTIME_JSON_STRING_LENGTH } from '../core/runtime/runtime-json-value';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 import { assertFetchableUrl, webFetchSchema, webSearchSchema } from '../core/web-research';
+
+import {
+  WEB_FETCH_CONTENT_MARGIN_CHARACTERS,
+  WEB_FETCH_TRUNCATION_NOTICE,
+} from './web-research-tool-executor.constants';
 
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
@@ -64,15 +70,39 @@ export class WebResearchToolExecutor implements RuntimeToolExecutorPort {
     // in front of it.
     const url = assertFetchableUrl(input.url);
     const page = await this.research.fetch({ ...input, url: url.toString() }, signal);
+    const bounded = boundPageContent(page.content);
     return {
       structured: {
         url: page.url,
         finalUrl: page.finalUrl,
         httpStatus: page.httpStatus,
         title: page.title ?? null,
-        content: page.content,
+        content: bounded.content,
+        truncated: bounded.truncated,
         untrusted: true,
       },
     };
   }
+}
+
+/**
+ * A page short enough to survive the Runtime V2 JSON contract.
+ *
+ * Any single string in a tool result is capped at
+ * `MAX_RUNTIME_JSON_STRING_LENGTH`. An unbounded page therefore came back as
+ * `400 Validation failed` — the run died and the message named no field. A
+ * live round hit it on the VS Code activation-events page, which is exactly
+ * the sort of page an agent is sent to.
+ *
+ * Cut rather than refused, with a notice the model can act on: a truncated
+ * page usually still answers the question, and refusing outright would send
+ * the agent back with nothing.
+ */
+function boundPageContent(content: string): { content: string; truncated: boolean } {
+  const ceiling = MAX_RUNTIME_JSON_STRING_LENGTH - WEB_FETCH_CONTENT_MARGIN_CHARACTERS;
+  if (content.length <= ceiling) return { content, truncated: false };
+  return {
+    content: `${content.slice(0, ceiling - WEB_FETCH_TRUNCATION_NOTICE.length)}${WEB_FETCH_TRUNCATION_NOTICE}`,
+    truncated: true,
+  };
 }

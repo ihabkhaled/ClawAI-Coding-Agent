@@ -5,10 +5,13 @@ import { mkdirSync, mkdtempSync, readFileSync, readdirSync, writeFileSync } from
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { env, stdout } from 'node:process';
+import { setTimeout as delay } from 'node:timers/promises';
 import { URL, URLSearchParams } from 'node:url';
 import { TextDecoder } from 'node:util';
 
 import {
+  BACKEND_READY_POLL_MS,
+  BACKEND_READY_TIMEOUT_MS,
   LIVE_COMMAND_TIMEOUT_MS,
   TOKEN_ASSUMED_LIFETIME_MS,
   TOKEN_REFRESH_MARGIN_MS,
@@ -155,6 +158,41 @@ function expiryOf(token) {
   }
 }
 
+/**
+ * Waits until the backend answers, rather than recording its restart.
+ *
+ * The development stack rebuilds whenever a source file changes and serves 502
+ * while it does. Rounds run against it recorded those as model failures — a
+ * whole sweep once lost fifteen rounds to a restart, and none of them said
+ * anything about any model. Returns whether the backend came back.
+ */
+export async function waitForBackend() {
+  const deadline = Date.now() + BACKEND_READY_TIMEOUT_MS;
+  let announced = false;
+  while (Date.now() < deadline) {
+    try {
+      // The chat endpoint, not /health: that path is served by a different
+      // service, so it answered 200 while chat-service was still rebuilding
+      // and the wait returned immediately into another 502. A 401 is the
+      // right answer here — it proves the service is up and refusing an
+      // unauthenticated call.
+      const response = await fetch(`${BASE}/chat-threads`);
+      if (response.status !== 502 && response.status !== 503 && response.status !== 504) {
+        if (announced) say('backend is back');
+        return true;
+      }
+    } catch {
+      // Connection refused is the same condition as a 502 here: not ready.
+    }
+    if (!announced) {
+      say('waiting for the backend to come back...');
+      announced = true;
+    }
+    await delay(BACKEND_READY_POLL_MS);
+  }
+  return false;
+}
+
 /** A scratch project, with whatever seed files the scenario needs. */
 export function createWorkspace(files = {}) {
   const workspace = mkdtempSync(path.join(tmpdir(), 'clawai-live-'));
@@ -173,6 +211,15 @@ export function createWorkspace(files = {}) {
  * another and a shared workspace would let one scenario's files satisfy the
  * next one's assertion.
  */
+/**
+ * The longest page a tool result may carry.
+ *
+ * Runtime V2 caps any single string at 65,536 characters; the margin leaves
+ * room for the surrounding JSON so a page that is only just too long does not
+ * fail on the envelope instead.
+ */
+const WEB_FETCH_CONTENT_CEILING = 60_000;
+
 export function toolExecutor(workspace) {
   /** Refuses any path that would leave the scratch workspace. */
   const resolveInside = (relative) => {
@@ -267,8 +314,54 @@ export function toolExecutor(workspace) {
     };
   };
 
-  return (toolName, operation, args) =>
-    toolName === 'workspace.command' ? runCommandTool(args) : runFileTool(operation, args);
+  /**
+   * The web tool goes through the research service, exactly as the extension's
+   * does: the provider credentials live there, and a client that searched
+   * directly would be a client holding a search key.
+   */
+  const runWebTool = async (operation, args, token) => {
+    if (operation === 'search') {
+      return api(
+        '/research/search',
+        {
+          method: 'POST',
+          body: JSON.stringify({ query: args.query, maxResults: args.maxResults ?? 5 }),
+        },
+        token,
+      );
+    }
+    if (operation === 'fetch') {
+      const page = await api(
+        '/research/fetch',
+        { method: 'POST', body: JSON.stringify({ url: args.url }) },
+        token,
+      );
+      // Reshaped and bounded exactly as the extension does, because a harness
+      // that posts a different payload tests a different product. Returning
+      // the research service's response verbatim sent `rawHtml` — a whole page
+      // of it — and every fetch round died on `400 Validation failed`, which
+      // reads as a product defect and is not one. Runtime V2 caps any single
+      // string in a tool result at 65,536 characters.
+      const content = String(page.content ?? '');
+      const truncated = content.length > WEB_FETCH_CONTENT_CEILING;
+      return {
+        url: page.url,
+        finalUrl: page.finalUrl,
+        httpStatus: page.httpStatus,
+        title: page.title ?? null,
+        content: truncated ? content.slice(0, WEB_FETCH_CONTENT_CEILING) : content,
+        truncated,
+        untrusted: true,
+      };
+    }
+    throw new Error(`Unsupported web operation ${operation}`);
+  };
+
+  return (toolName, operation, args, token) => {
+    if (toolName === 'workspace.command') return runCommandTool(args);
+    if (toolName === 'workspace.web') return runWebTool(operation, args, token);
+    return runFileTool(operation, args);
+  };
 }
 
 /** Builds the result the backend will verify, including the receipt it hashes. */
@@ -413,7 +506,7 @@ export async function runScenario(options) {
         let structured;
         let failure;
         try {
-          structured = execute(event.payload.toolName, event.payload.operation, args);
+          structured = await execute(event.payload.toolName, event.payload.operation, args, token);
         } catch (error) {
           failure = {
             code: 'TOOL_FAILED',
