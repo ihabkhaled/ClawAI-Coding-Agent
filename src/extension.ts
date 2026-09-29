@@ -5,6 +5,7 @@ import extensionPackage from '../package.json';
 import { contextModeForCommand } from './core/command-context';
 import { ExtensionState } from './core/extension-state';
 import { ExternalOutputGrantStore } from './core/external-output-grants';
+import { sanitizeRememberedColumn } from './core/panel-placement';
 import { createRuntimeSnapshot } from './core/runtime/runtime-event-reducer';
 import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
@@ -23,6 +24,7 @@ import { attachTerminalOutput } from './services/attach-terminal-command';
 import { ConfigurationService } from './services/configuration-service';
 import { ContextFreshnessTracker } from './services/context-freshness-tracker';
 import { ClawaiUriHandler } from './services/deep-link-handler';
+import { reportDictationUnavailable } from './services/dictation-fallback-command';
 import { ExternalOutputGrantService } from './services/external-output-grant-service';
 import { toggleFastMode } from './services/fast-mode-command';
 import { GlobalContextService } from './services/global-context-service';
@@ -116,6 +118,8 @@ function registerCommands(
     ['clawAI.sendFeedback', () => coordinator.commands.sendFeedback()],
     ['clawAI.searchRunHistory', () => coordinator.commands.searchRunHistory()],
     ['clawAI.showUsage', () => coordinator.commands.showUsage()],
+    ['clawAI.manageScheduledTasks', () => coordinator.automation.manageScheduledTasks()],
+    ['clawAI.runSavedWorkflow', () => coordinator.automation.runSavedWorkflow()],
     ['clawAI.createCheckpoint', () => coordinator.commands.createCheckpoint()],
     ['clawAI.restoreCheckpoint', () => coordinator.commands.restoreCheckpoint()],
     ['clawAI.askSideQuestion', () => coordinator.commands.askSideQuestion()],
@@ -160,6 +164,8 @@ function registerChatParticipant(
  * only be able to break the undo.
  */
 const FAST_MODE_MEMORY_KEY = 'clawAI.fastMode.previous';
+
+const CHAT_COLUMN_KEY = 'clawAI.chatEditorColumn';
 
 export function activate(context: vscode.ExtensionContext): ClawTestApi | undefined {
   const connectionConfiguration = new ConfigurationService();
@@ -237,68 +243,85 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
     context,
     workspaceScope,
   );
+  // Only a trusted workspace may start runs by itself.
+  if (vscode.workspace.isTrusted) {
+    void coordinator.startScheduler().catch((error: unknown) => {
+      logger.error(`Scheduler failed to start: ${String(error)}`);
+    });
+  }
   const mentions = new MentionSuggestionService(
     new VscodeMentionIndex(),
     workspaceSkillCatalog(context.globalStorageUri, workspaceScope),
   );
-  const chatView = new ChatViewProvider(context.extensionUri, state, {
-    agent: (input) => coordinator.runAgent(input),
-    cancel: (requestId) => coordinator.cancel(requestId),
-    conversationTokens: (threadId, tokens) => coordinator.conversationTokens(threadId, tokens),
-    dropUris: (uriList, shiftKey) => coordinator.dropUris(uriList, shiftKey),
-    captureAdmission: (threadId) => coordinator.captureAdmission(threadId),
-    compare: (input) => coordinator.compare(input),
-    configureConnections: async (profile) => {
-      await connectionConfiguration.saveConnectionProfile(profile);
-      await coordinator.configurationChanged();
+  const chatView = new ChatViewProvider(
+    context.extensionUri,
+    state,
+    {
+      agent: (input) => coordinator.runAgent(input),
+      cancel: (requestId) => coordinator.cancel(requestId),
+      conversationTokens: (threadId, tokens) => coordinator.conversationTokens(threadId, tokens),
+      dropUris: (uriList, shiftKey) => coordinator.dropUris(uriList, shiftKey),
+      dictationUnavailable: (code) => reportDictationUnavailable(code),
+      captureAdmission: (threadId) => coordinator.captureAdmission(threadId),
+      compare: (input) => coordinator.compare(input),
+      configureConnections: async (profile) => {
+        await connectionConfiguration.saveConnectionProfile(profile);
+        await coordinator.configurationChanged();
+      },
+      connect: async (profile) => {
+        const updated = await connectionConfiguration.saveConnectionProfile(profile);
+        await coordinator.configurationChanged();
+        await coordinator.connect(updated.backendUrl);
+      },
+      configureLanguage: async () => {
+        await vscode.commands.executeCommand('workbench.action.configureLocale');
+      },
+      logout: () => coordinator.logout(),
+      mentionSuggestions: (text, caretIndex) => mentions.suggest(text, caretIndex),
+      manageExternalOutputFolders: () => externalOutputGrants.manage(),
+      openThread: (input) => coordinator.openThread(input),
+      openFolder: async () => {
+        await vscode.commands.executeCommand('workbench.action.files.openFolder');
+      },
+      refreshModels: () => coordinator.commands.refreshModels(),
+      reviewChanges: async (previewId) => {
+        const available = await diffPreview.show(previewId);
+        if (!available) {
+          await chatView.postNotice(vscode.l10n.t('No ClawAI file changes are ready to review.'));
+        }
+      },
+      removeQueued: (requestId) => {
+        coordinator.removeQueued(requestId);
+        return Promise.resolve();
+      },
+      resolveApproval: (requestId, approved) => {
+        coordinator.interruptions.resolveApproval(requestId, approved);
+        return Promise.resolve();
+      },
+      answerQuestion: (requestId, selection) => {
+        coordinator.interruptions.answerQuestion(requestId, selection);
+      },
+      runtimePause: () => coordinator.runtimeControl('pause'),
+      runtimeResume: () => coordinator.runtimeControl('resume'),
+      runtimeSteer: (message) => coordinator.runtimeSteer(message),
+      runtimeStop: () => coordinator.cancel(),
+      undo: () => coordinator.commands.undoLastEdit(),
+      selectAgentMode: (mode) => coordinator.sessionControls.selectAgentMode(mode),
+      selectViewDensity: (density) => coordinator.sessionControls.selectViewDensity(density),
+      selectEffortMode: (mode) => coordinator.sessionControls.selectEffortMode(mode),
+      selectSpeedMode: (mode) => coordinator.sessionControls.selectSpeedMode(mode),
+      selectModel: (modelKey) => coordinator.commands.selectModel(modelKey),
+      selectPermissionMode: (mode) => coordinator.sessionControls.selectPermissionMode(mode),
+      selectWorkspaceFolder: (folderKey) => coordinator.selectWorkspaceFolder(folderKey),
+      send: (input) => coordinator.send(input),
     },
-    connect: async (profile) => {
-      const updated = await connectionConfiguration.saveConnectionProfile(profile);
-      await coordinator.configurationChanged();
-      await coordinator.connect(updated.backendUrl);
+    {
+      get: () => sanitizeRememberedColumn(context.globalState.get<number>(CHAT_COLUMN_KEY)),
+      remember: (column) => {
+        void context.globalState.update(CHAT_COLUMN_KEY, column);
+      },
     },
-    configureLanguage: async () => {
-      await vscode.commands.executeCommand('workbench.action.configureLocale');
-    },
-    logout: () => coordinator.logout(),
-    mentionSuggestions: (text, caretIndex) => mentions.suggest(text, caretIndex),
-    manageExternalOutputFolders: () => externalOutputGrants.manage(),
-    openThread: (input) => coordinator.openThread(input),
-    openFolder: async () => {
-      await vscode.commands.executeCommand('workbench.action.files.openFolder');
-    },
-    refreshModels: () => coordinator.commands.refreshModels(),
-    reviewChanges: async (previewId) => {
-      const available = await diffPreview.show(previewId);
-      if (!available) {
-        await chatView.postNotice(vscode.l10n.t('No ClawAI file changes are ready to review.'));
-      }
-    },
-    removeQueued: (requestId) => {
-      coordinator.removeQueued(requestId);
-      return Promise.resolve();
-    },
-    resolveApproval: (requestId, approved) => {
-      coordinator.interruptions.resolveApproval(requestId, approved);
-      return Promise.resolve();
-    },
-    answerQuestion: (requestId, selection) => {
-      coordinator.interruptions.answerQuestion(requestId, selection);
-    },
-    runtimePause: () => coordinator.runtimeControl('pause'),
-    runtimeResume: () => coordinator.runtimeControl('resume'),
-    runtimeSteer: (message) => coordinator.runtimeSteer(message),
-    runtimeStop: () => coordinator.cancel(),
-    undo: () => coordinator.commands.undoLastEdit(),
-    selectAgentMode: (mode) => coordinator.sessionControls.selectAgentMode(mode),
-    selectViewDensity: (density) => coordinator.sessionControls.selectViewDensity(density),
-    selectEffortMode: (mode) => coordinator.sessionControls.selectEffortMode(mode),
-    selectSpeedMode: (mode) => coordinator.sessionControls.selectSpeedMode(mode),
-    selectModel: (modelKey) => coordinator.commands.selectModel(modelKey),
-    selectPermissionMode: (mode) => coordinator.sessionControls.selectPermissionMode(mode),
-    selectWorkspaceFolder: (folderKey) => coordinator.selectWorkspaceFolder(folderKey),
-    send: (input) => coordinator.send(input),
-  });
+  );
   coordinator.attachView(chatView);
 
   const setupTree = new StateTreeProvider('setup', state);
@@ -470,6 +493,10 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
         },
       ),
     ),
+    vscode.commands.registerCommand('clawAI.moveChatToSecondarySideBar', async () => {
+      await vscode.commands.executeCommand('clawAI.chat.focus');
+      await vscode.commands.executeCommand('workbench.action.moveFocusedView');
+    }),
     vscode.commands.registerCommand('clawAI.reopenClosedChat', async () => {
       const sessionId = await chatView.reopenClosedSession();
       if (sessionId === undefined) {

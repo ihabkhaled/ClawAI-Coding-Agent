@@ -51,7 +51,7 @@ const sources = sourceText();
  */
 describe('contributed commands', () => {
   it('contributes the command surface the package audit counts', () => {
-    expect(commands.length).toBe(43);
+    expect(commands.length).toBe(46);
   });
 
   it('names every command under the extension prefix', () => {

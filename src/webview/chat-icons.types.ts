@@ -4,6 +4,7 @@ export type ClawIconName =
   | 'close'
   | 'explain'
   | 'globe'
+  | 'mic'
   | 'more'
   | 'plan'
   | 'plus'

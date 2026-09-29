@@ -16,6 +16,7 @@ import { type ChatViewProvider } from '../webview/chat-view-provider';
 
 import { AgentConnectionService } from './agent-connection-service';
 import { collectAgentContext } from './agent-context-service';
+import { coordinatorAutomation } from './agent-coordinator-automation';
 import { AgentCoordinatorBoundaries } from './agent-coordinator-boundaries';
 import { coordinatorCommands } from './agent-coordinator-commands';
 import { coordinatorInterruptions } from './agent-coordinator-interruptions';
@@ -455,6 +456,17 @@ export class AgentCoordinator implements vscode.Disposable {
 
   runEditWorkflow = (kind: WorkflowKind, contextMode: ContextMode): Promise<void> =>
     this.workflowActions.runEdit(kind, contextMode);
+
+  private readonly automationWiring = coordinatorAutomation({
+    studio: () => this.runtimeStudio,
+    runAgent: (input) => this.runAgent(input),
+  });
+
+  /** Scheduled runs and saved workflows. Starting the schedule is `startScheduler`. */
+  readonly automation = this.automationWiring.automation;
+
+  /** Begins waiting on the saved schedule; see `coordinatorAutomation`. */
+  startScheduler = (): Promise<void> => this.automationWiring.startScheduler();
 
   readonly commands = coordinatorCommands({
     connection: () => this.connection,

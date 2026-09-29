@@ -1,6 +1,8 @@
 import { EMPTY_BOARD } from '../core/agent-board';
+import { EMPTY_MAILBOX } from '../core/agent-mailbox';
 
 import type { AgentBoard } from '../core/agent-board.types';
+import type { AgentMailbox } from '../core/agent-mailbox.types';
 import type { AgentRunSnapshot } from '../core/agent-run';
 import type { ExtensionSnapshot } from '../core/extension-state';
 import type { RunGoal } from '../core/run-goal.types';
@@ -22,6 +24,7 @@ import type { ParentRunContext } from '../core/sub-agent-inheritance.types';
  */
 export class RunScopedContext {
   private boardValue: AgentBoard = EMPTY_BOARD;
+  private mailboxValue: AgentMailbox = EMPTY_MAILBOX;
   private goalValue: RunGoal | undefined;
 
   board(): AgentBoard {
@@ -54,6 +57,20 @@ export class RunScopedContext {
     };
   }
 
+  /**
+   * The mailbox as a port, for the same reason as the board: every read and
+   * write goes through this object, so a workspace change that clears it clears
+   * it for every holder at once.
+   */
+  mailboxPort(): { read: () => AgentMailbox; write: (mailbox: AgentMailbox) => void } {
+    return {
+      read: () => this.mailboxValue,
+      write: (mailbox) => {
+        this.mailboxValue = mailbox;
+      },
+    };
+  }
+
   goalPort(): { read: () => RunGoal | undefined; write: (goal: RunGoal) => void } {
     return {
       read: () => this.goalValue,
@@ -65,6 +82,7 @@ export class RunScopedContext {
 
   clear(): void {
     this.boardValue = EMPTY_BOARD;
+    this.mailboxValue = EMPTY_MAILBOX;
     this.goalValue = undefined;
   }
 }

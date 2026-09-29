@@ -47,6 +47,13 @@ function classify(
     return { effect: 'elevation', risk: 'R4', reversible: false };
   if (invocation.toolName === 'runtime.integration' || invocation.toolName === 'runtime.flagship')
     return { effect: 'local-mutation', risk: 'R3', reversible: false };
+  if (invocation.toolName === 'runtime.schedule' && invocation.operation === 'create')
+    return { effect: 'local-mutation', risk: 'R3', reversible: false };
+  if (
+    invocation.toolName === 'runtime.worktree' &&
+    (invocation.operation === 'enter' || invocation.operation === 'exit')
+  )
+    return { effect: 'local-mutation', risk: 'R3', reversible: false };
   if (invocation.toolName === 'workspace.git') return classifyGit(invocation.operation);
   if (invocation.toolName === 'workspace.files') return classifyFiles(invocation.operation);
   return classifyOperation(invocation, operation);

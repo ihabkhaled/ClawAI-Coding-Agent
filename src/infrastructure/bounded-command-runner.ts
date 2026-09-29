@@ -131,6 +131,37 @@ function shellArguments(specification: CommandSpec): readonly string[] {
   return ['-c', shell.command];
 }
 
+export interface BackgroundLaunchPlan {
+  readonly executablePath: string;
+  readonly arguments: readonly string[];
+  readonly environment: Readonly<Record<string, string>>;
+}
+
+/**
+ * What the process supervisor needs to start a command in the background.
+ *
+ * Resolved here rather than in the executor so a backgrounded command gets the
+ * same allowlisted environment, the same PATH-snapshot executable lookup and the
+ * same shell-dialect argv as one run in the foreground.
+ */
+export async function prepareBackgroundLaunch(candidate: unknown): Promise<BackgroundLaunchPlan> {
+  const specification = commandSpecSchema.parse(candidate);
+  if (specification.elevation) throw new Error('ELEVATION_NOT_AVAILABLE');
+  if (specification.stdin !== undefined)
+    throw new Error('A background command cannot take stdin; use workspace.process write.');
+  const environment = boundedEnvironment(specification.environment);
+  const executablePath = await resolveExecutable(specification.executable, environment);
+  const defined: Record<string, string> = {};
+  for (const [key, value] of Object.entries(environment)) {
+    if (value !== undefined) defined[key] = value;
+  }
+  return {
+    executablePath,
+    arguments: shellArguments(specification),
+    environment: defined,
+  };
+}
+
 export async function runCommandSpec(
   candidate: unknown,
   cwd: string,

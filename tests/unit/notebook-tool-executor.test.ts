@@ -54,6 +54,8 @@ describe('NotebookToolExecutor', () => {
       'insert-cell',
       'replace-cell',
       'delete-cell',
+      'run-cell',
+      'run-all',
     ]);
   });
 
@@ -125,7 +127,12 @@ describe('NotebookToolExecutor', () => {
   it('refuses an operation it does not advertise', async () => {
     await expect(
       executor().subject.execute(
-        invocation('run-cell', { rootKey: 'workspace', path: 'a.ipynb', index: 0, source: 'x' }),
+        invocation('teleport-cell', {
+          rootKey: 'workspace',
+          path: 'a.ipynb',
+          index: 0,
+          source: 'x',
+        }),
       ),
     ).rejects.toThrow(/Unknown notebook operation/u);
   });

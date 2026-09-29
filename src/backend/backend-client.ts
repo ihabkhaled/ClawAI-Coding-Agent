@@ -249,6 +249,10 @@ export class BackendClient {
   readonly researchPost: ResearchRequester = (path, schema, options) =>
     this.request(path, schema, options);
 
+  /** POST seam for publishing a scrubbed file as a hosted page. See `artifact-client`. */
+  readonly artifactPost: ResearchRequester = (path, schema, options) =>
+    this.request(path, schema, options);
+
   /** POST seam for file-service reads that store nothing. See `pdf-text-client`. */
   readonly filesPost: ResearchRequester = (path, schema, options) =>
     this.request(path, schema, options);

@@ -3,12 +3,16 @@ import { mkdir, readFile, writeFile } from 'node:fs/promises';
 import { dirname, isAbsolute, join, relative, resolve } from 'node:path';
 
 import {
+  boundObservedElements,
   hashBrowserArtifact,
+  type ObservedElement,
   type BrowserLocator,
   type BrowserOperation,
   type BrowserScope,
 } from '../core/browser-operation';
 import { redactText } from '../core/redaction';
+
+import { PAGE_ACTION_HANDLERS } from './playwright-page-actions.constants';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type {
@@ -160,7 +164,11 @@ export class PlaywrightBrowserDriver implements BrowserDriverPort {
       const locator = this.locator(page, operation.locator);
       return this.result(session, page, { count: await locator.count() });
     }
+    if (operation.operation === 'observe') return this.observe(session, page, operation);
     const actionOperations = new Set([
+      'click-at',
+      'type-text',
+      'scroll',
       'click',
       'fill',
       'select',
@@ -182,23 +190,15 @@ export class PlaywrightBrowserDriver implements BrowserDriverPort {
     operation: BrowserOperation,
     timeout: number,
   ): Promise<void> {
-    if (operation.operation === 'click')
-      await this.locator(page, operation.locator).click({ timeout });
-    else if (operation.operation === 'fill')
-      await this.locator(page, operation.locator).fill(operation.value ?? '', { timeout });
-    else if (operation.operation === 'select')
-      await this.locator(page, operation.locator).selectOption(operation.values ?? [], { timeout });
-    else if (operation.operation === 'keyboard')
-      await page.keyboard.press(operation.value ?? '', { delay: 0 });
-    else if (operation.operation === 'hover')
-      await this.locator(page, operation.locator).hover({ timeout });
-    else if (operation.operation === 'drag')
-      await this.locator(page, operation.locator).dragTo(
-        this.locator(page, operation.targetLocator),
-        { timeout },
-      );
-    else if (operation.operation === 'upload') await this.upload(page, operation);
-    else throw new Error('Unsupported browser action');
+    const handler = PAGE_ACTION_HANDLERS[operation.operation];
+    if (handler === undefined) throw new Error('Unsupported browser action');
+    await handler({
+      page,
+      operation,
+      timeout,
+      locate: (locator) => this.locator(page, locator),
+      upload: () => this.upload(page, operation),
+    });
   }
 
   private async executePageObservation(
@@ -273,6 +273,49 @@ export class PlaywrightBrowserDriver implements BrowserDriverPort {
       session,
       page,
       { suggestedFilename: download.suggestedFilename() },
+      artifactPath.relative,
+      hashBrowserArtifact(bytes),
+    );
+  }
+
+  /**
+   * The screen-understanding step of the coordinate loop: a screenshot saved as
+   * a hashed artifact, plus the visible interactive elements with their boxes
+   * so a model can pick a point for `click-at`. Page scoped, not desktop wide.
+   */
+  private async observe(
+    session: BrowserSession,
+    page: Page,
+    operation: BrowserOperation,
+  ): Promise<BrowserDriverResult> {
+    const viewport = page.viewportSize();
+    if (viewport === null) throw new Error('Browser viewport is unavailable');
+    const artifactPath = this.artifactPath(operation);
+    const bytes = await page.screenshot({ fullPage: false, type: 'png' });
+    await mkdir(dirname(artifactPath.absolute), { recursive: true });
+    await writeFile(artifactPath.absolute, bytes);
+    const raw: ObservedElement[] = await page.locator('body').evaluate((body) =>
+      [...body.querySelectorAll('a[href],button,input,select,textarea,[role]')].map((element) => {
+        const box = element.getBoundingClientRect();
+        return {
+          role: element.getAttribute('role') ?? element.tagName.toLowerCase(),
+          name: (element.getAttribute('aria-label') ?? element.textContent).trim(),
+          x: box.x,
+          y: box.y,
+          width: box.width,
+          height: box.height,
+        };
+      }),
+    );
+    return this.result(
+      session,
+      page,
+      {
+        observed: true,
+        scope: 'browser-page',
+        viewport,
+        elements: boundObservedElements(raw, viewport, redactText),
+      },
       artifactPath.relative,
       hashBrowserArtifact(bytes),
     );

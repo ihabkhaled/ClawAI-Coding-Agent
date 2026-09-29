@@ -30,6 +30,7 @@ const elements = {
   attachmentList: byId('attachmentList'),
   attachmentStatus: byId('attachmentStatus'),
   attachmentTray: byId('attachmentTray'),
+  voiceButton: byId('voiceButton'),
   backendDot: byId('backendDot'),
   backendLabel: byId('backendLabel'),
   backendUrlInput: byId('backendUrlInput'),
@@ -2112,6 +2113,91 @@ function revokePreview(attachment) {
   }
 }
 
+// Order is meaningful: the request carries file IDs in this order, and "compare
+// the first with the second" only works if the user can say which is which.
+const ATTACHMENT_DRAG_TYPE = 'application/x-claw-attachment';
+
+function reorderAttachment(clientId, targetIndex) {
+  const from = composerAttachments.findIndex((candidate) => candidate.clientId === clientId);
+  const to = Math.max(0, Math.min(composerAttachments.length - 1, targetIndex));
+  if (from < 0 || from === to) {
+    return -1;
+  }
+  const [moved] = composerAttachments.splice(from, 1);
+  composerAttachments.splice(to, 0, moved);
+  return to;
+}
+
+function announceAttachmentMove(attachment, position) {
+  elements.announcer.textContent = labels.attachmentMoved
+    .replace('{0}', attachment.filename)
+    .replace('{1}', String(position + 1))
+    .replace('{2}', String(composerAttachments.length));
+}
+
+function attachmentMoveButton(attachment, step, label, glyph) {
+  const button = textElement('button', 'attachment-move', glyph);
+  button.type = 'button';
+  button.setAttribute('aria-label', `${label} ${attachment.filename}`);
+  const index = composerAttachments.findIndex(
+    (candidate) => candidate.clientId === attachment.clientId,
+  );
+  const target = index + step;
+  button.disabled = target < 0 || target >= composerAttachments.length;
+  button.addEventListener('click', () => {
+    const moved = reorderAttachment(attachment.clientId, target);
+    if (moved < 0) {
+      return;
+    }
+    renderAttachments();
+    announceAttachmentMove(attachment, moved);
+    // The list was rebuilt, so put focus back on the same control: a keyboard
+    // user pressing "later" repeatedly must not be thrown out to the composer.
+    const chips = [...elements.attachmentList.querySelectorAll('.attachment-chip')];
+    const buttons = chips[moved]?.querySelectorAll('.attachment-move');
+    const preferred = step < 0 ? buttons?.[0] : buttons?.[1];
+    const fallback = step < 0 ? buttons?.[1] : buttons?.[0];
+    (preferred?.disabled === false ? preferred : fallback)?.focus();
+  });
+  return button;
+}
+
+function makeAttachmentDraggable(item, attachment) {
+  item.draggable = true;
+  item.addEventListener('dragstart', (event) => {
+    event.dataTransfer?.setData(ATTACHMENT_DRAG_TYPE, attachment.clientId);
+    if (event.dataTransfer) {
+      event.dataTransfer.effectAllowed = 'move';
+    }
+    item.classList.add('dragging-attachment');
+  });
+  item.addEventListener('dragend', () => {
+    item.classList.remove('dragging-attachment');
+  });
+  item.addEventListener('dragover', (event) => {
+    if (event.dataTransfer?.types.includes(ATTACHMENT_DRAG_TYPE)) {
+      event.preventDefault();
+    }
+  });
+  item.addEventListener('drop', (event) => {
+    const draggedId = event.dataTransfer?.getData(ATTACHMENT_DRAG_TYPE) ?? '';
+    if (draggedId.length === 0) {
+      return;
+    }
+    event.preventDefault();
+    event.stopPropagation();
+    const targetIndex = composerAttachments.findIndex(
+      (candidate) => candidate.clientId === attachment.clientId,
+    );
+    const dragged = composerAttachments.find((candidate) => candidate.clientId === draggedId);
+    const moved = reorderAttachment(draggedId, targetIndex);
+    if (moved >= 0 && dragged !== undefined) {
+      renderAttachments();
+      announceAttachmentMove(dragged, moved);
+    }
+  });
+}
+
 function renderAttachments() {
   elements.attachmentList.replaceChildren();
   for (const attachment of composerAttachments) {
@@ -2151,7 +2237,17 @@ function renderAttachments() {
         elements.prompt.focus();
       }
     });
-    item.append(details, remove);
+    const actions = document.createElement('span');
+    actions.className = 'attachment-actions';
+    if (composerAttachments.length > 1) {
+      actions.append(
+        attachmentMoveButton(attachment, -1, labels.attachmentMoveEarlier, '‹'),
+        attachmentMoveButton(attachment, 1, labels.attachmentMoveLater, '›'),
+      );
+      makeAttachmentDraggable(item, attachment);
+    }
+    actions.append(remove);
+    item.append(details, actions);
     elements.attachmentList.append(item);
   }
   elements.attachmentTray.hidden =
@@ -2219,11 +2315,64 @@ function validateAttachmentFiles(files) {
   return '';
 }
 
+// Formats a canvas can re-encode without changing what they are. A GIF would
+// lose its animation and an SVG is not a raster, so both go through untouched
+// and the host's size rule speaks for them.
+const RESIZABLE_IMAGE_TYPES = new Set(['image/jpeg', 'image/png', 'image/webp']);
+
+// A phone photo is 4000 pixels wide, which the host's per-request image budget
+// would refuse outright. Only the webview has a pixel decoder, so shrinking
+// happens here, before the bytes are read; the canvas re-encode also drops
+// EXIF and text chunks. Returns the file unchanged whenever it cannot improve it.
+async function downscaledImage(file, mimeType) {
+  const targetEdge = Number(labels.imageResizeEdge);
+  if (
+    !RESIZABLE_IMAGE_TYPES.has(mimeType) ||
+    !(targetEdge > 0) ||
+    typeof window.createImageBitmap !== 'function'
+  ) {
+    return file;
+  }
+  let bitmap;
+  try {
+    bitmap = await window.createImageBitmap(file);
+  } catch {
+    return file;
+  }
+  try {
+    const longest = Math.max(bitmap.width, bitmap.height);
+    if (longest <= targetEdge) {
+      return file;
+    }
+    const scale = targetEdge / longest;
+    const canvas = document.createElement('canvas');
+    canvas.width = Math.max(1, Math.round(bitmap.width * scale));
+    canvas.height = Math.max(1, Math.round(bitmap.height * scale));
+    const context = canvas.getContext('2d');
+    if (context === null) {
+      return file;
+    }
+    context.drawImage(bitmap, 0, 0, canvas.width, canvas.height);
+    const blob = await new Promise((resolve) => canvas.toBlob(resolve, mimeType, 0.9));
+    if (blob === null || blob.size === 0 || blob.type !== mimeType) {
+      return file;
+    }
+    return new window.File([blob], file.name, { type: mimeType });
+  } finally {
+    bitmap.close();
+  }
+}
+
 async function readAttachmentBatch(files, readGeneration) {
   const prepared = [];
+  const resized = [];
   try {
-    for (const file of files) {
-      const mimeType = normalizedMimeType(file.type);
+    for (const original of files) {
+      const mimeType = normalizedMimeType(original.type);
+      const file = await downscaledImage(original, mimeType);
+      if (file !== original) {
+        resized.push(original.name);
+      }
       const content = await fileContent(file);
       if (readGeneration !== attachmentReadGeneration) {
         return false;
@@ -2249,6 +2398,11 @@ async function readAttachmentBatch(files, readGeneration) {
     elements.announcer.textContent = `${labels.attachmentAdded}: ${files
       .map((file) => file.name)
       .join(', ')}`;
+    if (resized.length > 0) {
+      const notice = labels.attachmentResized.replace('{0}', resized.join(', '));
+      setAttachmentStatus(`${composerAttachmentSummary()} · ${notice}`);
+      elements.announcer.textContent += `. ${notice}`;
+    }
     return true;
   } catch {
     if (readGeneration === attachmentReadGeneration) {
@@ -2344,6 +2498,7 @@ function submitPrompt(retryInput) {
   if (attachmentsReading) {
     return;
   }
+  stopDictation(true);
   const content = (retryInput?.content ?? elements.prompt.value).trim();
   if (content.length === 0) {
     return;
@@ -2469,6 +2624,136 @@ function submitPrompt(retryInput) {
 elements.form.addEventListener('submit', (event) => {
   event.preventDefault();
   submitPrompt();
+});
+
+// Voice dictation. A VS Code webview may have no SpeechRecognition, no cloud
+// speech service behind it, or no permission for the microphone, so every one of
+// those is an expected outcome that is reported to the host, which knows the
+// platform and can point at what does work. Nothing here records audio itself:
+// the browser's recogniser owns the microphone and the panel only receives text.
+let dictation = null;
+
+function spliceTranscript(before, after, transcript, maxLength) {
+  const spoken = transcript.trim();
+  if (spoken.length === 0) {
+    return { text: `${before}${after}`, caret: before.length };
+  }
+  const lead = before.length > 0 && !/\s$/u.test(before) ? ' ' : '';
+  const trail = after.length > 0 && !/^\s/u.test(after) ? ' ' : '';
+  const room = maxLength - before.length - after.length - lead.length - trail.length;
+  if (room <= 0) {
+    return { text: `${before}${after}`, caret: before.length };
+  }
+  const inserted = `${lead}${spoken.slice(0, room)}${trail}`;
+  return { text: `${before}${inserted}${after}`, caret: before.length + inserted.length };
+}
+
+function renderDictation(transcript) {
+  if (dictation === null || dictation.discarded) {
+    return;
+  }
+  const maxLength = elements.prompt.maxLength > 0 ? elements.prompt.maxLength : 20000;
+  const result = spliceTranscript(dictation.before, dictation.after, transcript, maxLength);
+  elements.prompt.value = result.text;
+  elements.prompt.setSelectionRange(result.caret, result.caret);
+  elements.prompt.dispatchEvent(new window.Event('input', { bubbles: true }));
+}
+
+// Sending discards whatever the recogniser has not delivered yet: a late result
+// would otherwise refill a composer that was just cleared.
+function stopDictation(discard = false) {
+  if (dictation === null) {
+    return;
+  }
+  dictation.discarded = discard;
+  dictation.recognition.stop();
+}
+
+function endDictation(announcement) {
+  if (dictation === null) {
+    return;
+  }
+  window.clearTimeout(dictation.timer);
+  dictation = null;
+  elements.voiceButton.setAttribute('aria-pressed', 'false');
+  elements.voiceButton.classList.remove('listening');
+  elements.voiceButton.title = labels.dictate;
+  elements.voiceButton.setAttribute('aria-label', labels.dictate);
+  elements.announcer.textContent = announcement;
+}
+
+function startDictation() {
+  const Recognition = window.SpeechRecognition ?? window.webkitSpeechRecognition;
+  if (typeof Recognition !== 'function') {
+    vscode.postMessage({ type: 'dictationUnavailable', code: 'unsupported' });
+    return;
+  }
+  const prompt = elements.prompt;
+  const recognition = new Recognition();
+  recognition.continuous = true;
+  recognition.interimResults = true;
+  recognition.lang = document.documentElement.lang || window.navigator.language || 'en-US';
+  const maxSeconds = Number(labels.dictationMaxSeconds);
+  const session = {
+    recognition,
+    before: prompt.value.slice(0, prompt.selectionStart),
+    after: prompt.value.slice(prompt.selectionEnd),
+    // Bounded: an open microphone that is forgotten about must close itself.
+    timer: window.setTimeout(() => recognition.stop(), (maxSeconds > 0 ? maxSeconds : 60) * 1000),
+    failed: false,
+    discarded: false,
+  };
+  recognition.addEventListener('result', (event) => {
+    let transcript = '';
+    for (const result of event.results) {
+      transcript += result[0]?.transcript ?? '';
+    }
+    renderDictation(transcript);
+  });
+  recognition.addEventListener('error', (event) => {
+    const code = String(event.error ?? 'other').slice(0, 64);
+    if (code === 'aborted') {
+      return;
+    }
+    if (code === 'no-speech') {
+      elements.announcer.textContent = labels.dictationNoSpeech;
+      return;
+    }
+    session.failed = true;
+    vscode.postMessage({ type: 'dictationUnavailable', code });
+  });
+  recognition.addEventListener('end', () => {
+    endDictation(session.failed ? '' : labels.dictationStopped);
+  });
+  dictation = session;
+  try {
+    recognition.start();
+  } catch {
+    endDictation('');
+    vscode.postMessage({ type: 'dictationUnavailable', code: 'other' });
+    return;
+  }
+  elements.voiceButton.setAttribute('aria-pressed', 'true');
+  elements.voiceButton.classList.add('listening');
+  elements.voiceButton.title = labels.dictationStop;
+  elements.voiceButton.setAttribute('aria-label', labels.dictationStop);
+  elements.announcer.textContent = labels.dictationListening;
+}
+
+elements.voiceButton.addEventListener('click', () => {
+  if (dictation === null) {
+    startDictation();
+  } else {
+    stopDictation();
+  }
+});
+
+// Typing while the microphone is open means the user has taken the field back:
+// the words already inserted stay, and the recogniser stops adding to them.
+elements.prompt.addEventListener('input', (event) => {
+  if (event.isTrusted) {
+    stopDictation();
+  }
 });
 
 elements.attachmentButton.addEventListener('click', () => {

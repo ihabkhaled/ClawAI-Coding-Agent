@@ -167,3 +167,15 @@ describe('inboundMessageSchema', () => {
     );
   });
 });
+
+describe('dictationUnavailable', () => {
+  it('accepts a short recogniser code and rejects an oversized one', () => {
+    expect(
+      inboundMessageSchema.safeParse({ type: 'dictationUnavailable', code: 'not-allowed' }).success,
+    ).toBe(true);
+    expect(
+      inboundMessageSchema.safeParse({ type: 'dictationUnavailable', code: 'x'.repeat(65) })
+        .success,
+    ).toBe(false);
+  });
+});

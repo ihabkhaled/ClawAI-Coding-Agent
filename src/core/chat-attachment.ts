@@ -9,6 +9,17 @@ export const MAX_ATTACHMENT_BYTES = 25 * 1024 * 1024;
 export const MAX_ATTACHMENT_TOTAL_BYTES = 50 * 1024 * 1024;
 
 const ALLOWED_ATTACHMENT_MIME_TYPES = new Set([
+  // B6a — kept in step with AUDIO_MIME_TYPES in claw-file-service; the
+  // extension must not reject what the server accepts.
+  'audio/aac',
+  'audio/flac',
+  'audio/mp4',
+  'audio/mpeg',
+  'audio/ogg',
+  'audio/wav',
+  'audio/webm',
+  'audio/x-m4a',
+  'audio/x-wav',
   'application/graphql',
   'application/javascript',
   'application/json',

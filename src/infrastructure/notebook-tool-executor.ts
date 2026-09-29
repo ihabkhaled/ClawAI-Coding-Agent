@@ -8,11 +8,15 @@ import {
   parseNotebook,
   serializeNotebook,
 } from '../core/notebook-document';
+import {
+  DEFAULT_KERNEL_TIMEOUT_MS,
+  MAX_KERNEL_TIMEOUT_MS,
+} from '../core/notebook-execution.constants';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { FileTransactionService } from '../services/file-transaction-service';
-import type { NotebookReaderPort } from '../services/notebook-tool.types';
+import type { NotebookKernelPort, NotebookReaderPort } from '../services/notebook-tool.types';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
@@ -26,9 +30,11 @@ export const notebookToolDefinition: ToolDefinition = {
     'Read and edit Jupyter notebooks one cell at a time. read returns the cells with their ' +
     'index, type and source. insert-cell, replace-cell and delete-cell change exactly one ' +
     'cell and leave every other field of the file alone — outputs, metadata and widget state ' +
-    'survive. Edits go through the same review and undo as any other file change.',
-  operations: ['read', 'insert-cell', 'replace-cell', 'delete-cell'],
-  riskClasses: ['inspect', 'workspace-write'],
+    'survive. Edits go through the same review and undo as any other file change. run-cell ' +
+    'and run-all execute code on the notebook kernel (needs the Jupyter extension and asks ' +
+    'for approval); outputs come back bounded and redacted, and are not written to the file.',
+  operations: ['read', 'insert-cell', 'replace-cell', 'delete-cell', 'run-cell', 'run-all'],
+  riskClasses: ['inspect', 'workspace-write', 'process'],
   targetIds: ['target:workspace'],
   inputSchema: runtimeToolInputSchemas.notebook,
 };
@@ -36,6 +42,12 @@ export const notebookToolDefinition: ToolDefinition = {
 const locationSchema = z.object({
   rootKey: z.string().min(1).max(100),
   path: z.string().min(1).max(4_096),
+});
+
+const runSchema = locationSchema.extend({
+  index: z.number().int().min(0).max(10_000).optional(),
+  kernelId: z.string().min(1).max(200).optional(),
+  timeoutMs: z.number().int().min(1_000).max(MAX_KERNEL_TIMEOUT_MS).optional(),
 });
 
 const editSchema = locationSchema.extend({
@@ -57,6 +69,7 @@ export class NotebookToolExecutor implements RuntimeToolExecutorPort {
   constructor(
     private readonly files: FileTransactionService,
     private readonly reader: NotebookReaderPort,
+    private readonly kernel?: NotebookKernelPort,
   ) {}
 
   async execute(
@@ -78,6 +91,9 @@ export class NotebookToolExecutor implements RuntimeToolExecutorPort {
         },
       };
     }
+    if (invocation.operation === 'run-cell' || invocation.operation === 'run-all') {
+      return this.run(invocation, signal);
+    }
     const input = editSchema.parse(invocation.arguments);
     const before = await this.reader.read(input.rootKey, input.path);
     const edited = applyCellEdit(parseNotebook(before), this.editFor(invocation.operation, input));
@@ -98,6 +114,30 @@ export class NotebookToolExecutor implements RuntimeToolExecutorPort {
       signal,
     );
     return { structured: { receipt: await this.files.apply(preview, signal) } };
+  }
+
+  private async run(
+    invocation: ToolInvocation,
+    signal?: AbortSignal,
+  ): Promise<RuntimeToolExecutionOutput> {
+    const input = runSchema.parse(invocation.arguments);
+    if (invocation.operation === 'run-cell' && input.index === undefined) {
+      throw new Error('run-cell needs the index of the cell to run');
+    }
+    if (this.kernel === undefined) {
+      return { structured: { status: 'unavailable', reason: 'No notebook kernel host is wired.' } };
+    }
+    const result = await this.kernel.run(
+      {
+        rootKey: input.rootKey,
+        path: input.path,
+        index: invocation.operation === 'run-cell' ? input.index : undefined,
+        kernelId: input.kernelId,
+        timeoutMs: input.timeoutMs ?? DEFAULT_KERNEL_TIMEOUT_MS,
+      },
+      signal,
+    );
+    return { structured: { ...result } };
   }
 
   private editFor(

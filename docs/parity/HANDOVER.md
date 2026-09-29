@@ -89,12 +89,12 @@ MISSING → SHIPPED: **F012, F008**. MISSING → PARTIAL: **F106, F108**.
 ### MISSING (19) — nothing exists
 
 - [ ] F010 Cross-session messaging
-- [ ] F013 Scheduled tasks
-- [ ] F019 Jupyter kernel execution
+- [x] F013 Scheduled tasks
+- [x] F019 Jupyter kernel execution
 - [ ] F025 Artifact publishing
 - [ ] F029 RemoteTrigger
 - [ ] F038 PDF page-range reading
-- [ ] F044 Voice dictation
+- [x] F044 Voice dictation
 - [ ] F054 Managed MCP allowlists and denylists
 - [ ] F055 Zero data retention mode
 - [ ] F079 MCP servers with OAuth
@@ -111,14 +111,14 @@ MISSING → SHIPPED: **F012, F008**. MISSING → PARTIAL: **F106, F108**.
 ### PARTIAL (25) — half exists; the row names which half
 
 - [ ] F001 Bash tool
-- [ ] F009 Agent teams
+- [x] F009 Agent teams
 - [ ] F011 Dynamic workflows
 - [ ] F014 Goal mode
-- [ ] F017 EnterWorktree / ExitWorktree
+- [x] F017 EnterWorktree / ExitWorktree
 - [ ] F030 Computer use
 - [ ] F036 Browser references and integration
-- [ ] F037 Shift-drag attachments
-- [ ] F039 Image understanding
+- [x] F037 Shift-drag attachments
+- [x] F039 Image understanding
 - [ ] F051 Sandboxed shell
 - [ ] F053 Hard deny rules, trusted repositories and domains
 - [ ] F057 Checkpoints and rewind

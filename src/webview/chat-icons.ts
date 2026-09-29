@@ -12,6 +12,7 @@ const iconPaths: Readonly<Record<ClawIconName, string>> = {
   explain: '<circle cx="8" cy="8" r="6"/><path d="M8 11V7.5M8 5h.01"/>',
   globe: '<circle cx="8" cy="8" r="6"/><path d="M2 8h12"/><ellipse cx="8" cy="8" rx="2.7" ry="6"/>',
   close: '<path d="m4 4 8 8M12 4l-8 8"/>',
+  mic: '<rect x="6" y="1.5" width="4" height="7.5" rx="2"/><path d="M3.5 7.5a4.5 4.5 0 0 0 9 0M8 12v2.5M5.5 14.5h5"/>',
   more: '<circle cx="3.4" cy="8" r="1.1" fill="currentColor"/><circle cx="8" cy="8" r="1.1" fill="currentColor"/><circle cx="12.6" cy="8" r="1.1" fill="currentColor"/>',
   plan: '<path d="M2 4h12M2 8h8M2 12h5"/><path d="m10 12 1.5 1.5L15 10"/>',
   plus: '<path d="M8 3.5v9M3.5 8h9"/>',

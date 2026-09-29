@@ -30,6 +30,7 @@ import {
   QualityToolExecutor,
   qualityToolDefinition,
 } from '../infrastructure/quality-tool-executor';
+import { nodeTimers, WorkspaceScheduleStore } from '../infrastructure/schedule-store';
 import {
   SocketPortInspector,
   VscodeDevelopmentServiceAdapter,
@@ -77,6 +78,11 @@ import {
   RuntimeFlagshipStageAdapter,
 } from './runtime-flagship-stage-adapter';
 import { RuntimePolicyV2Adapter } from './runtime-policy-v2-adapter';
+import {
+  browserOriginApproval,
+  databaseWriteApproval,
+  gitCommitApproval,
+} from './runtime-studio-approvals';
 import { elevationBroker } from './runtime-studio-elevation';
 import { executeRuntimeStudio } from './runtime-studio-execution';
 import {
@@ -99,6 +105,7 @@ import {
 import { createRunScopedStores, type RunScopedStores } from './runtime-studio-stores';
 import { assembleSubAgents } from './runtime-studio-sub-agents';
 import { RuntimeToolRouter } from './runtime-tool-router';
+import { ScheduledTaskService } from './scheduled-task-service';
 import { ServerReadinessService } from './server-readiness-service';
 import { vscodeRuntimeExecutionDependencies } from './vscode-runtime-execution';
 import { recoverVscodeRuntime } from './vscode-runtime-recovery';
@@ -144,6 +151,8 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   readonly observability: LocalObservabilityService;
   readonly flagship: FlagshipDeliveryService;
   private readonly git: GitAgentService;
+  /** Timed and recurring runs; started by the coordinator, which owns starting a run. */
+  readonly schedules: ScheduledTaskService;
   readonly journals: RunJournalService;
   /** Findings and tasks: run-scoped, cleared together on a workspace change. */
   readonly stores: RunScopedStores;
@@ -168,6 +177,10 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       this.files,
       new WorkspaceMutationGate(),
       () => this.configuration.read().autosave,
+    );
+    this.schedules = new ScheduledTaskService(
+      new WorkspaceScheduleStore(context.workspaceState),
+      nodeTimers,
     );
     this.bindingStore = new VscodeRuntimeBindingStore(context.workspaceState);
     this.backendTools = backendToolPorts(backend);
@@ -203,24 +216,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       },
       new ProjectPolicyService(this.workspaceScope),
     );
-    this.git = new GitAgentService(this.files, (diff, hash, signal) =>
-      approvals.request(
-        {
-          kind: 'runtimeEffect',
-          title: vscode.l10n.t('Approve staged Git changes'),
-          message: vscode.l10n.t('Review the exact staged diff before creating this commit.'),
-          effect: {
-            purpose: vscode.l10n.t('Create a reviewed Git commit'),
-            target: hash,
-            risk: 'R3',
-            sideEffects: [vscode.l10n.t('The staged repository state will receive a new commit.')],
-            reversibility: 'partially-reversible',
-            sanitizedPreview: diff,
-          },
-        },
-        signal,
-      ),
-    );
+    this.git = new GitAgentService(this.files, gitCommitApproval(approvals));
     const containers = new ContainerEngineService(
       this.files,
       () => this.state.snapshot.user?.id ?? 'account:anonymous',
@@ -233,25 +229,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       [new SqlCliDatabaseAdapter(), new DocumentCliDatabaseAdapter()],
       {
         productionWritesEnabled: () => false,
-        approveWrite: (profile, classification, statementHash, backupAcknowledged, signal) =>
-          approvals.request(
-            {
-              kind: 'runtimeEffect',
-              title: vscode.l10n.t('Approve database change'),
-              message: vscode.l10n.t('Review this database effect before execution.'),
-              effect: {
-                purpose: `${classification} database operation`,
-                target: `${profile.label} · ${profile.environment}`,
-                risk: profile.environment === 'production' ? 'R4' : 'R3',
-                sideEffects: [
-                  backupAcknowledged ? 'Backup acknowledged' : 'No backup acknowledgement',
-                ],
-                reversibility: 'partially-reversible',
-                sanitizedPreview: statementHash,
-              },
-            },
-            signal,
-          ),
+        approveWrite: databaseWriteApproval(approvals),
       },
     );
     const browserDriver = new PlaywrightBrowserDriver(
@@ -261,24 +239,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     const browser = new BrowserControllerService(
       browserDriver,
       () => runtimeBrowserScope(this.configuration.read()),
-      {
-        approveOrigin: (origin, signal) =>
-          approvals.request(
-            {
-              kind: 'runtimeEffect',
-              title: vscode.l10n.t('Approve browser navigation'),
-              message: vscode.l10n.t('This origin is outside the current browser scope.'),
-              effect: {
-                purpose: vscode.l10n.t('Navigate the isolated browser'),
-                target: origin,
-                risk: 'R2',
-                sideEffects: [vscode.l10n.t('The website may receive the browser request.')],
-                reversibility: 'reversible',
-              },
-            },
-            signal,
-          ),
-      },
+      browserOriginApproval(approvals),
     );
     const readiness = new ServerReadinessService(
       () => runtimeBrowserScope(this.configuration.read()),
@@ -329,6 +290,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
             this.state.snapshot.agentRun,
           ),
         board: this.runContext.boardPort(),
+        mailbox: this.runContext.mailboxPort(),
       },
       files: this.files,
       globalStorageUri: context.globalStorageUri,
@@ -392,6 +354,9 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
           goal: () => this.runContext.goal(),
         }),
         goal: this.runContext.goalPort(),
+        schedule: this.schedules,
+        git: this.git,
+        mailbox: this.runContext.mailboxPort(),
         findings: this.stores.findings,
         currentEpochs: () => this.epochs,
         intelligence,
@@ -399,6 +364,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         tasks: this.stores.tasks,
         journals: this.journals,
         research: this.backendTools.research,
+        artifacts: this.backendTools.artifacts,
         advisor: this.advisor,
         files: this.files,
       }),
@@ -536,6 +502,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
 
   dispose(): void {
     void this.cancel();
+    this.schedules.dispose();
     this.processes.dispose();
     this.intelligenceIndex.dispose();
   }

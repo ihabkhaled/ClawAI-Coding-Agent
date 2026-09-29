@@ -11,6 +11,16 @@ export const MAX_IMAGE_TOKENS_PER_REQUEST = 8_000;
 /** Anything wider or taller than this is refused rather than silently truncated. */
 export const MAX_IMAGE_EDGE_PIXELS = 8_000;
 
+/**
+ * The longest edge the composer shrinks an image to before it is read.
+ *
+ * Small enough that a few photos fit `MAX_IMAGE_TOKENS_PER_REQUEST` (2048 by
+ * 1536 is about 4,200 tokens), large enough that a screenshot stays legible.
+ * Resizing happens in the webview, the only place with a pixel decoder; the
+ * host keeps `MAX_IMAGE_EDGE_PIXELS` as the backstop for what could not shrink.
+ */
+export const IMAGE_RESIZE_TARGET_EDGE_PIXELS = 2_048;
+
 function isImage(mimeType: string): boolean {
   return mimeType.startsWith('image/');
 }
