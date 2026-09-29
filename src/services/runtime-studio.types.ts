@@ -11,6 +11,7 @@ import type { RunJournalService } from './run-journal-service';
 import type { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
 import type { WebResearchPort } from './web-research.types';
 import type { WorkspaceIntelligenceService } from './workspace-intelligence-service';
+import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { AdvisorPort } from '../infrastructure/advisor-tool-executor.types';
@@ -37,6 +38,8 @@ export interface RuntimeStudioWorkspaceTools {
   readonly artifacts: DeliveredArtifactSink;
   readonly processes: ProcessSupervisorService;
   readonly accountId: () => string;
+  /** Reads a workspace PDF by page. Nothing sent here is stored. */
+  readonly pdfText: PdfTextPort;
 }
 
 export interface RuntimeStudioAnalysisTools {

@@ -249,6 +249,10 @@ export class BackendClient {
   readonly researchPost: ResearchRequester = (path, schema, options) =>
     this.request(path, schema, options);
 
+  /** POST seam for file-service reads that store nothing. See `pdf-text-client`. */
+  readonly filesPost: ResearchRequester = (path, schema, options) =>
+    this.request(path, schema, options);
+
   async getRouterModels(): Promise<RouterModel[]> {
     return modelCatalogClient.routerModels(this.catalogRequest);
   }
