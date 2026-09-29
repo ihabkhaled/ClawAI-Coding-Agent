@@ -167,6 +167,7 @@ describe('OtlpObservabilitySink', () => {
       async () => {
         throw new Error('collector is down');
       },
+      async () => undefined,
     );
     for (let index = 0; index < OTLP_MAX_QUEUED_SPANS + OTLP_BATCH_SIZE; index += 1) {
       sink.emit(span({ name: `span-${String(index)}` }));
@@ -186,6 +187,7 @@ describe('OtlpObservabilitySink', () => {
       async () => {
         throw new Error('network down');
       },
+      async () => undefined,
     );
     sink.emit(span());
 

@@ -4,14 +4,25 @@
  * One module, so what is supported is a list a reader can hold in their head
  * rather than whatever happens to be exported from somewhere inside. Anything
  * not here is an implementation detail and may move.
+ *
+ * Nothing reachable from here imports `vscode`; a test builds this graph and
+ * fails if one ever does.
  */
+export { createAgent } from './create-agent';
 export { runAgent } from './agent-sdk';
 export { toolResultFor } from './agent-tool-result';
+export { workspaceToolkit, offeredDefinitions, toolCategory } from './workspace-toolkit';
 export { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
+export {
+  AGENT_DEFAULT_TOOL_CATEGORIES,
+  AGENT_WORKSPACE_TOOL_DEFINITIONS,
+} from './workspace-toolkit.constants';
 export { HeadlessTransport, canonicalJson, sha256 } from '../headless/headless-transport';
+export { RuntimeHttpError } from '../headless/runtime-http-error';
 export {
   describeHeadlessOutcome,
   headlessExitCode,
+  outcomeFromError,
   outcomeFromTerminalEvent,
 } from '../core/headless-outcome';
 export { HEADLESS_EXIT_CODES } from '../core/headless-outcome.constants';
@@ -19,11 +30,25 @@ export { containedPath } from '../core/workspace-containment';
 export { inheritedEnvironment } from '../core/inherited-environment';
 
 export type {
+  AgentBudgetField,
   AgentRunOptions,
   AgentRunResult,
   AgentToolCall,
   AgentToolkit,
   RuntimeTransportPort,
 } from './agent-sdk.types';
+export type {
+  Agent,
+  AgentAuth,
+  AgentConfig,
+  AgentEvent,
+  AgentResult,
+  AgentRunCallOptions,
+} from './create-agent.types';
+export type {
+  AgentApprovalRequest,
+  AgentPermissions,
+  AgentToolCategory,
+} from './workspace-toolkit.types';
 export type { HeadlessExitCode, HeadlessOutcome } from '../core/headless-outcome.types';
 export type { HeadlessStreamEvent } from '../headless/headless-session.types';

@@ -63,6 +63,11 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
   // Why the composer microphone could not run, so the host can say what to do
   // instead. The code is a bounded string from the webview, never shown raw.
   z.object({ type: z.literal('dictationUnavailable'), code: z.string().max(64) }),
+  // The composer's browser button; the host decides whether a page exists.
+  z.object({ type: z.literal('attachBrowserState') }),
+  // "Rewind to here" on a rendered turn. The host re-checks the message
+  // belongs to this panel's thread on the server before deleting anything.
+  z.object({ type: z.literal('rewindToMessage'), messageId: z.string().min(1).max(255) }),
   z.object({ type: z.literal('newChat') }),
   z.object({ type: z.literal('openFolder') }),
   z.object({ type: z.literal('refreshModels') }),

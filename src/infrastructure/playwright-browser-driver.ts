@@ -12,6 +12,7 @@ import {
 } from '../core/browser-operation';
 import { redactText } from '../core/redaction';
 
+import { BROWSER_LIVE_PAGES } from './browser-live-pages.constants';
 import { PAGE_ACTION_HANDLERS } from './playwright-page-actions.constants';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
@@ -129,6 +130,7 @@ export class PlaywrightBrowserDriver implements BrowserDriverPort {
       );
     });
     session.pages.set(pageId, page);
+    BROWSER_LIVE_PAGES.track(page);
     return this.result(session, page, { pageId });
   }
 

@@ -16,6 +16,10 @@ export interface HeadlessSessionPorts {
   readonly now: () => number;
   /** How long to wait for the run to end before calling it exhausted. */
   readonly deadlineMs: number;
+  /** Sees every event before the loop acts on it; a throw here ends the run. */
+  readonly onEvent?: (event: HeadlessStreamEvent) => void;
+  /** Stops the loop; the run is then reported as cancelled. */
+  readonly signal?: AbortSignal;
 }
 
 export interface HeadlessRunReport {

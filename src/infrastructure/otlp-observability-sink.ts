@@ -2,13 +2,17 @@ import { otlpTracePayload } from '../core/otlp-export';
 import {
   OTLP_BATCH_SIZE,
   OTLP_FLUSH_INTERVAL_MS,
+  OTLP_MAX_QUEUED_RUNS,
   OTLP_MAX_QUEUED_SPANS,
-  OTLP_TIMEOUT_MS,
 } from '../core/otlp-export.constants';
+import { otlpMetricsPayload, otlpMetricsUrl } from '../core/otlp-metrics';
+
+import { postOtlp } from './otlp-post';
 
 import type { OutputLogger } from './output-logger';
 import type { EvidenceBundle } from '../core/evidence-bundle';
 import type { OtlpEndpoint } from '../core/otlp-export.types';
+import type { RunUsage } from '../core/run-telemetry.types';
 import type { ObservabilitySinkPort, ObservabilitySpan } from '../services/observability-service';
 
 /**
@@ -27,6 +31,7 @@ import type { ObservabilitySinkPort, ObservabilitySpan } from '../services/obser
  */
 export class OtlpObservabilitySink implements ObservabilitySinkPort {
   private queue: ObservabilitySpan[] = [];
+  private usages: RunUsage[] = [];
   private timer: ReturnType<typeof setTimeout> | undefined;
   private dropped = 0;
 
@@ -35,6 +40,7 @@ export class OtlpObservabilitySink implements ObservabilitySinkPort {
     private readonly serviceVersion: string,
     private readonly logger: OutputLogger,
     private readonly send: typeof fetch = fetch,
+    private readonly sleep?: (milliseconds: number) => Promise<void>,
   ) {}
 
   emit(span: ObservabilitySpan): void {
@@ -54,11 +60,22 @@ export class OtlpObservabilitySink implements ObservabilitySinkPort {
   }
 
   /**
-   * Metrics are not exported yet, and saying so is better than pretending.
+   * One finished run's counts, exported as OTLP metrics on the next flush.
    *
-   * A metrics payload is a different OTLP shape with its own aggregation
-   * temporality rules, and emitting spans shaped like metrics would produce a
-   * dashboard that looks right and counts nothing.
+   * Queued beside the spans and flushed with them, so an idle extension stays
+   * silent and a run's metrics leave at the same moment its spans do.
+   */
+  emitUsage(usage: RunUsage): void {
+    if (this.usages.length >= OTLP_MAX_QUEUED_RUNS) this.usages.shift();
+    this.usages.push(usage);
+    this.schedule();
+  }
+
+  /**
+   * The evidence-bundle metrics are not exported: run counts go through
+   * `emitUsage`, and resource peaks such as memory and CPU describe the
+   * developer's machine rather than the run, which is not what a team
+   * dashboard should be counting.
    */
   emitMetrics(_runId: string, _metrics: EvidenceBundle['metrics']): void {
     return undefined;
@@ -66,6 +83,10 @@ export class OtlpObservabilitySink implements ObservabilitySinkPort {
 
   async flush(): Promise<void> {
     this.cancelTimer();
+    await Promise.all([this.flushSpans(), this.flushUsage()]);
+  }
+
+  private async flushSpans(): Promise<void> {
     const batch = this.queue;
     if (batch.length === 0) return;
     this.queue = [];
@@ -75,21 +96,26 @@ export class OtlpObservabilitySink implements ObservabilitySinkPort {
       });
       this.dropped = 0;
     }
-    try {
-      const response = await this.send(this.endpoint.url, {
-        method: 'POST',
-        headers: { 'content-type': 'application/json', ...this.endpoint.headers },
-        body: JSON.stringify(otlpTracePayload(batch, 'clawai-coding-agent', this.serviceVersion)),
-        signal: AbortSignal.timeout(OTLP_TIMEOUT_MS),
-      });
-      if (!response.ok) {
-        // The status, never the body. A collector's error body can echo the
-        // request, and the request carries the headers.
-        this.logger.warn('ClawAI telemetry export was refused.', { status: response.status });
-      }
-    } catch (error: unknown) {
-      this.logger.warn('ClawAI telemetry export failed.', error);
-    }
+    const body = JSON.stringify(
+      otlpTracePayload(batch, 'clawai-coding-agent', this.serviceVersion),
+    );
+    await postOtlp(this.send, this.endpoint, this.endpoint.url, body, this.logger, this.sleep);
+  }
+
+  /**
+   * Metrics go to the traces URL's `/v1/metrics` sibling. An endpoint with a
+   * vendor path gets no metrics rather than a guess.
+   */
+  private async flushUsage(): Promise<void> {
+    const batch = this.usages;
+    if (batch.length === 0) return;
+    this.usages = [];
+    const url = otlpMetricsUrl(this.endpoint.url);
+    if (url === undefined) return;
+    const body = JSON.stringify(
+      otlpMetricsPayload(batch, 'clawai-coding-agent', this.serviceVersion),
+    );
+    await postOtlp(this.send, this.endpoint, url, body, this.logger, this.sleep);
   }
 
   dispose(): void {

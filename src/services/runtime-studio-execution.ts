@@ -5,6 +5,7 @@ import { effortBudget } from '../core/effort-mode';
 import { flagshipAdmission, withFlagshipRequirement } from '../core/flagship-admission';
 import { outputStylePreamble } from '../core/output-style';
 import { composePrompt } from '../core/prompt-composition';
+import { RunTelemetryRecorder } from '../core/run-telemetry';
 import { isRuntimeRunEnded } from '../core/runtime/runtime-event-reducer';
 
 import { RuntimeJournalTracker } from './runtime-journal-tracker';
@@ -125,6 +126,9 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
     // which one was in force.
     attributes: { threadId: input.threadId, toolCount: definitions.length, effortMode },
   });
+  // Tool spans and the run's usage counts, for an exporting sink. Names and
+  // numbers only: arguments and results never enter a span.
+  const telemetry = new RunTelemetryRecorder(traceId, spanId);
   // Whether the run reached an end state of its own, as opposed to the stream
   // being torn down under it by an error, a cancel, or a dropped connection.
   const outcome = { ended: false };
@@ -222,6 +226,7 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
       {
         onEvent: async (event) => {
           await journal.record(event);
+          observeTelemetry(dependencies, telemetry, event);
           if (event.type === 'steering.received' && typeof event.payload.message === 'string') {
             dependencies.flagship.steerIfActive(event.payload.message);
           }
@@ -230,9 +235,21 @@ export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionD
       },
       input.signal,
     );
-    emitCompletion(dependencies, traceId, spanId, startedAt, definitions.length, 'ok');
+    emitCompletion(
+      dependencies,
+      telemetry,
+      { traceId, spanId, startedAt },
+      definitions.length,
+      'ok',
+    );
   } catch (error) {
-    emitCompletion(dependencies, traceId, spanId, startedAt, definitions.length, 'error');
+    emitCompletion(
+      dependencies,
+      telemetry,
+      { traceId, spanId, startedAt },
+      definitions.length,
+      'error',
+    );
     throw error;
   } finally {
     // A run nobody is following any more has to be told to stop. Leaving it
@@ -319,20 +336,31 @@ export async function recoverRuntimeStudio(
   }
 }
 
+function observeTelemetry(
+  dependencies: RuntimeStudioExecutionDependencies,
+  telemetry: RunTelemetryRecorder,
+  event: RuntimeEvent,
+): void {
+  const toolSpan = telemetry.observe(event);
+  if (toolSpan !== undefined) dependencies.observability.emit(toolSpan);
+}
+
 function emitCompletion(
   dependencies: RuntimeStudioExecutionDependencies,
-  traceId: string,
-  spanId: string,
-  startedAt: string,
+  telemetry: RunTelemetryRecorder,
+  run: { readonly traceId: string; readonly spanId: string; readonly startedAt: string },
   toolCount: number,
   status: 'ok' | 'error',
 ): void {
+  const { traceId, spanId, startedAt } = run;
+  const completedAt = new Date().toISOString();
+  dependencies.observability.emitUsage(telemetry.usage(traceId, status, startedAt, completedAt));
   dependencies.observability.emit({
     name: 'runtime.v2.run',
     traceId,
     spanId,
     startedAt,
-    completedAt: new Date().toISOString(),
+    completedAt,
     status,
     attributes: { threadId: dependencies.input.threadId, toolCount },
   });

@@ -35,6 +35,35 @@ export function gitCommitApproval(
     );
 }
 
+/** The exact title and description a pull request is opened with, shown before it is. */
+export function pullRequestApproval(
+  approvals: ApprovalBroker,
+): (preview: string, hash: string, signal?: AbortSignal) => Promise<boolean> {
+  return (preview, hash, signal) =>
+    approvals.request(
+      {
+        kind: 'runtimeEffect',
+        title: vscode.l10n.t('Approve pull request'),
+        message: vscode.l10n.t(
+          'Review the exact title and description before this pull request is opened.',
+        ),
+        effect: {
+          purpose: vscode.l10n.t('Open a pull request'),
+          target: hash,
+          risk: 'R3',
+          sideEffects: [
+            vscode.l10n.t(
+              'The branch is pushed if needed and a pull request is opened on the remote.',
+            ),
+          ],
+          reversibility: 'partially-reversible',
+          sanitizedPreview: preview,
+        },
+      },
+      signal,
+    );
+}
+
 /** The approval a database write needs; production raises the risk to R4. */
 export function databaseWriteApproval(
   approvals: ApprovalBroker,

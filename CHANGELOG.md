@@ -2,6 +2,50 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.82.0
+
+Minor: thirty-three parity features finished or narrowed. Needs ClawAI backend
+60de82df8 or later for rewind, deferred tools, remote triggers, channels and
+runners.
+
+**Breaking for headless scripts:** the `clawai` exit codes are now 0 ok,
+1 failed, 2 usage, 3 auth, 4 denied, 5 budget, 130 aborted. The old 3
+(blocked) is now 4, and the old 4 (cancelled) is now 130.
+
+- **MCP servers (F079, F054).** `runtime.mcp` over stdio and streamable HTTP
+  with OAuth PKCE; every call asks; `mcpServers` allow/deny in policy.
+- **Plugins and marketplaces (F080, F081).** `clawai-plugin.json` bundles for
+  skills, commands, output styles and hooks; sha256-checked marketplaces with a
+  policy allowlist.
+- **Agent SDK and headless CLI (F086, F087).** Host-free `createAgent` and
+  `clawai -p` with text, json and stream-json output.
+- **Rewind (F059, F057).** "Rewind to here" deletes later turns on the server;
+  checkpoints restore code, conversation or both.
+- **Deferred tools (F028).** `runtime.tool_search` loads rarely used tools on
+  demand without changing the admitted catalog hash.
+- **Permission modes (F046).** Organization policy is a ceiling on every tool
+  call; "Enterprise Locked" is shown as "Strict" (ADR 0003).
+- **Sandboxed shell (F051).** `clawAI.commandSandbox.mode` with docker,
+  bubblewrap or seatbelt, network off by default.
+- **Pull requests and review (F103, F104, F105).** PRs through `gh` with
+  approval, 2-4 reviewer sub-agents, and check monitoring with "Fix it".
+- **Remote (F029, F083, F096-F100).** Remote job triggers with idempotency, an
+  HMAC channel inbox, remote commands with local approval, device pairing,
+  cloud routines, runner registration and cloud sessions.
+- **Sessions (F094, F095).** CLI threads in the history; resume a thread from
+  the web portal or another machine.
+- **Integrations (F101).** Review comments on GitHub and GitLab; Slack run
+  notifications.
+- **Security and telemetry (F106, F108).** Dependency audit and
+  `/security-review`; OTLP metrics and tool spans (span ids fixed to hex).
+- **Zero data retention (F055) and usage attribution (F107).** Client-side
+  retention guard; per-session usage by source and model.
+- **Goal stages and workflow templates (F014, F011).** Goals declare their own
+  stages; templates live in `.clawai/workflows`.
+- **Browser (F036).** Attach the agent's live page to the chat.
+- **Trust and deny rules (F053).** Organization rules and trusted
+  repositories, domains and commands.
+
 ## 1.81.0
 
 Minor: thirteen parity features finished or narrowed.

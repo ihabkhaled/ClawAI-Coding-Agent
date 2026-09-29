@@ -6,6 +6,18 @@
   "type": "object",
   "additionalProperties": false,
   "definitions": {
+    "mcpServerPattern": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Matches an MCP server by name, by command and arguments (stdio), or by URL (HTTP). Patterns are * globs; every field given must match.",
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 200 },
+        "command": { "type": "string", "minLength": 1, "maxLength": 1000 },
+        "url": { "type": "string", "minLength": 1, "maxLength": 2048 },
+        "reason": { "type": "string", "minLength": 1, "maxLength": 500 }
+      },
+      "anyOf": [{ "required": ["name"] }, { "required": ["command"] }, { "required": ["url"] }]
+    },
     "effectKind": {
       "enum": [
         "read",
@@ -112,6 +124,35 @@
       },
       "maxItems": 200,
       "default": []
+    },
+    "mcpServers": {
+      "type": "object",
+      "additionalProperties": false,
+      "description": "Which MCP servers may start. A server matching any deny pattern is refused; a non-empty allow list admits only the servers it matches. Deny wins.",
+      "properties": {
+        "allow": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/mcpServerPattern" },
+          "maxItems": 200,
+          "default": []
+        },
+        "deny": {
+          "type": "array",
+          "items": { "$ref": "#/definitions/mcpServerPattern" },
+          "maxItems": 200,
+          "default": []
+        }
+      }
+    },
+    "allowedPluginMarketplaces": {
+      "type": "array",
+      "description": "The only plugin marketplaces this project may install from. Absent means no restriction; an empty list refuses every marketplace.",
+      "items": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 2048
+      },
+      "maxItems": 100
     }
   }
 }

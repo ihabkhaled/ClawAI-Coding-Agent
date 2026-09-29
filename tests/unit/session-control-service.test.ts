@@ -318,8 +318,9 @@ describe('SessionControlService', () => {
     expect(configuration.selectPermissionMode).toHaveBeenCalledWith('PLAN');
   });
 
-  // ENTERPRISE_LOCKED is not on the ranked scale, so a floor never touches it.
-  it('never clamps a mode outside the ranked scale', async () => {
+  // ADR 0003: ENTERPRISE_LOCKED ("Strict") ranks between PLAN and ASK, so a
+  // PLAN ceiling holds it at PLAN rather than letting it keep edit access.
+  it('holds Strict under a Plan ceiling', async () => {
     state.snapshot = { organizationPolicy: { minimumPermissionMode: 'PLAN' } };
     configuration.selectPermissionMode.mockImplementation(async (mode: PermissionMode) => {
       configuration.permissionMode = mode;
@@ -331,7 +332,7 @@ describe('SessionControlService', () => {
 
     await expect(service.selectPermissionMode('ENTERPRISE_LOCKED')).resolves.toBe(true);
 
-    expect(configuration.selectPermissionMode).toHaveBeenCalledWith('ENTERPRISE_LOCKED');
+    expect(configuration.selectPermissionMode).toHaveBeenCalledWith('PLAN');
   });
 
   it('applies final diffs without another approval after Full Access has been enabled', async () => {

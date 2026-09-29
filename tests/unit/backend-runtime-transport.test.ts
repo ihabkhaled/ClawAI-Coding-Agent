@@ -35,6 +35,7 @@ describe('BackendRuntimeTransport durable bindings', () => {
       })),
       openRuntimeStream,
       steerRuntime: vi.fn(async () => mutationAck),
+      loadRuntimeTools: vi.fn(),
       submitRuntimeResult: vi.fn(async () => mutationAck),
     };
     const first = new BackendRuntimeTransport(() => backend, store);
@@ -119,6 +120,7 @@ describe('BackendRuntimeTransport durable bindings', () => {
       startRuntime: vi.fn(async () => acknowledgement),
       openRuntimeStream: vi.fn(),
       steerRuntime: vi.fn(),
+      loadRuntimeTools: vi.fn(),
       submitRuntimeResult: vi.fn(),
     };
     const transport = new BackendRuntimeTransport(() => backend, {

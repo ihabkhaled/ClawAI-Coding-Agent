@@ -1,10 +1,12 @@
 import { backendArtifactPublisher } from './backend-artifact-publisher';
 import { backendPdfText } from './backend-pdf-text';
+import { backendRemoteJobs } from './backend-remote-jobs';
 import { backendWebResearch } from './backend-web-research';
 
 import type { ArtifactPublisherPort } from '../backend/artifact-client';
 import type { BackendClient } from '../backend/backend-client';
 import type { PdfTextPort } from '../backend/pdf-text-client';
+import type { RemoteJobPort } from '../backend/remote-job.types';
 import type { WebResearchPort } from '../backend/research-client';
 
 /** The tool ports that talk to the backend on the agent's behalf. */
@@ -12,6 +14,8 @@ export interface BackendToolPorts {
   readonly research: WebResearchPort;
   readonly pdfText: PdfTextPort;
   readonly artifacts: ArtifactPublisherPort;
+  /** Remote jobs on paired devices (F029). */
+  readonly remoteJobs: RemoteJobPort;
 }
 
 /**
@@ -28,5 +32,6 @@ export function backendToolPorts(backend: () => BackendClient): BackendToolPorts
     research: backendWebResearch(backend),
     pdfText: backendPdfText(backend),
     artifacts: backendArtifactPublisher(backend),
+    remoteJobs: backendRemoteJobs(backend),
   };
 }

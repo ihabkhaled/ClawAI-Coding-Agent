@@ -92,17 +92,17 @@ MISSING → SHIPPED: **F012, F008**. MISSING → PARTIAL: **F106, F108**.
 - [x] F013 Scheduled tasks
 - [x] F019 Jupyter kernel execution
 - [ ] F025 Artifact publishing
-- [ ] F029 RemoteTrigger
+- [x] F029 RemoteTrigger
 - [ ] F038 PDF page-range reading
 - [x] F044 Voice dictation
 - [ ] F054 Managed MCP allowlists and denylists
 - [ ] F055 Zero data retention mode
-- [ ] F079 MCP servers with OAuth
+- [x] F079 MCP servers with OAuth
 - [ ] F080 Plugin GUI
 - [ ] F081 Plugin marketplaces
-- [ ] F083 Channels
-- [ ] F086 Agent SDK
-- [ ] F087 Headless mode
+- [x] F083 Channels
+- [x] F086 Agent SDK
+- [x] F087 Headless mode
 - [ ] F097 Mobile app integration
 - [ ] F098 Cloud coding sessions
 - [ ] F100 Self-hosted cloud runners
@@ -116,31 +116,31 @@ MISSING → SHIPPED: **F012, F008**. MISSING → PARTIAL: **F106, F108**.
 - [ ] F014 Goal mode
 - [x] F017 EnterWorktree / ExitWorktree
 - [ ] F030 Computer use
-- [ ] F036 Browser references and integration
+- [x] F036 Browser references and integration
 - [x] F037 Shift-drag attachments
 - [x] F039 Image understanding
-- [ ] F051 Sandboxed shell
+- [x] F051 Sandboxed shell
 - [ ] F053 Hard deny rules, trusted repositories and domains
-- [ ] F057 Checkpoints and rewind
+- [x] F057 Checkpoints and rewind
 - [ ] F067 Draggable panel placement
 - [ ] F092 LLM gateway support
 - [ ] F093 Automatic prompt caching (accounting shipped; requesting caching is backend)
 - [ ] F094 Shared history with CLI
 - [ ] F095 Resume cloud sessions
-- [ ] F096 Remote control
+- [x] F096 Remote control
 - [ ] F099 Routines
-- [ ] F103 Native commit and PR creation (readiness shipped; creation is a GitHub API call)
-- [ ] F104 Code review and multi-agent review
-- [ ] F105 Cloud PR auto-fix and monitoring
+- [x] F103 Native commit and PR creation (readiness shipped; creation is a GitHub API call)
+- [x] F104 Code review and multi-agent review
+- [x] F105 Cloud PR auto-fix and monitoring
 - [ ] F106 Security guidance and vulnerability scanning
 - [ ] F107 Usage dialog and attribution
 - [ ] F108 OpenTelemetry and team analytics
 
 ### BLOCKED (2) and CONFLICT (1)
 
-- [ ] F028 ToolSearch — BLOCKED, reason in `AUDIT_F001_F031.md`
-- [ ] F059 Conversation rewind command — BLOCKED, reason in `AUDIT_F056_F087.md`
-- [ ] F046 Multiple permission modes — CONFLICT; the pack and the shipped model
+- [x] F028 ToolSearch — BLOCKED, reason in `AUDIT_F001_F031.md`
+- [x] F059 Conversation rewind command — BLOCKED, reason in `AUDIT_F056_F087.md`
+- [x] F046 Multiple permission modes — CONFLICT; the pack and the shipped model
       disagree. **Resolve with the user before coding.**
 
 ### The pattern worth knowing before you plan

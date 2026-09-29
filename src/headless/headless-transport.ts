@@ -1,6 +1,9 @@
 import { createHash, randomUUID } from 'node:crypto';
 
+import { threadOriginForSource } from '../core/thread-source';
+
 import { HEADLESS_CALLBACK_URI, HEADLESS_CLIENT_NAME } from './headless-session.constants';
+import { RuntimeHttpError } from './runtime-http-error';
 
 import type { HeadlessStreamEvent } from './headless-session.types';
 import type { HeadlessCredentials, HeadlessRunRequest } from './headless-transport.types';
@@ -83,7 +86,9 @@ export class HeadlessTransport {
 
   async createThread(token: string, title: string): Promise<string> {
     const thread = await this.json<{ id?: string; data?: { id: string } }>('/chat-threads', {
-      body: { title, routingMode: 'MANUAL_MODEL' },
+      // Same origin as the editor, so a CLI run is in the shared agent history
+      // and resumable from VS Code (F094). Omitted, the backend files it as WEB.
+      body: { title, routingMode: 'MANUAL_MODEL', origin: threadOriginForSource('cli') },
       token,
     });
     const id = thread.id ?? thread.data?.id;
@@ -132,6 +137,7 @@ export class HeadlessTransport {
   async *events(
     token: string,
     run: { runId: string; generation: string; threadId: string },
+    signal?: AbortSignal,
   ): AsyncGenerator<HeadlessStreamEvent> {
     const query = new URLSearchParams({
       protocol: 'v2',
@@ -141,10 +147,13 @@ export class HeadlessTransport {
     });
     const response = await fetch(
       `${this.baseUrl}/chat-messages/stream/${encodeURIComponent(run.threadId)}?${query.toString()}`,
-      { headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' } },
+      {
+        headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
+        ...(signal === undefined ? {} : { signal }),
+      },
     );
     if (!response.ok || response.body === null) {
-      throw new Error(`Event stream refused: HTTP ${String(response.status)}`);
+      throw new RuntimeHttpError('Event stream', response.status, '');
     }
     const decoder = new TextDecoder();
     let buffer = '';
@@ -170,7 +179,7 @@ export class HeadlessTransport {
     });
     const text = await response.text();
     if (!response.ok) {
-      throw new Error(`${path} refused: HTTP ${String(response.status)} ${text.slice(0, 300)}`);
+      throw new RuntimeHttpError(path, response.status, text.slice(0, 300));
     }
     return (text.length === 0 ? {} : JSON.parse(text)) as T;
   }

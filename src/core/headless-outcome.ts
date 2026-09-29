@@ -1,4 +1,6 @@
-import { HEADLESS_EXIT_CODES } from './headless-outcome.constants';
+import { RuntimeHttpError } from '../headless/runtime-http-error';
+
+import { HEADLESS_AUTH_STATUSES, HEADLESS_EXIT_CODES } from './headless-outcome.constants';
 
 import type { HeadlessExitCode, HeadlessOutcome } from './headless-outcome.types';
 
@@ -16,16 +18,17 @@ import type { HeadlessExitCode, HeadlessOutcome } from './headless-outcome.types
  * - `0` completed — the run reached its own end. Whether the result is any good
  *   is the caller's question, not this one's.
  * - `1` failed — the run ran and did not finish. This is the honest failure.
- * - `2` unusable — the runner could not start: missing credentials, an
- *   unreadable workspace, a malformed request. Nothing was attempted.
- * - `3` blocked — something the run needed was not granted. A policy refused it
- *   or an approval never came. Retrying unchanged will block again.
- * - `4` cancelled — a person or a signal stopped it. Not a defect.
+ * - `2` unusable — a usage error: a missing prompt, an unknown flag, an
+ *   unreadable workspace. Nothing was attempted.
+ * - `3` unauthenticated — no credential, or the backend refused the one given.
+ * - `4` blocked — permission denied. A policy refused a tool or an approval was
+ *   declined. Retrying unchanged will block again.
  * - `5` exhausted — a budget ran out: turns, tool calls, or time. The work may
  *   be fine and simply larger than the allowance it was given.
+ * - `130` cancelled — a person or a signal stopped it (the shell's SIGINT code).
  *
- * `3`, `4` and `5` are deliberately not `1`. Each has a different remedy, and
- * collapsing them loses the only information the pipeline had.
+ * `3`, `4`, `5` and `130` are deliberately not `1`. Each has a different
+ * remedy, and collapsing them loses the only information the pipeline had.
  */
 export function headlessExitCode(outcome: HeadlessOutcome): HeadlessExitCode {
   return HEADLESS_EXIT_CODES[outcome];
@@ -56,10 +59,29 @@ export function describeHeadlessOutcome(outcome: HeadlessOutcome): string {
     completed: 'The run reached its end.',
     failed: 'The run started and did not finish.',
     unusable: 'The run never started, because the runner could not be configured.',
+    unauthenticated: 'The run never started, because no usable credential was accepted.',
     blocked:
       'The run needed something that was not granted, and retrying unchanged will block again.',
     cancelled: 'The run was stopped deliberately.',
     exhausted: 'The run ran out of budget before it finished.',
   };
   return messages[outcome];
+}
+
+/**
+ * An exception out of a run, read as an outcome.
+ *
+ * An abort wins over everything else, because the error an aborted fetch throws
+ * is an artefact of the cancel rather than a separate failure. A refused
+ * credential is `unauthenticated`: during sign-in any client error means the
+ * credential, afterwards only the statuses that name it do.
+ */
+export function outcomeFromError(
+  error: unknown,
+  context: { aborted: boolean; signingIn: boolean },
+): HeadlessOutcome {
+  if (context.aborted) return 'cancelled';
+  if (!(error instanceof RuntimeHttpError)) return 'failed';
+  if (context.signingIn && error.status >= 400 && error.status < 500) return 'unauthenticated';
+  return HEADLESS_AUTH_STATUSES.includes(error.status) ? 'unauthenticated' : 'failed';
 }

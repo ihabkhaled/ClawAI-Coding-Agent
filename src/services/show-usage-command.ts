@@ -1,12 +1,17 @@
 import * as vscode from 'vscode';
 
+import { sessionUsageAttribution } from '../core/usage-attribution';
 import { buildUsageReport } from '../core/usage-report';
 
+import { usageAttributionLines } from './show-usage-attribution';
+
 import type { ExtensionState } from '../core/extension-state';
+import type { UsageAttributionLedger } from '../core/usage-attribution';
 import type { UsageFeatureLine, UsageWindowLine } from '../core/usage-report';
 
 interface UsageDependencies {
   readonly state: ExtensionState;
+  readonly attribution?: UsageAttributionLedger;
 }
 
 function windowRow(line: UsageWindowLine): string {
@@ -64,6 +69,9 @@ export async function showUsage(dependencies: UsageDependencies): Promise<void> 
       ...report.features.map(featureRow),
     );
   }
+  lines.push(
+    ...usageAttributionLines((dependencies.attribution ?? sessionUsageAttribution).summary()),
+  );
   const document = await vscode.workspace.openTextDocument({
     content: lines.join('\n'),
     language: 'markdown',

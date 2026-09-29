@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "1.81.0",
+  "version": "1.82.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -33,6 +33,9 @@
     "clawai"
   ],
   "main": "./dist/extension.js",
+  "bin": {
+    "clawai": "./dist/headless.mjs"
+  },
   "l10n": "./l10n",
   "capabilities": {
     "untrustedWorkspaces": {
@@ -191,6 +194,11 @@
         "category": "ClawAI"
       },
       {
+        "command": "clawAI.rewindConversation",
+        "title": "%command.rewindConversation%",
+        "category": "ClawAI"
+      },
+      {
         "command": "clawAI.askSideQuestion",
         "title": "%command.askSideQuestion%",
         "category": "ClawAI"
@@ -201,6 +209,11 @@
         "category": "ClawAI"
       },
       {
+        "command": "clawAI.attachBrowserState",
+        "title": "%command.attachBrowserState%",
+        "category": "ClawAI"
+      },
+      {
         "command": "clawAI.openTerminal",
         "title": "%command.openTerminal%",
         "category": "ClawAI"
@@ -208,6 +221,36 @@
       {
         "command": "clawAI.toggleFastMode",
         "title": "%command.toggleFastMode%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.remoteControl.start",
+        "title": "%command.remoteControlStart%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.remoteControl.stop",
+        "title": "%command.remoteControlStop%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.runner.register",
+        "title": "%command.registerRunner%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.pairDevice",
+        "title": "%command.pairDevice%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.resumeConversation",
+        "title": "%command.resumeConversation%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.startCloudSession",
+        "title": "%command.startCloudSession%",
         "category": "ClawAI"
       },
       {
@@ -276,6 +319,31 @@
         "category": "ClawAI"
       },
       {
+        "command": "clawAI.manageRoutines",
+        "title": "%command.manageRoutines%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.postReviewComment",
+        "title": "%command.postReviewComment%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.configureSlackNotifications",
+        "title": "%command.configureSlackNotifications%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.managePlugins",
+        "title": "%command.managePlugins%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.browsePluginMarketplaces",
+        "title": "%command.browsePluginMarketplaces%",
+        "category": "ClawAI"
+      },
+      {
         "command": "clawAI.runSavedWorkflow",
         "title": "%command.runSavedWorkflow%",
         "category": "ClawAI"
@@ -283,6 +351,21 @@
       {
         "command": "clawAI.sendFeedback",
         "title": "%command.sendFeedback%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.runRemoteJob",
+        "title": "%command.runRemoteJob%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.showChannelWebhook",
+        "title": "%command.showChannelWebhook%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.checkChannelInbox",
+        "title": "%command.checkChannelInbox%",
         "category": "ClawAI"
       },
       {
@@ -392,6 +475,15 @@
           "scope": "resource",
           "description": "%config.autoCompact%"
         },
+        "clawAI.mcpServers": {
+          "type": "object",
+          "default": {},
+          "scope": "application",
+          "markdownDescription": "%config.mcpServers%",
+          "additionalProperties": {
+            "type": "object"
+          }
+        },
         "clawAI.agentMode": {
           "type": "string",
           "enum": [
@@ -401,6 +493,15 @@
           "default": "AUTO",
           "scope": "resource",
           "description": "%config.agentMode%"
+        },
+        "clawAI.pluginMarketplaces": {
+          "type": "array",
+          "default": [],
+          "scope": "application",
+          "markdownDescription": "%config.pluginMarketplaces%",
+          "items": {
+            "type": "string"
+          }
         },
         "clawAI.hooks": {
           "type": "array",
@@ -496,6 +597,31 @@
           "scope": "resource",
           "description": "%config.permissionMode%"
         },
+        "clawAI.commandSandbox.mode": {
+          "type": "string",
+          "enum": [
+            "off",
+            "auto",
+            "bubblewrap",
+            "seatbelt",
+            "docker"
+          ],
+          "default": "off",
+          "scope": "machine",
+          "description": "%config.commandSandbox.mode%"
+        },
+        "clawAI.commandSandbox.dockerImage": {
+          "type": "string",
+          "default": "",
+          "scope": "machine",
+          "description": "%config.commandSandbox.dockerImage%"
+        },
+        "clawAI.commandSandbox.allowNetwork": {
+          "type": "boolean",
+          "default": false,
+          "scope": "machine",
+          "description": "%config.commandSandbox.allowNetwork%"
+        },
         "clawAI.selectedModel": {
           "type": "string",
           "default": "",
@@ -553,6 +679,12 @@
           "maximum": 500,
           "scope": "window",
           "description": "%config.historyLimit%"
+        },
+        "clawAI.zeroDataRetention": {
+          "type": "boolean",
+          "default": false,
+          "scope": "application",
+          "description": "%config.zeroDataRetention%"
         }
       }
     },
@@ -748,6 +880,10 @@
       {
         "fileMatch": "/.clawai/agents/agents.json",
         "url": "./schemas/clawai-agents.schema.json"
+      },
+      {
+        "fileMatch": "/.clawai/mcp.json",
+        "url": "./schemas/clawai-mcp.schema.json"
       }
     ]
   },

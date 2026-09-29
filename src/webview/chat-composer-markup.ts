@@ -31,6 +31,9 @@ export function renderComposerMarkup(translated: ChatMarkupTranslator): string {
           <button id="attachmentButton" class="icon-button attachment-button" type="button" title="${translated('Attach files')}" aria-label="${translated('Attach files')}">
             ${iconMarkup('attach')}
           </button>
+          <button id="browserAttachButton" class="icon-button browser-attach-button" type="button" title="${translated('Attach the agent browser page')}" aria-label="${translated('Attach the agent browser page')}">
+            ${iconMarkup('globe')}
+          </button>
           <button id="voiceButton" class="icon-button voice-button" type="button" aria-pressed="false" title="${translated('Dictate')}" aria-label="${translated('Dictate')}">
             ${iconMarkup('mic')}
           </button>
@@ -82,7 +85,7 @@ export function renderComposerMarkup(translated: ChatMarkupTranslator): string {
                   <option value="ASK">${translated('Ask for Approval')}</option>
                   <option value="AUTO_EDIT">${translated('Auto Edit')}</option>
                   <option value="AUTONOMOUS_SCOPED">${translated('Autonomous Scoped')}</option>
-                  <option value="ENTERPRISE_LOCKED">${translated('Enterprise Locked')}</option>
+                  <option value="ENTERPRISE_LOCKED">${translated('Strict')}</option>
                 </select>
               </label>
               <label class="compact-control" for="contextMode"><span>${translated('Context')}</span>

@@ -1,0 +1,66 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clawai.dev/schemas/clawai-mcp.schema.json",
+  "title": "ClawAI MCP servers",
+  "description": "Mirrors mcpConfigFileSchema in src/core/mcp/mcp-config.ts. Servers declared here are untrusted workspace content: local servers start only in a trusted workspace, policy may refuse any of them, and every tool listing and call asks the user first.",
+  "type": "object",
+  "additionalProperties": false,
+  "definitions": {
+    "stdioServer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["command"],
+      "properties": {
+        "type": { "const": "stdio" },
+        "command": { "type": "string", "minLength": 1, "maxLength": 4096 },
+        "args": { "type": "array", "items": { "type": "string" }, "maxItems": 200 },
+        "env": { "type": "object", "additionalProperties": { "type": "string" } },
+        "cwd": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Relative to the workspace root, and must stay inside it."
+        }
+      }
+    },
+    "httpServer": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["url"],
+      "properties": {
+        "type": { "enum": ["http", "streamable-http"] },
+        "url": {
+          "type": "string",
+          "description": "https, or http on localhost only."
+        },
+        "headers": {
+          "type": "object",
+          "description": "Non-credential headers. Authorization and Cookie are refused: tokens come from OAuth and live in SecretStorage.",
+          "additionalProperties": { "type": "string" }
+        },
+        "oauth": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["clientId"],
+          "properties": {
+            "clientId": { "type": "string", "minLength": 1 },
+            "authorizationEndpoint": { "type": "string" },
+            "tokenEndpoint": { "type": "string" },
+            "scopes": { "type": "array", "items": { "type": "string" }, "maxItems": 50 },
+            "resource": { "type": "string" }
+          }
+        }
+      }
+    },
+    "serverMap": {
+      "type": "object",
+      "propertyNames": { "pattern": "^[A-Za-z0-9][A-Za-z0-9_.-]{0,63}$" },
+      "additionalProperties": {
+        "oneOf": [{ "$ref": "#/definitions/stdioServer" }, { "$ref": "#/definitions/httpServer" }]
+      }
+    }
+  },
+  "properties": {
+    "servers": { "$ref": "#/definitions/serverMap" },
+    "mcpServers": { "$ref": "#/definitions/serverMap" }
+  }
+}

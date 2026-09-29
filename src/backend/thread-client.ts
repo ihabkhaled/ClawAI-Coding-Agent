@@ -1,3 +1,5 @@
+import { threadRewindResultSchema } from '../core/conversation-rewind';
+
 import {
   messageSchema,
   paginatedSchema,
@@ -8,6 +10,7 @@ import {
 import { THREAD_ORIGIN } from './thread-client.constants';
 
 import type { RoutingMode } from '../core/configuration';
+import type { ThreadRewindResult } from '../core/conversation-rewind.types';
 import type { z } from 'zod';
 
 type PatchRequester = <T>(
@@ -104,4 +107,23 @@ export async function listMessages(
     paginatedSchema(messageSchema),
   );
   return result.data;
+}
+
+/**
+ * Drops every message after `afterMessageId`, keeping that one.
+ *
+ * `POST /chat-threads/:id/rewind` checks ownership and that the message
+ * belongs to this thread before deleting anything, and does both in one
+ * transaction on the server. The count comes back so the notice can say what
+ * went, rather than claiming a rewind that removed nothing.
+ */
+export async function rewindThread(
+  request: PostRequester,
+  threadId: string,
+  afterMessageId: string,
+): Promise<ThreadRewindResult> {
+  return request(`/chat-threads/${encodeURIComponent(threadId)}/rewind`, threadRewindResultSchema, {
+    method: 'POST',
+    body: { afterMessageId },
+  });
 }

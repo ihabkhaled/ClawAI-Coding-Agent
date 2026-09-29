@@ -1,3 +1,5 @@
+import { createHash } from 'node:crypto';
+
 import { redactText } from './redaction';
 
 import type { OtlpEndpoint, OtlpTracePayload } from './otlp-export.types';
@@ -40,6 +42,21 @@ export function parseOtlpEndpoint(
   if (parsed.protocol === 'http:' && !loopback) return undefined;
   if (parsed.protocol !== 'http:' && parsed.protocol !== 'https:') return undefined;
   return { url: parsed.toString(), headers };
+}
+
+/**
+ * An identifier in the shape OTLP requires: 32 hex digits for a trace, 16 for
+ * a span.
+ *
+ * The runtime names spans `span:<uuid>` and traces by request id, which a
+ * collector rejects outright — the whole batch, not just the span. Hashing
+ * rather than stripping keeps the mapping stable, so a tool span's parent id
+ * still matches its run span's id after both are converted.
+ */
+export function otlpId(value: string, hexDigits: 16 | 32): string {
+  const lower = value.toLowerCase();
+  if (lower.length === hexDigits && /^[0-9a-f]+$/u.test(lower)) return lower;
+  return createHash('sha256').update(value).digest('hex').slice(0, hexDigits);
 }
 
 /**
@@ -104,9 +121,11 @@ export function otlpTracePayload(
           {
             scope: { name: 'clawai.runtime' },
             spans: spans.map((span) => ({
-              traceId: span.traceId,
-              spanId: span.spanId,
-              ...(span.parentSpanId === undefined ? {} : { parentSpanId: span.parentSpanId }),
+              traceId: otlpId(span.traceId, 32),
+              spanId: otlpId(span.spanId, 16),
+              ...(span.parentSpanId === undefined
+                ? {}
+                : { parentSpanId: otlpId(span.parentSpanId, 16) }),
               name: span.name,
               kind: 1,
               startTimeUnixNano: nanoseconds(span.startedAt),

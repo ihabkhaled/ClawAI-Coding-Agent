@@ -2,11 +2,8 @@ import { z } from 'zod';
 
 import type { RoutingMode } from '../core/configuration';
 import type { ResearchMode } from '../core/research-mode';
-import type {
-  RunBudget,
-  ToolDefinition,
-  ToolInvocation,
-} from '../core/runtime/runtime-tool-contracts';
+import type { WireToolDefinition } from '../core/runtime/runtime-deferred-tools.types';
+import type { RunBudget, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { SessionVault } from '../core/session-vault';
 
 export const runtimeStartAckSchema = z
@@ -47,7 +44,8 @@ export interface RuntimeStartRequest {
   readonly fileIds?: readonly string[];
   readonly manifestHash: string;
   readonly toolCatalogHash: string;
-  readonly toolDefinitions: readonly ToolDefinition[];
+  /** Full definitions, or F028 deferred stubs committing to one by hash. */
+  readonly toolDefinitions: readonly WireToolDefinition[];
   readonly provider: string;
   readonly model: string;
   readonly epochs: ToolInvocation['epochs'];

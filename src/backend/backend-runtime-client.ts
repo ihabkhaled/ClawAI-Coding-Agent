@@ -7,9 +7,13 @@ import {
   type RuntimeStartRequest,
 } from './backend-client.types';
 import { runtimeProtocolWireDescriptorSchema } from './contracts';
+import {
+  runtimeDeferredLoadAckSchema,
+  type RuntimeDeferredLoadAck,
+} from './runtime-deferred-tools.contracts';
 
 import type { RuntimeProtocolWireDescriptor } from '../core/runtime/runtime-negotiation';
-import type { ToolResult } from '../core/runtime/runtime-tool-contracts';
+import type { ToolDefinition, ToolResult } from '../core/runtime/runtime-tool-contracts';
 import type { z } from 'zod';
 
 type Request = <T>(
@@ -104,6 +108,24 @@ export class BackendRuntimeClient {
         requestedAt: new Date().toISOString(),
       },
       signal,
+    );
+  }
+
+  /** F028: supplies full definitions for tools this run declared deferred at start. */
+  loadTools(
+    binding: RuntimeCommandBinding,
+    definitions: readonly ToolDefinition[],
+    signal?: AbortSignal,
+  ): Promise<RuntimeDeferredLoadAck> {
+    const query = new URLSearchParams({ threadId: binding.threadId });
+    return this.request(
+      `/chat-messages/runtime/runs/${encodeURIComponent(binding.runId)}/tools?${query.toString()}`,
+      runtimeDeferredLoadAckSchema,
+      {
+        body: { generation: binding.generation, definitions },
+        method: 'POST',
+        ...(signal === undefined ? {} : { signal }),
+      },
     );
   }
 

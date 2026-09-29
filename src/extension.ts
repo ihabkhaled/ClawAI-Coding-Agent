@@ -20,7 +20,7 @@ import { VscodeTerminalTracker } from './infrastructure/vscode-terminal-capture'
 import { VscodeUserNotifier } from './infrastructure/vscode-user-notifier';
 import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-edit-adapter';
 import { AgentCoordinator } from './services/agent-coordinator';
-import { attachTerminalOutput } from './services/attach-terminal-command';
+import { registerComposerReferenceCommands } from './services/composer-reference-commands';
 import { ConfigurationService } from './services/configuration-service';
 import { ContextFreshnessTracker } from './services/context-freshness-tracker';
 import { ClawaiUriHandler } from './services/deep-link-handler';
@@ -35,10 +35,14 @@ import {
   claimPendingWindowHandoff,
   openConversationInNewWindow,
 } from './services/open-in-new-window-command';
+import { registerConnectedCommands } from './services/register-connected-commands';
+import { registerRemoteChannelCommands } from './services/remote-channel-commands';
+import { registerRemoteSessionCommands } from './services/remote-session-commands';
 import { ThreadGroupStore } from './services/thread-group-store';
 import { WorkspaceContextService } from './services/workspace-context-service';
 import { WorkspaceScopeService } from './services/workspace-scope-service';
 import { workspaceSkillCatalog } from './services/workspace-skill-catalog';
+import { ZeroRetentionController } from './services/zero-retention-controller';
 import { AttentionView } from './views/attention-view';
 import { createClawIconPath } from './views/claw-icon-path';
 import { DiffPreviewProvider } from './views/diff-preview-provider';
@@ -122,6 +126,7 @@ function registerCommands(
     ['clawAI.runSavedWorkflow', () => coordinator.automation.runSavedWorkflow()],
     ['clawAI.createCheckpoint', () => coordinator.commands.createCheckpoint()],
     ['clawAI.restoreCheckpoint', () => coordinator.commands.restoreCheckpoint()],
+    ['clawAI.rewindConversation', (arg?: unknown) => coordinator.commands.rewindConversation(arg)],
     ['clawAI.askSideQuestion', () => coordinator.commands.askSideQuestion()],
     ['clawAI.compactConversation', () => coordinator.commands.compactConversation()],
     ['clawAI.selectOutputStyle', () => coordinator.commands.selectOutputStyle()],
@@ -381,6 +386,7 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
     contextTree,
     historyTree,
     statusBar,
+    new ZeroRetentionController(state),
     vscode.window.registerWebviewViewProvider('clawAI.chat', chatView, {
       webviewOptions: {
         retainContextWhenHidden: true,
@@ -436,13 +442,9 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
   );
   context.subscriptions.push(
     terminals,
-    vscode.commands.registerCommand('clawAI.attachTerminalOutput', () =>
-      attachTerminalOutput({
-        terminals: () => vscode.window.terminals,
-        capture: (terminal) => terminals.capture(terminal),
-        insert: (block) => chatView.appendToComposer(block),
-      }),
-    ),
+    ...registerComposerReferenceCommands(() => state.snapshot, chatView, terminals),
+    ...registerRemoteSessionCommands(() => coordinator.currentBackend(), state, chatView),
+    ...registerRemoteChannelCommands(() => coordinator.currentBackend(), state, chatView, context),
     vscode.commands.registerCommand('clawAI.groupConversation', () =>
       groupConversation({
         threads: () => state.snapshot.history,
@@ -507,6 +509,14 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
     }),
   );
   registerCommands(context, coordinator, logger, globalContext);
+  registerConnectedCommands({
+    context,
+    state,
+    backend: () => coordinator.currentBackend(),
+    logger,
+    workspaceScope,
+    version: extensionPackage.version,
+  });
   registerChatParticipant(context, coordinator);
   void coordinator.initialize();
   // Undefined everywhere except under the test runner. See extension-test-api.

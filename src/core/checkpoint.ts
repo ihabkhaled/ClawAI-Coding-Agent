@@ -1,5 +1,7 @@
 import { z } from 'zod';
 
+import { conversationAnchorSchema } from './conversation-rewind';
+
 import type { Checkpoint, CheckpointFile } from './checkpoint.types';
 
 /** How many checkpoints are kept before the oldest is dropped. */
@@ -24,6 +26,7 @@ export const checkpointSchema = z
     label: checkpointLabelSchema,
     createdAt: z.number().int().nonnegative(),
     files: z.array(checkpointFileSchema).max(1_000),
+    conversation: conversationAnchorSchema.optional(),
   })
   .strict();
 

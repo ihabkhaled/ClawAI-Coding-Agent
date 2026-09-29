@@ -1,4 +1,6 @@
 import { checkpointSchema, retainCheckpoints } from '../core/checkpoint';
+import { zeroRetentionPosture } from '../core/zero-retention-posture';
+import { retentionAwareKeyValue } from '../core/zero-retention-storage';
 
 import type { CheckpointStoragePort } from './checkpoint-store.types';
 import type { Checkpoint } from '../core/checkpoint.types';
@@ -18,7 +20,16 @@ export const CHECKPOINTS_KEY = 'clawAI.checkpoints';
  * keep that promise, and restoring from it would be worse than not having it.
  */
 export class CheckpointStore {
-  constructor(private readonly storage: CheckpointStoragePort) {}
+  private readonly storage: CheckpointStoragePort;
+
+  constructor(
+    storage: CheckpointStoragePort,
+    zeroRetention: () => boolean = () => zeroRetentionPosture.active(),
+  ) {
+    // Under zero data retention a checkpoint holds file contents for the
+    // session only; closing the window is the purge.
+    this.storage = retentionAwareKeyValue(storage, zeroRetention);
+  }
 
   read(): Checkpoint[] {
     const raw = this.storage.get(CHECKPOINTS_KEY);

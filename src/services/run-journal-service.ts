@@ -10,6 +10,8 @@ import {
   runJournalSearchSchema,
   type RunJournalSummary,
 } from '../core/run-journal-search';
+import { zeroRetentionPosture } from '../core/zero-retention-posture';
+import { retentionAwareTextStorage } from '../core/zero-retention-storage';
 
 export interface RunJournalStoragePort {
   read(runId: string): Promise<string | undefined>;
@@ -40,10 +42,16 @@ const encryptedJournalSchema = z
   .strict();
 
 export class RunJournalService {
+  private readonly storage: RunJournalStoragePort;
+
   constructor(
-    private readonly storage: RunJournalStoragePort,
+    storage: RunJournalStoragePort,
     private readonly keys: RunJournalKeyPort,
-  ) {}
+    zeroRetention: () => boolean = () => zeroRetentionPosture.active(),
+  ) {
+    // Under zero data retention a journal lives for the session only.
+    this.storage = retentionAwareTextStorage(storage, zeroRetention);
+  }
 
   async save(candidate: unknown): Promise<void> {
     const journal = durableRunJournalSchema.parse(candidate);

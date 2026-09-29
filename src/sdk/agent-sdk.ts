@@ -4,9 +4,15 @@ import { runHeadlessSession } from '../headless/headless-session';
 import { HeadlessTransport, sha256 } from '../headless/headless-transport';
 
 import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
-import { toolResultFor } from './agent-tool-result';
+import { toolCallOf, toolResultFor } from './agent-tool-result';
 
-import type { AgentRunOptions, AgentRunResult, RuntimeTransportPort } from './agent-sdk.types';
+import type {
+  AgentRunOptions,
+  AgentRunResult,
+  AgentToolkit,
+  RuntimeTransportPort,
+} from './agent-sdk.types';
+import type { HeadlessStreamEvent } from '../headless/headless-session.types';
 
 /**
  * Runs one agent task against the runtime, with no editor and no host.
@@ -28,7 +34,7 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
   const transport: RuntimeTransportPort =
     options.transport ?? new HeadlessTransport(options.backendUrl ?? AGENT_SDK_DEFAULTS.backendUrl);
   const deadlineMs = options.deadlineMs ?? AGENT_SDK_DEFAULTS.deadlineMs;
-  const token = await transport.signIn(options.credentials);
+  const token = await accessToken(transport, options);
   const threadId = await transport.createThread(token, options.title ?? AGENT_SDK_DEFAULTS.title);
   const epochs = { account: 1, workspace: 1, target: 1, policy: 1 };
 
@@ -47,18 +53,52 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
     provider: options.provider ?? AGENT_SDK_DEFAULTS.provider,
     model: options.model ?? AGENT_SDK_DEFAULTS.model,
     epochs,
-    budget: { ...AGENT_SDK_DEFAULTS.budget, maxRuntimeMs: deadlineMs },
+    budget: { ...AGENT_SDK_DEFAULTS.budget, maxRuntimeMs: deadlineMs, ...options.budget },
   });
 
   const run = { ...started, threadId };
+  options.onStarted?.({ runId: run.runId, threadId });
   const report = await runHeadlessSession({
-    events: () => transport.events(token, run),
+    events: () => transport.events(token, run, options.signal),
     answerTool: async (event) => {
-      await transport.submitResult(token, run, epochs, toolResultFor(event, options.toolkit));
+      const denial = await deniedReason(event, options.toolkit);
+      await transport.submitResult(
+        token,
+        run,
+        epochs,
+        toolResultFor(event, options.toolkit, denial),
+      );
     },
     now: options.now ?? ((): number => Date.now()),
     deadlineMs,
+    ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
+    ...(options.signal === undefined ? {} : { signal: options.signal }),
   });
 
   return { ...report, runId: run.runId };
+}
+
+/**
+ * A token the caller already holds is used as given; otherwise the credentials
+ * are exchanged for one. Neither is a usage error the caller can fix, so it is
+ * said plainly rather than surfacing as a sign-in with empty strings.
+ */
+async function accessToken(
+  transport: RuntimeTransportPort,
+  options: AgentRunOptions,
+): Promise<string> {
+  if (options.token !== undefined && options.token.length > 0) return options.token;
+  if (options.credentials === undefined) {
+    throw new Error('runAgent needs either a token or credentials');
+  }
+  return transport.signIn(options.credentials);
+}
+
+async function deniedReason(
+  event: HeadlessStreamEvent,
+  toolkit: AgentToolkit,
+): Promise<string | undefined> {
+  if (toolkit.authorize === undefined) return undefined;
+  const allowed = await toolkit.authorize(toolCallOf(event));
+  return allowed ? undefined : 'The tool call was not permitted for this run.';
 }

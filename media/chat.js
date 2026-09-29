@@ -30,6 +30,7 @@ const elements = {
   attachmentList: byId('attachmentList'),
   attachmentStatus: byId('attachmentStatus'),
   attachmentTray: byId('attachmentTray'),
+  browserAttachButton: byId('browserAttachButton'),
   voiceButton: byId('voiceButton'),
   backendDot: byId('backendDot'),
   backendLabel: byId('backendLabel'),
@@ -887,9 +888,30 @@ function renderHistoryMessages(messages) {
       historyMessageModelLabel(message),
     );
     body.dataset.streamPlaceholder = 'false';
+    appendRewindAction(body, message.id);
   }
   setConversationVisibility();
   renderConversationTokenCount();
+}
+
+// "Rewind to here": only saved turns carry a server id, so a turn still
+// streaming has nothing to rewind to. The host confirms before deleting.
+function appendRewindAction(body, messageId) {
+  if (typeof messageId !== 'string' || messageId.length === 0) return;
+  const card = body.closest('.message-card');
+  let actions = card.querySelector('.message-actions');
+  if (actions === null) {
+    actions = document.createElement('div');
+    actions.className = 'message-actions';
+    card.append(actions);
+  }
+  const button = textElement('button', 'message-action', labels.rewindToHere);
+  button.type = 'button';
+  button.dataset.action = 'rewind';
+  button.addEventListener('click', () => {
+    vscode.postMessage({ type: 'rewindToMessage', messageId });
+  });
+  actions.append(button);
 }
 
 function operationLabel(operation) {
@@ -2760,6 +2782,19 @@ elements.attachmentButton.addEventListener('click', () => {
   elements.attachmentInput.click();
 });
 
+elements.browserAttachButton?.addEventListener('click', () => {
+  vscode.postMessage({ type: 'attachBrowserState' });
+});
+
+// A host-made image (the agent browser's screenshot) goes through the same
+// validation, downscaling and preview as a file the user picked.
+function attachHostFile(attachment) {
+  const bytes = Uint8Array.from(window.atob(attachment.content), (char) => char.charCodeAt(0));
+  addAttachmentFiles([
+    new window.File([bytes], attachment.filename, { type: attachment.mimeType }),
+  ]);
+}
+
 elements.attachmentInput.addEventListener('change', () => {
   addAttachmentFiles(elements.attachmentInput.files ?? []);
 });
@@ -3508,6 +3543,13 @@ window.addEventListener('message', (event) => {
       elements.connectionError.hidden = false;
     }
     elements.announcer.textContent = message.message;
+  } else if (
+    message?.type === 'attachToComposer' &&
+    typeof message.attachment?.content === 'string' &&
+    typeof message.attachment?.filename === 'string' &&
+    typeof message.attachment?.mimeType === 'string'
+  ) {
+    attachHostFile(message.attachment);
   } else if (message?.type === 'appendToComposer' && typeof message.text === 'string') {
     const existing = elements.prompt.value;
     elements.prompt.value =

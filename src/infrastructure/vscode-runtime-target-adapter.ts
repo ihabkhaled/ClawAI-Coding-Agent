@@ -30,6 +30,7 @@ import { qualityToolDefinition } from './quality-tool-executor';
 import { runJournalToolDefinition } from './run-journal-tool-executor';
 import { structuredCommandToolDefinition } from './structured-command-tool-executor';
 import { subAgentToolDefinition } from './sub-agent-tool-executor';
+import { toolSearchToolDefinition } from './tool-search-tool-executor';
 import { workspaceFilesystemToolDefinition } from './vscode-filesystem-tool-executor';
 
 import type {
@@ -318,6 +319,9 @@ function localToolDefinitions(probe: RuntimeHostProbe) {
     // Declaring a run finished needs no host prerequisite either, and a run
     // that cannot say how it ended leaves no terminal record at all.
     endConversationToolDefinition,
+    // F028: loading a deferred schema needs no prerequisite or trust; the
+    // transport drops it again when nothing in the catalog is deferred.
+    toolSearchToolDefinition,
     intelligenceToolDefinition,
     planningToolDefinition,
     runJournalToolDefinition,

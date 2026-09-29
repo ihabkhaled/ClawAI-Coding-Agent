@@ -3,11 +3,17 @@ import * as vscode from 'vscode';
 import { assembleContextEnvelope } from '../core/context-envelope';
 import { SseDecoder } from '../core/sse-decoder';
 import { addTokenReceipts, estimateTokens, reconcileTokenReceipt } from '../core/token-telemetry';
+import {
+  attributionModelLabel,
+  sessionUsageAttribution,
+  type UsageAttributionLedger,
+} from '../core/usage-attribution';
 
 import type { RoutingMode } from '../core/configuration';
 import type { ContextCandidate, ContextReceipt } from '../core/context-collector';
 import type { ResearchMode } from '../core/research-mode';
 import type { ReportedTokenUsage, TokenReceipt } from '../core/token-telemetry';
+import type { UsageAttributionSource } from '../core/usage-attribution.types';
 
 export interface ChatBackendPort {
   createThread(input: {
@@ -45,6 +51,8 @@ export interface ChatSendInput {
   researchMode?: ResearchMode;
   fileIds?: string[];
   threadId?: string;
+  /** What the usage dialog charges this turn to. Never sent to the backend. */
+  attribution?: UsageAttributionSource;
 }
 
 export interface ChatResult {
@@ -313,6 +321,7 @@ export class ChatService {
   constructor(
     private backend: ChatBackendPort,
     private readonly publishContextReceipt: (receipt: ContextReceipt) => void = () => undefined,
+    private readonly usage: UsageAttributionLedger = sessionUsageAttribution,
   ) {}
 
   setBackend(backend: ChatBackendPort): void {
@@ -354,7 +363,21 @@ export class ChatService {
       const result = await consumeStream(body, onEvent);
       signal?.throwIfAborted();
 
-      return completedChatResult(threadId, result, request.content, message.contextReceipt);
+      const completed = completedChatResult(
+        threadId,
+        result,
+        request.content,
+        message.contextReceipt,
+      );
+      this.usage.record({
+        source: input.attribution ?? { kind: 'chat', name: 'chat' },
+        model: attributionModelLabel(
+          completed.provider ?? input.provider,
+          completed.model ?? input.model,
+        ),
+        tokens: completed.tokens,
+      });
+      return completed;
     } finally {
       await cancelUnreadResponse(response, streamConsumed);
     }

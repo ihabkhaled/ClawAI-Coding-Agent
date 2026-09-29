@@ -1,7 +1,10 @@
+import { BUILT_IN_SKILLS } from '../core/built-in-skills.constants';
 import { VscodeSkillSource } from '../infrastructure/vscode-skill-source';
 
 import { OutputStyleCatalog } from './output-style-catalog';
+import { PluginSkillSource } from './plugin-skill-source';
 import { SkillCatalogService } from './skill-catalog-service';
+import { workspacePluginStore } from './workspace-plugins';
 
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type * as vscode from 'vscode';
@@ -17,12 +20,19 @@ export function workspaceSkillCatalog(
   globalStorageUri: vscode.Uri,
   workspaceScope: WorkspaceScopeService,
 ): SkillCatalogService {
+  const folder = (): vscode.Uri | undefined =>
+    workspaceScope.refresh().selectedFolderKey === undefined
+      ? undefined
+      : workspaceScope.selectedFolder().uri;
+  // Plugin skills and plugin slash commands are the same thing here: a skill
+  // is how this extension spells a slash command.
   return new SkillCatalogService(
-    new VscodeSkillSource(globalStorageUri, () =>
-      workspaceScope.refresh().selectedFolderKey === undefined
-        ? undefined
-        : workspaceScope.selectedFolder().uri,
+    new PluginSkillSource(
+      new VscodeSkillSource(globalStorageUri, folder),
+      workspacePluginStore(globalStorageUri, folder),
+      ['skills', 'commands'],
     ),
+    BUILT_IN_SKILLS,
   );
 }
 
@@ -37,14 +47,15 @@ export function workspaceOutputStyles(
   globalStorageUri: vscode.Uri,
   workspaceScope: WorkspaceScopeService,
 ): OutputStyleCatalog {
+  const folder = (): vscode.Uri | undefined =>
+    workspaceScope.refresh().selectedFolderKey === undefined
+      ? undefined
+      : workspaceScope.selectedFolder().uri;
   return new OutputStyleCatalog(
-    new VscodeSkillSource(
-      globalStorageUri,
-      () =>
-        workspaceScope.refresh().selectedFolderKey === undefined
-          ? undefined
-          : workspaceScope.selectedFolder().uri,
-      'output-styles',
+    new PluginSkillSource(
+      new VscodeSkillSource(globalStorageUri, folder, 'output-styles'),
+      workspacePluginStore(globalStorageUri, folder),
+      ['outputStyles'],
     ),
   );
 }

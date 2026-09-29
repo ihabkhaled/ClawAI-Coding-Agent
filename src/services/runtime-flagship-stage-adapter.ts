@@ -4,8 +4,10 @@ import {
   graphSummaryLine,
   outcomeIdentitiesMatch,
 } from '../core/flagship-acceptance';
+import { flagshipStageAcceptanceChecks } from '../core/flagship-stage-plan';
 import { subAgentGraphSchema } from '../core/multi-agent-dag';
 
+import { FLAGSHIP_STAGE_ROLES, FLAGSHIP_STAGE_TOOLS } from './runtime-flagship-stage.constants';
 import { affectedReplanTaskIds } from './runtime-recovery-policy';
 
 import type { FlagshipStagePort } from './flagship-delivery-service';
@@ -16,6 +18,7 @@ import type {
   FlagshipStage,
   FlagshipStageResult,
 } from '../core/flagship-delivery';
+import type { ResolvedFlagshipStage } from '../core/flagship-stage';
 import type { SubAgentGraph, SubAgentOutcome, SubAgentTask } from '../core/multi-agent-dag';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 
@@ -82,41 +85,6 @@ export class CoordinatedFlagshipSubAgentPort implements FlagshipSubAgentPort {
   }
 }
 
-const stageRoles: Readonly<Record<FlagshipStage, SubAgentTask['role']>> = {
-  discover: 'explorer',
-  plan: 'explorer',
-  authorize: 'reviewer',
-  implement: 'implementer',
-  integrate: 'integrator',
-  verify: 'tester',
-  review: 'reviewer',
-  commit: 'integrator',
-  'publish-ready': 'reviewer',
-  report: 'documenter',
-};
-
-const stageTools: Readonly<Record<FlagshipStage, readonly string[]>> = {
-  discover: ['workspace.files', 'workspace.intelligence', 'workspace.git'],
-  plan: ['workspace.intelligence', 'workspace.planning', 'runtime.journal'],
-  authorize: ['workspace.planning', 'runtime.evidence'],
-  implement: [
-    'workspace.files',
-    'workspace.command',
-    'workspace.process',
-    'workspace.quality',
-    'workspace.container',
-    'workspace.database',
-    'workspace.browser',
-    'runtime.services',
-  ],
-  integrate: ['runtime.integration', 'workspace.git'],
-  verify: ['workspace.quality', 'workspace.browser', 'runtime.services', 'runtime.evidence'],
-  review: ['workspace.git', 'workspace.intelligence', 'runtime.evidence'],
-  commit: ['workspace.git', 'runtime.evidence'],
-  'publish-ready': ['workspace.git', 'runtime.evidence'],
-  report: ['workspace.files', 'runtime.evidence', 'runtime.journal'],
-};
-
 export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
   constructor(
     private readonly subAgent: FlagshipSubAgentPort,
@@ -129,16 +97,18 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
     request: FlagshipRequest,
     snapshot: FlagshipSnapshot,
     signal: AbortSignal,
+    definition?: ResolvedFlagshipStage,
   ): Promise<FlagshipStageResult> {
     if (stage === 'authorize') return this.authorizedResult(request);
     if (stage === 'integrate') return this.integrate(request, snapshot, signal);
     if (stage === 'commit') return this.committedResult(snapshot);
     const remaining = this.remainingBudget(request, snapshot);
-    if (this.isExhausted(remaining)) return this.exhaustedResult(stage);
+    if (this.isExhausted(remaining)) return this.exhaustedResult(definition?.id ?? stage);
     if (stage === 'implement') return this.implementGraph(request, snapshot, remaining, signal);
-    const task = this.task(stage, request, snapshot, remaining.turns, remaining.tools);
+    const resolved = definition ?? { id: stage, kind: stage, acceptanceChecks: [] };
+    const task = this.task(resolved, request, snapshot, remaining.turns, remaining.tools);
     const outcome = await this.subAgent.execute(task, () => snapshot.steering, signal);
-    return this.outcomeResult(stage, task, outcome);
+    return this.outcomeResult(resolved, task, outcome);
   }
 
   private async implementGraph(
@@ -345,7 +315,7 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
     return remaining.subAgents < 1 || remaining.turns < 1 || remaining.tools < 1;
   }
 
-  private exhaustedResult(stage: FlagshipStage): FlagshipStageResult {
+  private exhaustedResult(stage: string): FlagshipStageResult {
     return {
       status: 'blocked',
       summary: 'Flagship aggregate execution budget is exhausted',
@@ -357,12 +327,13 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
   }
 
   private outcomeResult(
-    stage: FlagshipStage,
+    definition: ResolvedFlagshipStage,
     task: SubAgentTask,
     outcome: SubAgentOutcome,
   ): FlagshipStageResult {
-    const validatedGraph = this.planStageGraph(stage, outcome);
-    const planInvalid = stage === 'plan' && validatedGraph === undefined;
+    const stage = definition.id;
+    const validatedGraph = this.planStageGraph(definition.kind, outcome);
+    const planInvalid = definition.kind === 'plan' && validatedGraph === undefined;
     const succeeded = outcome.status === 'succeeded' && !planInvalid;
     return {
       status:
@@ -463,19 +434,22 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
   }
 
   private task(
-    stage: FlagshipStage,
+    definition: ResolvedFlagshipStage,
     request: FlagshipRequest,
     snapshot: FlagshipSnapshot,
     remainingTurns: number,
     remainingTools: number,
   ): SubAgentTask {
+    const { id: stage, kind } = definition;
+    const acceptanceChecks = flagshipStageAcceptanceChecks(definition, request.acceptanceChecks);
     return {
       taskId: this.taskId(request.deliveryId, stage),
-      role: stageRoles[stage],
+      role: FLAGSHIP_STAGE_ROLES[kind],
       goal: [
         request.goal,
         `Complete only the ${stage} stage and return concrete evidence.`,
-        stage === 'plan'
+        ...(definition.description === undefined ? [] : [definition.description]),
+        kind === 'plan'
           ? 'Produce the implementation SubAgentGraph through workspace.planning validate.'
           : '',
         `Prior stage summaries: ${JSON.stringify(snapshot.stageSummaries)}`,
@@ -490,10 +464,10 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
       },
       contextNodeIds: [],
       dependencies: [],
-      writeSet: stage === 'implement' ? request.writeSet : [],
+      writeSet: kind === 'implement' ? request.writeSet : [],
       integrationSeams: [],
       worktreeId:
-        stage === 'implement'
+        kind === 'implement'
           ? this.taskId(request.deliveryId, stage)
           : (request.repositories[0] ?? 'workspace:missing'),
       budget: {
@@ -502,18 +476,18 @@ export class RuntimeFlagshipStageAdapter implements FlagshipStagePort {
         maxRuntimeMs: Math.min(86_400_000, request.budget.maxRuntimeMs),
         maxRetries: Math.max(0, request.budget.maxStageAttempts - 1),
       },
-      tools: [...stageTools[stage]],
+      tools: [...FLAGSHIP_STAGE_TOOLS[kind]],
       riskCeiling: 'R3',
       inherit: 'none' as const,
       acceptanceChecks:
-        request.acceptanceChecks.length > 0
-          ? request.acceptanceChecks
+        acceptanceChecks.length > 0
+          ? [...acceptanceChecks]
           : [`The ${stage} stage has evidence-backed output`],
       epochs: this.epochs(),
     };
   }
 
-  private taskId(deliveryId: string, stage: FlagshipStage): string {
+  private taskId(deliveryId: string, stage: string): string {
     const normalized = `${deliveryId}-${stage}`
       .toLowerCase()
       .replaceAll(/[^a-z0-9-]/gu, '-')

@@ -15,6 +15,10 @@ import {
   AskUserToolExecutor,
   askUserToolDefinition,
 } from '../infrastructure/ask-user-tool-executor';
+import {
+  DependencyAuditToolExecutor,
+  dependencyAuditToolDefinition,
+} from '../infrastructure/dependency-audit-tool-executor';
 import { DevelopmentServiceDiscovery } from '../infrastructure/development-service-discovery';
 import {
   DevelopmentServiceToolExecutor,
@@ -66,6 +70,10 @@ import {
   processSupervisorToolDefinition,
 } from '../infrastructure/process-supervisor-tool-executor';
 import {
+  RemoteTriggerToolExecutor,
+  remoteTriggerToolDefinition,
+} from '../infrastructure/remote-trigger-tool-executor';
+import {
   RunJournalToolExecutor,
   runJournalToolDefinition,
 } from '../infrastructure/run-journal-tool-executor';
@@ -85,6 +93,12 @@ import {
   SubAgentToolExecutor,
   subAgentToolDefinition,
 } from '../infrastructure/sub-agent-tool-executor';
+import {
+  ToolSearchToolExecutor,
+  toolSearchToolDefinition,
+} from '../infrastructure/tool-search-tool-executor';
+import { VscodeCommandSandbox } from '../infrastructure/vscode-command-sandbox';
+import { VscodeDependencyAuditPort } from '../infrastructure/vscode-dependency-audit-port';
 import {
   VscodeFilesystemToolExecutor,
   workspaceFilesystemToolDefinition,
@@ -128,6 +142,10 @@ export function analysisToolRegistrations(
     { definition: advisorToolDefinition, executor: new AdvisorToolExecutor(parts.advisor) },
     { definition: goalToolDefinition, executor: new GoalToolExecutor(parts.goal) },
     { definition: scheduleToolDefinition, executor: new ScheduleToolExecutor(parts.schedule) },
+    {
+      definition: remoteTriggerToolDefinition,
+      executor: new RemoteTriggerToolExecutor(parts.remoteJobs),
+    },
     { definition: worktreeToolDefinition, executor: new WorktreeToolExecutor(parts.git) },
     {
       // The main session's own address. Sub-agents are answered inside their
@@ -144,6 +162,12 @@ export function analysisToolRegistrations(
     {
       definition: sarifImportToolDefinition,
       executor: new SarifImportToolExecutor(new VscodeSarifPort(parts.files, parts.findings)),
+    },
+    {
+      definition: dependencyAuditToolDefinition,
+      executor: new DependencyAuditToolExecutor(
+        new VscodeDependencyAuditPort(parts.files, parts.findings),
+      ),
     },
     {
       definition: workflowStoreToolDefinition,
@@ -191,6 +215,10 @@ export function analysisToolRegistrations(
         new VscodeNotebookReader((key) => parts.files.workspaceRootUri(key)),
         parts.artifacts,
       ),
+    },
+    {
+      definition: toolSearchToolDefinition,
+      executor: new ToolSearchToolExecutor(parts.toolSearch),
     },
     {
       definition: webResearchToolDefinition,
@@ -253,10 +281,11 @@ export function workspaceToolRegistrations(
     },
     {
       definition: structuredCommandToolDefinition,
-      executor: new StructuredCommandToolExecutor(parts.files, {
-        supervisor: parts.processes,
-        ownerId: parts.accountId,
-      }),
+      executor: new StructuredCommandToolExecutor(
+        parts.files,
+        { supervisor: parts.processes, ownerId: parts.accountId },
+        new VscodeCommandSandbox(),
+      ),
     },
     {
       definition: processSupervisorToolDefinition,

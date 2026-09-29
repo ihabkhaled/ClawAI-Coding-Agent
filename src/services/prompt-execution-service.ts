@@ -274,6 +274,7 @@ export class PromptExecutionService {
         const result = await this.dependencies.chat.send(
           {
             content: session.preparePrompt(prompt),
+            attribution: { kind: 'workflow', name: kind },
             context: collected.files,
             contextReceipt: collected.receipt,
             ...selection,

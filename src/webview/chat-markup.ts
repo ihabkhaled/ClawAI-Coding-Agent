@@ -403,6 +403,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-remove="${translated('Remove')}"
     data-remove-waiting="${translated('Remove waiting request: {0}')}"
     data-retry="${translated('Retry')}"
+    data-rewind-to-here="${translated('Rewind to here')}"
     data-running="${translated('Running')}"
     data-running-count="${translated('{0} running')}"
     data-runtime-tool-budget="${translated('Tool calls used')}"

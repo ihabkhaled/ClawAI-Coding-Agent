@@ -36,6 +36,7 @@ export function sendAgentRunChat(input: {
   const request = {
     content: input.session.preparePrompt(input.content),
     clientIntent: input.run.content,
+    attribution: { kind: 'agent' as const, name: 'agent' },
     context: input.context?.files ?? [],
     ...(input.context === undefined ? {} : { contextReceipt: input.context.receipt }),
     ...input.run.selection,

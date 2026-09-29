@@ -3,9 +3,11 @@ import { describe, expect, it } from 'vitest';
 import {
   describeHeadlessOutcome,
   headlessExitCode,
+  outcomeFromError,
   outcomeFromTerminalEvent,
 } from '../../src/core/headless-outcome';
 import { HEADLESS_EXIT_CODES } from '../../src/core/headless-outcome.constants';
+import { RuntimeHttpError } from '../../src/headless/runtime-http-error';
 
 import type { HeadlessOutcome } from '../../src/core/headless-outcome.types';
 
@@ -13,6 +15,7 @@ const ALL: readonly HeadlessOutcome[] = [
   'completed',
   'failed',
   'unusable',
+  'unauthenticated',
   'blocked',
   'cancelled',
   'exhausted',
@@ -48,8 +51,20 @@ describe('headlessExitCode', () => {
   it('keeps every code inside the range a process can return', () => {
     for (const code of Object.values(HEADLESS_EXIT_CODES)) {
       expect(code).toBeGreaterThanOrEqual(0);
-      expect(code).toBeLessThan(126);
+      expect(code).toBeLessThan(256);
     }
+  });
+
+  it('keeps the documented contract: 0 ok, 1 failed, 2 usage, 3 auth, 4 denied, 130 aborted', () => {
+    expect(HEADLESS_EXIT_CODES).toEqual({
+      completed: 0,
+      failed: 1,
+      unusable: 2,
+      unauthenticated: 3,
+      blocked: 4,
+      exhausted: 5,
+      cancelled: 130,
+    });
   });
 });
 
@@ -78,5 +93,31 @@ describe('describeHeadlessOutcome', () => {
 
   it('tells the reader that a blocked run will block again', () => {
     expect(describeHeadlessOutcome('blocked')).toContain('block again');
+  });
+});
+
+describe('outcomeFromError', () => {
+  const refused = (status: number): RuntimeHttpError => new RuntimeHttpError('/x', status, 'no');
+
+  it('reports an aborted run as cancelled whatever was thrown', () => {
+    expect(outcomeFromError(refused(401), { aborted: true, signingIn: true })).toBe('cancelled');
+  });
+
+  it('reads any client error during sign-in as a refused credential', () => {
+    expect(outcomeFromError(refused(400), { aborted: false, signingIn: true })).toBe(
+      'unauthenticated',
+    );
+  });
+
+  it('reads only 401 as a refused credential after sign-in', () => {
+    expect(outcomeFromError(refused(401), { aborted: false, signingIn: false })).toBe(
+      'unauthenticated',
+    );
+    expect(outcomeFromError(refused(422), { aborted: false, signingIn: false })).toBe('failed');
+  });
+
+  it('reads a server error or a plain exception as a failed run', () => {
+    expect(outcomeFromError(refused(500), { aborted: false, signingIn: true })).toBe('failed');
+    expect(outcomeFromError(new Error('boom'), { aborted: false, signingIn: true })).toBe('failed');
   });
 });

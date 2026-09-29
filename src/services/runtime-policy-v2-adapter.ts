@@ -2,6 +2,12 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { z } from 'zod';
 
+import { classifyMcpOperation, mcpPolicySubject } from '../core/mcp/mcp-policy-classification';
+import { MCP_TOOL_NAME } from '../core/mcp/mcp.constants';
+import {
+  clampToOrganizationFloor,
+  organizationCeilingOf,
+} from '../core/organization-permission-floor';
 import {
   evaluatePolicyV2,
   OneShotCapabilityIssuer,
@@ -24,6 +30,8 @@ interface RuntimePolicyContext {
   readonly userPresent: () => boolean;
   /** Undefined when no organization constrains this user, or the backend is older. */
   readonly organizationPolicy: () => unknown;
+  /** The workspace repository as `host/owner/name`, for organization trust lists. */
+  readonly repository?: () => string | undefined;
   readonly approve: (request: PolicyRequest, signal?: AbortSignal) => Promise<boolean>;
 }
 
@@ -135,6 +143,9 @@ function subjectPaths(parsed: z.infer<typeof pathBearingArgumentsSchema>): strin
  * a bad argument into a policy failure.
  */
 function policySubject(invocation: ToolInvocation): PolicySubject {
+  if (invocation.toolName === MCP_TOOL_NAME) {
+    return mcpPolicySubject(invocation.operation, invocation.toolName, invocation.arguments);
+  }
   const parsed = pathBearingArgumentsSchema.safeParse(invocation.arguments);
   const base = { tool: invocation.toolName, operation: invocation.operation };
   if (!parsed.success) return { ...base, paths: [], domains: [] };
@@ -213,6 +224,13 @@ const operationRules: readonly (readonly [RegExp, Classification])[] = [
 ];
 
 function classifyOperation(invocation: ToolInvocation, operation: string): Classification {
+  if (invocation.toolName === MCP_TOOL_NAME) return classifyMcpOperation(invocation.operation);
+  // F029: creating or firing a remote job runs a command on another machine.
+  if (
+    invocation.toolName === 'runtime.remote' &&
+    /^(?:create|trigger)$/u.test(invocation.operation)
+  )
+    return { effect: 'network-write', risk: 'R3', reversible: false };
   if (
     invocation.toolName === 'workspace.browser' &&
     /^(?:click|fill|select|keyboard|drag|upload|download)$/u.test(invocation.operation)
@@ -246,7 +264,7 @@ export class RuntimePolicyV2Adapter implements RuntimeToolPolicyPort {
     const request: PolicyRequest = {
       runId: invocation.runId,
       invocationHash: `sha256:${createHash('sha256').update(JSON.stringify(invocation)).digest('hex')}`,
-      mode: mode(this.context.mode()),
+      mode: this.effectiveMode(),
       ...classification,
       scope: {
         accountId: this.context.accountId(),
@@ -257,7 +275,7 @@ export class RuntimePolicyV2Adapter implements RuntimeToolPolicyPort {
       },
       workspaceTrusted: this.context.workspaceTrusted(),
       userPresent: this.context.userPresent(),
-      subject: policySubject(invocation),
+      subject: this.subject(invocation),
     };
     const decision = evaluatePolicyV2(
       request,
@@ -285,6 +303,28 @@ export class RuntimePolicyV2Adapter implements RuntimeToolPolicyPort {
     };
   }
 
+  private subject(invocation: ToolInvocation): PolicySubject {
+    const repository = this.context.repository?.();
+    const subject = policySubject(invocation);
+    return repository === undefined ? subject : { ...subject, repository };
+  }
+
+  /**
+   * The configured mode, held under the organization's ceiling (ADR 0003).
+   *
+   * Clamped here as well as at selection: a mode written straight into
+   * settings.json, or chosen before the organization tightened its policy,
+   * never reaches the evaluator above the ceiling.
+   */
+  private effectiveMode(): PolicyRequest['mode'] {
+    return mode(
+      clampToOrganizationFloor(
+        this.context.mode(),
+        organizationCeilingOf(this.context.organizationPolicy()),
+      ),
+    );
+  }
+
   consumeCapability(invocation: ToolInvocation): void {
     const token = this.capabilities.get(invocation.invocationId);
     if (token === undefined) return;
@@ -292,7 +332,7 @@ export class RuntimePolicyV2Adapter implements RuntimeToolPolicyPort {
     const request: PolicyRequest = {
       runId: invocation.runId,
       invocationHash: `sha256:${createHash('sha256').update(JSON.stringify(invocation)).digest('hex')}`,
-      mode: mode(this.context.mode()),
+      mode: this.effectiveMode(),
       ...classification,
       scope: {
         accountId: this.context.accountId(),
@@ -303,7 +343,7 @@ export class RuntimePolicyV2Adapter implements RuntimeToolPolicyPort {
       },
       workspaceTrusted: this.context.workspaceTrusted(),
       userPresent: this.context.userPresent(),
-      subject: policySubject(invocation),
+      subject: this.subject(invocation),
     };
     this.issuer.consume(token, request);
     this.capabilities.delete(invocation.invocationId);

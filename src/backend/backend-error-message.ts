@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 
 import { BackendRequestError, BackendSessionExpiredError } from './backend-errors';
+import { ZeroRetentionRefusedError } from './zero-retention-guard';
+import { zeroRetentionRefusalMessage } from './zero-retention-messages';
 
 export function sessionBoundaryMessage(error: Error): string {
   return error instanceof BackendSessionExpiredError
@@ -21,6 +23,7 @@ export function connectionOperationErrorMessage(error: unknown): string {
 }
 
 export function agentOperationErrorMessage(error: unknown): string {
+  if (error instanceof ZeroRetentionRefusedError) return zeroRetentionRefusalMessage(error.feature);
   return error instanceof BackendSessionExpiredError
     ? sessionBoundaryMessage(error)
     : error instanceof Error

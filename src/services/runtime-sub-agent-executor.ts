@@ -7,6 +7,11 @@ import { subAgentGraphSchema } from '../core/multi-agent-dag';
 import { resolveSubAgentDefinition } from '../core/sub-agent-definitions';
 import { buildInheritedContext } from '../core/sub-agent-inheritance';
 import {
+  attributionModelLabel,
+  sessionUsageAttribution,
+  totalOnlyTokens,
+} from '../core/usage-attribution';
+import {
   AgentBoardToolExecutor,
   agentBoardToolDefinition,
 } from '../infrastructure/agent-board-tool-executor';
@@ -272,6 +277,11 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       },
       signal,
     );
+    sessionUsageAttribution.record({
+      source: { kind: 'subagent', name: task.definitionName ?? task.role },
+      model: attributionModelLabel(selection.provider, selection.model),
+      tokens: totalOnlyTokens(telemetry.tokens),
+    });
     return {
       taskId: task.taskId,
       status: telemetry.status,

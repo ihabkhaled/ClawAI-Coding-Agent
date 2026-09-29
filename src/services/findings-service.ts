@@ -1,4 +1,4 @@
-import { mergeFindings } from '../core/findings';
+import { findingIdentity, mergeFindings } from '../core/findings';
 
 import type { Finding, FindingSelection } from '../core/findings';
 
@@ -28,6 +28,17 @@ export class FindingsService {
     this.findings = selection.findings;
     this.state.update({ findings: this.findings });
     return selection;
+  }
+
+  /**
+   * Withdraws findings a verification step rejected. Matched on the same
+   * identity merging uses, so a rejected claim goes however it was phrased.
+   */
+  discard(rejected: readonly Finding[]): void {
+    if (rejected.length === 0) return;
+    const withdrawn = new Set(rejected.map(findingIdentity));
+    this.findings = this.findings.filter((finding) => !withdrawn.has(findingIdentity(finding)));
+    this.state.update({ findings: this.findings });
   }
 
   current(): FindingSelection {
