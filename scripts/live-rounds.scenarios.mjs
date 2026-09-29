@@ -34,6 +34,47 @@ const git = (workspace, args) =>
  * is the easy case. This tests the hard one — a fact referred to in ordinary
  * words.
  */
+/**
+ * A real, minimal PDF with one line of text per page.
+ *
+ * Built here rather than checked in as a fixture, so every round can put a
+ * fact that has never existed before on a page of its own. ASCII only, which
+ * keeps byte offsets equal to string offsets and lets it travel through the
+ * ordinary text `files` map.
+ */
+const pdfWithPages = (lines) => {
+  const objects = ['<< /Type /Font /Subtype /Type1 /BaseFont /Helvetica >>'];
+  const pagesId = 1 + lines.length * 2 + 1;
+  const kids = [];
+  for (const line of lines) {
+    const stream = `BT /F1 18 Tf 72 700 Td (${line}) Tj ET`;
+    objects.push(`<< /Length ${String(stream.length)} >>\nstream\n${stream}\nendstream`);
+    const contentId = objects.length;
+    objects.push(
+      `<< /Type /Page /Parent ${String(pagesId)} 0 R /MediaBox [0 0 612 792] ` +
+        `/Resources << /Font << /F1 1 0 R >> >> /Contents ${String(contentId)} 0 R >>`,
+    );
+    kids.push(objects.length);
+  }
+  objects.push(
+    `<< /Type /Pages /Kids [${kids.map((kid) => `${String(kid)} 0 R`).join(' ')}] ` +
+      `/Count ${String(kids.length)} >>`,
+  );
+  objects.push(`<< /Type /Catalog /Pages ${String(pagesId)} 0 R >>`);
+  let body = '%PDF-1.4\n';
+  const offsets = objects.map((object, index) => {
+    const offset = body.length;
+    body += `${String(index + 1)} 0 obj\n${object}\nendobj\n`;
+    return offset;
+  });
+  const xref = body.length;
+  body += `xref\n0 ${String(objects.length + 1)}\n0000000000 65535 f \n`;
+  body += offsets.map((offset) => `${String(offset).padStart(10, '0')} 00000 n \n`).join('');
+  body += `trailer\n<< /Size ${String(objects.length + 1)} /Root ${String(objects.length)} 0 R >>\n`;
+  body += `startxref\n${String(xref)}\n%%EOF\n`;
+  return body;
+};
+
 const plantedFact = () => {
   const syllables = ['ka', 'lo', 'mi', 'ru', 'ze', 'ta', 'vo', 'ni', 'sha', 'bre'];
   const pick = () => syllables[Math.floor(Math.random() * syllables.length)];
@@ -373,6 +414,38 @@ export const LIVE_ROUND_SCENARIOS = [
     assert: (workspace) => {
       const inside = read(workspace, 'notes.txt').toLowerCase().includes('contained');
       return { ok: inside, detail: `notes.txt inside workspace=${String(inside)}` };
+    },
+  },
+  {
+    key: 'reads-a-pdf',
+    title: 'reads a PDF in the workspace and uses what one page says',
+    // Not in the core set: the default stays at eight, and reading a file is
+    // already covered there. Run it by name when the PDF path changes.
+    //
+    // The fact is on page TWO of three, so an agent that reads only the first
+    // page — or that is handed the raw PDF bytes and guesses — cannot answer.
+    // A fresh value every round, so an earlier round's file is no help.
+    plant: plantedFact,
+    files: ({ value }) => ({
+      'docs/release-notes.pdf': pdfWithPages([
+        'Release notes. Nothing on this page matters.',
+        `The release codename is ${value}.`,
+        'Appendix. Nothing here either.',
+      ]),
+    }),
+    prompts: () => [
+      [
+        'docs/release-notes.pdf states the release codename on one of its pages. Read the PDF,',
+        'then create CODENAME.txt with workspace.files operation "create" containing only that',
+        'codename. Reply DONE.',
+      ].join(' '),
+    ],
+    assert: (workspace, { value }) => {
+      const found = read(workspace, 'CODENAME.txt').trim();
+      return {
+        ok: found.toUpperCase().includes(value),
+        detail: `CODENAME.txt=${JSON.stringify(found)} wanted=${value}`,
+      };
     },
   },
 ];
