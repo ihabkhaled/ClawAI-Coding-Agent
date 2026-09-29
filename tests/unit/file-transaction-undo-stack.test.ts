@@ -143,3 +143,57 @@ describe('FileTransactionService undo stack', () => {
     expect(service.undoDepth).toBe(0);
   });
 });
+
+/**
+ * The adapter keeps per-transaction state so a later rollback can save the
+ * documents it edited. That state is needed exactly as long as the transaction
+ * is on the undo stack — and it used to be kept forever: only a rollback ever
+ * released it, so every transaction that simply succeeded and later fell off
+ * the stack stayed in the adapter for the life of the session.
+ */
+describe('FileTransactionService releases what it can no longer undo', () => {
+  it('forgets the oldest transaction once it falls past the undo depth', async () => {
+    const forget = vi.fn();
+    const service = new FileTransactionService(adapter({ forget }));
+
+    await applyEdits(service, MAX_UNDO_DEPTH + 1);
+
+    expect(forget).toHaveBeenCalledTimes(1);
+    expect(forget).toHaveBeenCalledWith('transaction-0');
+  });
+
+  it('keeps every transaction that can still be undone', async () => {
+    // Forgetting one still on the stack would break the undo that needs it.
+    const forget = vi.fn();
+    const service = new FileTransactionService(adapter({ forget }));
+
+    await applyEdits(service, MAX_UNDO_DEPTH);
+
+    expect(forget).not.toHaveBeenCalled();
+    expect(service.undoDepth).toBe(MAX_UNDO_DEPTH);
+  });
+
+  it('forgets everything when the undo history is cleared', async () => {
+    const forget = vi.fn();
+    const service = new FileTransactionService(adapter({ forget }));
+    await applyEdits(service, 3);
+
+    service.forgetUndoHistory();
+
+    expect(forget.mock.calls.map(([id]) => id).sort()).toEqual([
+      'transaction-0',
+      'transaction-1',
+      'transaction-2',
+    ]);
+  });
+
+  it('works with an adapter that keeps no per-transaction state', async () => {
+    // `forget` is optional; an adapter without it must not throw.
+    const service = new FileTransactionService(adapter());
+
+    await expect(applyEdits(service, MAX_UNDO_DEPTH + 2)).resolves.toBeUndefined();
+    expect(() => {
+      service.forgetUndoHistory();
+    }).not.toThrow();
+  });
+});
