@@ -2,6 +2,20 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.80.0
+
+Minor: the agent reads PDFs, by page.
+
+- **`workspace.files` read handles `.pdf`.** Text comes from the ClawAI backend
+  (`POST /files/extract-text`, stateless, nothing stored), a page window at a
+  time with `pages` and `nextPage`, under the same byte budget as other reads.
+  A scanned PDF is reported as scanned instead of as empty.
+- **Undo history no longer leaks.** Transactions that fall off the undo stack
+  are released from the editor adapter too.
+- **Two source files carried raw NUL bytes**; they are now escaped.
+- **Live rounds gained a PDF scenario** (`reads-a-pdf`, non-core) with a fresh
+  fact on page two of three every round.
+
 ## 1.79.0
 
 Minor: every setting is proven to be consumed, not merely contributed.
