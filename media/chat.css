@@ -2372,7 +2372,7 @@ body[data-view-density='focus'] .conversation {
   min-width: 0;
   align-items: center;
   gap: var(--sp-2);
-  grid-template-columns: 28px minmax(0, 1fr) 22px;
+  grid-template-columns: 28px minmax(0, 1fr) auto;
   padding: var(--sp-1);
   border: 1px solid var(--claw-line);
   border-radius: var(--radius-sm);
@@ -2434,6 +2434,43 @@ body[data-view-density='focus'] .conversation {
 .attachment-remove:hover {
   color: var(--claw-text);
   background: var(--claw-hover);
+}
+
+.attachment-actions {
+  display: flex;
+  align-items: center;
+}
+
+.attachment-move {
+  width: 18px;
+  height: 22px;
+  padding: 0;
+  border: 0;
+  border-radius: var(--radius-xs);
+  color: var(--claw-muted);
+  background: transparent;
+  line-height: 1;
+}
+
+.attachment-move:hover:not(:disabled) {
+  color: var(--claw-text);
+  background: var(--claw-hover);
+}
+
+.attachment-move:disabled {
+  opacity: 0.35;
+}
+
+.attachment-move:dir(rtl) {
+  transform: scaleX(-1);
+}
+
+.attachment-chip[draggable='true'] {
+  cursor: grab;
+}
+
+.attachment-chip.dragging-attachment {
+  opacity: 0.5;
 }
 
 .control-rail {
@@ -3013,4 +3050,10 @@ body[data-view-density='focus'] .conversation {
   .runtime-budget-meter > span {
     background: Highlight;
   }
+}
+
+.voice-button.listening {
+  color: var(--claw-accent);
+  background: var(--claw-tint);
+  outline: 1px solid var(--claw-accent);
 }

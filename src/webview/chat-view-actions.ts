@@ -44,6 +44,8 @@ export interface ChatViewActions {
   conversationTokens(threadId: string, tokens: number): Promise<void>;
   /** Files dragged onto the composer from the editor or the explorer. */
   dropUris(uriList: string, shiftKey: boolean): Promise<void>;
+  /** The composer microphone could not run; explain why and what works. */
+  dictationUnavailable(code: string): Promise<void>;
   openThread(input: SessionInput & { threadId: string }): Promise<void>;
   refreshModels(): Promise<void>;
   reviewChanges(previewId?: string): Promise<void>;

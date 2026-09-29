@@ -30,6 +30,12 @@ export const commandSpecSchema = z
     expectedEffect: z.enum(COMMAND_EXPECTED_EFFECTS),
     targetId: z.string().min(8).max(128),
     elevation: z.boolean().default(false),
+    /**
+     * Hand the command to the process supervisor and return a receipt at once
+     * instead of waiting for it to exit. For servers and watchers, whose output
+     * the caller then polls through `workspace.process` inspect.
+     */
+    background: z.boolean().optional(),
     stdin: z.string().max(1_048_576).optional(),
     shell: z
       .object({

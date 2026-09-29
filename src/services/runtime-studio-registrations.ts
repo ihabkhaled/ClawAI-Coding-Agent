@@ -1,7 +1,16 @@
+import { MAIN_ADDRESS } from '../core/agent-mailbox.constants';
 import {
   AdvisorToolExecutor,
   advisorToolDefinition,
 } from '../infrastructure/advisor-tool-executor';
+import {
+  AgentMailboxToolExecutor,
+  agentMailboxToolDefinition,
+} from '../infrastructure/agent-mailbox-tool-executor';
+import {
+  ArtifactToolExecutor,
+  artifactToolDefinition,
+} from '../infrastructure/artifact-tool-executor';
 import {
   AskUserToolExecutor,
   askUserToolDefinition,
@@ -65,6 +74,10 @@ import {
   sarifImportToolDefinition,
 } from '../infrastructure/sarif-import-tool-executor';
 import {
+  ScheduleToolExecutor,
+  scheduleToolDefinition,
+} from '../infrastructure/schedule-tool-executor';
+import {
   StructuredCommandToolExecutor,
   structuredCommandToolDefinition,
 } from '../infrastructure/structured-command-tool-executor';
@@ -77,6 +90,7 @@ import {
   workspaceFilesystemToolDefinition,
 } from '../infrastructure/vscode-filesystem-tool-executor';
 import { VscodeMonitorPort } from '../infrastructure/vscode-monitor-port';
+import { VscodeNotebookKernel } from '../infrastructure/vscode-notebook-kernel';
 import { VscodeNotebookReader } from '../infrastructure/vscode-notebook-reader';
 import { VscodeSarifPort } from '../infrastructure/vscode-sarif-port';
 import { VscodeUserNotifier } from '../infrastructure/vscode-user-notifier';
@@ -89,6 +103,10 @@ import {
   WorkflowStoreToolExecutor,
   workflowStoreToolDefinition,
 } from '../infrastructure/workflow-store-tool-executor';
+import {
+  WorktreeToolExecutor,
+  worktreeToolDefinition,
+} from '../infrastructure/worktree-tool-executor';
 
 import type {
   RuntimeStudioAdvancedTools,
@@ -109,6 +127,20 @@ export function analysisToolRegistrations(
   return [
     { definition: advisorToolDefinition, executor: new AdvisorToolExecutor(parts.advisor) },
     { definition: goalToolDefinition, executor: new GoalToolExecutor(parts.goal) },
+    { definition: scheduleToolDefinition, executor: new ScheduleToolExecutor(parts.schedule) },
+    { definition: worktreeToolDefinition, executor: new WorktreeToolExecutor(parts.git) },
+    {
+      // The main session's own address. Sub-agents are answered inside their
+      // scope, so a call reaching this executor is always the main session.
+      definition: agentMailboxToolDefinition,
+      executor: new AgentMailboxToolExecutor({
+        read: () => parts.mailbox.read(),
+        write: (mailbox) => {
+          parts.mailbox.write(mailbox);
+        },
+        callerAddress: () => MAIN_ADDRESS,
+      }),
+    },
     {
       definition: sarifImportToolDefinition,
       executor: new SarifImportToolExecutor(new VscodeSarifPort(parts.files, parts.findings)),
@@ -150,6 +182,14 @@ export function analysisToolRegistrations(
       executor: new NotebookToolExecutor(
         parts.transactions,
         new VscodeNotebookReader((key) => parts.files.workspaceRootUri(key)),
+        new VscodeNotebookKernel((key) => parts.files.workspaceRootUri(key)),
+      ),
+    },
+    {
+      definition: artifactToolDefinition,
+      executor: new ArtifactToolExecutor(
+        new VscodeNotebookReader((key) => parts.files.workspaceRootUri(key)),
+        parts.artifacts,
       ),
     },
     {
@@ -213,7 +253,10 @@ export function workspaceToolRegistrations(
     },
     {
       definition: structuredCommandToolDefinition,
-      executor: new StructuredCommandToolExecutor(parts.files),
+      executor: new StructuredCommandToolExecutor(parts.files, {
+        supervisor: parts.processes,
+        ownerId: parts.accountId,
+      }),
     },
     {
       definition: processSupervisorToolDefinition,

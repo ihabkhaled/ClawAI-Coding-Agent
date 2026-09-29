@@ -1,5 +1,6 @@
 import { createHash, randomUUID } from 'node:crypto';
 
+import { acknowledge, inboxFor, registerAddress, retireAddress } from '../core/agent-mailbox';
 import { fileTransactionSchema } from '../core/file-transaction';
 import { findingsSchema, type Finding } from '../core/findings';
 import { subAgentGraphSchema } from '../core/multi-agent-dag';
@@ -9,6 +10,10 @@ import {
   AgentBoardToolExecutor,
   agentBoardToolDefinition,
 } from '../infrastructure/agent-board-tool-executor';
+import {
+  AgentMailboxToolExecutor,
+  agentMailboxToolDefinition,
+} from '../infrastructure/agent-mailbox-tool-executor';
 
 import { RuntimeRunService } from './runtime-run-service';
 
@@ -22,6 +27,7 @@ import type {
 import type { SubAgentExecutionPort } from './sub-agent-coordinator-service';
 import type { BackendClient } from '../backend/backend-client';
 import type { AgentBoard } from '../core/agent-board.types';
+import type { AgentMailbox } from '../core/agent-mailbox.types';
 import type { SubAgentGraph, SubAgentOutcome, SubAgentTask } from '../core/multi-agent-dag';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -51,6 +57,11 @@ export interface RuntimeSubAgentDependencies {
    * about which run it belongs to.
    */
   readonly board: { read: () => AgentBoard; write: (board: AgentBoard) => void };
+  /**
+   * The mailbox the workspace shares. Unlike the board it outlives one graph, so
+   * a message left for the main session survives until it reads it.
+   */
+  readonly mailbox: { read: () => AgentMailbox; write: (mailbox: AgentMailbox) => void };
 }
 
 interface SubAgentTelemetry {
@@ -124,6 +135,22 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
     steering: () => readonly string[],
     signal: AbortSignal,
   ): Promise<SubAgentOutcome> {
+    const { mailbox } = this.dependencies;
+    // Addressable only while running, so nothing is accepted for an agent that
+    // has already finished and will never read it.
+    mailbox.write(registerAddress(mailbox.read(), task.taskId));
+    try {
+      return await this.executeTask(task, steering, signal);
+    } finally {
+      mailbox.write(retireAddress(mailbox.read(), task.taskId));
+    }
+  }
+
+  private async executeTask(
+    task: SubAgentTask,
+    steering: () => readonly string[],
+    signal: AbortSignal,
+  ): Promise<SubAgentOutcome> {
     const definitions = this.allowedDefinitions(task);
     if (definitions.length === 0) return this.blocked(task, 'No admitted tools match the task');
     const preset = resolveSubAgentDefinition(
@@ -149,11 +176,21 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
       },
       callerTaskId: () => task.taskId,
     });
+    // Same reasoning as the board: the sender is the task being run, never a
+    // name the model supplies.
+    const messages = new AgentMailboxToolExecutor({
+      read: () => this.dependencies.mailbox.read(),
+      write: (next) => {
+        this.dependencies.mailbox.write(next);
+      },
+      callerAddress: () => task.taskId,
+    });
     const scopedExecutor = new ScopedSubAgentExecutor(
       task,
       this.dependencies.executor,
       telemetry,
       board,
+      messages,
     );
     const runtime = new RuntimeRunService({
       clock: { now: Date.now },
@@ -188,16 +225,32 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
         maxToolResultBytes: 1_048_576,
       },
     });
+    // Coordinator steering and messages from other agents share one queue and
+    // one sequence, because the steering envelope demands a gapless counter.
+    const queue: string[] = [];
     let sentSteering = 0;
+    let steeringTaken = 0;
+    let mailSeen = 0;
     await this.dependencies.stream.follow(
       receipt.runId,
       runtime,
       {
         onEvent: async (event) => {
           this.observe(event, telemetry);
-          const messages = steering();
-          while (sentSteering < messages.length) {
-            const message = messages[sentSteering];
+          const steered = steering();
+          queue.push(...steered.slice(steeringTaken));
+          steeringTaken = steered.length;
+          // A message is pushed into the running agent rather than left for it to
+          // remember to poll, then acknowledged so `receive` does not repeat it.
+          for (const mail of inboxFor(this.dependencies.mailbox.read(), task.taskId, mailSeen)) {
+            queue.push(`Message from ${mail.from}: ${mail.text}`);
+            mailSeen = mail.sequence;
+          }
+          this.dependencies.mailbox.write(
+            acknowledge(this.dependencies.mailbox.read(), task.taskId, mailSeen),
+          );
+          while (sentSteering < queue.length) {
+            const message = queue[sentSteering];
             if (message === undefined) break;
             await this.dependencies.transport.steer(
               receipt.runId,
@@ -239,17 +292,24 @@ export class RuntimeSubAgentExecutor implements SubAgentExecutionPort {
     // a graph, and offering it to a run with no siblings would be a tool whose
     // reads are always empty.
     const board = allowed.has(agentBoardToolDefinition.name) ? [agentBoardToolDefinition] : [];
+    // Also answered inside the scope, so it is offered from here and kept out of
+    // the parent's list below: the parent's copy would speak as `main`.
+    const mail = allowed.has(agentMailboxToolDefinition.name) ? [agentMailboxToolDefinition] : [];
     return [
       ...board,
+      ...mail,
       ...this.dependencies
         .definitions()
         .filter(
           (definition) =>
             allowed.has(definition.name) &&
             !/(?:elevat|publish)/iu.test(definition.name) &&
-            !['runtime.agents', 'runtime.integration', 'runtime.flagship'].includes(
-              definition.name,
-            ),
+            ![
+              'runtime.agents',
+              'runtime.integration',
+              'runtime.flagship',
+              agentMailboxToolDefinition.name,
+            ].includes(definition.name),
         ),
     ];
   }
@@ -326,6 +386,7 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
     private readonly delegate: RuntimeToolExecutorPort,
     private readonly telemetry: SubAgentTelemetry,
     private readonly board?: RuntimeToolExecutorPort,
+    private readonly messages?: RuntimeToolExecutorPort,
   ) {}
 
   async execute(
@@ -337,6 +398,9 @@ export class ScopedSubAgentExecutor implements RuntimeToolExecutorPort {
     // way to know which task is calling.
     if (invocation.toolName === agentBoardToolDefinition.name && this.board !== undefined) {
       return this.board.execute(invocation, signal);
+    }
+    if (invocation.toolName === agentMailboxToolDefinition.name && this.messages !== undefined) {
+      return this.messages.execute(invocation, signal);
     }
     if (/(?:push|publish|elevat)/iu.test(`${invocation.toolName}.${invocation.operation}`)) {
       throw new Error('Sub-agents cannot push, publish, or elevate');

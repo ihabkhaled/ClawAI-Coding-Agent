@@ -31,6 +31,9 @@ export function renderComposerMarkup(translated: ChatMarkupTranslator): string {
           <button id="attachmentButton" class="icon-button attachment-button" type="button" title="${translated('Attach files')}" aria-label="${translated('Attach files')}">
             ${iconMarkup('attach')}
           </button>
+          <button id="voiceButton" class="icon-button voice-button" type="button" aria-pressed="false" title="${translated('Dictate')}" aria-label="${translated('Dictate')}">
+            ${iconMarkup('mic')}
+          </button>
           <button id="focusToggle" class="icon-button focus-toggle" type="button" aria-pressed="false" title="${translated('Focus view')}" aria-label="${translated('Focus view')}">
             <span aria-hidden="true">&#9678;</span>
           </button>

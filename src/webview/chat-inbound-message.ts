@@ -60,6 +60,9 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
     uriList: z.string().max(20_000),
     shiftKey: z.boolean(),
   }),
+  // Why the composer microphone could not run, so the host can say what to do
+  // instead. The code is a bounded string from the webview, never shown raw.
+  z.object({ type: z.literal('dictationUnavailable'), code: z.string().max(64) }),
   z.object({ type: z.literal('newChat') }),
   z.object({ type: z.literal('openFolder') }),
   z.object({ type: z.literal('refreshModels') }),

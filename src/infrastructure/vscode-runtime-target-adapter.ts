@@ -10,6 +10,7 @@ import {
 } from '../core/runtime/capability-manifest';
 import { advertisedWorkspaceRootKey } from '../core/workspace-scope';
 
+import { agentMailboxToolDefinition } from './agent-mailbox-tool-executor';
 import { askUserToolDefinition } from './ask-user-tool-executor';
 import { browserToolDefinition } from './browser-tool-executor';
 import { containerToolDefinition } from './container-tool-executor';
@@ -332,7 +333,9 @@ function localToolDefinitions(probe: RuntimeHostProbe) {
   }
   if (probe.prerequisites.git) definitions.push(gitToolDefinition, integrationToolDefinition);
   if (probe.prerequisites.git && probe.prerequisites.process) {
-    definitions.push(subAgentToolDefinition, flagshipToolDefinition);
+    // Messaging only means something once there are agents to address, so it
+    // is offered with the tool that creates them.
+    definitions.push(subAgentToolDefinition, agentMailboxToolDefinition, flagshipToolDefinition);
   }
   if (probe.prerequisites.elevation) definitions.push(elevationToolDefinition);
   return definitions;

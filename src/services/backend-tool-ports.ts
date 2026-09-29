@@ -1,6 +1,8 @@
+import { backendArtifactPublisher } from './backend-artifact-publisher';
 import { backendPdfText } from './backend-pdf-text';
 import { backendWebResearch } from './backend-web-research';
 
+import type { ArtifactPublisherPort } from '../backend/artifact-client';
 import type { BackendClient } from '../backend/backend-client';
 import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { WebResearchPort } from '../backend/research-client';
@@ -9,6 +11,7 @@ import type { WebResearchPort } from '../backend/research-client';
 export interface BackendToolPorts {
   readonly research: WebResearchPort;
   readonly pdfText: PdfTextPort;
+  readonly artifacts: ArtifactPublisherPort;
 }
 
 /**
@@ -24,5 +27,6 @@ export function backendToolPorts(backend: () => BackendClient): BackendToolPorts
   return {
     research: backendWebResearch(backend),
     pdfText: backendPdfText(backend),
+    artifacts: backendArtifactPublisher(backend),
   };
 }

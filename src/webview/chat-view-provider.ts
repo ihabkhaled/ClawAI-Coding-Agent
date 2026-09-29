@@ -8,6 +8,7 @@ import {
   deriveConversationSubject,
 } from '../core/chat-session';
 import { rememberClosedSession, takeClosedSession } from '../core/closed-session-stack';
+import { resolvePlacementColumn } from '../core/panel-placement';
 import { redactReasoningEvent } from '../core/reasoning-visibility';
 
 import { publicHistoryMessage } from './chat-history-message';
@@ -24,6 +25,7 @@ import { ChatSessionRegistry } from './chat-session-registry';
 import { markSessionRead, syncSessions } from './chat-session-sync';
 import { runPromptAdmissionFlow } from './prompt-admission-flow';
 
+import type { PlacementMemory } from './chat-placement.types';
 import type { ChatViewActions } from './chat-view-actions';
 import type { ChatMessage } from '../backend/contracts';
 import type { ClosedSession } from '../core/closed-session-stack.types';
@@ -48,6 +50,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     private readonly extensionUri: vscode.Uri,
     private readonly state: ExtensionState,
     private readonly actions: ChatViewActions,
+    private readonly placement?: PlacementMemory,
   ) {
     this.unsubscribe = state.subscribe((snapshot) => {
       syncSessions(this.sessions, snapshot);
@@ -224,6 +227,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     return this.createEditorSession(taken.entry.subject, taken.entry.threadId);
   }
 
+  /** The remembered column while it still exists, otherwise the active one. */
+  private placementColumn(): vscode.ViewColumn {
+    const columns = vscode.window.tabGroups.all.map((group) => group.viewColumn);
+    return resolvePlacementColumn(this.placement?.get(), columns) ?? vscode.ViewColumn.Active;
+  }
+
   private async createEditorSession(
     title = DEFAULT_CHAT_SUBJECT,
     threadId?: string,
@@ -237,7 +246,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     const panel = vscode.window.createWebviewPanel(
       'clawAI.chatEditor',
       title,
-      vscode.ViewColumn.Active,
+      this.placementColumn(),
       {
         enableScripts: true,
         localResourceRoots: this.localResourceRoots(),
@@ -252,6 +261,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     this.configureWebview(panel.webview, sessionId);
     panel.onDidChangeViewState(() => {
       if (panel.active) markSessionRead(this.sessions, sessionId);
+      if (panel.viewColumn !== undefined) this.placement?.remember(panel.viewColumn);
     });
     panel.onDidDispose(() => {
       const closed = this.sessions.get(sessionId)?.descriptor;
@@ -374,6 +384,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await this.actions.conversationTokens(request.threadId, request.tokens);
     } else if (request.type === 'dropUris') {
       await this.actions.dropUris(request.uriList, request.shiftKey);
+    } else if (request.type === 'dictationUnavailable') {
+      await this.actions.dictationUnavailable(request.code);
     } else if (request.type === 'openFolder') {
       await this.actions.openFolder();
     } else return false;

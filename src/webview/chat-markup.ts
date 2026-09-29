@@ -1,9 +1,11 @@
+import { IMAGE_RESIZE_TARGET_EDGE_PIXELS } from '../core/attachment-preparation';
 import {
   BACKEND_CLOUD_URL,
   BACKEND_LOCAL_URL,
   FRONTEND_CLOUD_URL,
   FRONTEND_LOCAL_URL,
 } from '../core/configuration';
+import { DICTATION_MAX_SECONDS } from '../core/voice-dictation';
 
 import { renderComposerMarkup } from './chat-composer-markup';
 import { iconMarkup } from './chat-icons';
@@ -298,6 +300,17 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-approval-required="${translated('Approval required')}"
     data-approve="${translated('Approve')}"
     data-attachment-added="${translated('Attachment added')}"
+    data-image-resize-edge="${String(IMAGE_RESIZE_TARGET_EDGE_PIXELS)}"
+    data-attachment-resized="${translated('Resized {0} to fit the image limit')}"
+    data-dictate="${translated('Dictate')}"
+    data-dictation-stop="${translated('Stop dictation')}"
+    data-dictation-listening="${translated('Listening… speak now')}"
+    data-dictation-stopped="${translated('Stopped listening')}"
+    data-dictation-no-speech="${translated('No speech was heard.')}"
+    data-dictation-max-seconds="${String(DICTATION_MAX_SECONDS)}"
+    data-attachment-move-earlier="${translated('Move earlier')}"
+    data-attachment-move-later="${translated('Move later')}"
+    data-attachment-moved="${translated('{0} moved to position {1} of {2}')}"
     data-attachment="${translated('attachment')}"
     data-attaching-files="${translated('Attaching files…')}"
     data-attachment-empty="${translated('Empty files cannot be attached.')}"

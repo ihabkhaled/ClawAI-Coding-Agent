@@ -2,6 +2,32 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.81.0
+
+Minor: thirteen parity features finished or narrowed.
+
+- **Scheduled tasks (F013).** `runtime.schedule` create/list/delete and
+  **ClawAI: Manage Scheduled Tasks**. One disposable timer, persisted per
+  workspace, 20 tasks, 5-minute floor, 100-run cap, trusted workspaces only.
+- **Session worktrees (F017).** `runtime.worktree` enter/exit/status; exit
+  refuses uncommitted changes unless `discard` is set.
+- **Agent mailbox (F009, F010).** `runtime.messages` send/receive/peers between
+  the main session and live sub-agents; redacted, deduplicated, quota-bounded.
+- **Background commands (F001).** `workspace.command` accepts `background: true`
+  and returns a receipt read through `workspace.process`.
+- **Notebook execution (F019).** `workspace.notebook` `run-cell`/`run-all`
+  through the Jupyter extension, with redacted, capped outputs.
+- **Artifact prepare/publish (F025).** Scrub, re-scan for secrets, refuse
+  binaries; publish reports `route-missing` until the backend route exists.
+- **Browser coordinates (F030).** `click-at`, `type-text`, `scroll`, `observe`.
+- **Saved workflows (F011).** **ClawAI: Run Saved Workflow**.
+- **Composer (F037, F039, F044).** Reorder attachments, shrink oversized images
+  in the webview, voice dictation with an OS fallback.
+- **Panel placement (F067).** **ClawAI: Move Chat to Secondary Side Bar**, and
+  editor chats reopen in the last-used column.
+- **Audio attachments.** Nine audio MIME types accepted, matching the file
+  service.
+
 ## 1.80.0
 
 Minor: the agent reads PDFs, by page.
