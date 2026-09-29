@@ -4,6 +4,7 @@ import { z } from 'zod';
 import { deliveredArtifactsFromReceipt } from '../core/delivered-artifact';
 import { fileTransactionSchema } from '../core/file-transaction';
 import { normalizeTransactionEncoding } from '../core/file-transaction-encoding';
+import { fitPdfPages } from '../core/pdf-page-budget';
 import {
   MAX_RUNTIME_JSON_ENTRIES,
   MAX_RUNTIME_JSON_STRING_LENGTH,
@@ -29,6 +30,7 @@ import {
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { SearchHit } from './vscode-filesystem-tool-executor.types';
+import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { DeliveredArtifact } from '../core/delivered-artifact';
 import type { FileTransaction } from '../core/file-transaction';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -67,6 +69,10 @@ const rootKey = z.string().min(1).max(100);
 // the ClawAI monorepo is over 200 kB, so i18n was unreachable. The ceiling now
 // matches the contract, and an oversized range is paged instead of failed.
 const MAX_READ_BYTES = MAX_RUNTIME_JSON_STRING_LENGTH;
+// Pages read when a PDF is read with no range. The backend refuses a range
+// wider than 100 pages; twenty is enough to answer most questions about a
+// document and small enough that the text usually fits in one result.
+const PDF_DEFAULT_PAGE_WINDOW = 20;
 const readSchema = z
   .object({
     rootKey,
@@ -74,6 +80,16 @@ const readSchema = z
     startLine: z.number().int().min(1).default(1),
     endLine: z.number().int().min(1).max(100_000).optional(),
     maxBytes: z.number().int().min(1).max(MAX_READ_BYTES).default(MAX_READ_BYTES),
+    // Deliberately absent from the tool description, whose budget is spent.
+    // A PDF read with no range answers with totalPages and nextPage, so the
+    // model learns this argument from the one result where it needs it.
+    pages: z
+      .object({
+        from: z.number().int().min(1).max(10_000),
+        to: z.number().int().min(1).max(10_000),
+      })
+      .strict()
+      .optional(),
   })
   .strict();
 const pathSchema = z.object({ rootKey, path: relativePath }).strict();
@@ -306,6 +322,9 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     private readonly adapter: VscodeFileTransactionAdapter,
     private readonly transactions: FileTransactionService,
     private readonly artifacts: DeliveredArtifactSink,
+    // Optional so a host without a backend still reads text files; a PDF read
+    // there says why it cannot rather than calling the bytes "not UTF-8".
+    private readonly pdfText?: PdfTextPort,
   ) {}
 
   async execute(
@@ -378,6 +397,11 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     if (snapshot.kind === 'directory') {
       throw new Error(`${input.path} is a directory - use the list operation`);
     }
+    // On the extension, not on decoding failing: an uncompressed PDF can be
+    // valid UTF-8, and would otherwise come back as raw PDF source.
+    if (input.path.toLowerCase().endsWith('.pdf')) {
+      return this.readPdf(input.path, snapshot.bytes, input.pages, input.maxBytes);
+    }
     if (snapshot.text === undefined) {
       throw new Error(`${input.path} is not UTF-8 text and cannot be read`);
     }
@@ -416,6 +440,59 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
         hash: snapshot.hash,
         totalLines,
         ...(truncated ? { nextStartLine: deliveredEndLine + 1 } : {}),
+      },
+    };
+  }
+
+  /**
+   * A workspace PDF, as text, by page.
+   *
+   * The bytes go to the backend's extractor, which keeps nothing: this is a
+   * read, not an upload, so the file never lands in the user's file list.
+   *
+   * Pages are delivered whole and in order until the byte budget is spent,
+   * then `nextPage` says where to resume — the page-shaped twin of the text
+   * read's `nextStartLine`. Cutting a page mid-way would hand the model half a
+   * sentence it cannot tell is half.
+   */
+  private async readPdf(
+    path: string,
+    bytes: Uint8Array | undefined,
+    requested: { from: number; to: number } | undefined,
+    maxBytes: number,
+  ): Promise<RuntimeToolExecutionOutput> {
+    if (this.pdfText === undefined) {
+      throw new Error(`${path} is a PDF, and this host has no backend to extract its text`);
+    }
+    if (bytes === undefined || bytes.byteLength === 0) {
+      throw new Error(`${path} is an empty file`);
+    }
+    const pages = requested ?? { from: 1, to: PDF_DEFAULT_PAGE_WINDOW };
+    const extracted = await this.pdfText.extract({
+      filename: path.split('/').pop() ?? path,
+      contentBase64: Buffer.from(bytes).toString('base64'),
+      pages,
+    });
+
+    const window = fitPdfPages(extracted.pages, extracted.totalPages, pages.from, maxBytes);
+    const nextPage = window.nextPage;
+    return {
+      structured: {
+        path,
+        format: 'pdf',
+        totalPages: extracted.totalPages,
+        pages: window.pages,
+        // A scanned page has no text layer however often it is read. Saying
+        // so stops the model retrying a page that will always come back empty.
+        isScanned: extracted.isScanned,
+        // Kept apart on purpose — see fitPdfPages.
+        truncated: window.truncated,
+        ...(nextPage === undefined
+          ? {}
+          : {
+              nextPage,
+              hint: `Read on with pages {"from":${String(nextPage)},"to":${String(Math.min(nextPage + PDF_DEFAULT_PAGE_WINDOW - 1, extracted.totalPages))}}`,
+            }),
       },
     };
   }
