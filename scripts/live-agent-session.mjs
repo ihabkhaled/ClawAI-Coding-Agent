@@ -220,6 +220,16 @@ export function createWorkspace(files = {}) {
  */
 const WEB_FETCH_CONTENT_CEILING = 60_000;
 
+/**
+ * The extension's PDF read, mirrored.
+ *
+ * A harness that answered a PDF read differently from the extension would test
+ * a product nobody ships — the lesson of the unbounded `rawHtml` that failed
+ * every fetch round. Same default window, same byte budget, same result shape.
+ */
+const PDF_DEFAULT_PAGE_WINDOW = 20;
+const PDF_READ_BYTE_BUDGET = 65_536;
+
 export function toolExecutor(workspace) {
   /** Refuses any path that would leave the scratch workspace. */
   const resolveInside = (relative) => {
@@ -357,9 +367,66 @@ export function toolExecutor(workspace) {
     throw new Error(`Unsupported web operation ${operation}`);
   };
 
+  const runPdfRead = async (args, token) => {
+    const relative = requirePath('read', args);
+    const bytes = readFileSync(resolveInside(relative));
+    const pages = args.pages ?? { from: 1, to: PDF_DEFAULT_PAGE_WINDOW };
+    const extracted = await api(
+      '/files/extract-text',
+      {
+        method: 'POST',
+        body: JSON.stringify({
+          filename: path.basename(relative),
+          contentBase64: bytes.toString('base64'),
+          pages,
+        }),
+      },
+      token,
+    );
+    // Whole pages until the budget is spent, as fitPdfPages does. A page larger
+    // than the entire budget is cut rather than skipped, so nextPage never
+    // points back at itself.
+    const delivered = [];
+    let spent = 0;
+    for (const page of extracted.pages) {
+      const cost = Buffer.byteLength(page.text, 'utf8');
+      if (delivered.length > 0 && spent + cost > PDF_READ_BYTE_BUDGET) break;
+      delivered.push(
+        cost > PDF_READ_BYTE_BUDGET
+          ? { number: page.number, text: page.text.slice(0, PDF_READ_BYTE_BUDGET) }
+          : { number: page.number, text: page.text },
+      );
+      spent += Math.min(cost, PDF_READ_BYTE_BUDGET);
+    }
+    const last = delivered.at(-1)?.number ?? pages.from - 1;
+    const nextPage = last < extracted.totalPages ? last + 1 : undefined;
+    return {
+      path: relative,
+      format: 'pdf',
+      totalPages: extracted.totalPages,
+      pages: delivered,
+      isScanned: extracted.isScanned,
+      truncated: delivered.length < extracted.pages.length,
+      ...(nextPage === undefined
+        ? {}
+        : {
+            nextPage,
+            hint: `Read on with pages {"from":${String(nextPage)},"to":${String(Math.min(nextPage + PDF_DEFAULT_PAGE_WINDOW - 1, extracted.totalPages))}}`,
+          }),
+    };
+  };
+
   return (toolName, operation, args, token) => {
     if (toolName === 'workspace.command') return runCommandTool(args);
     if (toolName === 'workspace.web') return runWebTool(operation, args, token);
+    // On the extension, as the extension decides it: an uncompressed PDF can
+    // be valid UTF-8 and would otherwise come back as raw PDF source.
+    if (
+      operation === 'read' &&
+      typeof args.path === 'string' &&
+      args.path.toLowerCase().endsWith('.pdf')
+    )
+      return runPdfRead(args, token);
     return runFileTool(operation, args);
   };
 }

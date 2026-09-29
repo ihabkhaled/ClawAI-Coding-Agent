@@ -91,7 +91,13 @@ const results = [];
 for (const model of models) {
   for (const scenario of scenarios) {
     for (let attempt = 1; attempt <= repeat; attempt += 1) {
-      const workspace = createWorkspace(scenario.files);
+      // Planted before the workspace exists, because a scenario may put the
+      // fact IN a file — a PDF whose second page carries it — rather than in
+      // a prompt.
+      const planted = scenario.plant === undefined ? {} : scenario.plant();
+      const workspace = createWorkspace(
+        typeof scenario.files === 'function' ? scenario.files(planted) : scenario.files,
+      );
       const label = `${model} · ${scenario.key}${repeat > 1 ? ` #${String(attempt)}` : ''}`;
       let outcome = { terminal: 'not-started', toolLog: [], threadId: undefined };
       let verdict = { ok: false, detail: 'scenario did not run' };
@@ -102,7 +108,6 @@ for (const model of models) {
       // all the time — the round had made its own needle into hay. A fresh
       // subject per round also stops an earlier round's thread from being a
       // valid answer, which is a stricter test than the fixed one was.
-      const planted = scenario.plant === undefined ? {} : scenario.plant();
       const prompts =
         typeof scenario.prompts === 'function'
           ? scenario.prompts(planted)
