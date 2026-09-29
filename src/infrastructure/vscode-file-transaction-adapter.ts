@@ -228,6 +228,11 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
     await saveToDisk(replaced);
   }
 
+  /** Releases what `apply` kept so a later rollback could save its documents. */
+  forget(transactionId: string): void {
+    this.editedDocuments.delete(transactionId);
+  }
+
   async rollback(
     transaction: FileTransaction,
     prepared: readonly PreparedFileOperation[],
