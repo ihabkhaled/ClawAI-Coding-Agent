@@ -2,11 +2,15 @@ import path from 'node:path';
 
 import { threadIdProblem, toolPatternsProblem } from '../sdk/agent-inputs';
 import { AGENT_PERMISSION_MODES } from '../sdk/permission-modes.constants';
+import { writeScopeProblem } from '../sdk/write-scope';
+
+import { parseDoneCheckFlags } from './headless-done-checks';
 
 import type { HeadlessInvocation } from './headless-args.types';
 import type { AgentPermissionMode } from '../sdk/permission-modes.types';
 
 type Values = ReadonlyMap<string, readonly string[]>;
+type Flags = ReadonlySet<string>;
 type Extras = Partial<
   Pick<
     HeadlessInvocation,
@@ -18,6 +22,11 @@ type Extras = Partial<
     | 'permissionMode'
     | 'allowedTools'
     | 'disallowedTools'
+    | 'useMemory'
+    | 'writeScope'
+    | 'writeDeny'
+    | 'doneChecks'
+    | 'doneCheckFile'
   >
 >;
 
@@ -46,6 +55,13 @@ function sessionFlags(values: Values, continueLast: boolean): Extras | string {
   };
 }
 
+function memoryFlags(flags: Flags): Extras | string {
+  if (flags.has('--use-memory') && flags.has('--no-memory')) {
+    return '--use-memory and --no-memory cannot be combined.';
+  }
+  return flags.has('--use-memory') ? { useMemory: true } : {};
+}
+
 function policyFlags(values: Values): Extras | string {
   const mode = lastOf(values, 'permissionMode');
   if (mode !== undefined && !isMode(mode)) {
@@ -59,6 +75,28 @@ function policyFlags(values: Values): Extras | string {
     ...(mode !== undefined && isMode(mode) ? { permissionMode: mode } : {}),
     ...(allowed.length === 0 ? {} : { allowedTools: allowed }),
     ...(disallowed.length === 0 ? {} : { disallowedTools: disallowed }),
+  };
+}
+
+function scopeFlags(values: Values): Extras | string {
+  const scope = splitPatterns(values.get('writeScope'));
+  const deny = splitPatterns(values.get('writeDeny'));
+  const problem = writeScopeProblem(scope, deny);
+  if (problem !== undefined) return `--write-scope/--write-deny: ${problem}`;
+  return {
+    ...(scope.length === 0 ? {} : { writeScope: scope }),
+    ...(deny.length === 0 ? {} : { writeDeny: deny }),
+  };
+}
+
+function doneFlags(values: Values, cwd: string): Extras | string {
+  const raw = values.get('doneCheck') ?? [];
+  const checks = parseDoneCheckFlags(raw);
+  if (typeof checks === 'string') return checks;
+  const file = lastOf(values, 'doneCheckFile');
+  return {
+    ...(checks.length === 0 ? {} : { doneChecks: checks }),
+    ...(file === undefined ? {} : { doneCheckFile: path.resolve(cwd, file) }),
   };
 }
 
@@ -79,10 +117,16 @@ function fileFlags(values: Values, cwd: string): Extras {
  * Only flags that were given appear in the result, so an invocation that uses
  * none of them is unchanged. A string is the first mistake found.
  */
-export function checkedExtras(values: Values, continueLast: boolean, cwd: string): Extras | string {
-  const session = sessionFlags(values, continueLast);
+export function checkedExtras(values: Values, flags: Flags, cwd: string): Extras | string {
+  const session = sessionFlags(values, flags.has('--continue'));
   if (typeof session === 'string') return session;
+  const memory = memoryFlags(flags);
+  if (typeof memory === 'string') return memory;
   const policy = policyFlags(values);
   if (typeof policy === 'string') return policy;
-  return { ...session, ...policy, ...fileFlags(values, cwd) };
+  const scope = scopeFlags(values);
+  if (typeof scope === 'string') return scope;
+  const done = doneFlags(values, cwd);
+  if (typeof done === 'string') return done;
+  return { ...session, ...memory, ...policy, ...scope, ...done, ...fileFlags(values, cwd) };
 }

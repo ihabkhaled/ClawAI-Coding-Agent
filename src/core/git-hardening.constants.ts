@@ -57,3 +57,14 @@ export const PROGRAM_CONFIG_KEYS: readonly RegExp[] = [
   /^(?:uploadpack|receivepack)\.(?:packobjectshook|uploadpack|receivepack)$/u,
   /^remote\..+\.(?:uploadpack|receivepack|vcs)$/u,
 ];
+
+/**
+ * The neutralising config for git that is allowed to run the repository's own
+ * hooks. Everything that names another program stays pinned; `core.hooksPath` is
+ * left alone, and `core.sshCommand` is pinned to plain `ssh` because an empty
+ * value would break every push over ssh.
+ */
+export const GIT_WRITE_NEUTRALISING_CONFIG: readonly string[] = [
+  ...GIT_NEUTRALISING_CONFIG.filter((pair) => pair !== 'core.sshCommand='),
+  'core.sshCommand=ssh',
+];

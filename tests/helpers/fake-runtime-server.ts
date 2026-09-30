@@ -95,6 +95,10 @@ export async function startRuntime(
         send(response, 201, { id: 'thread-1' });
         return;
       }
+      if (request.method === 'PATCH' && url.pathname.startsWith('/api/v1/chat-threads/')) {
+        send(response, 200, { id: 'thread-1' });
+        return;
+      }
       if (url.pathname === '/api/v1/chat-messages/runtime/runs') {
         send(response, 202, { runId: 'run-1', generation: 'gen-1' });
         return;

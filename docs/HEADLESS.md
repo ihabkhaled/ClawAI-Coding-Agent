@@ -19,30 +19,37 @@ Other environment: `CLAW_MODEL`, `CLAW_PROVIDER`, `CLAW_BACKEND_URL` (default
 
 ## Flags
 
-| Flag                                      | Meaning                                                                                                                                      |
-| ----------------------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------- |
-| `-p`, `--prompt <text>`                   | The task. Required.                                                                                                                          |
-| `--model`, `--provider`                   | Model and connector for the run.                                                                                                             |
-| `--workspace <dir>`                       | Directory every file, command and git call is confined to. Default: cwd.                                                                     |
-| `--backend-url <url>`                     | Runtime API base.                                                                                                                            |
-| `--output-format text\|json\|stream-json` | `text` (default), one final JSON object, or one JSON event per line. See [Events](#events).                                                  |
-| `--json`                                  | Older spelling of `--output-format json`.                                                                                                    |
-| `--max-turns <n>`                         | Model-turn budget, 1 to 1000. Running out exits 5.                                                                                           |
-| `--max-tool-calls <n>`                    | Stop the run after `n` tool calls (1 to 10000). Exits 5. See [Run guards](#run-guards).                                                      |
-| `--max-duration <seconds>`                | Stop the run after this wall-clock time (1 to 86400). Exits 5. See [Run guards](#run-guards).                                                |
-| `--allow-tools <list>`                    | Categories granted: `read,write,command,git,mcp`. Default `read,git`; `read,git,mcp` with `--mcp-config`; all five with `--permission-mode`. |
-| `--allow-command <name>`                  | Adds an executable to the command allowlist (default `node`, `npm`, `npx`). Repeatable.                                                      |
-| `--allowed-tools <globs>`                 | Tool patterns to allow. Empty means no restriction. Comma list, repeatable. See [Tool patterns](#tool-patterns).                             |
-| `--disallowed-tools <globs>`              | Tool patterns to refuse. **Deny wins over allow.**                                                                                           |
-| `--permission-mode <mode>`                | `plan`, `ask` or `accept-edits`. See [Permission modes](#permission-modes).                                                                  |
-| `--resume <threadId>`                     | Continue an existing thread instead of creating one.                                                                                         |
-| `--continue`                              | Continue the most recent CLI thread for this workspace and backend. Cannot be combined with `--resume`.                                      |
-| `--append-system-prompt <t\|@f>`          | Operator instructions: literal text, or `@path` to read a file.                                                                              |
-| `--system-prompt-file <file>`             | Operator instructions from a file. When both are given the file comes first.                                                                 |
-| `--mcp-config <file>`                     | MCP servers. See [MCP](#mcp).                                                                                                                |
-| `--mcp-login <server>`                    | Sign in to an OAuth MCP server named in `--mcp-config`. No `-p`. See [MCP sign-in](#mcp-sign-in).                                            |
-| `--mcp-token-file <file>`                 | Token file: `--mcp-login` writes it; a run reads it and keeps refreshed tokens in memory only.                                               |
-| `-h`, `--help`                            | Usage.                                                                                                                                       |
+| Flag                                      | Meaning                                                                                                                                                                                 |
+| ----------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `-p`, `--prompt <text>`                   | The task. Required.                                                                                                                                                                     |
+| `--model`, `--provider`                   | Model and connector for the run.                                                                                                                                                        |
+| `--workspace <dir>`                       | Directory every file, command and git call is confined to. Default: cwd.                                                                                                                |
+| `--backend-url <url>`                     | Runtime API base.                                                                                                                                                                       |
+| `--output-format text\|json\|stream-json` | `text` (default), one final JSON object, or one JSON event per line. See [Events](#events).                                                                                             |
+| `--json`                                  | Older spelling of `--output-format json`.                                                                                                                                               |
+| `--max-turns <n>`                         | Model-turn budget, 1 to 1000. Running out exits 5.                                                                                                                                      |
+| `--max-tool-calls <n>`                    | Stop the run after `n` tool calls (1 to 10000). Exits 5. See [Run guards](#run-guards).                                                                                                 |
+| `--max-duration <seconds>`                | Stop the run after this wall-clock time (1 to 86400). Exits 5. See [Run guards](#run-guards).                                                                                           |
+| `--budget default\|long`                  | Server-side run budget requested per run. CLI default `long` (the runtime maxima); the SDK default stays `default`. See [Run guards](#run-guards).                                      |
+| `--auto-continue <n>`                     | Start up to `n` follow-up runs on the same thread when a run ends on the server budget (0 to 20, default 3; SDK `autoContinue` defaults to 0).                                          |
+| `--allow-tools <list>`                    | Categories granted: `read,write,command,git,git-write,mcp`. Default `read,git`; `read,git,mcp` with `--mcp-config`; all six with `--permission-mode`.                                   |
+| `--allow-command <name>`                  | Adds an executable to the command allowlist (default `node`, `npm`, `npx`). Repeatable.                                                                                                 |
+| `--allowed-tools <globs>`                 | Tool patterns to allow. Empty means no restriction. Comma list, repeatable. See [Tool patterns](#tool-patterns).                                                                        |
+| `--disallowed-tools <globs>`              | Tool patterns to refuse. **Deny wins over allow.**                                                                                                                                      |
+| `--write-scope <globs>`                   | Confine every file and git change to these workspace-relative globs; command changes outside them are reverted. Comma list, repeatable. See [Write scope](#write-scope).                |
+| `--write-deny <globs>`                    | Globs no change may match. Wins over `--write-scope`; alone it means "anywhere except there". Repeatable.                                                                               |
+| `--done-check "<label>=<cmd args>"`       | Completion check defined by YOU, run when the model says it is done; exit 0 = pass. No shell; `"..."` and `'...'` group words. Repeatable. See [Completion checks](#completion-checks). |
+| `--done-check-file <json>`                | JSON array of `{ label, executable, args[], cwd?, timeoutMs? }` checks, run before the `--done-check` ones. See [Completion checks](#completion-checks).                                |
+| `--permission-mode <mode>`                | `plan`, `ask` or `accept-edits`. See [Permission modes](#permission-modes).                                                                                                             |
+| `--resume <threadId>`                     | Continue an existing thread instead of creating one.                                                                                                                                    |
+| `--use-memory`                            | Keep the account's personal memories on a NEW thread. Default off; `--no-memory` is that default and a no-op. Cannot be combined with `--no-memory` (exit 2). See [Memory](#memory).    |
+| `--continue`                              | Continue the most recent CLI thread for this workspace and backend. Cannot be combined with `--resume`.                                                                                 |
+| `--append-system-prompt <t\|@f>`          | Operator instructions: literal text, or `@path` to read a file.                                                                                                                         |
+| `--system-prompt-file <file>`             | Operator instructions from a file. When both are given the file comes first.                                                                                                            |
+| `--mcp-config <file>`                     | MCP servers. See [MCP](#mcp).                                                                                                                                                           |
+| `--mcp-login <server>`                    | Sign in to an OAuth MCP server named in `--mcp-config`. No `-p`. See [MCP sign-in](#mcp-sign-in).                                                                                       |
+| `--mcp-token-file <file>`                 | Token file: `--mcp-login` writes it; a run reads it and keeps refreshed tokens in memory only.                                                                                          |
+| `-h`, `--help`                            | Usage.                                                                                                                                                                                  |
 
 A usage mistake, an unreadable file or an oversized prompt is exit 2 **before any request is made**.
 
@@ -82,6 +89,19 @@ SDK: `createAgent({ threadId })` continues a thread, and `agent.threadId` is tha
 or the first run's thread once it started. An agent is one conversation, so a second
 `agent.run()` reuses it.
 
+### Memory
+
+A coding run must not answer from stale personal facts of another conversation, so a
+NEW thread is asked to ignore the account's stored memories: right after the thread is
+created the runner sends `PATCH /chat-threads/:id` with `{ "useMemory": false }` (the create
+request cannot carry it). `run.started` says which happened in `memory`: `off`, or
+`account-default` (`--use-memory`, SDK `useMemory: true`, or the backend refused). A
+resumed thread (`--resume`, `--continue`, SDK `threadId`, and every later run of one agent) is
+never touched and `run.started` has no `memory`. The call is best effort: a 400, 403 or 404
+from an older or stricter backend is one `thread.memory-unchanged { status }` event and the
+run continues; transient errors retry like every runtime call, and any other failure (a 401,
+a 5xx after the retries) fails the run. Cross-thread context is already off by default.
+
 ## Operator instructions
 
 `--append-system-prompt` and `--system-prompt-file` (SDK: `systemPrompt`) add
@@ -101,12 +121,12 @@ appear in events, and any error text has them replaced by `[redacted-instruction
 
 ## Permission modes
 
-| Mode           | Grants                  | Asked                                                 |
-| -------------- | ----------------------- | ----------------------------------------------------- |
-| (none)         | Exactly `--allow-tools` | Nothing. Unattended, the pre-existing behaviour.      |
-| `plan`         | `read`, `git` only      | Nothing. Every write, command and MCP call is denied. |
-| `ask`          | `--allow-tools`         | Every write, command and MCP `call`.                  |
-| `accept-edits` | `--allow-tools`         | Every command and MCP `call`; writes are accepted.    |
+| Mode           | Grants                  | Asked                                                              |
+| -------------- | ----------------------- | ------------------------------------------------------------------ |
+| (none)         | Exactly `--allow-tools` | Nothing. Unattended, the pre-existing behaviour.                   |
+| `plan`         | `read`, `git` only      | Nothing. Every write, git-write, command and MCP call is denied.   |
+| `ask`          | `--allow-tools`         | Every write, git-write, command and MCP `call`.                    |
+| `accept-edits` | `--allow-tools`         | Every command, git-write and MCP `call`; file writes are accepted. |
 
 Approval is the SDK's `permissions.approve` callback. The CLI asks on the terminal
 (`Allow workspace.file.create {...}? [y/N]`, arguments redacted and cut to 200
@@ -122,19 +142,109 @@ and can try something else. If the run then fails, it is reported as `blocked` (
 `--allowed-tools` and `--disallowed-tools` take globs (`*` is the only wildcard,
 case-insensitive) over tool identifiers:
 
-| Call                    | Identifier                                  |
-| ----------------------- | ------------------------------------------- |
-| File read, list, create | `workspace.file.read` / `.list` / `.create` |
-| Command                 | `workspace.command.run`                     |
-| Git                     | `workspace.git.status` / `.diff` / `.log`   |
-| MCP tool call           | `mcp__<server>__<tool>`                     |
-| MCP tool listing        | `runtime.mcp.tools`, `mcp__<server>`        |
-| MCP server listing      | `runtime.mcp.servers`                       |
+| Call                                | Identifier                                                                                                                                                                  |
+| ----------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| File read, list, glob, search, stat | `workspace.file.read` / `.list` / `.glob` / `.search` / `.stat`                                                                                                             |
+| File create, update, delete, rename | `workspace.file.create` / `.update` / `.delete` / `.rename`                                                                                                                 |
+| Command                             | `workspace.command.run` / `.output` / `.wait` / `.stop`                                                                                                                     |
+| Git                                 | `workspace.git.status` / `.diff` / `.log` / `.show` / `.branch` / `.remote`; writes `.add` / `.unstage` / `.restore` / `.commit` / `.fetch` / `.pull` / `.push` / `.switch` |
+| MCP tool call                       | `mcp__<server>__<tool>`                                                                                                                                                     |
+| MCP tool listing                    | `runtime.mcp.tools`, `mcp__<server>`                                                                                                                                        |
+| MCP server listing                  | `runtime.mcp.servers`                                                                                                                                                       |
+
+### The command tool
+
+`workspace.command` runs asynchronously (never blocks the run loop) with no shell. All four operations are the `command` category.
+
+- `run` `{ executable, arguments (<=50), cwd?, timeoutMs?, maxOutputChars?, background? }`. Default timeout 120 s (max 30 min); default output budget 24 000 chars (max 48 000) shared by stdout and stderr. Long output keeps the first 4 000 chars and the end, with `... [N chars omitted] ...` between, because errors are at the end. The result carries `exitCode`, `signal`, `timedOut`, `aborted`, `durationMs`, `stdout`, `stderr`, `truncated`.
+- A timeout or the run's abort signal kills the whole process tree (`taskkill /T /F` on Windows, process-group signals elsewhere).
+- `background: true` returns `{ processId }` at once. `output {processId, sinceOffset?}` reads a 1 MB ring buffer (pass back `nextOffset`), `wait {processId, timeoutMs<=600000}` blocks, `stop {processId}` kills. At most 4 live; all are killed when the run ends.
+- Environment: allowlisted variables only (PATH, HOME, USERPROFILE, APPDATA, TEMP, SystemRoot, ComSpec, PATHEXT, ...), never tokens, `AWS_*` or `CLAW_*` credentials; plus `CI=true`, `FORCE_COLOR=0`, `NO_COLOR=1`. stdin is closed.
+- Windows `.cmd`/`.exe` shims (npm, npx, git, gh) are resolved through `PATHEXT`; arguments to a `.cmd` shim may not contain `%`, newlines or NUL. `git` and `gh` run only if allowed with `--allow-command`; git runs hardened (repository hooks and program-spawning config are neutralised).
 
 Rules: deny wins; an empty allow list restricts nothing; an allow list naming any
 `mcp__` pattern also admits MCP discovery. Patterns narrow what the model is _offered_
 and are checked again on every call, before any approval prompt. They apply on top of
 `--allow-tools`: a call must pass both.
+
+- A program not on the allowlist is refused with the allowlist (each name once) and this hint: _Commands run WITHOUT a shell: no pipes, redirects, globbing or &&. Use workspace.file list/glob/search to inspect files, and run one program per call._ The same hint is returned, and nothing runs, when an argument is only shell syntax (`|`, `>`, `>>`, `<`, `2>&1`, `&&`, `||`, `;`, `&`).
+
+### Working memory
+
+The runtime condenses old tool results to a short summary, so a long run forgets what it read twenty calls ago and reads it again. `workspace.notes` is the agent's own memory against that: right after reading something it will need later (file structure, exact names and paths, decisions, gate results, TODOs) it adds a short note, and later it calls `read` instead of re-reading files.
+
+- `add {text (<=2000 chars), tag? (<=32)}`, `read {tag?, query?}` (every note or the matching ones, numbered, newest last, at most 24 000 chars), `replace {id, text}`, `remove {id}`, `clear`. At most 200 notes and 64 KB per conversation. Category `read`: no approval, and nothing is written inside the workspace.
+- Notes are redacted (`src/core/redaction.ts`) before they are stored, kept in memory, and written atomically (mode 0600) to `<state-dir>/notes/<hash of workspace and thread>.json`. The state dir is `CLAW_STATE_DIR`, else `~/.clawai`, the same place `--continue` keeps thread ids. Never inside the workspace, so they cannot be committed; a state dir that is inside the workspace keeps the notes in memory only. A corrupt file reads as no notes.
+- Notes are per conversation: another thread or workspace sees none.
+- Continuations: the `--auto-continue` prompt (budget exhausted or run lost) ends with `Your notes so far:` and the current notes (at most 8 KB, newest kept). The first prompt of a `--resume` or `--continue` run does the same when notes exist.
+- Each note emits a `note.added` event with `id`, `tag?` and `chars`, never the text.
+
+### The git tools
+
+`workspace.git` reads under `git` (status, diff, log, show, branch, remote with URL credentials redacted). Everything that changes a repository or talks to a remote is the separate `git-write` category, so a run granted only `git` cannot commit. `ask` and `accept-edits` ask for every git-write call; `plan` denies them.
+
+- Argument lists are fixed per operation. Nothing the model writes becomes a flag: no `--no-verify`, `--no-gpg-sign`, `--force`, `--delete`, `--mirror` or tags.
+- `add`, `unstage`, `restore` take an explicit `paths` list inside the workspace. `.`, `-A`, `--all`, wildcard-only names and `:`-magic are refused; a name like `[id]` is literal. `restore` touches the worktree only. There is no reset, clean, checkout or stash.
+- `commit` `{ message (one line, <=100 chars), body?, trailers? (Co-Authored-By only) }` runs the repository's hooks (pre-commit, commit-msg) normally, unlike the hook-free read path. It returns `committed`, `hash`, `exitCode` and the head and tail of hook output; a failing hook is a failed commit.
+- `fetch` and `pull` (`--rebase --no-autostash` only) use `origin`. A pull conflict is a result (`conflicts`, `rebaseAborted`), not an error; the rebase is aborted so the tree stays clean.
+- `push` `{ branch? }` sends `HEAD` to `origin` as the current or named branch, never forced. `gh` on PATH supplies the credential helper (`gh auth git-credential`), otherwise git's default; there is no terminal prompt.
+- `switch` `{ branch, create? }` never discards local changes. Branch names cannot start with `-` or contain refspec syntax.
+- Hooks can run for minutes: commit, fetch, pull and push wait 30 minutes by default; `timeoutSeconds` (max 3600) changes it. Abort or timeout kills the process tree. Each result is bounded JSON under 60 000 characters.
+
+## Write scope
+
+Instructions alone do not keep a model inside a task: told to only read a module as a template, one
+edited it and added a file in a shared folder. `--write-scope` makes the tools enforce it.
+
+```sh
+clawai -p "Add the widget module" --allow-tools read,write,command,git,git-write \
+  --write-scope 'src/widget/**,tests/widget/**' --write-deny '**/*.env'
+```
+
+Globs are workspace-relative and forward-slash (a `\` is read as `/`): `*` and `?` stay inside one
+path segment, `**` crosses segments (`src/**/x.ts` also matches `src/x.ts`), a trailing `/` means
+everything below. They compare case-insensitively on win32 and darwin, case-sensitively on linux.
+Absolute paths, drive letters and `..` are a usage error (exit 2). A deny with no scope means
+"anywhere except there". `.git` is always denied. **Reads are never restricted.**
+
+When a scope is set, every change must match a scope glob and no deny glob (a link inside the scope
+that leads out of it is judged by where it lands):
+
+- `workspace.file` create, update, delete, rename (`path` and `to`), and `workspace.git` add, unstage
+  and restore paths. A refusal reads: `workspace.file update refused: "x" is outside the write scope.
+You may only change: <first 8 globs>. If this file really needs to change, say so in your final
+report instead of editing it.` `git add .` and `-A` stay refused. `git add <directory>` is judged
+  as the directory path, so name files.
+- `workspace.git commit` is refused when `git diff --cached --name-only` (renames counted at both
+  ends) holds a path outside the scope; the message lists them. Nothing is committed.
+- `workspace.command` cannot be path-scoped, so it is **checked afterwards**. Refused up front:
+  `rm mv del erase rmdir rd move cp copy xcopy robocopy tee`, `sed`/`perl` with an in-place flag, and
+  any `git` subcommand other than status, diff, log, show, rev-parse, `branch --list`, `remote -v`,
+  fetch, pull, push (the rest goes through `workspace.git`). After every run (foreground, and a
+  background process when `wait` sees it finished or `stop` ends it) `git status --porcelain` is
+  compared with the state before: a path that is now changed, new or deleted, was not dirty before and
+  is outside the scope is reverted (tracked: restored from HEAD, staged included; new: deleted), at
+  most 50 per check, and the result gets `writeScopeViolation: [paths]`, `reverted`, `note`.
+  Ignored files (`.gitignore`) never count.
+- Every refusal and every revert emits a stream-json `write-scope.violation {tool, paths}` event (a
+  `[write-scope]` line on stderr in text mode).
+
+SDK: `permissions: { allow: [...], writeScope: ['src/**'], writeDeny: ['**/*.env'] }`; an unusable
+glob throws a `RangeError` from `createAgent`.
+
+**Limits, stated plainly.** This is a guard on the built-in tools, not a sandbox.
+
+- A command that writes with its own code (`node -e`, a test that emits files, `npm run` scripts) is
+  not detected while it runs; only the git-visible result is undone afterwards. A path that was
+  already dirty before the command is not judged again, and a change that leaves no git-visible
+  trace (a file in an ignored folder, anything outside the repository) is not seen at all.
+- The check needs the workspace in a git repository; otherwise commands run unchecked and the result
+  says `writeScopeCheck: "skipped: ..."`. A background process still running when the run ends is not
+  checked. Paths outside the workspace but inside the repository are compared as `../x`.
+- `workspace.git` switch, pull and push are not path-scoped (a pull brings whatever upstream has), and
+  MCP tools are not scoped at all; withhold them with `--disallowed-tools` when that matters.
+- `unstage` is scoped like the rest, so a path staged outside the scope by someone else blocks
+  `commit` until the operator clears it.
 
 ## MCP
 
@@ -215,8 +325,140 @@ cleanly with **exit 5**, `outcome: "exhausted"`, and a `budget.exhausted` event 
 - `--max-duration <seconds>` (SDK `maxDurationMs`): a wall-clock limit for the whole run. It cancels
   a call in flight and closes the event stream. This is separate from the runtime's own deadline.
 
+### Server budget, profiles and continuation
+
+Separate from those guards, the runtime enforces its own budget per run, counted cumulatively:
+model turns, tool calls, tool rounds, wall-clock time and the total bytes of tool results. When
+it is used up the run ends (`run.failed` with `RUNTIME_BUDGET_EXHAUSTED`, or a 409 on the next
+tool result) and, before this existed, a real task died after a handful of file reads.
+
+- `--budget default|long` (SDK `budgetProfile`, explicit `budget` fields still win). `default` is
+  20 turns, 40 calls, 256 KiB of results. `long` is the server maximum: 100 turns, 500 calls, 100
+  rounds, 2 hours, 1 MiB of results. The CLI defaults to `long`; the library default stays
+  `default`. The server budget is a **ceiling**, not a cost bound: `--max-tool-calls`,
+  `--max-duration` and `--max-turns` stay the real limits.
+- `--auto-continue <n>` (SDK `autoContinue`, 0 to 20; CLI default 3, SDK default 0). When a run ends
+  on the server budget, a new run starts on the same thread with a prompt telling the model to
+  check the workspace (`git status`, its changed files) and finish the remaining steps. A
+  `run.continued {attempt, reason}` event precedes it. A server-budget ending
+  (`reason: "budget-exhausted"`) and a run the runtime no longer knows (`reason: "run-lost"`, see
+  Resilience) are continued; any other failure, a denial or a cancel is not.
+- Guards accumulate: `--max-tool-calls` and `--max-duration` are totals over all the runs (each run
+  is given what is left); `--max-turns` applies to each run. **Exit 5** when a guard trips, or
+  when the continuations are used up and the task is still not finished; 0 on completion. With
+  `--auto-continue 0` a budget ending is exit 1 with `budgetExhausted: true` in the result.
+- Read economy: results are billed cumulatively, so `workspace.file read` returns 16,000 characters
+  by default (optional `maxChars` up to 48,000) with `nextLine` to continue, and the model is told
+  to prefer search, glob and ranges. At 75% and 90% of the result budget (counted on this side)
+  the next tool result carries a `budgetNote`.
+
 A Ctrl-C or aborted signal is still `cancelled` (130), not `exhausted`. Both are checked before the
 run starts: a non-positive or non-integer value is exit 2 (SDK: `RangeError`).
+
+### Completion checks
+
+A model cannot be trusted to judge its own completion on a long task (one live run changed a single
+Prisma file, wrote "All done" and exited 0). The orchestrator, meaning the human or CI that starts
+the run, defines what "done" means, and the tool enforces it.
+
+```sh
+clawai -p "Build the billing module" --allow-tools read,write,command,git-write \
+  --done-check "tests=npm test" \
+  --done-check "pushed=git diff --quiet origin/main HEAD" \
+  --done-check "module=node -e \"require('fs').accessSync('src/billing/billing.module.ts')\""
+```
+
+- **What a check is.** `label=executable args...` (quotes group words, nothing else is interpreted:
+  no pipes, no globbing, no `&&`, no backslash escapes), or an entry of `--done-check-file`
+  (`[{ "label": "tests", "executable": "npm", "args": ["test"], "cwd": "app", "timeoutMs": 900000 }]`).
+  SDK: `createAgent({ doneChecks: [...] })`. At most 20, labels distinct and at most 80 characters.
+  A bad check is exit 2 (SDK: `RangeError`) before anything runs.
+- **When they run.** When a run ends with outcome `completed` (and is not being continued for another
+  reason). All of them run, in order, so every failure is reported at once. Exit code 0 is a pass;
+  anything else, a timeout, a cancel or a missing program is a fail. Other outcomes (failed, blocked,
+  exhausted, cancelled) never run them.
+- **How they run.** They are the caller's own commands, so they bypass the model's allowlist
+  (`--allow-command`), `--allow-tools`, the write scope and the permission mode: they run even
+  under `plan`. They still use the hardened spawn of the command tool: no shell, stdin closed, the
+  filtered environment (no secrets from the parent), `cwd` contained in the workspace (default the
+  workspace root; a path outside is a failed check), a timeout (default 600,000 ms, at most
+  3,600,000) that kills the whole process tree, and 3,000 characters of output, head and tail,
+  redacted.
+- **A pass** emits `run.checks {passed: true, checks: [{label, ok, exitCode, durationMs}]}` and the run
+  finishes as it would have. The result carries `checks: [{label, ok, exitCode}]`.
+- **A fail** emits the same event with `passed: false` and treats the run as unfinished: with
+  `--auto-continue` left, a new run starts on the same thread (`run.continued` with
+  `reason: "checks-failed"`, counted in `continuations`) whose prompt says the completion checks
+  failed, lists each failing check (`<label>: exit <code>; <output tail>`), says not to declare done
+  until every check passes, and carries the agent's notes like every continuation. The budget is the
+  same `--auto-continue` one; `--max-tool-calls` and `--max-duration` stay totals.
+- **When the continuations run out** with a check still failing, the result is outcome `failed`,
+  **exit 1**, `errorCode: "DONE_CHECKS_FAILED"` and an `error` starting with that code, with
+  `checks` showing which. Exit 1 ("ran and did not finish") was chosen over 5: 5 means a budget
+  ran out, and here the work was declared done and is wrong. `--auto-continue 0` fails at once.
+- **Gaming.** Checks run after the model's last tool call, in the same workspace, so the model can
+  touch anything they look at. They are the orchestrator's responsibility: verify with state, not
+  with text. Prefer git history (`git log origin/main..HEAD` is empty, `git diff --quiet origin/main HEAD`),
+  the project's own tests and file presence over anything the model could have merely said, and keep
+  the check scripts out of the model's write scope (`--write-deny`).
+
+### Loop guards
+
+Some models call the same tool with the same arguments over and over (one real run read one small
+file 38 times in a row). The SDK watches for it, on the runner's side, so no budget is burned
+silently. A call is a **repeat** when the same tool, operation and arguments (keys sorted) were
+made in the last 40 calls and nothing changed since. A write, update, create, delete, rename, any
+`workspace.command` call or a git write counts as a change and resets the count; reads, notes and
+git reads do not.
+
+- 2nd identical call: runs normally.
+- 3rd (and 4th): **not run.** The result is `{ repeatedCall: true, times, note }` telling the model
+  to stop and take the next step; a repeated read also carries `previousResult`, the first 40
+  lines (4,000 characters at most) of what it returned before.
+- 5th and later: the note escalates (`STOP reading. You must now write code or end the run with
+your report.`).
+- 8th: the run ends as **stuck**. There is no new outcome: it is `failed` (**exit 1**) with
+  `result.stuck {tool, operation, times, target}` and `result.error` starting `STUCK:`; stream-json
+  emits `run.stuck {tool, operation, times}` before `run.finished`. `--auto-continue` treats it
+  like a used-up budget: the continuation prompt starts `Your previous run got stuck repeating
+<tool op> on <target>. Do something different: ...` followed by the current notes, the event is
+  `run.continued` with `reason: "stuck"`, and it counts in `continuations`. A caller's own
+  `--max-tool-calls` or `--max-duration` still wins (exit 5).
+- Read starvation: after 40 read-only calls in a row (read, list, glob, search, stat, notes read,
+  git read) with no write, command or note, the 40th result (and every 10th after) carries a
+  `readingTooLong` note telling the model to plan with `workspace.notes add` and start
+  implementing. The call itself is never blocked.
+
+### Resilience
+
+A runtime that is briefly away (a deploy, a restart, a Redis blip) does not end a run. Every
+runtime call is retried: sign-in, create thread, start run, submit tool result and the event
+stream.
+
+- **Retried:** network errors (`ECONNRESET`, `ECONNREFUSED`, `ETIMEDOUT`, `EAI_AGAIN`, `socket hang
+up`, `fetch failed`, a stream cut off by the server), HTTP 408, 429, 502, 503, 504, and a 500 only
+  when its body says the state is unavailable. `Retry-After` is honoured up to 30 s.
+- **Never retried:** every other 4xx (400 and 422 validation, 404, 409), and 401/403, which stay
+  exit 3.
+- **Bounds:** exponential backoff with jitter, 1 s doubling to a 15 s cap; at most 12 attempts and
+  5 minutes per call. A call that keeps failing ends the run as exit 1 with
+  `The ClawAI runtime stayed unavailable: gave up after N attempts...`. Ctrl-C, an aborted signal and
+  `--max-duration` all end a wait at once.
+- **Event:** `run.retrying {attempt, waitMs, status | code}` before each wait (a `[retry]` line in
+  text mode).
+- **Safe to repeat:** a retried call sends the same body. A tool result carries its
+  `idempotencyKey`, fixed once per result, and the runtime answers a repeat with the original
+  acknowledgement (`replayed: true`) instead of recording it twice. A run start is keyed the same
+  way. The event stream reconnects from the last sequence number seen, so a `tool.requested` is
+  never delivered, or run, twice.
+- **Lost run:** if the runtime then answers that it does not know the run (404
+  `RUNTIME_RUN_NOT_FOUND`, or a 409 `RUN_TERMINAL`, `NOT_CLAIMED` or `STALE_CLAIM`), the run is
+  continued like a spent budget: a new run on the same thread, counted in `continuations`, with
+  `run.continued {reason: "run-lost"}` and a prompt telling the model to check `git status` and
+  its changed files first. This needs `--auto-continue` above 0; otherwise the result has
+  `runLost: true` and exit 1.
+- SDK: `createAgent({ retry: { maxAttempts, budgetMs } })` tunes the bounds; a caller-supplied
+  `transport` is not wrapped.
 
 ## Events
 
@@ -225,22 +467,31 @@ run starts: a non-positive or non-integer value is exit 2 (SDK: `RangeError`).
 and `tests/unit/headless-event-schema.test.ts` validates real runs against it.
 `--output-format json` prints only the final result object (the `result` shape below).
 
-| `type`             | Fields                                    | When                                                                                                                                              |
-| ------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
-| `run.started`      | `runId`, `threadId`                       | The runtime accepted the run.                                                                                                                     |
-| `text`             | `text`                                    | A fragment of the model's answer.                                                                                                                 |
-| `tool.call`        | `toolName`, `operation`, `arguments`      | A call was authorized and is about to run.                                                                                                        |
-| `tool.denied`      | `toolName`, `operation`                   | A call was refused.                                                                                                                               |
-| `tool.result`      | `toolName`, `operation`, `ok`, `message?` | A call finished; `message` only on failure.                                                                                                       |
-| `runtime`          | `name`, `payload?`                        | Any other runtime event, passed through.                                                                                                          |
-| `budget.exhausted` | `budget`, `limit`                         | A run guard stopped the run. `budget` is `tool-calls` or `duration`; `limit` is a count, or milliseconds. Followed by `run.finished` with exit 5. |
-| `run.finished`     | `result`                                  | Always last, including when the run threw.                                                                                                        |
+| `type`                    | Fields                                                         | When                                                                                                                                                                                       |
+| ------------------------- | -------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------ |
+| `run.started`             | `runId`, `threadId`, `memory?`                                 | The runtime accepted the run. `memory` is `off` or `account-default`, absent on a resumed thread.                                                                                          |
+| `thread.memory-unchanged` | `status`                                                       | The backend refused to turn memories off for the new thread (400, 403, 404); the run goes on. See Memory.                                                                                  |
+| `text`                    | `text`                                                         | A fragment of the model's answer.                                                                                                                                                          |
+| `tool.call`               | `toolName`, `operation`, `arguments`                           | A call was authorized and is about to run.                                                                                                                                                 |
+| `tool.denied`             | `toolName`, `operation`                                        | A call was refused.                                                                                                                                                                        |
+| `tool.result`             | `toolName`, `operation`, `ok`, `message?`                      | A call finished; `message` only on failure.                                                                                                                                                |
+| `runtime`                 | `name`, `payload?`                                             | Any other runtime event, passed through.                                                                                                                                                   |
+| `budget.exhausted`        | `budget`, `limit`                                              | A run guard stopped the run. `budget` is `tool-calls` or `duration`; `limit` is a count, or milliseconds. Followed by `run.finished` with exit 5.                                          |
+| `run.continued`           | `attempt`, `reason`                                            | The previous run ended on the runtime's own budget and `--auto-continue` started a new run on the same thread. `reason` is `budget-exhausted`, `run-lost`, `stuck`, `checks-failed` or `session-expired` (a long run outlived its access token; with `CLAW_EMAIL`/`CLAW_PASSWORD` it signs in again and goes on).     |
+| `run.checks`              | `passed`, `checks[]` (`label`, `ok`, `exitCode`, `durationMs`) | The run completed and the orchestrator's completion checks ran. `passed: false` continues the run (`reason: "checks-failed"`). See Completion checks.                                      |
+| `run.stuck`               | `tool`, `operation`, `times`                                   | The run repeated one call with nothing changing and was ended. Followed by `run.finished` with exit 1 and `result.stuck`. See Loop guards.                                                 |
+| `write-scope.violation`   | `tool`, `paths`                                                | The write scope refused a file or git change (`tool` is `workspace.file` or `workspace.git`, nothing changed), or reverted paths a command changed (`workspace.command`). See Write scope. |
+| `note.added`              | `id`, `tag?`, `chars`                                          | The agent saved a note with `workspace.notes`. The text is never in the event. See Working memory.                                                                                         |
+| `run.retrying`            | `attempt`, `waitMs`, `status?`, `code?`                        | A runtime call failed transiently and is retried after `waitMs`. See Resilience.                                                                                                           |
+| `run.finished`            | `result`                                                       | Always last, including when the run threw.                                                                                                                                                 |
 
 `result`: `outcome`, `exitCode`, `toolCalls`, `deniedCalls`, `text`, and when known
-`runId`, `threadId`, `terminalEvent`, `error`.
+`runId`, `threadId`, `terminalEvent`, `error`, `stuck`, `budgetExhausted` (the last run ended on the
+runtime's budget), `runLost`, `errorCode` (`DONE_CHECKS_FAILED`), `checks` (the last completion checks, without output) and `continuations` (follow-up runs started). With continuations,
+`toolCalls`, `deniedCalls` and `text` are totals over every run.
 
 ```jsonl
-{"type":"run.started","runId":"run-1","threadId":"thread-1"}
+{"type":"run.started","runId":"run-1","threadId":"thread-1","memory":"off"}
 {"type":"text","text":"Writing "}
 {"type":"tool.call","toolName":"workspace.file","operation":"create","arguments":{"path":"hello.txt","content":"..."}}
 {"type":"tool.result","toolName":"workspace.file","operation":"create","ok":true}
@@ -300,6 +551,7 @@ const agent = createAgent({
   allowedTools: ['workspace.file.*', 'mcp__echo__*'],
   disallowedTools: ['workspace.file.create'],
   systemPrompt: 'Answer in French.',
+  // useMemory: true,  // keep the account's personal memories; default: off for a new thread
   mcp: { config: { mcpServers: { echo: { command: 'node', args: ['server.mjs'] } } } },
 });
 const result = await agent.run('summarise the repo', { onEvent: (event) => log(event) });

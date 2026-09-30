@@ -368,7 +368,10 @@ describe('--allowed-tools and --disallowed-tools', () => {
     expect(existsSync(path.join(root, 'hello.txt'))).toBe(false);
     expect(submitted(runtime)).toMatchObject({ result: { error: { code: 'PERMISSION_DENIED' } } });
     expect(startBody(runtime).toolDefinitions).toMatchObject([
-      { name: 'workspace.file', operations: ['read', 'list'] },
+      {
+        name: 'workspace.file',
+        operations: ['read', 'list', 'glob', 'search', 'stat', 'update', 'delete', 'rename'],
+      },
     ]);
   }, 20_000);
 

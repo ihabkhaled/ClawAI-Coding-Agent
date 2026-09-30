@@ -5,12 +5,19 @@
   "description": "One line of `clawai -p ... --output-format stream-json` (newline-delimited JSON), and the shape of `result` inside the closing run.finished event. `--output-format json` prints a single object that is exactly a run result. Mirrors AgentEvent and AgentResult in src/sdk/create-agent.types.ts; tests/unit/headless-event-schema.test.ts holds the two together.",
   "oneOf": [
     { "$ref": "#/definitions/runStarted" },
+    { "$ref": "#/definitions/threadMemoryUnchanged" },
     { "$ref": "#/definitions/text" },
     { "$ref": "#/definitions/toolCall" },
     { "$ref": "#/definitions/toolDenied" },
     { "$ref": "#/definitions/toolResult" },
     { "$ref": "#/definitions/runtime" },
     { "$ref": "#/definitions/budgetExhausted" },
+    { "$ref": "#/definitions/runContinued" },
+    { "$ref": "#/definitions/runRetrying" },
+    { "$ref": "#/definitions/noteAdded" },
+    { "$ref": "#/definitions/runStuck" },
+    { "$ref": "#/definitions/runChecks" },
+    { "$ref": "#/definitions/writeScopeViolation" },
     { "$ref": "#/definitions/runFinished" }
   ],
   "definitions": {
@@ -43,9 +50,82 @@
           "description": "Pass to --resume to continue this conversation."
         },
         "terminalEvent": { "type": "string" },
+        "budgetExhausted": {
+          "const": true,
+          "description": "The last run ended because the runtime's own run budget was used up, not because of the task or a run guard."
+        },
+        "runLost": {
+          "const": true,
+          "description": "The last run ended because the runtime no longer knew it (a restart or stale claim), and it could not be continued."
+        },
+        "stuck": {
+          "type": "object",
+          "additionalProperties": false,
+          "required": ["tool", "operation", "times", "target"],
+          "description": "The last run was ended for repeating one call with nothing changing. outcome is failed (exit 1) and error starts with STUCK.",
+          "properties": {
+            "tool": { "type": "string", "minLength": 1 },
+            "operation": { "type": "string" },
+            "times": { "type": "integer", "minimum": 1 },
+            "target": {
+              "type": "string",
+              "description": "The path, pattern or query the call was about; empty when it had none."
+            }
+          }
+        },
+        "continuations": {
+          "type": "integer",
+          "minimum": 0,
+          "description": "How many follow-up runs --auto-continue started on the same thread. toolCalls, deniedCalls and text cover all of them."
+        },
         "error": {
           "type": "string",
           "description": "Why the run could not proceed. Never a secret."
+        },
+        "errorCode": {
+          "const": "DONE_CHECKS_FAILED",
+          "description": "The run completed but the orchestrator's completion checks still fail and no continuation is left. outcome is failed (exit 1) and error starts with DONE_CHECKS_FAILED."
+        },
+        "checks": {
+          "type": "array",
+          "description": "The last completion checks that ran (--done-check, --done-check-file). Absent when none were configured or the run never completed.",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "ok", "exitCode"],
+            "properties": {
+              "label": { "type": "string", "minLength": 1 },
+              "ok": { "type": "boolean" },
+              "exitCode": {
+                "type": "integer",
+                "description": "-1 for a check that did not exit: timed out, cancelled, or never started."
+              }
+            }
+          }
+        }
+      }
+    },
+    "runChecks": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "passed", "checks"],
+      "description": "The run ended completed and the orchestrator's completion checks ran, all of them, in order. passed is false when any failed; the run is then unfinished and --auto-continue starts a new run (run.continued with reason checks-failed). Output is never in the event.",
+      "properties": {
+        "type": { "const": "run.checks" },
+        "passed": { "type": "boolean" },
+        "checks": {
+          "type": "array",
+          "items": {
+            "type": "object",
+            "additionalProperties": false,
+            "required": ["label", "ok", "exitCode", "durationMs"],
+            "properties": {
+              "label": { "type": "string", "minLength": 1 },
+              "ok": { "type": "boolean" },
+              "exitCode": { "type": "integer" },
+              "durationMs": { "type": "integer", "minimum": 0 }
+            }
+          }
         }
       }
     },
@@ -56,7 +136,21 @@
       "properties": {
         "type": { "const": "run.started" },
         "runId": { "type": "string", "minLength": 1 },
-        "threadId": { "type": "string", "minLength": 1 }
+        "threadId": { "type": "string", "minLength": 1 },
+        "memory": {
+          "enum": ["off", "account-default"],
+          "description": "off: this new thread ignores the account's stored personal memories (the default). account-default: left as the account has it (--use-memory, or the backend refused the setting). Absent for a continued thread."
+        }
+      }
+    },
+    "threadMemoryUnchanged": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "status"],
+      "description": "The backend refused to turn personal memories off for the new thread (an older or stricter backend). The run continues with the account default.",
+      "properties": {
+        "type": { "const": "thread.memory-unchanged" },
+        "status": { "type": "integer", "description": "The HTTP status: 400, 403 or 404." }
       }
     },
     "text": {
@@ -123,6 +217,79 @@
           "type": "integer",
           "minimum": 1,
           "description": "A call count for tool-calls; milliseconds for duration."
+        }
+      }
+    },
+    "runContinued": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "attempt", "reason"],
+      "description": "The previous run ended on the runtime's own run budget and --auto-continue started a new run on the same thread. Followed by that run's run.started.",
+      "properties": {
+        "type": { "const": "run.continued" },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1 for the first continuation."
+        },
+        "reason": {
+          "enum": ["budget-exhausted", "run-lost", "stuck", "checks-failed", "session-expired"],
+          "description": "checks-failed: the run said it was done but the orchestrator's completion checks (--done-check) failed. budget-exhausted: the runtime's run budget was used up. run-lost: the runtime no longer knew the run (a restart, a stale claim). stuck: the run was ended for repeating one call. session-expired: the access token expired during the run (email and password only); it signed in again."
+        }
+      }
+    },
+    "runStuck": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "tool", "operation", "times"],
+      "description": "The run made the same tool call again and again with nothing changing in the workspace, and was ended. Followed by run.finished with outcome failed (exit 1), result.stuck set and result.error starting with STUCK; --auto-continue starts a new run instead when it has one left.",
+      "properties": {
+        "type": { "const": "run.stuck" },
+        "tool": { "type": "string", "minLength": 1 },
+        "operation": { "type": "string" },
+        "times": { "type": "integer", "minimum": 1 }
+      }
+    },
+    "writeScopeViolation": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "tool", "paths"],
+      "description": "The write scope (--write-scope, --write-deny) refused a change, or undid one a command made. tool is workspace.file or workspace.git for a refused call (nothing changed), workspace.command for paths a command changed outside the scope (they were reverted). Paths are workspace-relative, forward-slash.",
+      "properties": {
+        "type": { "const": "write-scope.violation" },
+        "tool": { "type": "string", "minLength": 1 },
+        "paths": { "type": "array", "items": { "type": "string" } }
+      }
+    },
+    "noteAdded": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "id", "chars"],
+      "description": "The agent saved a note with workspace.notes. The text is never in the event.",
+      "properties": {
+        "type": { "const": "note.added" },
+        "id": { "type": "integer", "minimum": 1 },
+        "tag": { "type": "string", "minLength": 1 },
+        "chars": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "runRetrying": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "attempt", "waitMs"],
+      "description": "A runtime call failed transiently (network error, HTTP 408/429/502/503/504, or a 500 saying the state is unavailable) and is being retried after waitMs. At most 12 attempts and 5 minutes per call.",
+      "properties": {
+        "type": { "const": "run.retrying" },
+        "attempt": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "1 for the first retry of one call."
+        },
+        "waitMs": { "type": "integer", "minimum": 0 },
+        "status": { "type": "integer", "description": "The HTTP status, when there was one." },
+        "code": {
+          "type": "string",
+          "description": "A network error code such as ECONNRESET, when there was no status."
         }
       }
     },

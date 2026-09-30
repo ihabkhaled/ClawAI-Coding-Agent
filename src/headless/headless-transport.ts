@@ -4,10 +4,13 @@ import { threadOriginForSource } from '../core/thread-source';
 import { LEGACY_CLI_THREAD_ORIGIN } from '../core/thread-source.constants';
 
 import { HEADLESS_CALLBACK_URI, HEADLESS_CLIENT_NAME } from './headless-session.constants';
+import { withRetries } from './retry-policy';
+import { readRuntimeEvents } from './runtime-event-stream';
 import { RuntimeHttpError } from './runtime-http-error';
 
 import type { HeadlessStreamEvent } from './headless-session.types';
 import type { HeadlessCredentials, HeadlessRunRequest } from './headless-transport.types';
+import type { RetryContext } from './retry-policy.types';
 
 export function sha256(text: string): string {
   return `sha256:${createHash('sha256').update(text).digest('hex')}`;
@@ -43,7 +46,16 @@ export function canonicalJson(value: unknown): string {
 }
 
 export class HeadlessTransport {
-  constructor(private readonly baseUrl: string) {}
+  /**
+   * `retry` makes every call survive a runtime that is briefly away — a deploy,
+   * a restart, a store blip — by waiting and asking again; see `withRetries`.
+   * A retried call sends the same body, so the idempotency key inside it is the
+   * same and the runtime recognises the repeat instead of doing the work twice.
+   */
+  constructor(
+    private readonly baseUrl: string,
+    private readonly retry: RetryContext = {},
+  ) {}
 
   /**
    * Completes the VS Code authorization without a browser.
@@ -111,6 +123,21 @@ export class HeadlessTransport {
     return id;
   }
 
+  /**
+   * Turns the account's stored personal memories off (or on) for one thread.
+   *
+   * The create-thread request cannot carry this, so it is a separate update.
+   * Throws `RuntimeHttpError` on a refusal; the caller decides whether that
+   * matters. Transient failures are retried like every other call.
+   */
+  async setThreadMemory(token: string, threadId: string, useMemory: boolean): Promise<void> {
+    await this.json(`/chat-threads/${encodeURIComponent(threadId)}`, {
+      method: 'PATCH',
+      body: { useMemory },
+      token,
+    });
+  }
+
   startRun(
     token: string,
     request: HeadlessRunRequest,
@@ -142,94 +169,40 @@ export class HeadlessTransport {
     );
   }
 
-  /**
-   * The run's events, one at a time.
-   *
-   * Frames are reassembled across chunk boundaries because a server-sent event
-   * is not guaranteed to arrive whole, and a half-parsed frame is silently
-   * dropped rather than reported, which is how a run appears to end on nothing.
-   */
-  async *events(
+  /** The run's events, reconnecting from the last one seen; see `readRuntimeEvents`. */
+  events(
     token: string,
     run: { runId: string; generation: string; threadId: string },
     signal?: AbortSignal,
   ): AsyncGenerator<HeadlessStreamEvent> {
-    const query = new URLSearchParams({
-      protocol: 'v2',
-      runId: run.runId,
-      generation: run.generation,
-      after: '0',
+    return readRuntimeEvents({
+      baseUrl: this.baseUrl,
+      token,
+      run,
+      signal,
+      retry: { ...this.retry, signal: signal ?? this.retry.signal },
     });
-    const response = await fetch(
-      `${this.baseUrl}/chat-messages/stream/${encodeURIComponent(run.threadId)}?${query.toString()}`,
-      {
-        headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
-        ...(signal === undefined ? {} : { signal }),
-      },
-    );
-    if (!response.ok || response.body === null) {
-      throw new RuntimeHttpError('Event stream', response.status, '');
-    }
-    const decoder = new TextDecoder();
-    let buffer = '';
-    for await (const chunk of streamChunks(response.body)) {
-      buffer += decoder.decode(chunk, { stream: true });
-      const frames = buffer.split('\n\n');
-      buffer = frames.pop() ?? '';
-      for (const frame of frames) {
-        const event = parseFrame(frame);
-        if (event !== undefined) yield event;
-      }
-    }
   }
 
-  private async json<T>(path: string, options: { body: unknown; token?: string }): Promise<T> {
-    const response = await fetch(this.baseUrl + path, {
-      method: 'POST',
-      headers: {
-        'Content-Type': 'application/json',
-        ...(options.token === undefined ? {} : { Authorization: `Bearer ${options.token}` }),
-      },
-      body: JSON.stringify(options.body),
+  private async json<T>(
+    path: string,
+    options: { body: unknown; token?: string; method?: 'POST' | 'PATCH' },
+  ): Promise<T> {
+    // Serialized once, outside the retry, so every attempt sends identical bytes.
+    const payload = JSON.stringify(options.body);
+    return withRetries(this.retry, async () => {
+      const response = await fetch(this.baseUrl + path, {
+        method: options.method ?? 'POST',
+        headers: {
+          'Content-Type': 'application/json',
+          ...(options.token === undefined ? {} : { Authorization: `Bearer ${options.token}` }),
+        },
+        body: payload,
+        ...(this.retry.signal === undefined ? {} : { signal: this.retry.signal }),
+      });
+      const text = await response.text();
+      if (!response.ok) throw RuntimeHttpError.fromResponse(path, response, text);
+      return (text.length === 0 ? {} : JSON.parse(text)) as T;
     });
-    const text = await response.text();
-    if (!response.ok) {
-      throw new RuntimeHttpError(path, response.status, text.slice(0, 300));
-    }
-    return (text.length === 0 ? {} : JSON.parse(text)) as T;
   }
-}
-
-async function* streamChunks(body: ReadableStream<Uint8Array>): AsyncGenerator<Uint8Array> {
-  const reader = body.getReader();
-  try {
-    for (;;) {
-      const { done, value } = await reader.read();
-      if (done) return;
-      yield value;
-    }
-  } finally {
-    reader.releaseLock();
-  }
-}
-
-function parseFrame(frame: string): HeadlessStreamEvent | undefined {
-  const line = frame.split('\n').find((candidate) => candidate.startsWith('data:'));
-  if (line === undefined) return undefined;
-  try {
-    const parsed: unknown = JSON.parse(line.slice(5).trim());
-    if (parsed === null || typeof parsed !== 'object') return undefined;
-    const event = parsed as { type?: unknown; payload?: unknown };
-    if (typeof event.type !== 'string') return undefined;
-    return {
-      type: event.type,
-      ...(isRecord(event.payload) ? { payload: event.payload } : {}),
-    };
-  } catch {
-    return undefined;
-  }
-}
-
-function isRecord(value: unknown): value is Readonly<Record<string, unknown>> {
-  return value !== null && typeof value === 'object' && !Array.isArray(value);
 }

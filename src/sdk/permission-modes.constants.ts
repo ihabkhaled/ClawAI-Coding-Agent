@@ -13,6 +13,7 @@ export const AGENT_ALL_TOOL_CATEGORIES: readonly AgentToolCategory[] = [
   'write',
   'command',
   'git',
+  'git-write',
   'mcp',
 ];
 

@@ -1,15 +1,30 @@
+import path from 'node:path';
+import { env } from 'node:process';
+
 import { headlessExitCode, outcomeFromError } from '../core/headless-outcome';
 import { redactText } from '../core/redaction';
+import { headlessStateDirectory } from '../headless/headless-session-store';
 import { HeadlessTransport } from '../headless/headless-transport';
+import { RuntimeHttpError } from '../headless/runtime-http-error';
 
 import { agentEventFrom } from './agent-events';
 import { assertAgentInputs, promptWithInstructions, withoutInstructions } from './agent-inputs';
 import { runAgent } from './agent-sdk';
 import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
 import { agentToolkit } from './agent-toolkit';
+import { runWithContinuations } from './auto-continue';
+import { resultByteLimit } from './budget-profiles';
+import { doneCheckRunner, doneChecksProblem } from './done-checks';
+import { createNotesStore } from './notes-store';
+import { promptWithNotes } from './notes-tool';
 import { observedToolkit } from './observed-toolkit';
+import { createRepetitionGuard } from './repetition-guard';
+import { guardedOutcome, stuckEvent, stuckFields } from './repetition-guard-result';
 import { assertRunLimits, createRunGuard, describeBudgetTrip } from './run-budget';
+import { isRunLostError } from './run-lost';
+import { isServerBudgetError, isServerBudgetEvent, withResultBudgetNotes } from './server-budget';
 
+import type { AgentRunResult } from './agent-sdk.types';
 import type {
   Agent,
   AgentConfig,
@@ -17,6 +32,8 @@ import type {
   AgentResult,
   AgentRunCallOptions,
 } from './create-agent.types';
+import type { NotesStore } from './notes-tool.types';
+import type { StuckInfo } from './repetition-guard.types';
 import type { RunBudgetTrip } from './run-budget.types';
 import type { HeadlessOutcome } from '../core/headless-outcome.types';
 
@@ -34,29 +51,86 @@ import type { HeadlessOutcome } from '../core/headless-outcome.types';
  */
 export function createAgent(config: AgentConfig): Agent {
   assertAgentInputs(config);
+  const checkProblem = doneChecksProblem(config.doneChecks ?? []);
+  if (checkProblem !== undefined) throw new RangeError(checkProblem);
+  const checkDone = doneCheckRunner(config.doneChecks, path.resolve(config.workspaceRoot));
   const session: { threadId: string | undefined } = { threadId: config.threadId };
+  const notes = createNotesStore({
+    workspace: path.resolve(config.workspaceRoot),
+    threadId: () => session.threadId,
+    stateDirectory: headlessStateDirectory(env),
+  });
+  // A new conversation starts with a blank notebook: notes kept from an earlier
+  // task in this workspace once steered a fresh run into the wrong feature.
+  if (config.threadId === undefined) notes.clear();
+  // A resumed conversation starts with what its last run wrote down.
+  let resumed = config.threadId !== undefined;
   return {
     get threadId() {
       return session.threadId;
     },
-    run: (prompt, options = {}) => runOnce(config, session, prompt, options),
+    run: (prompt, options = {}) => {
+      const first = resumed ? promptWithNotes(prompt, notes) : prompt;
+      resumed = false;
+      return runWithContinuations({
+        prompt: first,
+        options,
+        hasThread: () => session.threadId !== undefined,
+        withNotes: (text) => promptWithNotes(text, notes),
+        checkDone,
+        runOne: (text, callOptions) => runOnce({ config, session, notes }, text, callOptions),
+      });
+    },
   };
 }
 
 async function runOnce(
-  config: AgentConfig,
-  session: { threadId: string | undefined },
+  agent: {
+    config: AgentConfig;
+    session: { threadId: string | undefined };
+    notes: NotesStore;
+  },
   prompt: string,
   options: AgentRunCallOptions,
 ): Promise<AgentResult> {
+  const { config, session, notes } = agent;
   assertRunLimits(options);
   const emit = (event: AgentEvent): void => options.onEvent?.(event);
   const guard = createRunGuard(options, options.signal);
-  const tally = { denied: 0, calls: 0, text: '', signingIn: true, runId: '' };
+  const tally = { denied: 0, calls: 0, text: '', signingIn: true, runId: '', serverBudget: false };
+  // Calls wait out a runtime that is briefly away, and stop when the guard's
+  // signal does, so a cancel or --max-duration ends a wait as well as a run.
   const transport =
-    config.transport ?? new HeadlessTransport(config.backendUrl ?? AGENT_SDK_DEFAULTS.backendUrl);
-  const inner = agentToolkit(config);
-  const toolkit = guard.guard(observedToolkit(inner, emit, tally));
+    config.transport ??
+    new HeadlessTransport(config.backendUrl ?? AGENT_SDK_DEFAULTS.backendUrl, {
+      ...config.retry,
+      signal: guard.signal,
+      onRetry: (notice) => {
+        emit({ type: 'run.retrying', ...notice });
+      },
+    });
+  const inner = agentToolkit(config, {
+    store: notes,
+    onNoteAdded: (info) => {
+      emit({ type: 'note.added', ...info });
+    },
+    onWriteScopeViolation: (violation) => {
+      emit({ type: 'write-scope.violation', ...violation });
+    },
+  });
+  const noted = withResultBudgetNotes(inner, resultByteLimit(options.budgetProfile));
+  // A run that loops on one call is ended here: `stop` aborts the stream, and the
+  // guard's own signal (when a limit is set) still ends it as `exhausted`.
+  const stop = new AbortController();
+  const repetition = createRepetitionGuard({
+    onStuck: (info) => {
+      emit(stuckEvent(info));
+      stop.abort();
+    },
+  });
+  const runSignal =
+    guard.signal === undefined ? stop.signal : AbortSignal.any([guard.signal, stop.signal]);
+  const toolkit = guard.guard(observedToolkit(repetition.guard(noted), emit, tally));
   try {
     // Signed in here rather than inside runAgent, so a refusal can be told
     // apart from a later one: during sign-in any client error is the credential.
@@ -69,10 +143,15 @@ async function runOnce(
       provider: config.provider,
       model: config.model,
       title: options.title,
+      budgetProfile: options.budgetProfile,
       threadId: session.threadId,
+      useMemory: config.useMemory,
+      onMemoryUnchanged: (info) => {
+        emit({ type: 'thread.memory-unchanged', ...info });
+      },
       deadlineMs: config.deadlineMs,
       transport,
-      signal: guard.signal,
+      signal: runSignal,
       ...(options.maxTurns === undefined
         ? {}
         : { budget: { maxModelTurns: options.maxTurns, maxToolRounds: options.maxTurns } }),
@@ -82,33 +161,49 @@ async function runOnce(
         emit({ type: 'run.started', ...run });
       },
       onEvent: (raw) => {
+        if (isServerBudgetEvent(raw)) tally.serverBudget = true;
         const event = agentEventFrom(raw);
         if (event?.type === 'text') tally.text += event.text;
         if (event !== undefined) emit(event);
       },
     });
     const trip = guard.tripped();
-    const outcome = trip === undefined ? withDenials(report.outcome, tally.denied) : 'exhausted';
-    return finish(
-      emit,
-      {
-        ...report,
-        outcome,
-        exitCode: headlessExitCode(outcome),
-        deniedCalls: tally.denied,
-        text: tally.text,
-        ...tripFields(trip, report.toolCalls),
-      },
-      trip,
-    );
+    const stuck = trip === undefined ? repetition.stuck() : undefined;
+    return finish(emit, reportedResult(report, tally, { trip, stuck }), trip);
   } catch (error) {
     const trip = guard.tripped();
     const aborted = options.signal?.aborted === true;
-    return finish(emit, failedResult(error, { trip, aborted, tally, session, config }), trip);
+    return finish(
+      emit,
+      failedResult(error, { trip, aborted, tally, session, config, stuck: repetition.stuck() }),
+      trip,
+    );
   } finally {
     guard.dispose();
     inner.dispose?.();
   }
+}
+
+/** The result of a run that ended on its own or on a guard, from the loop's report. */
+function reportedResult(
+  report: AgentRunResult,
+  tally: FailureContext['tally'],
+  guards: { trip: RunBudgetTrip | undefined; stuck: StuckInfo | undefined },
+): AgentResult {
+  const { trip, stuck } = guards;
+  const outcome = guardedOutcome(withDenials(report.outcome, tally.denied), guards);
+  return {
+    ...report,
+    outcome,
+    exitCode: headlessExitCode(outcome),
+    deniedCalls: tally.denied,
+    text: tally.text,
+    ...tripFields(trip, report.toolCalls),
+    ...stuckFields(stuck),
+    ...(tally.serverBudget && trip === undefined && stuck === undefined
+      ? { budgetExhausted: true as const }
+      : {}),
+  };
 }
 
 interface FailureContext {
@@ -120,22 +215,28 @@ interface FailureContext {
     text: string;
     signingIn: boolean;
     runId: string;
+    serverBudget: boolean;
   };
   readonly session: { threadId: string | undefined };
   readonly config: AgentConfig;
+  readonly stuck: StuckInfo | undefined;
 }
 
-/** The result of a run that threw: an exhausted guard, a cancel, or a failure with a redacted reason. */
+/** The result of a run that threw: an exhausted guard, a cancel, a stuck loop, or a failure with a redacted reason. */
 function failedResult(error: unknown, context: FailureContext): AgentResult {
   const { trip, tally, session } = context;
-  const outcome: HeadlessOutcome =
+  const stuck = context.aborted ? undefined : context.stuck;
+  const outcome = guardedOutcome(
     trip === undefined
       ? withDenials(
           outcomeFromError(error, { aborted: context.aborted, signingIn: tally.signingIn }),
           tally.denied,
         )
-      : 'exhausted';
+      : 'exhausted',
+    { trip, stuck },
+  );
   const reason = error instanceof Error ? error.message : 'Agent run failed';
+  const plain = trip === undefined && stuck === undefined;
   return {
     outcome,
     exitCode: headlessExitCode(outcome),
@@ -145,6 +246,38 @@ function failedResult(error: unknown, context: FailureContext): AgentResult {
     ...(tally.runId.length === 0 ? {} : { runId: tally.runId }),
     ...(session.threadId === undefined ? {} : { threadId: session.threadId }),
     error: trip === undefined ? redacted(reason, context.config) : describeBudgetTrip(trip),
+    ...(plain ? endedFlags(error, tally.serverBudget) : {}),
+    ...(plain && expiredSession(error, outcome, context) ? { sessionExpired: true as const } : {}),
+    ...stuckFields(stuck),
+  };
+}
+
+/**
+ * A 401 after the run started, with a password to sign in again: the access
+ * token simply outlived a long run, so a continuation can renew it.
+ */
+function expiredSession(
+  error: unknown,
+  outcome: HeadlessOutcome,
+  context: FailureContext,
+): boolean {
+  return (
+    outcome === 'unauthenticated' &&
+    !context.tally.signingIn &&
+    'password' in context.config.auth &&
+    error instanceof RuntimeHttpError &&
+    error.status === 401
+  );
+}
+
+/** Flags for a run that threw on the runtime's own budget, or that the runtime lost. */
+function endedFlags(
+  error: unknown,
+  serverBudget: boolean,
+): { budgetExhausted?: true; runLost?: true } {
+  return {
+    ...(serverBudget || isServerBudgetError(error) ? { budgetExhausted: true as const } : {}),
+    ...(isRunLostError(error) ? { runLost: true as const } : {}),
   };
 }
 

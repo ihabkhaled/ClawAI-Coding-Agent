@@ -41,6 +41,7 @@ const KNOWN = new Set([
   'additionalProperties',
   'minimum',
   'minLength',
+  'items',
 ]);
 
 function resolve(ref: string): Json {
@@ -53,6 +54,7 @@ function resolve(ref: string): Json {
 
 function typeOk(type: string, value: unknown): boolean {
   if (type === 'integer') return Number.isInteger(value);
+  if (type === 'array') return Array.isArray(value);
   if (type === 'object')
     return typeof value === 'object' && value !== null && !Array.isArray(value);
   return typeof value === type;
@@ -73,6 +75,11 @@ function errors(node: Json, value: unknown, at: string): string[] {
     return [`${at}: not ${node.type}`];
   const found = [...valueErrors(node, value, at)];
   if (node.type === 'object') found.push(...objectErrors(node, value as Json, at));
+  if (node.type === 'array' && node.items !== undefined) {
+    (value as unknown[]).forEach((item, index) => {
+      found.push(...errors(node.items as Json, item, `${at}[${String(index)}]`));
+    });
+  }
   return found;
 }
 
@@ -117,6 +124,19 @@ const result = {
 
 const SAMPLES: Record<string, Json> = {
   'run.started': { type: 'run.started', runId: 'run-1', threadId: 'thread-1' },
+  'run.started (memory off)': {
+    type: 'run.started',
+    runId: 'run-1',
+    threadId: 'thread-1',
+    memory: 'off',
+  },
+  'run.started (account default)': {
+    type: 'run.started',
+    runId: 'run-1',
+    threadId: 'thread-1',
+    memory: 'account-default',
+  },
+  'thread.memory-unchanged': { type: 'thread.memory-unchanged', status: 400 },
   text: { type: 'text', text: 'Hel' },
   'tool.call': {
     type: 'tool.call',
@@ -137,6 +157,58 @@ const SAMPLES: Record<string, Json> = {
   'runtime (payload)': { type: 'runtime', name: 'budget.updated', payload: { modelTurns: 1 } },
   'budget.exhausted (tool calls)': { type: 'budget.exhausted', budget: 'tool-calls', limit: 3 },
   'budget.exhausted (duration)': { type: 'budget.exhausted', budget: 'duration', limit: 60000 },
+  'run.continued (run-lost)': { type: 'run.continued', attempt: 1, reason: 'run-lost' },
+  'run.continued (stuck)': { type: 'run.continued', attempt: 2, reason: 'stuck' },
+  'run.continued (checks-failed)': { type: 'run.continued', attempt: 1, reason: 'checks-failed' },
+  'run.checks (passed)': {
+    type: 'run.checks',
+    passed: true,
+    checks: [{ label: 'tests', ok: true, exitCode: 0, durationMs: 1200 }],
+  },
+  'run.checks (failed)': {
+    type: 'run.checks',
+    passed: false,
+    checks: [
+      { label: 'tests', ok: false, exitCode: 1, durationMs: 900 },
+      { label: 'pushed', ok: false, exitCode: -1, durationMs: 5 },
+    ],
+  },
+  'run.finished (checks failed)': {
+    type: 'run.finished',
+    result: {
+      ...result,
+      outcome: 'failed',
+      exitCode: 1,
+      error: 'DONE_CHECKS_FAILED: still failing',
+      errorCode: 'DONE_CHECKS_FAILED',
+      checks: [{ label: 'tests', ok: false, exitCode: 1 }],
+    },
+  },
+  'run.stuck': { type: 'run.stuck', tool: 'workspace.file', operation: 'read', times: 8 },
+  'run.finished (stuck)': {
+    type: 'run.finished',
+    result: {
+      ...result,
+      outcome: 'failed',
+      exitCode: 1,
+      error: 'STUCK: the run made the same call 8 times',
+      stuck: { tool: 'workspace.file', operation: 'read', times: 8, target: 'a.txt' },
+    },
+  },
+  'run.retrying (status)': { type: 'run.retrying', attempt: 1, waitMs: 1000, status: 503 },
+  'run.retrying (code)': { type: 'run.retrying', attempt: 2, waitMs: 2100, code: 'ECONNRESET' },
+  'write-scope.violation (refused)': {
+    type: 'write-scope.violation',
+    tool: 'workspace.file',
+    paths: ['src/other.ts'],
+  },
+  'write-scope.violation (command)': {
+    type: 'write-scope.violation',
+    tool: 'workspace.command',
+    paths: ['a.txt', 'docs/b.md'],
+  },
+  'note.added': { type: 'note.added', id: 1, chars: 42 },
+  'note.added (tag)': { type: 'note.added', id: 2, tag: 'plan', chars: 7 },
   'run.finished': { type: 'run.finished', result },
   'run.finished (error)': {
     type: 'run.finished',
@@ -156,7 +228,31 @@ describe('clawai-headless-events.schema.json', () => {
   it.each([
     ['an unknown event type', { type: 'run.exploded' }],
     ['a run.started without a thread', { type: 'run.started', runId: 'r' }],
+    ['a run.started with an unknown memory mode', { ...SAMPLES['run.started'], memory: 'on' }],
+    ['a memory-unchanged event without a status', { type: 'thread.memory-unchanged' }],
+    [
+      'a memory-unchanged event carrying more than the status',
+      { type: 'thread.memory-unchanged', status: 400, token: 'x' },
+    ],
     ['a tool.result with a non-boolean ok', { ...SAMPLES['tool.result'], ok: 'yes' }],
+    ['a write-scope.violation without paths', { type: 'write-scope.violation', tool: 'x' }],
+    [
+      'a write-scope.violation with a non-string path',
+      { type: 'write-scope.violation', tool: 'workspace.file', paths: [1] },
+    ],
+    ['a run.checks without the passed flag', { type: 'run.checks', checks: [] }],
+    [
+      'a run.checks entry carrying its output',
+      {
+        type: 'run.checks',
+        passed: false,
+        checks: [{ label: 'a', ok: false, exitCode: 1, durationMs: 1, output: 'x' }],
+      },
+    ],
+    [
+      'a result with an unknown error code',
+      { type: 'run.finished', result: { ...result, errorCode: 'NOPE' } },
+    ],
     ['a text event with an extra field', { type: 'text', text: 'x', extra: 1 }],
     [
       'an exit code outside the contract',

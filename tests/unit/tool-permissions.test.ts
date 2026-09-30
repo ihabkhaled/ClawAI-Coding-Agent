@@ -135,7 +135,16 @@ describe('restrictToolkit and combineToolkits', () => {
     const restricted = restrictToolkit(inner, { deny: ['workspace.file.create'] });
     const definition = restricted.definitions[0] as { operations: string[] };
 
-    expect(definition.operations).toEqual(['read', 'list']);
+    expect(definition.operations).toEqual([
+      'read',
+      'list',
+      'glob',
+      'search',
+      'stat',
+      'update',
+      'delete',
+      'rename',
+    ]);
   });
 
   it('checks the filter before the inner authorization, so a denied call is never asked', async () => {

@@ -1,4 +1,6 @@
 import type { HeadlessLogin } from './mcp/mcp-login.types';
+import type { AgentBudgetProfile } from '../sdk/agent-sdk.types';
+import type { DoneCheck } from '../sdk/done-checks.types';
 import type { AgentPermissionMode } from '../sdk/permission-modes.types';
 import type { AgentToolCategory } from '../sdk/workspace-toolkit.types';
 
@@ -18,6 +20,10 @@ export interface HeadlessInvocation {
   /** Stops the run as `exhausted` (exit 5) once exceeded. */
   readonly maxToolCalls?: number | undefined;
   readonly maxDurationMs?: number | undefined;
+  /** The server budget requested for each run; the CLI defaults to `long`. */
+  readonly budgetProfile?: AgentBudgetProfile | undefined;
+  /** Follow-up runs allowed when the server budget ends one (0 to 20, default 3). */
+  readonly autoContinue?: number | undefined;
   /** Token file for OAuth MCP servers; a run reads it and keeps refreshed tokens in memory. */
   readonly mcpTokenFile?: string | undefined;
   /** Thread to continue: from `--resume`, or resolved from the store for `--continue`. */
@@ -27,9 +33,18 @@ export interface HeadlessInvocation {
   readonly appendSystemPrompt?: string | undefined;
   readonly systemPromptFile?: string | undefined;
   readonly mcpConfig?: string | undefined;
+  /** `--use-memory`: keep the account's personal memories on a new thread. Absent means off. */
+  readonly useMemory?: true | undefined;
   readonly permissionMode?: AgentPermissionMode | undefined;
   readonly allowedTools?: readonly string[] | undefined;
   readonly disallowedTools?: readonly string[] | undefined;
+  /** Globs every file and git change must match; see `docs/HEADLESS.md`, Write scope. */
+  readonly writeScope?: readonly string[] | undefined;
+  readonly writeDeny?: readonly string[] | undefined;
+  /** Completion checks from `--done-check`; the file form is read by the runner. */
+  readonly doneChecks?: readonly DoneCheck[] | undefined;
+  /** `--done-check-file`, resolved against the working directory; read by the runner. */
+  readonly doneCheckFile?: string | undefined;
 }
 
 /** A parse either yields a run, asks for help, or names the mistake. */

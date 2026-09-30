@@ -2,6 +2,8 @@ import { randomUUID } from 'node:crypto';
 
 import { canonicalJson, sha256 } from '../headless/headless-transport';
 
+import { guardToolResult } from './tool-result-guard';
+
 import type { AgentToolCall, AgentToolkit, ToolAttempt } from './agent-sdk.types';
 import type { ToolRequestPayload } from '../headless/headless-main.types';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
@@ -100,11 +102,12 @@ async function attempt_(
   try {
     // The signal is passed only when there is one, so a toolkit written before
     // it existed sees the call it always saw.
-    return {
-      structured: await (signal === undefined
-        ? toolkit.execute(call)
-        : toolkit.execute(call, signal)),
-    };
+    // Guarded here as well as in the workspace executor: an MCP or custom
+    // toolkit is bounded by the same ceiling the backend enforces.
+    const result = await (signal === undefined
+      ? toolkit.execute(call)
+      : toolkit.execute(call, signal));
+    return { structured: guardToolResult(result) };
   } catch (error) {
     return {
       failure: {

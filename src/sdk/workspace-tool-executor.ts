@@ -1,20 +1,25 @@
 import { spawnSync } from 'node:child_process';
-import { mkdirSync, readFileSync, readdirSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 import { env } from 'node:process';
 
 import { inheritedEnvironment } from '../core/inherited-environment';
 import { containedPath } from '../core/workspace-containment';
-import { isAllowedExecutable } from '../headless/headless-command-policy';
 import { prepareGitSpawn } from '../infrastructure/hardened-git';
 
+import { createCommandTool } from './command-tool';
+import { runFileTool } from './file-tools';
+import { executeGitTool, isGitToolOperation } from './git-tools';
+import { guardToolResult } from './tool-result-guard';
 import {
   AGENT_GIT_LOG_MAX,
   AGENT_TOOL_OUTPUT_CEILING,
   AGENT_TOOL_TIMEOUT_MS,
 } from './workspace-toolkit.constants';
+import { assertScopedCall } from './write-scope';
 
 import type { AgentToolCall } from './agent-sdk.types';
+import type { CommandTool } from './command-tool.types';
+import type { NotesTool } from './notes-tool.types';
 import type { ToolLimits } from '../headless/headless-main.types';
 
 /**
@@ -24,76 +29,54 @@ import type { ToolLimits } from '../headless/headless-main.types';
  * here is containment. Every path resolves inside the workspace, every command
  * is on the allowlist and gets a built environment, and git is read-only.
  */
-export function executeWorkspaceTool(call: AgentToolCall, limits: ToolLimits): unknown {
+export function executeWorkspaceTool(
+  call: AgentToolCall,
+  limits: ToolLimits,
+  signal?: AbortSignal,
+  commands: CommandTool = createCommandTool(),
+  notes?: NotesTool,
+): unknown {
+  const result = dispatchWorkspaceTool(call, limits, signal, commands, notes);
+  return result instanceof Promise ? result.then(guardToolResult) : guardToolResult(result);
+}
+
+function dispatchWorkspaceTool(
+  call: AgentToolCall,
+  limits: ToolLimits,
+  signal: AbortSignal | undefined,
+  commands: CommandTool,
+  notes: NotesTool | undefined,
+): unknown {
   const args = call.arguments;
-  if (call.toolName === 'workspace.command') return runCommandTool(args, limits);
-  if (call.toolName === 'workspace.git') return runGitTool(call.operation, args, limits.workspace);
+  if (limits.writeScope !== undefined) assertScopedCall(call, limits.workspace, limits.writeScope);
+  if (call.toolName === 'workspace.notes' && notes !== undefined) {
+    return notes.execute(call.operation, args);
+  }
+  if (call.toolName === 'workspace.command') {
+    return commands.execute(call.operation, args, limits, signal);
+  }
+  if (call.toolName === 'workspace.git') {
+    return runGitTool(call.operation, args, limits.workspace, signal);
+  }
   if (call.toolName === 'workspace.file')
     return runFileTool(call.operation, args, limits.workspace);
   throw new Error(`Unsupported tool ${call.toolName}`);
 }
 
-function runFileTool(
-  operation: string,
-  args: Readonly<Record<string, unknown>>,
-  workspace: string,
-): unknown {
-  if (operation === 'list') return { entries: readdirSync(workspace) };
-  if (operation === 'read') {
-    return {
-      content: readFileSync(containedPath(workspace, requirePath(operation, args)), 'utf8'),
-    };
-  }
-  if (operation === 'create') {
-    const relative = requirePath(operation, args);
-    const target = containedPath(workspace, relative);
-    mkdirSync(path.dirname(target), { recursive: true });
-    writeFileSync(target, typeof args.content === 'string' ? args.content : '', 'utf8');
-    return { written: relative };
-  }
-  throw new Error(`Unsupported operation ${operation}`);
-}
+export { requirePath } from './file-tools';
 
 /**
- * Refuses a read or create that named no file.
- *
- * A missing `path` used to fall back to `.`, which resolves to the workspace
- * directory itself, so the write failed with EISDIR — a message about
- * directories that says nothing about the actual mistake. Naming the missing
- * argument lets the model correct itself on the next turn.
+ * Git with the argument list fixed per operation: status, diff and log here,
+ * everything else in `git-tools`. Whether a write may run was decided by
+ * `authorize`; a run without the `git-write` grant never gets this far.
  */
-export function requirePath(operation: string, args: Readonly<Record<string, unknown>>): string {
-  const value = args.path;
-  if (typeof value === 'string' && value.trim().length > 0) return value;
-  const provided = Object.keys(args).join(', ');
-  throw new Error(
-    `workspace.file ${operation} requires a "path" argument. Received: ${provided.length > 0 ? provided : 'nothing'}.`,
-  );
-}
-
-/**
- * Runs a bounded command, inside the allowlist and with a built environment.
- *
- * The environment is built from nothing rather than inherited, because the
- * process running an agent is the one most likely to be holding a credential,
- * and the command the model chose only has to print it.
- */
-function runCommandTool(args: Readonly<Record<string, unknown>>, limits: ToolLimits): unknown {
-  const executable = typeof args.executable === 'string' ? args.executable : '';
-  if (!isAllowedExecutable(executable, limits.allowedExecutables)) {
-    throw new Error(
-      `Command ${executable} is not allowed. Allowed: ${limits.allowedExecutables.join(', ')}.`,
-    );
-  }
-  return spawnBounded(executable, toStrings(args.arguments), limits.workspace);
-}
-
-/** Read-only git, with the argument list fixed per operation. */
 function runGitTool(
   operation: string,
   args: Readonly<Record<string, unknown>>,
   workspace: string,
+  signal: AbortSignal | undefined,
 ): unknown {
+  if (isGitToolOperation(operation)) return executeGitTool(operation, args, workspace, signal);
   return spawnBounded('git', gitArguments(operation, args, workspace), workspace);
 }
 
@@ -141,8 +124,4 @@ function spawnBounded(executable: string, argumentList: string[], cwd: string): 
  */
 function captured(value: unknown): string {
   return typeof value === 'string' ? value : '';
-}
-
-function toStrings(value: unknown): string[] {
-  return Array.isArray(value) ? value.map((entry) => String(entry)) : [];
 }

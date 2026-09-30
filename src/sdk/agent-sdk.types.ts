@@ -3,6 +3,9 @@ import type { HeadlessOutcome } from '../core/headless-outcome.types';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
 import type { HeadlessRunRequest } from '../headless/headless-transport.types';
 
+/** `off`: the thread ignores personal memories. `account-default`: left as the account has it. */
+export type AgentMemoryMode = 'off' | 'account-default';
+
 /** One tool call the model asked for, as a caller's toolkit receives it. */
 export interface AgentToolCall {
   readonly toolName: string;
@@ -38,6 +41,11 @@ export interface AgentToolkit {
 export interface RuntimeTransportPort {
   readonly signIn: (credentials: { email: string; password: string }) => Promise<string>;
   readonly createThread: (token: string, title: string) => Promise<string>;
+  /**
+   * Optional: turns the account's personal memories off for a new thread. A
+   * transport without it leaves the thread on the account default.
+   */
+  readonly setThreadMemory?: (token: string, threadId: string, useMemory: boolean) => Promise<void>;
   readonly startRun: (
     token: string,
     request: HeadlessRunRequest,
@@ -62,6 +70,12 @@ export interface AgentRunOptions {
   readonly credentials?: { email: string; password: string } | undefined;
   /** An access token already issued for this runtime; skips the sign-in. */
   readonly token?: string | undefined;
+  /**
+   * The server-side allowance requested for the run: `default` (20 turns, 40
+   * calls, 256 KiB of results) or `long` (the runtime's maxima). Explicit
+   * `budget` fields win over either.
+   */
+  readonly budgetProfile?: AgentBudgetProfile | undefined;
   /** Overrides individual budget fields, such as `maxModelTurns`. */
   readonly budget?: Readonly<Partial<Record<AgentBudgetField, number>>> | undefined;
   /** Every raw runtime event, in order, before the loop acts on it. */
@@ -69,7 +83,16 @@ export interface AgentRunOptions {
   /** Aborting ends the run as `cancelled`. */
   readonly signal?: AbortSignal | undefined;
   /** Told the run's identity as soon as the runtime accepts it. */
-  readonly onStarted?: ((run: { runId: string; threadId: string }) => void) | undefined;
+  readonly onStarted?:
+    ((run: { runId: string; threadId: string; memory?: AgentMemoryMode }) => void) | undefined;
+  /**
+   * A NEW thread is asked to ignore the account's stored personal memories, so a
+   * repository task is deterministic. `true` keeps the account default. Never
+   * applied to a continued thread (`threadId`).
+   */
+  readonly useMemory?: boolean | undefined;
+  /** Told when the backend refused the memory setting (HTTP status only); the run goes on. */
+  readonly onMemoryUnchanged?: ((info: { status: number }) => void) | undefined;
   /** Defaults to the local gateway when omitted. */
   readonly backendUrl?: string | undefined;
   readonly provider?: string | undefined;
@@ -93,6 +116,9 @@ export interface AgentRunResult {
 
 /** A budget field the runtime enforces, as named in the run request. */
 export type AgentBudgetField = keyof (typeof AGENT_SDK_DEFAULTS)['budget'];
+
+/** A named set of run budget values; see `AGENT_BUDGET_PROFILES`. */
+export type AgentBudgetProfile = 'default' | 'long';
 
 /** What running (or refusing) one tool call produced, before it becomes a receipt. */
 export interface ToolAttempt {

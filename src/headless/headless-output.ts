@@ -4,6 +4,16 @@ import { redactText } from '../core/redaction';
 import type { HeadlessIo, HeadlessOutputFormat } from './headless-args.types';
 import type { AgentEvent, AgentResult } from '../sdk/create-agent.types';
 
+const CONTINUE_WHY: Readonly<
+  Record<Extract<AgentEvent, { type: 'run.continued' }>['reason'], string>
+> = {
+  'checks-failed': 'the completion checks failed',
+  'run-lost': 'the runtime lost the run',
+  'session-expired': 'the sign-in expired and was renewed',
+  'budget-exhausted': 'the server budget was used up',
+  stuck: 'the run got stuck repeating a call',
+};
+
 /**
  * What the runner prints for one event while the run happens.
  *
@@ -52,6 +62,39 @@ export function textLine(event: AgentEvent): string | undefined {
   }
   if (event.type === 'budget.exhausted') {
     return `[budget] ${event.budget} limit ${String(event.limit)} reached\n`;
+  }
+  return recoveryLine(event);
+}
+
+/** The stderr line for the events that report the run recovering from something. */
+function recoveryLine(event: AgentEvent): string | undefined {
+  if (event.type === 'run.continued') {
+    const why = CONTINUE_WHY[event.reason];
+    return `[continue] run ${String(event.attempt)}: ${why}; continuing on the same thread\n`;
+  }
+  if (event.type === 'write-scope.violation') {
+    return `[write-scope] ${event.tool}: ${event.paths.join(', ')}
+`;
+  }
+  if (event.type === 'run.checks') {
+    const failed = event.checks.filter((check) => !check.ok).map((check) => check.label);
+    return event.passed
+      ? `[checks] all ${String(event.checks.length)} passed
+`
+      : `[checks] failed: ${failed.join(', ')}
+`;
+  }
+  if (event.type === 'run.stuck') {
+    return `[stuck] ${event.tool}.${event.operation} repeated ${String(event.times)} times with nothing changing; ending the run\n`;
+  }
+  if (event.type === 'thread.memory-unchanged') {
+    return `[memory] the backend refused the setting (HTTP ${String(event.status)}); account memories stay on\n`;
+  }
+  if (event.type === 'run.retrying') {
+    const cause =
+      event.status === undefined ? (event.code ?? 'network error') : `HTTP ${String(event.status)}`;
+    const seconds = String(Math.round(event.waitMs / 1_000));
+    return `[retry] ${cause}: attempt ${String(event.attempt)}, waiting ${seconds}s\n`;
   }
   return undefined;
 }

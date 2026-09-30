@@ -205,7 +205,11 @@ describe('createAgent', () => {
     expect(body?.model).toBe('m1');
     expect(body?.budget).toMatchObject({ maxModelTurns: 3, maxToolRounds: 3 });
     expect(body?.toolDefinitions).toEqual([
-      expect.objectContaining({ name: 'workspace.file', operations: ['read', 'list'] }),
+      expect.objectContaining({
+        name: 'workspace.file',
+        operations: ['read', 'list', 'glob', 'search', 'stat'],
+      }),
+      expect.objectContaining({ name: 'workspace.notes' }),
     ]);
   });
 

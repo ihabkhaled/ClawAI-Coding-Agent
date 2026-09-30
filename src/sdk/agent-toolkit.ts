@@ -6,7 +6,7 @@ import { AGENT_DEFAULT_TOOL_CATEGORIES } from './workspace-toolkit.constants';
 
 import type { AgentToolkit } from './agent-sdk.types';
 import type { AgentConfig } from './create-agent.types';
-import type { AgentPermissions } from './workspace-toolkit.types';
+import type { AgentPermissions, WorkspaceMemory } from './workspace-toolkit.types';
 
 /**
  * What a configured agent may do: the workspace tools, the MCP servers when
@@ -15,9 +15,9 @@ import type { AgentPermissions } from './workspace-toolkit.types';
  * Without `permissions`, the grant is read and git, plus `mcp` when servers
  * were configured — naming servers is the request to use them.
  */
-export function agentToolkit(config: AgentConfig): AgentToolkit {
+export function agentToolkit(config: AgentConfig, memory?: WorkspaceMemory): AgentToolkit {
   const permissions = effectivePermissions(config);
-  const workspace = workspaceToolkit(config.workspaceRoot, permissions);
+  const workspace = workspaceToolkit(config.workspaceRoot, permissions, memory);
   const combined =
     config.mcp === undefined
       ? workspace

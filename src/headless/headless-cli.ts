@@ -86,6 +86,8 @@ export async function runHeadlessCli(
     maxTurns: invocation.maxTurns,
     maxToolCalls: invocation.maxToolCalls,
     maxDurationMs: invocation.maxDurationMs,
+    budgetProfile: invocation.budgetProfile,
+    autoContinue: invocation.autoContinue,
     signal: context.signal,
     onEvent: (event) => {
       if (event.type !== 'run.finished') writeEvent(invocation.outputFormat, event, io);

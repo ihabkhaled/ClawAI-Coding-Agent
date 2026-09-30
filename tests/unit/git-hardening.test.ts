@@ -144,6 +144,9 @@ function sourceFiles(directory: string): string[] {
  */
 const SPAWNERS_THAT_MAY_RUN_GIT = new Set([
   'infrastructure/bounded-command-runner.ts',
+  'sdk/command-tool-spawn.ts',
+  'sdk/git-tools-run.ts',
+  'sdk/write-scope-git.ts',
   'sdk/workspace-tool-executor.ts',
 ]);
 const SPAWNERS_NEVER_GIT = new Set([

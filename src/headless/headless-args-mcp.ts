@@ -1,11 +1,25 @@
 import path from 'node:path';
 
-import { HEADLESS_MAX_DURATION_SECONDS, HEADLESS_MAX_TOOL_CALLS } from './headless-args.constants';
+import { AGENT_BUDGET_PROFILE_NAMES } from '../sdk/budget-profiles.constants';
+import { AUTO_CONTINUE_MAX } from '../sdk/server-budget.constants';
+
+import {
+  HEADLESS_AUTO_CONTINUE_DEFAULT,
+  HEADLESS_BUDGET_PROFILE_DEFAULT,
+  HEADLESS_MAX_DURATION_SECONDS,
+  HEADLESS_MAX_TOOL_CALLS,
+} from './headless-args.constants';
 
 import type { HeadlessInvocation, HeadlessParse } from './headless-args.types';
+import type { AgentBudgetProfile } from '../sdk/agent-sdk.types';
 
 type Values = ReadonlyMap<string, readonly string[]>;
-type Budgets = Partial<Pick<HeadlessInvocation, 'maxToolCalls' | 'maxDurationMs' | 'mcpTokenFile'>>;
+type Budgets = Partial<
+  Pick<
+    HeadlessInvocation,
+    'maxToolCalls' | 'maxDurationMs' | 'mcpTokenFile' | 'budgetProfile' | 'autoContinue'
+  >
+>;
 
 const lastOf = (values: Values, field: string): string | undefined => values.get(field)?.at(-1);
 
@@ -21,6 +35,36 @@ function wholeNumber(raw: string, max: number): number | undefined {
  * string is the first mistake found.
  */
 export function checkedBudgets(values: Values, cwd: string): Budgets | string {
+  const server = serverBudgetFlags(values);
+  if (typeof server === 'string') return server;
+  const guards = checkedGuards(values, cwd);
+  return typeof guards === 'string' ? guards : { ...server, ...guards };
+}
+
+function isProfile(value: string): value is AgentBudgetProfile {
+  return AGENT_BUDGET_PROFILE_NAMES.some((name) => name === value);
+}
+
+/** `--budget` and `--auto-continue`; the CLI defaults to the long profile and three continuations. */
+function serverBudgetFlags(
+  values: Values,
+): Pick<HeadlessInvocation, 'budgetProfile' | 'autoContinue'> | string {
+  const profile = lastOf(values, 'budgetProfile') ?? HEADLESS_BUDGET_PROFILE_DEFAULT;
+  if (!isProfile(profile)) {
+    return `--budget must be one of ${AGENT_BUDGET_PROFILE_NAMES.join(', ')}.`;
+  }
+  const raw = lastOf(values, 'autoContinue');
+  const count = raw === undefined ? HEADLESS_AUTO_CONTINUE_DEFAULT : Number(raw);
+  if (
+    raw !== undefined &&
+    (raw.trim() === '' || !Number.isInteger(count) || count < 0 || count > AUTO_CONTINUE_MAX)
+  ) {
+    return `--auto-continue must be a whole number from 0 to ${String(AUTO_CONTINUE_MAX)}.`;
+  }
+  return { budgetProfile: profile, autoContinue: count };
+}
+
+function checkedGuards(values: Values, cwd: string): Budgets | string {
   const calls = lastOf(values, 'maxToolCalls');
   const seconds = lastOf(values, 'maxDuration');
   const file = lastOf(values, 'mcpTokenFile');

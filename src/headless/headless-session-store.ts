@@ -19,6 +19,11 @@ import type {
   HeadlessSessionStore,
 } from './headless-session-store.types';
 
+/** Where the CLI keeps its state: `CLAW_STATE_DIR`, else `~/.clawai`. */
+export function headlessStateDirectory(environment: HeadlessEnvironment): string {
+  return environment[HEADLESS_STATE_DIR_ENV] ?? path.join(os.homedir(), HEADLESS_STATE_DIR_NAME);
+}
+
 /** The scope's key: a hash, so the file never spells out a workspace path. */
 export function sessionKey(scope: HeadlessSessionScope): string {
   return createHash('sha256')
@@ -54,8 +59,7 @@ async function readEntries(file: string): Promise<Record<string, HeadlessSession
  * is better than failing a run that already finished.
  */
 export function fileSessionStore(environment: HeadlessEnvironment): HeadlessSessionStore {
-  const directory =
-    environment[HEADLESS_STATE_DIR_ENV] ?? path.join(os.homedir(), HEADLESS_STATE_DIR_NAME);
+  const directory = headlessStateDirectory(environment);
   const file = path.join(directory, HEADLESS_SESSION_FILE);
   return {
     latest: async (scope) => (await readEntries(file))[sessionKey(scope)]?.threadId,

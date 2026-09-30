@@ -2,6 +2,16 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.86.0
+
+- The command-line agent can now read large files in slices, search, find files, edit text precisely, rename and delete, instead of failing on big files.
+- It can run long commands (tests, builds) without freezing, keeps the end of long output where errors live, and can run something in the background while it works.
+- It can stage, commit, pull, push and switch branches with your repository's own hooks running, only when you allow it with `--allow-tools git-write`. It never forces, resets or bypasses hooks.
+- Tool results are always kept small enough for the server to accept.
+- You can tell the command-line agent what "done" means: `--done-check "tests=npm test"` runs your own command when it says it finished, and sends it back to work if the command fails.
+- Long runs no longer stop when your sign-in expires: with an email and password it signs in again and carries on.
+- A new conversation starts with an empty notebook, so notes from an old task cannot steer it.
+
 ## 1.85.0
 
 - Safer by default: plugins that come with a project stay off until you approve them, and a plugin's hooks must be approved again whenever their commands change.

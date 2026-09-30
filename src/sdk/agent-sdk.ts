@@ -5,6 +5,8 @@ import { HeadlessTransport, sha256 } from '../headless/headless-transport';
 
 import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
 import { toolCallOf, toolResultFor } from './agent-tool-result';
+import { profileDeadlineMs, resolveRunBudget } from './budget-profiles';
+import { openThread } from './thread-memory';
 
 import type {
   AgentRunOptions,
@@ -32,12 +34,13 @@ import type { HeadlessStreamEvent } from '../headless/headless-session.types';
  */
 export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult> {
   const transport: RuntimeTransportPort =
-    options.transport ?? new HeadlessTransport(options.backendUrl ?? AGENT_SDK_DEFAULTS.backendUrl);
-  const deadlineMs = options.deadlineMs ?? AGENT_SDK_DEFAULTS.deadlineMs;
+    options.transport ??
+    new HeadlessTransport(options.backendUrl ?? AGENT_SDK_DEFAULTS.backendUrl, {
+      signal: options.signal,
+    });
+  const deadlineMs = options.deadlineMs ?? profileDeadlineMs(options.budgetProfile);
   const token = await accessToken(transport, options);
-  const threadId =
-    options.threadId ??
-    (await transport.createThread(token, options.title ?? AGENT_SDK_DEFAULTS.title));
+  const { threadId, memory } = await openThread(transport, token, options);
   const epochs = { account: 1, workspace: 1, target: 1, policy: 1 };
 
   const started = await transport.startRun(token, {
@@ -55,11 +58,11 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
     provider: options.provider ?? AGENT_SDK_DEFAULTS.provider,
     model: options.model ?? AGENT_SDK_DEFAULTS.model,
     epochs,
-    budget: { ...AGENT_SDK_DEFAULTS.budget, maxRuntimeMs: deadlineMs, ...options.budget },
+    budget: resolveRunBudget(options.budgetProfile, deadlineMs, options.budget),
   });
 
   const run = { ...started, threadId };
-  options.onStarted?.({ runId: run.runId, threadId });
+  options.onStarted?.({ runId: run.runId, threadId, ...(memory === undefined ? {} : { memory }) });
   const report = await runHeadlessSession({
     events: () => transport.events(token, run, options.signal),
     answerTool: async (event) => {

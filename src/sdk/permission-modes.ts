@@ -7,7 +7,7 @@ import type { AgentApprovalRequest, AgentPermissions } from './workspace-toolkit
 export function needsApproval(mode: AgentPermissionMode, request: AgentApprovalRequest): boolean {
   if (request.category === 'read' || request.category === 'git') return false;
   if (request.category === 'mcp') return request.operation === 'call';
-  if (request.category === 'command') return true;
+  if (request.category === 'command' || request.category === 'git-write') return true;
   return mode === 'ask';
 }
 
