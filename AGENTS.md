@@ -16,11 +16,10 @@ and the obvious repair breaks `npm run build`.
 Runbooks: `skills/add-a-runtime-tool`, `add-a-command-or-view`, `add-a-translated-string`,
 `add-a-backend-client-with-fallback`, `run-live-rounds`, `land-a-release`.
 
-Read and apply `skills/version-every-change/SKILL.md` for every publishable
-change. Every push to `main` must carry a new SemVer version, matching changelog
-entry, rebuilt VSIX in `builds/`, and GitHub release asset. Delivery releases
-advance the second SemVer component even after `1.99.0`; use third-component
-patches only for explicit compatible patch releases.
+Read `skills/version-every-change/SKILL.md` when preparing an intentional
+release. Normal pushes to `main` may keep the current version even when its tag
+already exists; the Release workflow skips publication in that case. Only a
+real release needs a new SemVer, changelog entry, rebuilt VSIX and release asset.
 
 Read `docs/RULES.md` and apply
 `skills/verify-coding-agent-readiness/SKILL.md` whenever a change affects agent
