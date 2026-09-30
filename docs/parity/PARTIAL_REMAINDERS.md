@@ -26,3 +26,11 @@ backend change or a product decision; nothing here can be finished client-side.
 **F101 Desktop, JetBrains, Slack, GitHub, GitLab.** JetBrains and Desktop are separate products. The remaining integrations need the runtime-v2 run contract exposed to non-VS-Code clients.
 
 **F108 OpenTelemetry and team analytics.** auth-service must return provider cost at settlement and runtime events must carry it; the client already exports cost when `costMicros` is present.
+
+## Backend finding: a run with memory off still reads the account's memories (2026-10-01)
+
+The client does its part. `createAgent` and the headless CLI PATCH `/chat-threads/:id` with `{ useMemory: false }` on every new thread, the backend accepts it, and `run.started` reports `memory: "off"` (`src/sdk/thread-memory.ts`, `src/headless/headless-transport.ts`). A marker stored in the account's memories still came back in replies (QA 2026-10-01, rounds R01, R09, R11, R13 and a web crawl reply).
+
+Root cause is in `apps/claw-chat-service`, not here. A runtime run builds its thread settings with `runtimeThreadSettings` (`src/modules/chat-messages/helpers/runtime-thread-context.helper.ts`), which passes only `maxTokens`, `useCrossThreadContext` and `systemPrompt`; `RuntimeThreadContext` (`types/runtime-thread-context.types.ts`) has no `useMemory` or `useContext` field at all. `ContextAssemblyManager` then evaluates `useMemory: threadSettings?.useMemory !== false` (`managers/context-assembly.manager.ts:158`), and `undefined !== false` is `true`, so memories are fetched for every runtime run whatever the thread says. The regular chat path passes the real thread (`chat-messages.service.ts:1735`) and is correct.
+
+Fix, in chat-service: add `useMemory` and `useContext` to `RuntimeThreadContext`, read them where the runtime loop loads the thread, and forward them in `runtimeThreadSettings`; add a spec that a thread with `useMemory: false` yields no memory fetch in a runtime run. Until then `--no-memory` and `useMemory: false` only change what the thread reports.
