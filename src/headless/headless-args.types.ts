@@ -1,3 +1,4 @@
+import type { HeadlessLogin } from './mcp/mcp-login.types';
 import type { AgentPermissionMode } from '../sdk/permission-modes.types';
 import type { AgentToolCategory } from '../sdk/workspace-toolkit.types';
 
@@ -14,6 +15,11 @@ export interface HeadlessInvocation {
   readonly allowCommands: readonly string[];
   readonly outputFormat: HeadlessOutputFormat;
   readonly maxTurns?: number | undefined;
+  /** Stops the run as `exhausted` (exit 5) once exceeded. */
+  readonly maxToolCalls?: number | undefined;
+  readonly maxDurationMs?: number | undefined;
+  /** Token file for OAuth MCP servers; a run reads it and keeps refreshed tokens in memory. */
+  readonly mcpTokenFile?: string | undefined;
   /** Thread to continue: from `--resume`, or resolved from the store for `--continue`. */
   readonly resume?: string | undefined;
   readonly continueLast?: true | undefined;
@@ -29,6 +35,7 @@ export interface HeadlessInvocation {
 /** A parse either yields a run, asks for help, or names the mistake. */
 export type HeadlessParse =
   | { readonly kind: 'run'; readonly invocation: HeadlessInvocation }
+  | { readonly kind: 'login'; readonly login: HeadlessLogin }
   | { readonly kind: 'help' }
   | { readonly kind: 'usage'; readonly message: string };
 

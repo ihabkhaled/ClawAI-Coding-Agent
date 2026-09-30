@@ -2,7 +2,7 @@ import { createHash, randomBytes } from 'node:crypto';
 
 import { z } from 'zod';
 
-import { classifyMcpOperation, mcpPolicySubject } from '../core/mcp/mcp-policy-classification';
+import { mcpPolicySubject } from '../core/mcp/mcp-policy-classification';
 import { MCP_TOOL_NAME } from '../core/mcp/mcp.constants';
 import {
   clampToOrganizationFloor,
@@ -14,10 +14,15 @@ import {
   type PolicyRequest,
   type PolicySubject,
 } from '../core/policy-v2';
+import {
+  classifiedOperation,
+  UNCLASSIFIED_OPERATION,
+} from '../core/runtime/runtime-operation-classification';
 
 import type { RuntimeToolPolicyDecision, RuntimeToolPolicyPort } from './runtime-tool-dispatcher';
 import type { PermissionMode } from '../core/permission-policy.types';
 import type { ProjectPolicy } from '../core/policy-v2';
+import type { OperationClassification } from '../core/runtime/runtime-operation-classification';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 
 interface RuntimePolicyContext {
@@ -47,27 +52,14 @@ const mode = (value: PermissionMode): PolicyRequest['mode'] => {
   return 'ASK';
 };
 
-function classify(
-  invocation: ToolInvocation,
-): Pick<PolicyRequest, 'effect' | 'risk' | 'reversible'> {
-  const operation = `${invocation.toolName}.${invocation.operation}`.toLowerCase();
-  if (invocation.toolName === 'runtime.elevation')
-    return { effect: 'elevation', risk: 'R4', reversible: false };
-  if (invocation.toolName === 'runtime.integration' || invocation.toolName === 'runtime.flagship')
-    return { effect: 'local-mutation', risk: 'R3', reversible: false };
-  if (invocation.toolName === 'runtime.schedule' && invocation.operation === 'create')
-    return { effect: 'local-mutation', risk: 'R3', reversible: false };
-  if (
-    invocation.toolName === 'runtime.worktree' &&
-    (invocation.operation === 'enter' || invocation.operation === 'exit')
-  )
-    return { effect: 'local-mutation', risk: 'R3', reversible: false };
-  if (invocation.toolName === 'workspace.git') return classifyGit(invocation.operation);
-  if (invocation.toolName === 'workspace.files') return classifyFiles(invocation.operation);
-  return classifyOperation(invocation, operation);
+/**
+ * The risk class and effect of one invocation, from the explicit table in
+ * `runtime-operation-classification.ts`. An operation missing from it is an
+ * irreversible local mutation that always asks, never a quiet read.
+ */
+export function classify(invocation: ToolInvocation): OperationClassification {
+  return classifiedOperation(invocation.toolName, invocation.operation) ?? UNCLASSIFIED_OPERATION;
 }
-
-type Classification = Pick<PolicyRequest, 'effect' | 'risk' | 'reversible'>;
 
 /**
  * What a project rule may match on: the tool, the operation, the paths the
@@ -159,95 +151,6 @@ function policySubject(invocation: ToolInvocation): PolicySubject {
     domains: subjectDomains(parsed.data),
     ...(command === undefined ? {} : { command }),
   };
-}
-
-const gitReadOperations = new Set([
-  'status',
-  'diff',
-  'log',
-  'blame',
-  'branches',
-  'tags',
-  'remotes',
-  'worktrees',
-  'conflicts',
-  'submodules',
-  'topology',
-  'pr-readiness',
-]);
-
-function classifyGit(operation: string): Classification {
-  if (operation === 'push' || operation === 'tag') {
-    return { effect: 'publication', risk: 'R3', reversible: false };
-  }
-  if (operation === 'fetch') return { effect: 'read', risk: 'R2', reversible: true };
-  if (gitReadOperations.has(operation)) return { effect: 'read', risk: 'R0', reversible: true };
-  return { effect: 'local-mutation', risk: 'R3', reversible: false };
-}
-
-const fileWriteOperations = new Set([
-  'create',
-  'update',
-  'patch',
-  'rename',
-  'copy',
-  'mkdir',
-  'artifact',
-]);
-
-function classifyFiles(operation: string): Classification {
-  if (operation === 'delete') return { effect: 'destructive', risk: 'R4', reversible: false };
-  if (fileWriteOperations.has(operation)) {
-    return { effect: 'workspace-write', risk: 'R1', reversible: true };
-  }
-  return { effect: 'read', risk: 'R0', reversible: true };
-}
-
-const operationRules: readonly (readonly [RegExp, Classification])[] = [
-  [/elevat|admin|sudo|root/u, { effect: 'elevation', risk: 'R4', reversible: false }],
-  [/production|prod\b/u, { effect: 'production', risk: 'R4', reversible: false }],
-  [
-    /delete|destroy|drop|prune|reset|force/u,
-    { effect: 'destructive', risk: 'R4', reversible: false },
-  ],
-  [/publish|push|release|deploy/u, { effect: 'publication', risk: 'R3', reversible: false }],
-  [/network-write|http-post|webhook/u, { effect: 'network-write', risk: 'R3', reversible: false }],
-  [/fetch|crawl|search/u, { effect: 'read', risk: 'R2', reversible: true }],
-  [
-    /write|edit|patch|create|rename|move|export|save|persist/u,
-    { effect: 'workspace-write', risk: 'R1', reversible: true },
-  ],
-  [
-    /run|exec|process|container|database/u,
-    { effect: 'local-mutation', risk: 'R2', reversible: false },
-  ],
-];
-
-function classifyOperation(invocation: ToolInvocation, operation: string): Classification {
-  if (invocation.toolName === MCP_TOOL_NAME) return classifyMcpOperation(invocation.operation);
-  // F011: a saved template is instructions a later run will follow, so writing
-  // one is a local mutation that outlives this run, not an ordinary file edit.
-  if (invocation.toolName === 'runtime.workflows' && invocation.operation === 'save-template')
-    return { effect: 'local-mutation', risk: 'R2', reversible: false };
-  // F029: creating or firing a remote job runs a command on another machine.
-  if (
-    invocation.toolName === 'runtime.remote' &&
-    /^(?:create|trigger)$/u.test(invocation.operation)
-  )
-    return { effect: 'network-write', risk: 'R3', reversible: false };
-  if (
-    invocation.toolName === 'workspace.browser' &&
-    /^(?:click|fill|select|keyboard|drag|upload|download)$/u.test(invocation.operation)
-  ) {
-    return { effect: 'network-write', risk: 'R3', reversible: false };
-  }
-  return (
-    operationRules.find(([pattern]) => pattern.test(operation))?.[1] ?? {
-      effect: 'read',
-      risk: 'R0',
-      reversible: true,
-    }
-  );
 }
 
 export class RuntimePolicyV2Adapter implements RuntimeToolPolicyPort {

@@ -10,6 +10,7 @@
     { "$ref": "#/definitions/toolDenied" },
     { "$ref": "#/definitions/toolResult" },
     { "$ref": "#/definitions/runtime" },
+    { "$ref": "#/definitions/budgetExhausted" },
     { "$ref": "#/definitions/runFinished" }
   ],
   "definitions": {
@@ -108,6 +109,21 @@
         "type": { "const": "runtime" },
         "name": { "type": "string", "minLength": 1 },
         "payload": { "type": "object" }
+      }
+    },
+    "budgetExhausted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "budget", "limit"],
+      "description": "A run guard (--max-tool-calls, --max-duration) stopped the run. Always followed by run.finished with outcome exhausted and exit code 5.",
+      "properties": {
+        "type": { "const": "budget.exhausted" },
+        "budget": { "enum": ["tool-calls", "duration"] },
+        "limit": {
+          "type": "integer",
+          "minimum": 1,
+          "description": "A call count for tool-calls; milliseconds for duration."
+        }
       }
     },
     "runFinished": {

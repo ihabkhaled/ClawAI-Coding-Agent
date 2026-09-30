@@ -2,15 +2,17 @@ import { headlessExitCode } from '../core/headless-outcome';
 import { AGENT_SDK_DEFAULTS } from '../sdk/agent-sdk.constants';
 import { createAgent } from '../sdk/create-agent';
 
-import { approvalFrom } from './headless-approval';
+import { agentConfigFor } from './headless-agent-config';
 import { authFromEnvironment, parseHeadlessArgs } from './headless-args';
 import { HEADLESS_USAGE } from './headless-args.constants';
 import { resolveHeadlessInputs } from './headless-inputs';
 import { writeEvent, writeResult } from './headless-output';
 import { fileSessionStore } from './headless-session-store';
+import { runMcpLogin } from './mcp/mcp-login-command';
 
 import type { HeadlessEnvironment, HeadlessInvocation, HeadlessIo } from './headless-args.types';
 import type { HeadlessSessionStore } from './headless-session-store.types';
+import type { McpLoginContext } from './mcp/mcp-login.types';
 import type { RuntimeTransportPort } from '../sdk/agent-sdk.types';
 
 interface HeadlessContext {
@@ -19,6 +21,10 @@ interface HeadlessContext {
   readonly transport?: RuntimeTransportPort;
   /** Where `--continue` finds the last thread; defaults to a file under the state directory. */
   readonly sessions?: HeadlessSessionStore;
+  /** Opens a URL in a browser; supplied by the process only when a terminal is attached. */
+  readonly openUrl?: (url: string) => void;
+  /** Overrides for `--mcp-login`, so a test can reach a local authorization server. */
+  readonly login?: Partial<McpLoginContext>;
 }
 
 /**
@@ -41,6 +47,14 @@ export async function runHeadlessCli(
     return 0;
   }
   if (parsed.kind === 'usage') return usageError(io, parsed.message);
+  if (parsed.kind === 'login') {
+    return runMcpLogin(parsed.login, environment, io, {
+      cwd: context.cwd,
+      signal: context.signal,
+      openUrl: context.openUrl,
+      ...context.login,
+    });
+  }
   const auth = authFromEnvironment(environment);
   if (auth === undefined) {
     io.stderr('No credential: set CLAW_TOKEN, or CLAW_EMAIL and CLAW_PASSWORD.\n');
@@ -56,28 +70,22 @@ export async function runHeadlessCli(
   };
   const threadId = await threadToResume(invocation, sessions, scope);
   if (threadId === null) return usageError(io, 'There is no previous thread to --continue.');
-  const agent = createAgent({
-    auth,
-    workspaceRoot: invocation.workspace,
-    backendUrl: invocation.backendUrl,
-    model: invocation.model,
-    provider: invocation.provider,
-    permissions: {
-      allow: invocation.allowTools,
-      allowedExecutables: invocation.allowCommands,
-      ...(invocation.permissionMode === undefined ? {} : { approve: approvalFrom(io) }),
-    },
-    permissionMode: invocation.permissionMode,
-    allowedTools: invocation.allowedTools,
-    disallowedTools: invocation.disallowedTools,
-    threadId,
-    systemPrompt: inputs.systemPrompt,
-    mcp: inputs.mcp,
-    transport: context.transport,
-  });
+  const agent = createAgent(
+    agentConfigFor({
+      invocation,
+      inputs,
+      auth,
+      threadId,
+      environment,
+      io,
+      transport: context.transport,
+    }),
+  );
   const result = await agent.run(invocation.prompt, {
     title: 'Headless run',
     maxTurns: invocation.maxTurns,
+    maxToolCalls: invocation.maxToolCalls,
+    maxDurationMs: invocation.maxDurationMs,
     signal: context.signal,
     onEvent: (event) => {
       if (event.type !== 'run.finished') writeEvent(invocation.outputFormat, event, io);

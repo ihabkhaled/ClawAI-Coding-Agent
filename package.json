@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "1.84.0",
+  "version": "1.85.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -563,6 +563,12 @@
             "type": "string"
           }
         },
+        "clawAI.allowPrivatePluginSources": {
+          "type": "boolean",
+          "default": false,
+          "scope": "machine",
+          "markdownDescription": "%config.allowPrivatePluginSources%"
+        },
         "clawAI.pluginSignaturePolicy": {
           "type": "string",
           "enum": [
@@ -815,6 +821,94 @@
         }
       ]
     },
+    "walkthroughs": [
+      {
+        "id": "clawAI.gettingStarted",
+        "title": "%walkthrough.title%",
+        "description": "%walkthrough.description%",
+        "steps": [
+          {
+            "id": "connect",
+            "title": "%walkthrough.connect.title%",
+            "description": "%walkthrough.connect.description%",
+            "media": {
+              "markdown": "media/walkthrough/connect.md"
+            },
+            "completionEvents": [
+              "onCommand:clawAI.connect"
+            ]
+          },
+          {
+            "id": "ask",
+            "title": "%walkthrough.ask.title%",
+            "description": "%walkthrough.ask.description%",
+            "media": {
+              "markdown": "media/walkthrough/ask.md"
+            },
+            "completionEvents": [
+              "onCommand:clawAI.openChat"
+            ]
+          },
+          {
+            "id": "agent",
+            "title": "%walkthrough.agent.title%",
+            "description": "%walkthrough.agent.description%",
+            "media": {
+              "markdown": "media/walkthrough/agent.md"
+            },
+            "completionEvents": [
+              "onCommand:clawAI.generateCode"
+            ]
+          },
+          {
+            "id": "attach",
+            "title": "%walkthrough.attach.title%",
+            "description": "%walkthrough.attach.description%",
+            "media": {
+              "markdown": "media/walkthrough/attach.md"
+            },
+            "completionEvents": [
+              "onCommand:clawAI.askFile"
+            ]
+          },
+          {
+            "id": "review",
+            "title": "%walkthrough.review.title%",
+            "description": "%walkthrough.review.description%",
+            "media": {
+              "markdown": "media/walkthrough/review.md"
+            },
+            "completionEvents": [
+              "onCommand:clawAI.rewindConversation",
+              "onCommand:clawAI.undoLastEdit"
+            ]
+          },
+          {
+            "id": "pullRequest",
+            "title": "%walkthrough.pullRequest.title%",
+            "description": "%walkthrough.pullRequest.description%",
+            "media": {
+              "markdown": "media/walkthrough/pull-request.md"
+            },
+            "completionEvents": [
+              "onCommand:clawAI.reviewCode"
+            ]
+          },
+          {
+            "id": "extras",
+            "title": "%walkthrough.extras.title%",
+            "description": "%walkthrough.extras.description%",
+            "media": {
+              "markdown": "media/walkthrough/extras.md"
+            },
+            "completionEvents": [
+              "onCommand:clawAI.managePlugins",
+              "onCommand:clawAI.manageScheduledTasks"
+            ]
+          }
+        ]
+      }
+    ],
     "viewsWelcome": [
       {
         "view": "clawAI.plugins",
@@ -1021,7 +1115,9 @@
     "lint": "eslint . --max-warnings=0",
     "test": "vitest run --coverage",
     "test:unit": "vitest run tests/unit",
+    "permissions:matrix": "node scripts/generate-permission-matrix.mjs",
     "test:integration": "vitest run tests/integration",
+    "test:live-api": "node --use-system-ca node_modules/vitest/vitest.mjs run --config vitest.live.config.ts",
     "test:labs": "node --test tests/labs/*.test.mjs",
     "test:host": "npm run build && node scripts/run-extension-tests.mjs",
     "test:host:installed": "node scripts/run-installed-extension-tests.mjs",
@@ -1032,6 +1128,7 @@
     "coverage:scope": "node scripts/labs/verify-coverage-scope.mjs",
     "format": "prettier --write .",
     "format:check": "prettier --check .",
+    "screenshots": "node scripts/capture-screenshots.mjs",
     "package:audit": "node scripts/package-audit.mjs",
     "supply-chain": "node scripts/generate-supply-chain.mjs",
     "l10n:build": "node scripts/generate-locales.mjs",

@@ -100,6 +100,7 @@ const elements = {
   streamStatus: byId('streamStatus'),
   tokenCount: byId('tokenCount'),
   toastStack: byId('toastStack'),
+  setupNotice: byId('setupNotice'),
   trustBadge: byId('trustBadge'),
   themeMode: byId('themeMode'),
   workspaceName: byId('workspaceName'),
@@ -285,6 +286,7 @@ const promptHistory = Array.isArray(persistedViewState.promptHistory)
 let promptHistoryIndex = promptHistory.length;
 let promptHistoryDraft = '';
 let historyTokenTotal = 0;
+let bulkRendering = false;
 let historyTokensReported = false;
 // "Don't show again" survives a reload; the X only silences the current panel.
 const silencedWarnings = new Set(
@@ -837,9 +839,13 @@ function appendMessage(
   }
   article.append(card);
   elements.conversation.append(article);
-  renumberTurns();
-  setConversationVisibility();
-  article.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  if (!bulkRendering) {
+    // A bulk load renumbers and scrolls once at the end; doing it per turn made
+    // opening a long thread quadratic (each append re-queried every turn).
+    renumberTurns();
+    setConversationVisibility();
+    article.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  }
   return body;
 }
 
@@ -874,6 +880,19 @@ function renderHistoryMessages(messages) {
   requestInputs.clear();
   historyTokenTotal = 0;
   historyTokensReported = false;
+  bulkRendering = true;
+  try {
+    appendHistoryTurns(messages);
+  } finally {
+    bulkRendering = false;
+  }
+  renumberTurns();
+  elements.conversation.lastElementChild?.scrollIntoView({ block: 'end', behavior: 'smooth' });
+  setConversationVisibility();
+  renderConversationTokenCount();
+}
+
+function appendHistoryTurns(messages) {
   for (const message of messages) {
     const role = message.role === 'USER' ? 'user' : 'assistant';
     const messageTokens = (message.inputTokens ?? 0) + (message.outputTokens ?? 0);
@@ -890,8 +909,6 @@ function renderHistoryMessages(messages) {
     body.dataset.streamPlaceholder = 'false';
     appendRewindAction(body, message.id);
   }
-  setConversationVisibility();
-  renderConversationTokenCount();
 }
 
 // "Rewind to here": only saved turns carry a server id, so a turn still
@@ -987,6 +1004,65 @@ function endModelRefreshFeedback() {
   delete elements.refreshModelsButton.dataset.busy;
   elements.refreshModelsButton.disabled = false;
   elements.announcer.textContent = labels.modelsRefreshed;
+}
+
+// First-run edge states. Each is one plain sentence and one action, so a new
+// user is never left on a screen with nothing to click. The most blocking
+// state wins, because fixing it usually clears the ones behind it.
+function setupNoticeFor(state) {
+  const post = (message) => () => vscode.postMessage(message);
+  if (state.backendStatus === 'error') {
+    return [labels.setupUnreachable, labels.setupTryAgain, post({ type: 'refreshModels' })];
+  }
+  if (
+    state.workspaceReadiness?.hasWorkspace === true &&
+    state.workspaceReadiness.trusted === false
+  ) {
+    return [
+      labels.setupUntrusted,
+      labels.setupTrust,
+      post({ type: 'setupAction', action: 'manageTrust' }),
+    ];
+  }
+  if (state.models.length === 0) {
+    return [labels.setupNoModels, labels.setupRefreshModels, requestModelRefresh];
+  }
+  if (state.zeroRetention === true) {
+    return [
+      labels.setupRetention,
+      labels.setupOpenRetention,
+      post({ type: 'setupAction', action: 'openRetention' }),
+    ];
+  }
+  return undefined;
+}
+
+function renderSetupNotice(state) {
+  const notice = state.connected ? setupNoticeFor(state) : undefined;
+  // State frames arrive constantly while streaming; rebuild only on a change.
+  const key = notice?.[0] ?? '';
+  if (elements.setupNotice.dataset.key === key) {
+    return;
+  }
+  elements.setupNotice.dataset.key = key;
+  elements.setupNotice.replaceChildren();
+  if (notice === undefined) {
+    return;
+  }
+  const [message, actionLabel, run] = notice;
+  const card = document.createElement('div');
+  card.className = 'warning-card setup-notice';
+  card.append(
+    textElement('span', 'warning-shape', 'i'),
+    describeText(textElement('span', 'warning-text', message), message),
+  );
+  const actions = document.createElement('span');
+  actions.className = 'warning-actions';
+  const action = warningActionButton(actionLabel, run);
+  action.classList.add('setup-notice-action');
+  actions.append(action);
+  card.append(actions);
+  elements.setupNotice.append(card);
 }
 
 function persistSilencedWarnings() {
@@ -1821,12 +1897,14 @@ function renderState(state) {
   elements.connectionForm.setAttribute('aria-busy', authorizing ? 'true' : 'false');
   elements.connectButtonLabel.textContent = authorizing
     ? labels.openingAuthorization
-    : labels.connectClawai;
+    : state.backendStatus === 'error'
+      ? labels.setupTryAgain
+      : labels.connectClawai;
   elements.connectionProgress.hidden = !authorizing;
   elements.connectionCancelButton.hidden = !authorizing;
   const connectionError =
-    !state.connected && state.backendStatus === 'error' && typeof state.lastError === 'string'
-      ? state.lastError
+    !state.connected && state.backendStatus === 'error'
+      ? state.lastError || labels.setupUnreachable
       : '';
   elements.connectionError.textContent = connectionError;
   elements.connectionError.hidden = connectionError.length === 0;
@@ -1887,6 +1965,7 @@ function renderState(state) {
       ? [...(state.modelWarnings ?? []), labels.modelCannotCallTools]
       : (state.modelWarnings ?? []),
   );
+  renderSetupNotice(state);
   renderWorkspace(state.workspaceReadiness, state.workspaceScope);
   renderRunDeck(state.generationQueue, state.agentRuns);
   renderRuntimeTimeline(state.runtime);

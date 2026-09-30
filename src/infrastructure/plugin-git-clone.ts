@@ -9,7 +9,9 @@ import {
 } from '../core/plugin-git-marketplace.constants';
 
 import { runCommandSpec } from './bounded-command-runner';
+import { assertPublicUrl } from './plugin-network-guard';
 
+import type { PluginNetworkOptions } from './plugin-network-guard.types';
 import type { GitMarketplaceLocation } from '../core/plugin-marketplace.types';
 
 /**
@@ -19,19 +21,26 @@ import type { GitMarketplaceLocation } from '../core/plugin-marketplace.types';
  * timeout and an output cap. Every open replaces the previous clone, so the
  * catalog is always the ref's current content and never a stale checkout.
  * Prompts are off, so a private repository fails instead of waiting on a
- * credential dialog nobody can see.
+ * credential dialog nobody can see. A host that is, or resolves to, a private
+ * address is refused before git runs, unless the user opted in.
  */
 export async function cloneGitMarketplace(
   base: string,
   location: GitMarketplaceLocation,
+  network: PluginNetworkOptions = {},
 ): Promise<string> {
+  await assertPublicUrl(location.url, network);
   const target = path.join(base, gitCloneFolderName(location));
   await rm(target, { recursive: true, force: true });
   await mkdir(base, { recursive: true });
   const result = await runCommandSpec(
     {
       executable: 'git',
-      arguments: gitCloneArguments(location, target),
+      // Git resolves redirects itself; refusing them keeps the checked host the only host.
+      arguments: [
+        ...(network.allowPrivate === true ? [] : ['-c', 'http.followRedirects=false']),
+        ...gitCloneArguments(location, target),
+      ],
       cwdRootKey: 'plugin-marketplaces',
       cwd: '.',
       environment: { GIT_TERMINAL_PROMPT: '0' },

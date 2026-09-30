@@ -1,4 +1,5 @@
 import { PluginFailure } from '../core/plugin-failure';
+import { hookCommandLines } from '../core/plugin-hook-approval';
 import { describeInstalled, manifestInBundle, parsePluginManifest } from '../core/plugin-manifest';
 import {
   MAX_MANIFEST_BYTES,
@@ -70,7 +71,17 @@ export class PluginStore {
 
   async setSwitches(plugin: InstalledPlugin, switches: PluginSwitches): Promise<void> {
     const state = await this.readState();
-    await this.writeState({ ...state, [plugin.root]: switches });
+    const approved = switches.hooksEnabled
+      ? { hooksDigest: plugin.hooksDigest, approvedCommands: hookCommandLines(plugin.manifest) }
+      : {};
+    await this.writeState({
+      ...state,
+      [plugin.root]: {
+        enabled: switches.enabled,
+        hooksEnabled: switches.hooksEnabled,
+        ...approved,
+      },
+    });
   }
 
   /**
@@ -92,16 +103,8 @@ export class PluginStore {
     for (const file of bundle) {
       await this.files.writeFile(this.files.join(root, ...file.path.split('/')), file.bytes);
     }
-    // The person approved the hook commands of the version they saw. New bytes
-    // may carry different commands, so that approval does not carry over.
-    const state = await this.readState();
-    const previous = state[root];
-    if (previous?.hooksEnabled === true) {
-      await this.writeState({
-        ...state,
-        [root]: { enabled: previous.enabled, hooksEnabled: false },
-      });
-    }
+    // Hook approval is bound to a digest of the commands and version, so an
+    // update that changes either revokes it without this method deciding.
     return root;
   }
 

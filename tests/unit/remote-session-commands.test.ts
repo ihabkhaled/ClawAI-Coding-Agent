@@ -263,8 +263,8 @@ describe('startCloudSession', () => {
 
     await startCloudSession(dependencies);
 
-    expect(window.showErrorMessage).toHaveBeenCalled();
-    expect(calls.some((call) => call.path === '/agent/commands')).toBe(false);
+    expect(window.showErrorMessage).toHaveBeenCalledOnce();
+    expect(calls.map((call) => call.path)).not.toContain('/agent/commands');
   });
 
   it('stops when the runner reports no repositories', async () => {

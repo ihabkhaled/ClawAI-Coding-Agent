@@ -2,7 +2,11 @@ import { backendErrorReason } from '../core/backend-error-body';
 import { redactText } from '../core/redaction';
 
 import { BackendRequestError } from './backend-errors';
-import { MAX_ERROR_BODY_BYTES, MAX_SUCCESS_BODY_BYTES } from './backend-response.constants';
+import {
+  MAX_ERROR_BODY_BYTES,
+  MAX_SUCCESS_BODY_BYTES,
+  UNREADABLE_RESPONSE_MESSAGE,
+} from './backend-response.constants';
 import {
   readBoundedResponseText,
   ResponseBodyLimitError,
@@ -52,6 +56,22 @@ export async function parseBackendResponse<T>(
     return schema.parse(undefined);
   }
   const text = await readResponseBody(lease, MAX_SUCCESS_BODY_BYTES);
-  const body: unknown = JSON.parse(text);
-  return schema.parse(body);
+  return parseJsonBody(text, schema, lease.response.status);
+}
+
+/**
+ * Malformed JSON and a body of the wrong shape both end as one plain error.
+ * The raw `SyntaxError` and `ZodError` messages quote the body back, which is
+ * unreadable in the panel and can echo whatever a proxy put in that body.
+ */
+function parseJsonBody<T>(text: string, schema: z.ZodType<T>, status: number): T {
+  let body: unknown;
+  try {
+    body = JSON.parse(text);
+  } catch {
+    throw new BackendRequestError(UNREADABLE_RESPONSE_MESSAGE, status, false);
+  }
+  const result = schema.safeParse(body);
+  if (!result.success) throw new BackendRequestError(UNREADABLE_RESPONSE_MESSAGE, status, false);
+  return result.data;
 }

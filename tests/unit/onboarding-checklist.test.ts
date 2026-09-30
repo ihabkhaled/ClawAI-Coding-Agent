@@ -68,6 +68,11 @@ describe('onboardingChecklist', () => {
     expect(revoked.find((step) => step.id === 'trust')?.done).toBe(false);
   });
 
+  it('points the folder step at a command VS Code really has', () => {
+    const folder = onboardingChecklist(snapshot()).find(({ id }) => id === 'folder');
+    expect(folder?.command).toBe('workbench.action.files.openFolder');
+  });
+
   it('gives every step a command the user can run now', () => {
     expect(onboardingChecklist(snapshot()).every(({ command }) => command.length > 0)).toBe(true);
   });

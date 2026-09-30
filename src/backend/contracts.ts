@@ -201,6 +201,28 @@ export const messageSchema = z
   })
   .loose();
 
+/**
+ * `GET /chat-messages/thread/:id`. The backend moved this route from page
+ * offsets to a cursor (`meta.nextBefore`, newest first), which dropped `page`
+ * and `totalPages`. Reading it with `paginatedSchema` failed every history
+ * load, so this accepts the cursor form and the old one. Only `total` and
+ * `limit` are relied on; the rest is optional and never read.
+ */
+export const messagePageSchema = z
+  .object({
+    data: z.array(messageSchema),
+    meta: z
+      .object({
+        total: z.number().int().nonnegative(),
+        limit: z.number().int().positive(),
+        nextBefore: z.string().nullable().optional(),
+        page: z.number().int().positive().optional(),
+        totalPages: z.number().int().nonnegative().optional(),
+      })
+      .loose(),
+  })
+  .loose();
+
 export const uploadedFileSchema = z
   .object({
     id: z.string().min(1),

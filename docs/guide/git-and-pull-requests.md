@@ -52,9 +52,9 @@ After the agent opens a pull request, ClawAI watches its checks in the backgroun
 
 ## Multi-agent review
 
-Ask for "a full review of my changes". ClawAI then sends the change to two to four
+Ask for a multi-agent review of your changes. ClawAI then sends the change to
 independent reviewers, each looking for a different kind of problem: correctness,
-security, tests and performance.
+security, tests and performance (all four unless you ask for fewer).
 
 - Comments about files your change does not touch are dropped.
 - Duplicates are merged, and points that two reviewers agree on are ranked higher.
@@ -90,9 +90,13 @@ account (ClawAI Workspace), and a signed-in extension.
 
 ## Keeping work safe
 
-- Use **Auto Edit** or **Ask for Approval** while the agent works on Git tasks.
+- Commits, merges, rebases, stashes, pushes and tags ask in every approval level,
+  so pick the level that suits the rest of the work.
 - You can add a project rule that forbids pushes, for example `git push*`. See
   [Extend it](extend-it.md).
 - To try things without touching your current branch, ask the agent to work in a
-  separate worktree. It refuses to leave a worktree with uncommitted changes
-  unless you say to discard them.
+  separate Git worktree.
+
+## Verified against
+
+ClawAI Coding Agent 1.84.0 (package.json, package.nls.json and the source).

@@ -48,12 +48,11 @@ video. Limits:
 
 Things to know:
 
-- Attachments are uploaded to your ClawAI backend when the message starts running,
-  not when you attach them.
+- Attachments are sent to your ClawAI backend with your message.
 - If the selected model cannot read images, the panel says the image was not sent.
   Pick a model that can.
 - **Reorder** attachments by dragging them, or with the **Move earlier** and
-  **Move later** buttons. The order is the order the model sees them.
+  **Move later** buttons.
 - With zero data retention on, uploads are refused. See
   [Privacy and security](privacy-and-security.md).
 
@@ -61,8 +60,8 @@ Things to know:
 
 - Attach a PDF to a message like any other file.
 - The agent can also read a PDF that is in your project, a few pages at a time. The
-  text is extracted by your ClawAI backend and nothing is stored. If a PDF is only
-  scanned pages, the agent is told so instead of getting an empty result.
+  text is extracted by your ClawAI backend. If a PDF is only scanned pages, the
+  agent is told so instead of getting an empty result.
 
 **Needs:** your ClawAI backend for PDF text.
 
@@ -79,8 +78,8 @@ If yours does not, ClawAI tells you it cannot read that terminal.
 
 When the agent has opened a page in its own browser, choose the globe button
 (**Attach the agent browser page**) or run **ClawAI: Attach Agent Browser Page**.
-You can attach the page text only, or the text plus a screenshot if the model can
-see images. If the agent has no page open, ClawAI says so.
+You are offered **Page text and screenshot** or the page text alone. If the
+screenshot is too large, only the text is attached. If the agent has no page open, ClawAI says so.
 
 ## Voice dictation
 
@@ -89,7 +88,7 @@ chat box. Choose it again to stop.
 
 Dictation depends on your editor and system. If it is not available, ClawAI shows a
 notice with what works instead, such as `Win+H` on Windows or pressing `Fn` twice on
-macOS, or installing the VS Code Speech extension.
+macOS, or getting the VS Code Speech extension.
 
 ## What the agent will not read
 
@@ -98,3 +97,7 @@ dependency folders are never read, and you cannot mention them. To exclude more,
 list patterns in `.clawai/ignore` (one per line) or in the `clawAI.exclude`
 setting. The **Context** view shows what was included, excluded and shortened for
 each request.
+
+## Verified against
+
+ClawAI Coding Agent 1.84.0 (package.json, package.nls.json and the source).

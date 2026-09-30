@@ -11,6 +11,7 @@ import { MemoryPluginFileSystem, manifestJson } from '../helpers/memory-plugin-f
 
 const USER = '/profile/plugins';
 const MEGABYTE = 1024 * 1024;
+const PUBLIC = { lookup: async () => ['93.184.216.34'] };
 
 afterEach(() => {
   vi.restoreAllMocks();
@@ -64,9 +65,11 @@ describe('downloads', () => {
   it('stops reading a body with no content-length once it passes the ceiling', async () => {
     const counter = { pulled: 0 };
     const request = vi.fn(async () => streamed(500, counter));
-    await expect(downloadBytes('https://cdn.example/p.zip', request)).rejects.toMatchObject({
-      code: 'too-large',
-    });
+    await expect(downloadBytes('https://cdn.example/p.zip', request, PUBLIC)).rejects.toMatchObject(
+      {
+        code: 'too-large',
+      },
+    );
     expect(counter.pulled).toBeLessThan(30);
   });
 
@@ -74,14 +77,18 @@ describe('downloads', () => {
     'refuses credentials in the URL: %s',
     async (url) => {
       const request = vi.fn();
-      await expect(downloadBytes(url, request)).rejects.toMatchObject({ code: 'invalid-source' });
+      await expect(downloadBytes(url, request, PUBLIC)).rejects.toMatchObject({
+        code: 'invalid-source',
+      });
       expect(request).not.toHaveBeenCalled();
     },
   );
 
   it('still returns a small body', async () => {
     const request = vi.fn(async () => new Response(new Uint8Array([1, 2, 3])));
-    expect([...(await downloadBytes('https://cdn.example/p.zip', request))]).toEqual([1, 2, 3]);
+    expect([...(await downloadBytes('https://cdn.example/p.zip', request, PUBLIC))]).toEqual([
+      1, 2, 3,
+    ]);
   });
 });
 
@@ -98,7 +105,7 @@ describe('plugin paths', () => {
 });
 
 describe('an update never carries the old hooks approval', () => {
-  it('re-installing a plugin switches its hooks back off but keeps enabled', async () => {
+  it('re-installing an update with different hooks switches hooks off but keeps enabled', async () => {
     const files = new MemoryPluginFileSystem();
     const store = new PluginStore(files, { user: () => USER, workspace: () => undefined });
     const bundle = [
@@ -110,7 +117,13 @@ describe('an update never carries the old hooks approval', () => {
     await store.setSwitches(installed, { enabled: true, hooksEnabled: true });
     expect((await store.list()).plugins[0]?.hooksEnabled).toBe(true);
 
-    await store.install('user', bundle);
+    const changed = [
+      {
+        path: 'clawai-plugin.json',
+        bytes: new TextEncoder().encode(manifestJson({ version: '1.0.1' })),
+      },
+    ];
+    await store.install('user', changed);
 
     const [updated] = (await store.list()).plugins;
     expect(updated?.hooksEnabled).toBe(false);

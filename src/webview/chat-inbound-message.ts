@@ -70,6 +70,8 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
   z.object({ type: z.literal('rewindToMessage'), messageId: z.string().min(1).max(255) }),
   z.object({ type: z.literal('newChat') }),
   z.object({ type: z.literal('openFolder') }),
+  // The one action of a first-run notice that has no message of its own.
+  z.object({ type: z.literal('setupAction'), action: z.enum(['manageTrust', 'openRetention']) }),
   z.object({ type: z.literal('refreshModels') }),
   z.object({ type: z.literal('configureLanguage') }),
   z.object({ type: z.literal('manageExternalOutputFolders') }),

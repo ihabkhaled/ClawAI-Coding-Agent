@@ -58,3 +58,7 @@ explains what you can do and how, in plain language.
 
 For the full list of changes in each version, see the
 [changelog](../../CHANGELOG.md).
+
+## Verified against
+
+ClawAI Coding Agent 1.84.0 (package.json, package.nls.json and the source).

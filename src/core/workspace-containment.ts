@@ -1,6 +1,8 @@
 import { lstatSync, realpathSync } from 'node:fs';
 import path from 'node:path';
 
+import { isPathInside } from './path-inside';
+
 /**
  * Resolves a path and proves it is really inside the workspace.
  *
@@ -50,7 +52,7 @@ function nearestReal(target: string): string {
 }
 
 function isInside(root: string, candidate: string): boolean {
-  return candidate === root || candidate.startsWith(root + path.sep);
+  return isPathInside(root, candidate);
 }
 
 function lstatSafe(target: string): ReturnType<typeof lstatSync> | undefined {

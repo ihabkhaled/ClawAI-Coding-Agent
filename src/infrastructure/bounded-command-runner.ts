@@ -1,16 +1,19 @@
 import { createHash } from 'node:crypto';
-import { access, readFile } from 'node:fs/promises';
+import { constants } from 'node:fs';
+import { access, readFile, stat } from 'node:fs/promises';
 import path from 'node:path';
 
 import spawn from 'cross-spawn';
 
 import { BoundedOutputBuffer } from '../core/bounded-output';
 import { commandSpecSchema, type CommandResult, type CommandSpec } from '../core/command-spec';
+import { executableCandidates } from '../core/executable-candidates';
 import { inheritedEnvironment } from '../core/inherited-environment';
 import { INHERITED_ENVIRONMENT_KEYS } from '../core/inherited-environment.constants';
 import { redactText } from '../core/redaction';
 
 import { planCommandLaunch } from './command-launch-plan';
+import { prepareGitSpawn } from './hardened-git';
 import { terminateProcess } from './process-terminator';
 
 import type { CommandSandboxBinding } from './command-launch-plan.types';
@@ -38,7 +41,13 @@ export function runBoundedCommand(
   const startedAt = Date.now();
   const outputLimit = 1024 * 1024;
   return new Promise((resolve, reject) => {
-    const child = spawn(executable, arguments_, { cwd, shell: false, windowsHide: true });
+    const prepared = prepareGitSpawn(executable, arguments_, cwd, process.env);
+    const child = spawn(executable, prepared.arguments, {
+      cwd,
+      env: prepared.environment,
+      shell: false,
+      windowsHide: true,
+    });
     assertPipedStdio(child);
     // Same head-and-tail rule as the structured runner: a development command
     // that overruns is almost always one that failed, and the reason is at the
@@ -102,20 +111,11 @@ export async function resolveExecutable(
   executable: string,
   environment: NodeJS.ProcessEnv = boundedEnvironment({}),
 ): Promise<string> {
-  const hasPath =
-    path.isAbsolute(executable) || executable.includes('/') || executable.includes('\\');
-  const extensions =
-    process.platform === 'win32' ? (environment.PATHEXT ?? '.EXE;.CMD;.BAT;.COM').split(';') : [''];
-  const candidates = hasPath
-    ? [executable]
-    : (environment.PATH ?? environment.Path ?? '')
-        .split(path.delimiter)
-        .flatMap((directory) =>
-          extensions.map((extension) => path.join(directory, `${executable}${extension}`)),
-        );
-  for (const candidate of candidates) {
+  for (const candidate of executableCandidates(executable, environment, process.platform)) {
     try {
-      await access(candidate);
+      // A directory named like the command must not shadow the real binary.
+      if (!(await stat(candidate)).isFile()) continue;
+      await access(candidate, process.platform === 'win32' ? constants.F_OK : constants.X_OK);
       return path.resolve(candidate);
     } catch {
       // Continue searching the explicit PATH snapshot.
@@ -173,12 +173,19 @@ export async function runCommandSpec(
 ): Promise<CommandResult> {
   const specification = commandSpecSchema.parse(candidate);
   if (specification.elevation) throw new Error('ELEVATION_NOT_AVAILABLE');
-  const environment = boundedEnvironment(specification.environment);
-  for (const [key, value] of Object.entries(trustedEnvironment)) environment[key] = value;
+  const rawEnvironment = boundedEnvironment(specification.environment);
+  for (const [key, value] of Object.entries(trustedEnvironment)) rawEnvironment[key] = value;
+  const prepared = prepareGitSpawn(
+    specification.executable,
+    shellArguments(specification),
+    cwd,
+    rawEnvironment,
+  );
+  const environment: NodeJS.ProcessEnv = prepared.environment;
   const launch = await planCommandLaunch(
     {
       executable: specification.executable,
-      arguments: shellArguments(specification),
+      arguments: prepared.arguments,
       cwd,
       environment,
       declaredEnvironment: specification.environment,

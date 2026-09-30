@@ -15,6 +15,12 @@ export const HEADLESS_TOOL_CATEGORIES: readonly AgentToolCategory[] = [
   'mcp',
 ];
 
+/** Ceilings for the run guards; past them a number is a typo, not a budget. */
+/** How long the process may take to drain sockets before it is ended with its exit code. */
+export const HEADLESS_EXIT_GRACE_MS = 3000;
+export const HEADLESS_MAX_TOOL_CALLS = 10_000;
+export const HEADLESS_MAX_DURATION_SECONDS = 86_400;
+
 /** Flags that stand alone. */
 export const HEADLESS_BARE_FLAGS: readonly string[] = ['-h', '--help', '--json', '--continue'];
 
@@ -34,6 +40,10 @@ export const HEADLESS_VALUE_FLAGS: Readonly<Record<string, string>> = {
   '--append-system-prompt': 'appendSystemPrompt',
   '--system-prompt-file': 'systemPromptFile',
   '--mcp-config': 'mcpConfig',
+  '--mcp-login': 'mcpLogin',
+  '--mcp-token-file': 'mcpTokenFile',
+  '--max-tool-calls': 'maxToolCalls',
+  '--max-duration': 'maxDuration',
   '--permission-mode': 'permissionMode',
   '--allowed-tools': 'allowedTools',
   '--disallowed-tools': 'disallowedTools',
@@ -61,9 +71,13 @@ export const HEADLESS_USAGE = [
   '  --append-system-prompt <t>   Operator instructions, text or @file (added to the runtime instructions).',
   '  --system-prompt-file <file>  Operator instructions read from a file; --append follows it.',
   '  --mcp-config <file>          JSON file of MCP servers ({"mcpServers": {...}}).',
+  '  --mcp-login <server>         Sign in to an OAuth MCP server from --mcp-config; no -p needed.',
+  '  --mcp-token-file <file>      Token file: --mcp-login writes it; a run reads it, in memory only.',
   '  --allow-command <name>       Add an executable to the command allowlist; repeatable.',
   '  --output-format <fmt>        text | json | stream-json (default: text).',
   '  --max-turns <n>              Model-turn budget for the run.',
+  '  --max-tool-calls <n>         Stop the run (exit 5) after n tool calls.',
+  '  --max-duration <seconds>     Stop the run (exit 5) after this many seconds.',
   '  -h, --help                   Show this help.',
   '',
   'Auth: CLAW_TOKEN, or CLAW_EMAIL and CLAW_PASSWORD. Never printed.',

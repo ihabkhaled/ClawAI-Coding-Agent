@@ -12,6 +12,7 @@ import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
 import { testApiFor } from './extension-test-api';
 import { openAgentTerminal } from './infrastructure/agent-terminal';
 import { createOutputLogger, logActivation, type OutputLogger } from './infrastructure/claw-logger';
+import { setGitWorkspaceTrustProbe } from './infrastructure/hardened-git';
 import { VscodeContextRangeReader } from './infrastructure/vscode-context-range-reader';
 import { VscodeMentionIndex } from './infrastructure/vscode-mention-index';
 import { probeRuntimeHost } from './infrastructure/vscode-runtime-host-probe';
@@ -173,6 +174,7 @@ const FAST_MODE_MEMORY_KEY = 'clawAI.fastMode.previous';
 const CHAT_COLUMN_KEY = 'clawAI.chatEditorColumn';
 
 export function activate(context: vscode.ExtensionContext): ClawTestApi | undefined {
+  setGitWorkspaceTrustProbe(() => vscode.workspace.isTrusted);
   const connectionConfiguration = new ConfigurationService();
   const configuration = connectionConfiguration.read();
   const workspaceScope = new WorkspaceScopeService();

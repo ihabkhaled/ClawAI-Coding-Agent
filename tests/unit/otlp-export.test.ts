@@ -34,8 +34,15 @@ describe('parseOtlpEndpoint', () => {
   });
 
   it('accepts plain http only on this machine, which is the ordinary collector', () => {
-    expect(parseOtlpEndpoint('http://localhost:4318/v1/traces', {})).toBeDefined();
-    expect(parseOtlpEndpoint('http://127.0.0.1:4318/v1/traces', {})).toBeDefined();
+    expect(parseOtlpEndpoint('http://localhost:4318/v1/traces', {})?.url).toBe(
+      'http://localhost:4318/v1/traces',
+    );
+    expect(parseOtlpEndpoint('http://127.0.0.1:4318/v1/traces', {})?.url).toBe(
+      'http://127.0.0.1:4318/v1/traces',
+    );
+    expect(parseOtlpEndpoint('http://[::1]:4318/v1/traces', {})?.url).toBe(
+      'http://[::1]:4318/v1/traces',
+    );
   });
 
   it('refuses plain http to a remote host, which would leak the auth header', () => {

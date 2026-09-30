@@ -86,7 +86,13 @@ Telemetry Headers** and they are stored in your operating system's credential st
 
 ## Good to know
 
-- Secrets are deliberately not settings.
+- Secrets are deliberately not settings. The old `clawAI.backendUrl` and
+  `clawAI.telemetryHeaders` settings still exist for older setups; use the connection
+  screen and **ClawAI: Set Telemetry Headers** instead.
 - A setting you change in the chat box may apply to just the open folder.
 - If a setting seems to have no effect, check whether your organization's rules cap
   it, especially the approval level.
+
+## Verified against
+
+ClawAI Coding Agent 1.84.0 (package.json, package.nls.json and the source).

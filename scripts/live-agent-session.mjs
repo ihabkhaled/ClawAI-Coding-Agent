@@ -304,7 +304,16 @@ export function toolExecutor(workspace) {
       const relative = requirePath(operation, args);
       const target = resolveInside(relative);
       mkdirSync(path.dirname(target), { recursive: true });
-      writeFileSync(target, typeof args.content === 'string' ? args.content : '', 'utf8');
+      // The flat shape accepts the same `contentLines` the transaction shape
+      // does. It silently wrote an empty file for `{path, contentLines}`, so a
+      // model that answered correctly was scored as having lost its memory.
+      if (!Array.isArray(args.contentLines) && typeof args.content !== 'string') {
+        throw new Error(
+          `workspace.file create for "${relative}" carried no content. Send "contentLines" (an array of lines) or "content" (a string). Received keys: ${Object.keys(args).join(', ')}`,
+        );
+      }
+      const body = Array.isArray(args.contentLines) ? args.contentLines.join('\n') : args.content;
+      writeFileSync(target, body, 'utf8');
       return { written: relative };
     }
     throw new Error(`Unsupported file operation ${operation}`);
@@ -481,8 +490,11 @@ export async function runScenario(options) {
     title = 'Live agent round',
     budget = LIVE_DEFAULT_BUDGET,
     verbose = true,
+    // A caller may offer more tools than the mirrored three, and run them.
+    toolDefinitions = LIVE_TOOL_DEFINITIONS,
+    executor,
   } = options;
-  const execute = toolExecutor(workspace);
+  const execute = executor ?? toolExecutor(workspace);
   const epochs = { account: 1, workspace: 1, target: 1, policy: 1 };
   const toolLog = [];
   const rejectedResults = [];
@@ -515,8 +527,8 @@ export async function runScenario(options) {
         // tool-result receipt uses the canonical form, and using the wrong one
         // there is a 500 with no detail.
         manifestHash: sha256(JSON.stringify({ targets: ['target:workspace'] })),
-        toolCatalogHash: sha256(JSON.stringify(LIVE_TOOL_DEFINITIONS)),
-        toolDefinitions: LIVE_TOOL_DEFINITIONS,
+        toolCatalogHash: sha256(JSON.stringify(toolDefinitions)),
+        toolDefinitions,
         provider,
         model,
         epochs,

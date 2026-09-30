@@ -6,7 +6,10 @@ import { tmpdir } from 'node:os';
 import { join } from 'node:path';
 import test from 'node:test';
 
-import { verifyReleaseParity } from '../../scripts/labs/verify-release-parity.mjs';
+import {
+  commandInvocation,
+  verifyReleaseParity,
+} from '../../scripts/labs/verify-release-parity.mjs';
 
 async function releaseFixture() {
   const root = await mkdtemp(join(tmpdir(), 'clawai-parity-'));
@@ -90,4 +93,17 @@ test('reports each release mismatch by stable check id', async () => {
       'remote-release',
     ],
   );
+});
+
+test('commandInvocation runs the code CLI through cmd.exe on Windows only', () => {
+  assert.deepEqual(commandInvocation('code', ['--list-extensions'], 'win32'), {
+    file: 'cmd.exe',
+    args: ['/d', '/s', '/c', 'code', '--list-extensions'],
+    options: { windowsHide: true },
+  });
+  assert.deepEqual(commandInvocation('git', ['tag'], 'linux'), {
+    file: 'git',
+    args: ['tag'],
+    options: { windowsHide: true },
+  });
 });

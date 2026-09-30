@@ -35,10 +35,22 @@ export function verdictLabel(verdict: SignatureVerdict): string {
     : vscode.l10n.t('Unsigned');
 }
 
+function hooksLabel(plugin: InstalledPlugin): string {
+  if (plugin.hooksEnabled) return ` · ${vscode.l10n.t('Hooks on')}`;
+  const { status } = plugin.hookApproval;
+  return status === 'changed' || status === 'legacy'
+    ? ` · ${vscode.l10n.t('Hooks need re-approval')}`
+    : '';
+}
+
 /** Version, scope and switches, the way the picker and the tree both show them. */
 export function pluginStateDescription(plugin: InstalledPlugin): string {
-  const state = plugin.enabled ? vscode.l10n.t('Enabled') : vscode.l10n.t('Disabled');
-  const hooks = plugin.hooksEnabled ? ` · ${vscode.l10n.t('Hooks on')}` : '';
+  const state = plugin.needsApproval
+    ? vscode.l10n.t('Needs your approval')
+    : plugin.enabled
+      ? vscode.l10n.t('Enabled')
+      : vscode.l10n.t('Disabled');
+  const hooks = hooksLabel(plugin);
   const badge = signatureBadge(plugin);
   const signature = badge === undefined ? '' : ` · ${badge}`;
   return `${plugin.manifest.version} · ${scopeLabel(plugin.scope)} · ${state}${hooks}${signature}`;

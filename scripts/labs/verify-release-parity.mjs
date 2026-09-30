@@ -97,8 +97,19 @@ export async function verifyReleaseParity(options) {
   });
 }
 
+/** `code` is a .cmd shim on Windows, which execFile cannot spawn without a shell. */
+export function commandInvocation(command, args, platform = process.platform) {
+  const viaCmd = platform === 'win32' && command === 'code';
+  return {
+    file: viaCmd ? 'cmd.exe' : command,
+    args: viaCmd ? ['/d', '/s', '/c', command, ...args] : args,
+    options: { windowsHide: true },
+  };
+}
+
 async function commandLines(command, args) {
-  const result = await execFileAsync(command, args, { windowsHide: true });
+  const invocation = commandInvocation(command, args);
+  const result = await execFileAsync(invocation.file, invocation.args, invocation.options);
   return result.stdout
     .split(/\r?\n/u)
     .map((line) => line.trim())

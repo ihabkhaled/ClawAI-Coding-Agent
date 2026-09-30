@@ -228,11 +228,12 @@ describe('QualityToolExecutor', () => {
     const record = vi.fn(() => ({ findings: [] }));
     const current = vi.fn(() => ({ findings: [] }));
 
-    await build({ record, current }).execute(
+    const output = await build({ record, current }).execute(
       invocation(qualityToolDefinition, { operation: 'list-findings' }),
     );
 
-    expect(current).toHaveBeenCalled();
+    expect(current).toHaveBeenCalledOnce();
+    expect(output.structured).toMatchObject({ findings: [] });
     expect(record).not.toHaveBeenCalled();
   });
 });

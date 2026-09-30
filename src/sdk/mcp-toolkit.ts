@@ -14,8 +14,14 @@ import type { AgentToolCall, AgentToolkit } from './agent-sdk.types';
 import type { AgentMcpOptions } from './mcp-toolkit.types';
 import type { AgentPermissions } from './workspace-toolkit.types';
 import type { McpServerConfig, McpSession } from '../core/mcp/mcp.types';
+import type { McpTokenProvider } from '../infrastructure/mcp/mcp-transport.types';
 
 const SDK_MCP_CLIENT_VERSION = 'sdk';
+
+const ANONYMOUS_TOKENS: McpTokenProvider = {
+  current: () => Promise.resolve(undefined),
+  renew: () => Promise.resolve(undefined),
+};
 
 const toolsSchema = z.object({ server: mcpServerNameSchema }).strict();
 const callSchema = z
@@ -33,8 +39,9 @@ const callSchema = z
  *
  * The tool is offered only when `permissions.allow` grants `mcp`, and each call
  * goes to `permissions.approve` like any other granted tool. What is not carried
- * over is OAuth: signing in to a remote server needs a person and a browser, so
- * a server configured with `oauth` is refused here rather than half-connected.
+ * over is the sign-in itself: it needs a person and a browser, so
+ * a server configured with `oauth` is refused here unless `tokens` supplies
+ * them, rather than half-connected.
  */
 export function mcpToolkit(
   options: AgentMcpOptions,
@@ -72,7 +79,7 @@ function connectHeadless(
   options: AgentMcpOptions,
   signal: AbortSignal | undefined,
 ): Promise<McpSession> {
-  if (server.transport === 'http' && server.oauth !== undefined) {
+  if (server.transport === 'http' && server.oauth !== undefined && options.tokens === undefined) {
     return Promise.reject(
       new Error(
         `MCP server "${server.name}" needs an interactive OAuth sign-in, which a headless run cannot do.`,
@@ -84,10 +91,7 @@ function connectHeadless(
     {
       clientVersion: options.clientVersion ?? SDK_MCP_CLIENT_VERSION,
       workspaceRoot: () => workspaceRoot,
-      tokens: () => ({
-        current: () => Promise.resolve(undefined),
-        renew: () => Promise.resolve(undefined),
-      }),
+      tokens: (http) => options.tokens?.(http) ?? ANONYMOUS_TOKENS,
     },
     signal,
   );

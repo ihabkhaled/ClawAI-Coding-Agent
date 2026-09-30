@@ -160,6 +160,9 @@ const flagshipRequest = strict(
     writeSet: texts,
     acceptanceChecks: texts,
     stages: flagshipStagesInputSchema,
+    // Integration refuses to run without one, so a model that cannot name a gate
+    // can never finish a delivery.
+    mandatoryGateIds: texts,
     budget: flagshipBudget,
   },
   ['deliveryId', 'runId', 'goal', 'strategy', 'repositories', 'budget'],

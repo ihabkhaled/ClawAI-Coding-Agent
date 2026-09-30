@@ -45,7 +45,11 @@ export const REMOTE_UNSAFE_FLAG_PREFIXES: readonly string[] = [
   '--output',
   '--no-index',
   '--ext-diff',
+  '--textconv',
   '--exec',
+  '--config',
+  '--upload-pack',
+  '--receive-pack',
 ];
 
 /**

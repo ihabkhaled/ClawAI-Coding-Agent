@@ -3,6 +3,7 @@ import path from 'node:path';
 import { AGENT_ALL_TOOL_CATEGORIES } from '../sdk/permission-modes.constants';
 
 import { checkedExtras } from './headless-args-extras';
+import { checkedBudgets, loginFrom } from './headless-args-mcp';
 import {
   HEADLESS_BARE_FLAGS,
   HEADLESS_OUTPUT_FORMATS,
@@ -52,6 +53,7 @@ export function parseHeadlessArgs(
     index += 1;
   }
   if (flags.has('-h') || flags.has('--help')) return { kind: 'help' };
+  if (values.has('mcpLogin')) return loginFrom(values, cwd);
   return invocationFrom(values, flags, environment, cwd);
 }
 
@@ -66,11 +68,14 @@ function invocationFrom(
   if (typeof checked === 'string') return { kind: 'usage', message: checked };
   const extras = checkedExtras(values, flags.has('--continue'), cwd);
   if (typeof extras === 'string') return { kind: 'usage', message: extras };
+  const budgets = checkedBudgets(values, cwd);
+  if (typeof budgets === 'string') return { kind: 'usage', message: budgets };
   return {
     kind: 'run',
     invocation: {
       ...checked,
       ...extras,
+      ...budgets,
       workspace: path.resolve(cwd, last('workspace') ?? '.'),
       model: last('model') ?? environment.CLAW_MODEL ?? environment.CLAW_LIVE_MODEL,
       provider: last('provider') ?? environment.CLAW_PROVIDER ?? environment.CLAW_LIVE_PROVIDER,

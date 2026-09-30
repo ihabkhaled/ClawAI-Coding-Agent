@@ -162,6 +162,13 @@ describe('PluginSkillSource', () => {
     files.put(`${WORKSPACE}/acme.review-kit/commands/ship.md`, 'plugin command');
     const source = new PluginSkillSource(base, store, ['skills', 'commands']);
 
+    expect((await source.project()).map((file) => file.fileName)).toEqual(['repo.md']);
+    const workspacePlugin = (await store.list()).plugins.find(
+      (plugin) => plugin.scope === 'workspace',
+    );
+    if (workspacePlugin === undefined) throw new Error('expected a workspace plugin');
+    await store.setSwitches(workspacePlugin, { enabled: true, hooksEnabled: false });
+
     expect(await source.global()).toEqual([
       { fileName: 'review.md', content: 'plugin skill' },
       { fileName: 'mine.md', content: 'user' },

@@ -6,6 +6,8 @@ import {
   STAGED_SECRET_PLACEHOLDER_MARKERS,
 } from './staged-secret-scan.constants';
 
+const REDACTION_MASK = '[REDACTED]';
+
 /**
  * Decides whether a staged diff introduces a credential.
  *
@@ -40,6 +42,24 @@ export function findStagedSecret(diff: string): string | undefined {
     if (leaked !== undefined) return leaked;
   }
   return undefined;
+}
+
+/**
+ * The same scan for a diff that came out of the command runner.
+ *
+ * The runner masks secret shapes in its own output, so a mask in an added line
+ * means a credential was there even though the patterns can no longer see it.
+ * Stronger masking once hid a real key from the commit scan and let it reach the
+ * approval dialog. Text this module or the artifact scrubber masked itself must
+ * use `findStagedSecret`: there a mask is the remedy, not the leak.
+ */
+export function findSecretInCommandOutput(diff: string): string | undefined {
+  const masked = diff
+    .split('\n')
+    .some(
+      (line) => line.startsWith('+') && !line.startsWith('+++') && line.includes(REDACTION_MASK),
+    );
+  return masked ? REDACTION_MASK : findStagedSecret(diff);
 }
 
 function assignedSecret(line: string): string | undefined {

@@ -2,6 +2,7 @@ import * as vscode from 'vscode';
 
 import extensionPackage from '../../package.json';
 import { buildDiagnosticReport } from '../core/diagnostic-report';
+import { redactText } from '../core/redaction';
 import { VscodeSandboxProbe } from '../infrastructure/vscode-sandbox-probe';
 
 import type { BackendClient } from '../backend/backend-client';
@@ -110,7 +111,8 @@ export async function sendFeedback(dependencies: FeedbackDependencies): Promise<
       type: typeChoice.value satisfies FeedbackType,
       title: title.trim(),
       // What was reviewed is what is sent, edits included.
-      contentMarkdown: document.getText(),
+      // Redacted again: the user may have pasted a token while editing.
+      contentMarkdown: redactText(document.getText()),
     });
     await vscode.window.showInformationMessage(
       vscode.l10n.t('Feedback sent. Ticket {0}.', ticket.ticketNumber),
@@ -121,7 +123,7 @@ export async function sendFeedback(dependencies: FeedbackDependencies): Promise<
     await vscode.window.showErrorMessage(
       vscode.l10n.t(
         'Feedback could not be sent: {0}',
-        error instanceof Error ? error.message : String(error),
+        redactText(error instanceof Error ? error.message : String(error)),
       ),
     );
   }

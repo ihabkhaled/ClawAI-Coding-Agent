@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { findStagedSecret } from '../../src/core/staged-secret-scan';
+import { findSecretInCommandOutput, findStagedSecret } from '../../src/core/staged-secret-scan';
 
 const added = (...lines: readonly string[]): string =>
   ['diff --git a/x b/x', '--- a/x', '+++ b/x', '@@ -0,0 +1 @@', ...lines].join('\n');
@@ -95,5 +95,27 @@ describe('findStagedSecret — model provider keys', () => {
     ['a kebab-case key under forty characters', '+const id = "sk-settings-panel-toggle";'],
   ])('allows %s', (_label, line) => {
     expect(findStagedSecret(added(line))).toBeUndefined();
+  });
+});
+
+describe('findSecretInCommandOutput', () => {
+  const NL = String.fromCharCode(10);
+
+  it('blocks an added line the command runner already masked', () => {
+    // The runner masks vendor keys in its output; the scan must still refuse.
+    expect(findSecretInCommandOutput(`+export const KEY = "[REDACTED]";${NL}`)).toBe('[REDACTED]');
+  });
+
+  it('ignores a mask on a removed or context line', () => {
+    const diff = [`-const KEY = "[REDACTED]";`, ' const other = 1;', ''].join(NL);
+    expect(findSecretInCommandOutput(diff)).toBeUndefined();
+  });
+
+  it('still finds an unmasked secret', () => {
+    expect(findSecretInCommandOutput(`+-----BEGIN RSA PRIVATE KEY-----${NL}`)).toBeDefined();
+  });
+
+  it('leaves findStagedSecret alone: text the scrubber masked itself is not a leak', () => {
+    expect(findStagedSecret(`+export const KEY = "[REDACTED]";${NL}`)).toBeUndefined();
   });
 });

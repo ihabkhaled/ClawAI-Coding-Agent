@@ -1,7 +1,7 @@
 import { threadRewindResultSchema } from '../core/conversation-rewind';
 
 import {
-  messageSchema,
+  messagePageSchema,
   paginatedSchema,
   threadSchema,
   type ChatMessage,
@@ -104,7 +104,7 @@ export async function listMessages(
 ): Promise<ChatMessage[]> {
   const result = await request(
     `/chat-messages/thread/${encodeURIComponent(threadId)}?limit=${String(limit)}`,
-    paginatedSchema(messageSchema),
+    messagePageSchema,
   );
   return result.data;
 }

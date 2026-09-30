@@ -12,8 +12,9 @@ into a support request. Remote runs and cloud sessions write to their own output
 panels (**ClawAI Cloud Session**, **ClawAI Runner Session**).
 
 To report a problem, run **ClawAI: Send Feedback**. It opens a short report about
-your installation, such as versions and settings, and sends nothing until you
-read it and choose **Send to ClawAI**. It contains no prompts, code or file paths.
+your installation, such as versions, connection state and chosen modes, and sends
+nothing until you read it and choose **Send to ClawAI**. It contains no prompts,
+code or file paths.
 
 ## Sign-in problems
 
@@ -91,3 +92,7 @@ services, then retry."
 - **A slash command does nothing.** It must be at the very start of the message, and
   its file must be in `.clawai/skills/` with a name of lowercase letters, digits and
   hyphens.
+
+## Verified against
+
+ClawAI Coding Agent 1.84.0 (package.json, package.nls.json and the source).

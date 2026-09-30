@@ -105,8 +105,10 @@ const server = createServer((request, response) => {
   response.end(asset.body);
 });
 
-server.listen(4178, '127.0.0.1', () => {
-  stdout.write('ClawAI webview fixture listening on http://127.0.0.1:4178\n');
+const fixturePort = Number(process.env.CLAW_FIXTURE_PORT ?? 4178);
+server.listen(fixturePort, '127.0.0.1', () => {
+  stdout.write(`ClawAI webview fixture listening on http://127.0.0.1:${fixturePort}
+`);
 });
 
 for (const signal of ['SIGINT', 'SIGTERM']) {

@@ -278,7 +278,7 @@ describe('otlpSink headers', () => {
       subscriptions: [],
     });
 
-    expect(sink).toBeDefined();
+    expect(sink).toEqual(expect.objectContaining({ dispose: expect.any(Function) }));
   });
 
   it('posts whatever the keychain holds at send time, set after the sink was built', async () => {

@@ -57,7 +57,14 @@ export const pluginManifestSchema = z
   .strict();
 
 export const pluginSwitchesSchema = z
-  .object({ enabled: z.boolean(), hooksEnabled: z.boolean() })
+  .object({
+    enabled: z.boolean(),
+    hooksEnabled: z.boolean(),
+    /** Digest of the hooks and version a person approved; absent on approvals made before it existed. */
+    hooksDigest: z.string().max(128).optional(),
+    /** The command lines shown at approval, so a change can name what is new. */
+    approvedCommands: z.array(z.string().max(8_192)).max(20).optional(),
+  })
   .strict();
 
 /** Switches keyed by the plugin's installed folder, so two workspaces never share one. */

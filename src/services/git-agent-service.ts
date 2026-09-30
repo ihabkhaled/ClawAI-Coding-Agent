@@ -3,7 +3,7 @@ import path from 'node:path';
 
 import { gitOperationSchema, type GitOperation, type GitReceipt } from '../core/git-operation';
 import { assessPullRequestReadiness, describeReadiness } from '../core/pull-request-readiness';
-import { findStagedSecret } from '../core/staged-secret-scan';
+import { findSecretInCommandOutput } from '../core/staged-secret-scan';
 import { advertisedWorkspaceRootIndex } from '../core/workspace-scope';
 import { runCommandSpec } from '../infrastructure/bounded-command-runner';
 
@@ -43,7 +43,7 @@ export class GitAgentService {
         ['diff', '--cached', '--no-ext-diff', '--binary'],
         signal,
       );
-      const leaked = findStagedSecret(staged);
+      const leaked = findSecretInCommandOutput(staged);
       if (leaked !== undefined)
         throw new Error(
           `Staged secret scan blocked the commit: an added line assigns what looks like a live credential (${leaked.slice(0, 12)}…). Remove it, or move it to an environment variable, then stage again.`,

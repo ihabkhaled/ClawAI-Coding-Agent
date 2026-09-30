@@ -183,6 +183,11 @@ const riskIndex = (risk: PolicyRequest['risk']): number => RISK_CLASSES.indexOf(
 
 function immutableRailDecision(request: PolicyRequest): PolicyV2Decision | undefined {
   if (!['elevation', 'production', 'destructive'].includes(request.effect)) return undefined;
+  // Plan is read-only. Asking here would let one approval carry a destructive
+  // effect out of a mode whose whole promise is that nothing changes.
+  if (request.mode === 'PLAN') {
+    return { outcome: 'deny', code: 'PLAN_READ_ONLY', risk: request.risk, immutable: true };
+  }
   if (!request.userPresent || request.mode === 'ENTERPRISE_LOCKED') {
     return { outcome: 'deny', code: 'FRESH_USER_PRESENCE_REQUIRED', risk: 'R4', immutable: true };
   }
@@ -283,7 +288,12 @@ function organizationDecision(
 }
 
 function requiresExplicitApproval(request: PolicyRequest, project: ProjectPolicy): boolean {
-  return request.mode === 'ASK' || project.requireApproval.includes(request.effect);
+  // Strict asks like Ask; it ranks below Ask (ADR 0003), so it must never be looser.
+  return (
+    request.mode === 'ASK' ||
+    request.mode === 'ENTERPRISE_LOCKED' ||
+    project.requireApproval.includes(request.effect)
+  );
 }
 
 function parseOrganization(candidate: unknown): OrganizationPolicyConstraints | undefined {
@@ -304,17 +314,19 @@ export function evaluatePolicyV2(
     return { outcome: 'deny', code: 'WORKSPACE_UNTRUSTED', risk: request.risk, immutable: true };
   }
   const immutableDecision = immutableRailDecision(request);
-  if (immutableDecision !== undefined) return immutableDecision;
+  if (immutableDecision?.outcome === 'deny') return immutableDecision;
   const organizationOutcome = organizationDecision(request, organization);
-  if (organizationOutcome?.outcome === 'deny') return organizationOutcome;
-  const projectDecision = narrowedProjectDecision(request, project);
-  if (projectDecision !== undefined) return projectDecision;
   // After the immutable rail, so a rule can never loosen a hard deny, and
   // before the mode defaults, so it can tighten one.
   const ruled = ruleDecision(request, project);
   // Every deny is collected before any ask, so an organization's "ask" can
-  // never mask a project's hard deny of the same call.
-  if (ruled?.outcome === 'deny') return ruled;
+  // never mask a project's hard deny of the same call, and the rail's question
+  // (below) can never turn a forbidden call into a prompt one click clears.
+  const denied = [organizationOutcome, narrowedProjectDecision(request, project), ruled].find(
+    (decision) => decision?.outcome === 'deny',
+  );
+  if (denied !== undefined) return denied;
+  if (immutableDecision !== undefined) return immutableDecision;
   return organizationOutcome ?? ruled ?? modeDecision(request, project);
 }
 

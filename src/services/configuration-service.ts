@@ -188,6 +188,13 @@ export class ConfigurationService {
     return readCommandSandboxSettings(vscode.workspace.getConfiguration('clawAI'));
   }
 
+  /** Opt-in for intranet plugin marketplaces; machine scope, so a repository cannot set it. */
+  allowPrivatePluginSources(): boolean {
+    return vscode.workspace
+      .getConfiguration('clawAI')
+      .get<boolean>('allowPrivatePluginSources', false);
+  }
+
   zeroDataRetention(): boolean {
     return vscode.workspace.getConfiguration('clawAI').get<boolean>('zeroDataRetention', false);
   }

@@ -21,6 +21,7 @@ const HOST_FREE_ROOTS = [
   'src/headless/',
   'src/infrastructure/mcp/',
   'src/infrastructure/process-terminator',
+  'src/infrastructure/hardened-git',
   'src/services/mcp-server-registry',
 ];
 

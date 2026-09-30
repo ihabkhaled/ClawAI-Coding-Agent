@@ -1,4 +1,5 @@
 import { describeHeadlessOutcome } from '../core/headless-outcome';
+import { redactText } from '../core/redaction';
 
 import type { HeadlessIo, HeadlessOutputFormat } from './headless-args.types';
 import type { AgentEvent, AgentResult } from '../sdk/create-agent.types';
@@ -12,13 +13,13 @@ import type { AgentEvent, AgentResult } from '../sdk/create-agent.types';
  */
 export function writeEvent(format: HeadlessOutputFormat, event: AgentEvent, io: HeadlessIo): void {
   if (format === 'stream-json') {
-    io.stdout(`${JSON.stringify(event)}\n`);
+    io.stdout(`${redactText(JSON.stringify(event))}\n`);
     return;
   }
   if (format !== 'text') return;
   const line = textLine(event);
-  if (event.type === 'text') io.stdout(event.text);
-  else if (line !== undefined) io.stderr(line);
+  if (event.type === 'text') io.stdout(redactText(event.text));
+  else if (line !== undefined) io.stderr(redactText(line));
 }
 
 /** The closing output, after the last event. */
@@ -28,7 +29,7 @@ export function writeResult(
   io: HeadlessIo,
 ): void {
   if (format === 'json') {
-    io.stdout(`${JSON.stringify(result)}\n`);
+    io.stdout(`${redactText(JSON.stringify(result))}\n`);
     return;
   }
   if (format === 'stream-json') return;
@@ -37,7 +38,7 @@ export function writeResult(
     `${describeHeadlessOutcome(result.outcome)} ${String(result.toolCalls)} tool call(s). exit ${String(result.exitCode)}\n`,
   );
   if (result.threadId !== undefined) io.stderr(`thread ${result.threadId}\n`);
-  if (result.error !== undefined) io.stderr(`${result.error}\n`);
+  if (result.error !== undefined) io.stderr(`${redactText(result.error)}\n`);
 }
 
 /** The stderr line a person watching a text run sees for a non-text event. */
@@ -48,6 +49,9 @@ export function textLine(event: AgentEvent): string | undefined {
   }
   if (event.type === 'tool.result' && !event.ok) {
     return `[tool failed] ${event.toolName}.${event.operation}: ${event.message ?? ''}\n`;
+  }
+  if (event.type === 'budget.exhausted') {
+    return `[budget] ${event.budget} limit ${String(event.limit)} reached\n`;
   }
   return undefined;
 }

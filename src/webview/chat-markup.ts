@@ -167,6 +167,7 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
         <div><dt>${translated('Agent behavior')}</dt><dd id="agentBehavior">${translated('Coding automatically')}</dd></div>
       </dl>
       <div id="modelWarnings" class="warning-stack" role="status"></div>
+      <div id="setupNotice" class="warning-stack" role="status"></div>
       <section id="runDeck" class="run-deck" aria-label="${translated('Runs')}" hidden>
         <header class="run-deck-header">
           <strong>${translated('Runs')}</strong>
@@ -369,6 +370,14 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     data-local="${translated('local')}"
     data-logout="${translated('Log out')}"
     data-new-chat="${translated('New ClawAI chat')}"
+    data-setup-unreachable="${translated('ClawAI cannot reach the backend. Check that it is running, then try again.')}"
+    data-setup-try-again="${translated('Try again')}"
+    data-setup-no-models="${translated('No models are available. Refresh the list once your backend has a model configured.')}"
+    data-setup-refresh-models="${translated('Refresh models')}"
+    data-setup-untrusted="${translated('This workspace is not trusted, so file changes are off. Chat and read-only review still work.')}"
+    data-setup-trust="${translated('Trust this workspace')}"
+    data-setup-retention="${translated('Zero data retention is on. Nothing is stored on the server, so uploads, sharing and comparison are off.')}"
+    data-setup-open-retention="${translated('Open retention setting')}"
     data-no-folder="${translated('No folder')}"
     data-no-workspace="${translated('No workspace')}"
     data-prompt-explain="${translated('Explain the architecture of this workspace and identify the best starting points.')}"

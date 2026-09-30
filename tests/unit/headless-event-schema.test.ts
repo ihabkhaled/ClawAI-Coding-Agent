@@ -135,6 +135,8 @@ const SAMPLES: Record<string, Json> = {
   },
   runtime: { type: 'runtime', name: 'run.completed' },
   'runtime (payload)': { type: 'runtime', name: 'budget.updated', payload: { modelTurns: 1 } },
+  'budget.exhausted (tool calls)': { type: 'budget.exhausted', budget: 'tool-calls', limit: 3 },
+  'budget.exhausted (duration)': { type: 'budget.exhausted', budget: 'duration', limit: 60000 },
   'run.finished': { type: 'run.finished', result },
   'run.finished (error)': {
     type: 'run.finished',
@@ -161,6 +163,11 @@ describe('clawai-headless-events.schema.json', () => {
       { type: 'run.finished', result: { ...result, exitCode: 9 } },
     ],
     ['a negative tool count', { type: 'run.finished', result: { ...result, toolCalls: -1 } }],
+    [
+      'a budget event naming an unknown guard',
+      { type: 'budget.exhausted', budget: 'cost', limit: 1 },
+    ],
+    ['a budget event with no limit', { type: 'budget.exhausted', budget: 'duration' }],
     ['an unknown outcome', { type: 'run.finished', result: { ...result, outcome: 'meh' } }],
   ])('rejects %s', (_name, sample) => {
     expect(valid(sample)).not.toEqual([]);

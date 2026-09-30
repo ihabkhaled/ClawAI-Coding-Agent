@@ -26,6 +26,16 @@ describe('promptRequestId', () => {
 });
 
 describe('inboundMessageSchema', () => {
+  it('accepts only the two known first-run notice actions', () => {
+    expect(inboundMessageSchema.parse({ type: 'setupAction', action: 'manageTrust' })).toEqual({
+      type: 'setupAction',
+      action: 'manageTrust',
+    });
+    expect(inboundMessageSchema.safeParse({ type: 'setupAction', action: 'rm -rf' }).success).toBe(
+      false,
+    );
+  });
+
   it('accepts bounded runtime controls', () => {
     expect(inboundMessageSchema.parse({ type: 'runtimePause' })).toEqual({ type: 'runtimePause' });
     expect(inboundMessageSchema.parse({ type: 'runtimeResume' })).toEqual({

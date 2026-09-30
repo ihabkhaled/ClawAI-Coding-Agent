@@ -276,6 +276,8 @@ describe('unzipPlugin', () => {
   });
 });
 
+const PUBLIC = { lookup: async () => ['93.184.216.34'] };
+
 describe('downloadBytes', () => {
   function response(body: string, init: { status?: number; url?: string; length?: string } = {}) {
     const headers = new Headers(init.length === undefined ? {} : { 'content-length': init.length });
@@ -285,7 +287,7 @@ describe('downloadBytes', () => {
   }
 
   it('returns the bytes of an https download', async () => {
-    const bytes = await downloadBytes('https://a.example/x', async () => response('hi'));
+    const bytes = await downloadBytes('https://a.example/x', async () => response('hi'), PUBLIC);
 
     expect(new TextDecoder().decode(bytes)).toBe('hi');
   });
@@ -295,16 +297,28 @@ describe('downloadBytes', () => {
       code: 'invalid-source',
     });
     await expect(
-      downloadBytes('https://a.example/x', async () => Promise.reject(new Error('offline'))),
+      downloadBytes(
+        'https://a.example/x',
+        async () => Promise.reject(new Error('offline')),
+        PUBLIC,
+      ),
     ).rejects.toMatchObject({ code: 'unreachable' });
     await expect(
-      downloadBytes('https://a.example/x', async () => response('', { status: 404 })),
+      downloadBytes('https://a.example/x', async () => response('', { status: 404 }), PUBLIC),
     ).rejects.toMatchObject({ code: 'unreachable' });
     await expect(
-      downloadBytes('https://a.example/x', async () => response('', { url: 'http://a.example/x' })),
+      downloadBytes(
+        'https://a.example/x',
+        async () => response('', { url: 'http://a.example/x' }),
+        PUBLIC,
+      ),
     ).rejects.toMatchObject({ code: 'invalid-source' });
     await expect(
-      downloadBytes('https://a.example/x', async () => response('', { length: '99999999' })),
+      downloadBytes(
+        'https://a.example/x',
+        async () => response('', { length: '99999999' }),
+        PUBLIC,
+      ),
     ).rejects.toMatchObject({ code: 'too-large' });
   });
 });
