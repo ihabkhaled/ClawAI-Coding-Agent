@@ -6,6 +6,7 @@ import path from 'node:path';
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
 import { executeWorkspaceTool, gitArguments } from '../../src/sdk/workspace-tool-executor';
+import { permissionsForMode } from '../../src/sdk/permission-modes';
 import {
   offeredDefinitions,
   toolCategory,
@@ -64,6 +65,31 @@ describe('toolCategory', () => {
     expect(toolCategory(call('workspace.git', 'diff'))).toBe('git');
     expect(toolCategory(call('workspace.git', 'reset'))).toBeUndefined();
     expect(toolCategory(call('workspace.web', 'fetch'))).toBeUndefined();
+  });
+});
+
+describe('plan mode refuses a write instead of failing the run', () => {
+  const createCall = { toolName: 'workspace.file', operation: 'create', arguments: {} };
+
+  it('still lists the write operation so the call reaches the client, which refuses it', async () => {
+    const permissions = permissionsForMode('plan', { allow: ['read', 'write', 'git'] });
+    const toolkit = workspaceToolkit(workspace(), permissions);
+    const file = (toolkit.definitions as { name: string; operations: string[] }[]).find(
+      (definition) => definition.name === 'workspace.file',
+    );
+
+    expect(file?.operations).toContain('create');
+    await expect(toolkit.authorize?.(createCall)).resolves.toBe(false);
+    await expect(toolkit.authorize?.({ ...createCall, operation: 'read' })).resolves.toBe(true);
+  });
+
+  it('keeps hiding ungranted operations outside plan mode', () => {
+    const toolkit = workspaceToolkit(workspace(), { allow: ['read'] });
+    const file = (toolkit.definitions as { name: string; operations: string[] }[]).find(
+      (definition) => definition.name === 'workspace.file',
+    );
+
+    expect(file?.operations).not.toContain('create');
   });
 });
 

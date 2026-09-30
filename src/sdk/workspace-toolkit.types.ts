@@ -28,6 +28,13 @@ export interface AgentPermissions {
   readonly writeScope?: readonly string[] | undefined;
   /** Globs no change may match; wins over `writeScope`, and alone means "anywhere but here". */
   readonly writeDeny?: readonly string[] | undefined;
+  /**
+   * Offer every operation to the model even when only some are granted; the
+   * withheld ones are refused on arrival as `PERMISSION_DENIED`. Plan mode sets
+   * it: a model that asks for a write there gets a refusal it can answer with,
+   * where an operation missing from the offered catalog would fail the run.
+   */
+  readonly offerRefused?: boolean | undefined;
   readonly approve?: ((request: AgentApprovalRequest) => boolean | Promise<boolean>) | undefined;
 }
 

@@ -165,16 +165,17 @@ describe('permission policy', () => {
       });
       expect(decidePermission({ ...scoped, operation: 'commandExecution' }).outcome).toBe('ask');
       expect(decidePermission({ ...scoped, operation: 'externalFinalDiff' }).outcome).toBe('ask');
-      expect(decidePermission({ ...scoped, trusted: false, operation: 'editGeneration' })).toEqual(
-        { outcome: 'deny', reason: 'workspaceUntrusted' },
-      );
+      expect(decidePermission({ ...scoped, trusted: false, operation: 'editGeneration' })).toEqual({
+        outcome: 'deny',
+        reason: 'workspaceUntrusted',
+      });
     });
 
     it('Strict asks for every operation with a reason of its own, unlike Ask', () => {
       for (const operation of ['workspaceContext', 'editGeneration', 'commandExecution'] as const) {
-        expect(decidePermission({ ...base, permissionMode: 'ENTERPRISE_LOCKED', operation })).toEqual(
-          { outcome: 'ask', reason: 'strictApproval' },
-        );
+        expect(
+          decidePermission({ ...base, permissionMode: 'ENTERPRISE_LOCKED', operation }),
+        ).toEqual({ outcome: 'ask', reason: 'strictApproval' });
         expect(decidePermission({ ...base, permissionMode: 'ASK', operation }).reason).not.toBe(
           'strictApproval',
         );

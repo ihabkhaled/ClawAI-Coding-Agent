@@ -56,7 +56,7 @@ export function workspaceToolkit(
     });
   const notes = createNotesTool(store, memory.onNoteAdded);
   return {
-    definitions: offeredDefinitions(permissions.allow),
+    definitions: offeredDefinitions(permissions.allow, permissions.offerRefused === true),
     execute: (call, signal) => executeWorkspaceTool(call, limits, signal, commands, notes),
     dispose: () => {
       commands.dispose();
@@ -75,13 +75,20 @@ export function toolCategory(call: AgentToolCall): AgentToolCategory | undefined
   return AGENT_TOOL_OPERATIONS[call.toolName]?.[call.operation];
 }
 
-/** The tool definitions narrowed to the granted operations; empty tools are dropped. */
-export function offeredDefinitions(allow: readonly AgentToolCategory[]): readonly unknown[] {
+/**
+ * The tool definitions narrowed to the granted operations; empty tools are
+ * dropped. With `offerRefused` every operation is listed and the withheld ones
+ * are refused when called.
+ */
+export function offeredDefinitions(
+  allow: readonly AgentToolCategory[],
+  offerRefused = false,
+): readonly unknown[] {
   return AGENT_WORKSPACE_TOOL_DEFINITIONS.flatMap((definition) => {
     const categories = AGENT_TOOL_OPERATIONS[definition.name] ?? {};
     const operations = definition.operations.filter((operation) => {
       const category = categories[operation];
-      return category !== undefined && allow.includes(category);
+      return category !== undefined && (offerRefused || allow.includes(category));
     });
     return operations.length === 0 ? [] : [{ ...definition, operations }];
   });

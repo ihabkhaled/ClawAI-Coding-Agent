@@ -35,6 +35,7 @@ export function permissionsForMode(
       ...base,
       allow: base.allow.filter((category) => AGENT_PLAN_TOOL_CATEGORIES.includes(category)),
       approve: undefined,
+      offerRefused: true,
     };
   }
   const ask = base.approve;
