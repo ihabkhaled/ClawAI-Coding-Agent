@@ -31,6 +31,7 @@ export default defineConfig({
         'src/core/runtime/runtime-deferred-tools.ts',
         'src/core/runtime/runtime-deferred-tools.types.ts',
         'src/core/runtime/runtime-result-files.constants.ts',
+        'src/core/runtime/runtime-operation-classification.ts',
         'src/core/runtime/capability-manifest.ts',
         'src/core/runtime/external-output-catalog.ts',
         'src/core/runtime/runtime-event-admission.ts',
