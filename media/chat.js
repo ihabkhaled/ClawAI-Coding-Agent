@@ -337,6 +337,25 @@ function persistThemeMode(mode) {
   vscode.setState?.({ ...(vscode.getState?.() ?? {}), themeMode: mode });
 }
 
+// Run, Context and Web research survive a reload like Theme does: the webview's
+// own state holds the last choice, and only a value the select still offers is restored.
+const REMEMBERED_CONTROLS = ['runMode', 'contextMode', 'researchMode'];
+
+function persistControl(key) {
+  vscode.setState?.({ ...(vscode.getState?.() ?? {}), [key]: elements[key].value });
+}
+
+function restoreRememberedControls() {
+  for (const key of REMEMBERED_CONTROLS) {
+    const saved = persistedViewState[key];
+    const offered = [...elements[key].options].some((option) => option.value === saved);
+    if (typeof saved === 'string' && offered) {
+      elements[key].value = saved;
+      elements[key].dispatchEvent(new Event('change'));
+    }
+  }
+}
+
 function setWorkspaceMenuOpen(open) {
   elements.workspaceMenu.dataset.open = open ? 'true' : 'false';
   elements.workspaceMenuToggle.setAttribute('aria-expanded', open ? 'true' : 'false');
@@ -3414,6 +3433,12 @@ elements.workspaceMenuToggle.addEventListener('click', () => {
   setWorkspaceMenuOpen(elements.workspaceMenu.dataset.open !== 'true');
 });
 
+for (const key of REMEMBERED_CONTROLS) {
+  elements[key].addEventListener('change', () => {
+    persistControl(key);
+  });
+}
+
 elements.themeMode.addEventListener('change', () => {
   applyThemeMode(elements.themeMode.value);
   persistThemeMode(elements.themeMode.value);
@@ -3649,6 +3674,7 @@ ${message.text}`;
 setConversationVisibility();
 setWorkspaceMenuOpen(false);
 applyThemeMode(persistedViewState.themeMode);
+restoreRememberedControls();
 syncControlTitles();
 syncSendAvailability();
 elements.attachmentInput.accept = [...ALLOWED_ATTACHMENT_MIME_TYPES].join(',');
