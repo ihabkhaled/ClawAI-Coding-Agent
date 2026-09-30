@@ -55,5 +55,7 @@ package:audit. Before every push: `npm run preflight` (or `npm run ship`). Also 
 `setup-a-fresh-worktree`, `version-every-change`, `verify-coding-agent-readiness`,
 `add-a-runtime-tool`, `add-a-command-or-view`, `add-a-translated-string`,
 `land-a-release`, `add-a-backend-client-with-fallback`, `run-live-rounds`.
-Every publishable change: one SemVer bump (second component), CHANGELOG +
-`docs/releases/DETAILED_CHANGELOG.md`, rebuilt VSIX in `builds/`.
+Version bumps are for intentional releases, not every main update. A normal
+main update may keep an already-tagged package version; Release then skips
+publication. Intentional releases still require SemVer + changelogs + rebuilt
+VSIX and supply-chain assets.
