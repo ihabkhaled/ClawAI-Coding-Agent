@@ -7,6 +7,9 @@ What changed in each release of ClawAI Coding Agent, newest first. The full engi
 - Scheduled tasks can follow a calendar, not just "every N minutes". Ask for "weekdays at 9:00" and the agent schedules it. A schedule cannot fire more than every 5 minutes, and tasks still run only while VS Code is open.
 - Commands sent to a runner or remote-control machine now use the same safety as the agent's own commands: they no longer see the editor's environment variables, and they follow your command sandbox setting. If you require a sandbox your computer does not have, the command is refused.
 - The parity notes now say exactly which remaining features wait on the ClawAI server or on a product decision.
+- The command-line agent can now be set up like the chat box: `--effort` (how hard it may work), `--context-mode` with `--context-file` or `--context-selection` (what it is shown first), `--speed`, `--research` (which web tools it may use) and two more approval modes, `autonomous-scoped` and `strict`. A wrong value is refused before anything is sent.
+- The agent can now read several pages of one website, and can read a page together with its links. It stays on the same site, reads at most 30 pages, refuses private addresses, and lists every page it could not read and why.
+- A new page, `docs/parity/web-research-parity.md`, says what each chat box control sends to the server, and which website abilities still need a server change.
 
 ## 1.86.0
 

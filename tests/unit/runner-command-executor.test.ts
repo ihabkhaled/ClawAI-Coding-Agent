@@ -2,8 +2,8 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { sandboxedRunnerExecutor } from '../../src/infrastructure/runner-command-executor';
 
-import type { CommandSandboxBinding } from '../../src/infrastructure/command-launch-plan.types';
 import type { CommandSandboxPlan } from '../../src/core/command-sandbox.types';
+import type { CommandSandboxBinding } from '../../src/infrastructure/command-launch-plan.types';
 
 const host: CommandSandboxPlan['host'] = {
   platform: process.platform,
@@ -26,7 +26,7 @@ const signal = new AbortController().signal;
 const secret = 'CLAW_TEST_RUNNER_LEAK';
 
 afterEach(() => {
-  delete process.env[secret];
+  Reflect.deleteProperty(process.env, secret);
 });
 
 describe('sandboxedRunnerExecutor', () => {

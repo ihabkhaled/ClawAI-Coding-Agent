@@ -1,3 +1,4 @@
+import type { AgentContextConfig } from './agent-context.types';
 import type { AgentBudgetProfile, AgentMemoryMode, RuntimeTransportPort } from './agent-sdk.types';
 import type { DoneCheck, DoneCheckSummary } from './done-checks.types';
 import type { AgentMcpOptions } from './mcp-toolkit.types';
@@ -5,7 +6,11 @@ import type { AgentPermissionMode } from './permission-modes.types';
 import type { StuckInfo } from './repetition-guard.types';
 import type { RunBudgetKind } from './run-budget.types';
 import type { AgentPermissions } from './workspace-toolkit.types';
+import type { EffortMode } from '../core/effort-mode';
 import type { HeadlessExitCode, HeadlessOutcome } from '../core/headless-outcome.types';
+import type { ResearchMode } from '../core/research-mode';
+import type { SpeedMode } from '../core/speed-mode';
+import type { WebResearchPort } from '../core/web-research.types';
 import type { RetryTuning } from '../headless/retry-policy.types';
 
 /** A token already issued, or credentials to exchange for one. */
@@ -57,6 +62,28 @@ export interface AgentConfig {
    * caller wrote them. See `DoneCheck`.
    */
   readonly doneChecks?: readonly DoneCheck[] | undefined;
+  /**
+   * How hard the run may work: the editor's Effort control, LOW to ULTRA. It picks
+   * the run budget (model turns, tool calls, rounds, repair, wall clock, output and
+   * result bytes) through the same table the editor uses, and takes the place of the
+   * long profile; maxTurns on a call still narrows it.
+   */
+  readonly effort?: EffortMode | undefined;
+  /**
+   * The editor's Speed control. It sets how many workspace lookups run at once while
+   * context is collected, and does nothing else: it never changes which files are read.
+   */
+  readonly speed?: SpeedMode | undefined;
+  /** Which context the run starts with; see AgentContextConfig. Absent means none. */
+  readonly context?: AgentContextConfig | undefined;
+  /**
+   * The editor's Web research control. It decides which web tools the agent is
+   * offered (search, fetch, crawl, extract); the runtime run request carries no
+   * research field, so it is not sent to the server. Absent means none.
+   */
+  readonly research?: ResearchMode | undefined;
+  /** Replaces the research service calls, for tests and for hosts with their own. */
+  readonly webResearch?: WebResearchPort | undefined;
 }
 
 export interface AgentRunCallOptions {
@@ -174,6 +201,13 @@ export type AgentEvent =
       readonly tool: string;
       /** Workspace-relative, forward-slash. Refused or, for a command, reverted. */
       readonly paths: readonly string[];
+    }
+  | {
+      readonly type: 'context.collected';
+      readonly mode: string;
+      readonly included: number;
+      readonly excluded: number;
+      readonly truncated: boolean;
     }
   | { readonly type: 'run.finished'; readonly result: AgentResult };
 

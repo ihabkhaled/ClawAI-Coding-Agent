@@ -1,4 +1,5 @@
 import type { HeadlessOutputFormat } from './headless-args.types';
+import type { ContextMode } from '../core/context-mode';
 import type { AgentToolCategory } from '../sdk/workspace-toolkit.types';
 
 export const HEADLESS_OUTPUT_FORMATS: readonly HeadlessOutputFormat[] = [
@@ -14,6 +15,15 @@ export const HEADLESS_TOOL_CATEGORIES: readonly AgentToolCategory[] = [
   'git',
   'git-write',
   'mcp',
+];
+
+/** The Context control's modes, as --context-mode spells them. */
+export const HEADLESS_CONTEXT_MODES: readonly ContextMode[] = [
+  'file',
+  'none',
+  'selection',
+  'smart',
+  'workspace',
 ];
 
 /** Ceilings for the run guards; past them a number is a typo, not a budget. */
@@ -69,6 +79,12 @@ export const HEADLESS_VALUE_FLAGS: Readonly<Record<string, string>> = {
   '--write-deny': 'writeDeny',
   '--done-check': 'doneCheck',
   '--done-check-file': 'doneCheckFile',
+  '--effort': 'effort',
+  '--speed': 'speed',
+  '--context-mode': 'contextMode',
+  '--context-file': 'contextFile',
+  '--context-selection': 'contextSelection',
+  '--research': 'research',
 };
 
 export const HEADLESS_USAGE = [
@@ -93,8 +109,19 @@ export const HEADLESS_USAGE = [
   '                               run (up to --auto-continue), then fails with DONE_CHECKS_FAILED. Repeatable.',
   '  --done-check-file <file>     JSON array of { label, executable, args[], cwd?, timeoutMs? } checks.',
   '  --permission-mode <mode>     plan (read-only) | ask (approve every write, command and MCP',
-  '                               call) | accept-edits (approve commands and MCP calls only).',
+  '                               call) | accept-edits (approve commands and MCP calls only) |',
+  '                               autonomous-scoped (edits and commands run; commit, push, delete and',
+  '                               MCP calls are asked) | strict (like ask; deletes are refused).',
   '                               Approvals are asked on a terminal; with none, they are denied.',
+  '  --effort <level>             LOW | MEDIUM | HIGH | MAX | XHIGH | ULTRA: the run budget, from the editor',
+  '                               Effort table. Replaces --budget; give one of them.',
+  '  --speed <1X|1.5X|2X>         Parallel workspace lookups while --context-mode reads the workspace.',
+  '  --context-mode <mode>        none | file | selection | smart | workspace: context put in front of the',
+  '                               prompt (default: none). smart picks selection, file, workspace, in that order.',
+  '  --context-file <path>        Workspace-relative file for file, or "a file is open" for smart.',
+  '  --context-selection <p:a-b>  Lines a to b of file p for selection, or "a selection exists" for smart.',
+  '  --research <mode>            none | search | search-fetch | search-extract: which web tools the agent is',
+  '                               offered (search-fetch adds crawl; search-extract adds extract).',
   '  --resume <threadId>          Continue an existing thread.',
   '  --continue                   Continue the most recent CLI thread for this workspace.',
   '  --append-system-prompt <t>   Operator instructions, text or @file (added to the runtime instructions).',

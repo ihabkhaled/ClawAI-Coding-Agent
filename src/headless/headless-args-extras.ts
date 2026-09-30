@@ -4,6 +4,7 @@ import { threadIdProblem, toolPatternsProblem } from '../sdk/agent-inputs';
 import { AGENT_PERMISSION_MODES } from '../sdk/permission-modes.constants';
 import { writeScopeProblem } from '../sdk/write-scope';
 
+import { checkedControls } from './headless-args-controls';
 import { parseDoneCheckFlags } from './headless-done-checks';
 
 import type { HeadlessInvocation } from './headless-args.types';
@@ -27,6 +28,10 @@ type Extras = Partial<
     | 'writeDeny'
     | 'doneChecks'
     | 'doneCheckFile'
+    | 'effort'
+    | 'speed'
+    | 'context'
+    | 'research'
   >
 >;
 
@@ -128,5 +133,15 @@ export function checkedExtras(values: Values, flags: Flags, cwd: string): Extras
   if (typeof scope === 'string') return scope;
   const done = doneFlags(values, cwd);
   if (typeof done === 'string') return done;
-  return { ...session, ...memory, ...policy, ...scope, ...done, ...fileFlags(values, cwd) };
+  const controls = checkedControls(values);
+  if (typeof controls === 'string') return controls;
+  return {
+    ...session,
+    ...memory,
+    ...policy,
+    ...scope,
+    ...done,
+    ...controls,
+    ...fileFlags(values, cwd),
+  };
 }

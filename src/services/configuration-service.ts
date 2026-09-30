@@ -18,6 +18,11 @@ import {
   type GlobalConfiguration,
   type RoutingMode,
 } from '../core/configuration';
+import {
+  DEFAULT_CONTEXT_EXCLUDES,
+  DEFAULT_MAX_CONTEXT_BYTES,
+  DEFAULT_MAX_CONTEXT_FILES,
+} from '../core/context-defaults.constants';
 import { normalizeEffortMode } from '../core/effort-mode';
 import { lifecycleHooksSchema } from '../core/lifecycle-hook';
 import { normalizeOutputStyle } from '../core/output-style';
@@ -84,17 +89,6 @@ export interface RuntimeConfiguration extends GlobalConfiguration {
 function normalizeAutosavePolicy(value: unknown): AutosavePolicy {
   return isAutosavePolicy(value) ? value : DEFAULT_AUTOSAVE_POLICY;
 }
-
-const DEFAULT_EXCLUDES = [
-  '**/.git/**',
-  '**/node_modules/**',
-  '**/dist/**',
-  '**/build/**',
-  '**/coverage/**',
-  '**/.env*',
-  '**/*secret*',
-  '**/*credential*',
-];
 
 function numberSetting(
   configuration: vscode.WorkspaceConfiguration,
@@ -287,9 +281,9 @@ export class ConfigurationService {
       requestTimeoutMs: numberSetting(configuration, 'requestTimeoutMs', 60_000),
       routingMode: normalizeRoutingMode(configuration.get<unknown>('routingMode') ?? 'AUTO'),
       selectedModel: configuration.get<string>('selectedModel') ?? '',
-      maxContextBytes: numberSetting(configuration, 'maxContextBytes', 200_000),
-      maxContextFiles: numberSetting(configuration, 'maxContextFiles', 40),
-      exclude: configuration.get<string[]>('exclude') ?? DEFAULT_EXCLUDES,
+      maxContextBytes: numberSetting(configuration, 'maxContextBytes', DEFAULT_MAX_CONTEXT_BYTES),
+      maxContextFiles: numberSetting(configuration, 'maxContextFiles', DEFAULT_MAX_CONTEXT_FILES),
+      exclude: configuration.get<string[]>('exclude') ?? [...DEFAULT_CONTEXT_EXCLUDES],
       historyLimit: numberSetting(configuration, 'historyLimit', 50),
       permissionMode: normalizePermissionMode(configuration.get<unknown>('permissionMode')),
       autosave: normalizeAutosavePolicy(configuration.get<unknown>('autosave')),

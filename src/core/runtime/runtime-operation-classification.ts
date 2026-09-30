@@ -272,7 +272,7 @@ const workspaceTools: Readonly<Record<string, ToolTable>> = {
     group(RUN, ['register', 'restart', 'restore', 'start', 'start-all', 'stop']),
     group(READ, ['discover', 'list']),
   ),
-  'workspace.web': group(FETCH, ['fetch', 'search']),
+  'workspace.web': group(FETCH, ['crawl', 'extract', 'fetch', 'search']),
 };
 
 const CLASSIFICATION: Readonly<Record<string, ToolTable>> = {

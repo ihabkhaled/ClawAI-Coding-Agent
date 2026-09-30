@@ -455,6 +455,8 @@ export const runtimeToolInputSchemas = {
     url: text,
     timeoutMs: integer,
     refresh: flag,
+    maxPages: integer,
+    maxDepth: integer,
   }),
   mcp: strict({ server: shortText, tool: shortText, arguments: opaque, timeoutMs: integer }),
   quality: strict({ rootKey: text, scope: text, projects: objects, gateId: text }),

@@ -1,12 +1,14 @@
 import path from 'node:path';
 import { env } from 'node:process';
 
+import { effortBudget } from '../core/effort-mode';
 import { headlessExitCode, outcomeFromError } from '../core/headless-outcome';
 import { redactText } from '../core/redaction';
 import { headlessStateDirectory } from '../headless/headless-session-store';
 import { HeadlessTransport } from '../headless/headless-transport';
 import { RuntimeHttpError } from '../headless/runtime-http-error';
 
+import { contextProblem, promptWithContext } from './agent-context';
 import { agentEventFrom } from './agent-events';
 import { assertAgentInputs, promptWithInstructions, withoutInstructions } from './agent-inputs';
 import { runAgent } from './agent-sdk';
@@ -24,7 +26,7 @@ import { assertRunLimits, createRunGuard, describeBudgetTrip } from './run-budge
 import { isRunLostError } from './run-lost';
 import { isServerBudgetError, isServerBudgetEvent, withResultBudgetNotes } from './server-budget';
 
-import type { AgentRunResult } from './agent-sdk.types';
+import type { AgentBudgetField, AgentRunResult } from './agent-sdk.types';
 import type {
   Agent,
   AgentConfig,
@@ -53,6 +55,8 @@ export function createAgent(config: AgentConfig): Agent {
   assertAgentInputs(config);
   const checkProblem = doneChecksProblem(config.doneChecks ?? []);
   if (checkProblem !== undefined) throw new RangeError(checkProblem);
+  const contextIssue = config.context === undefined ? undefined : contextProblem(config.context);
+  if (contextIssue !== undefined) throw new RangeError(contextIssue);
   const checkDone = doneCheckRunner(config.doneChecks, path.resolve(config.workspaceRoot));
   const session: { threadId: string | undefined } = { threadId: config.threadId };
   const notes = createNotesStore({
@@ -69,8 +73,10 @@ export function createAgent(config: AgentConfig): Agent {
     get threadId() {
       return session.threadId;
     },
-    run: (prompt, options = {}) => {
-      const first = resumed ? promptWithNotes(prompt, notes) : prompt;
+    run: async (prompt, options = {}) => {
+      const built = await contextualized(config, prompt, options);
+      if (typeof built !== 'string') return built;
+      const first = resumed ? promptWithNotes(built, notes) : built;
       resumed = false;
       return runWithContinuations({
         prompt: first,
@@ -109,16 +115,26 @@ async function runOnce(
         emit({ type: 'run.retrying', ...notice });
       },
     });
-  const inner = agentToolkit(config, {
-    store: notes,
-    onNoteAdded: (info) => {
-      emit({ type: 'note.added', ...info });
+  const credential = { token: 'token' in config.auth ? config.auth.token : undefined };
+  const inner = agentToolkit(
+    config,
+    {
+      store: notes,
+      onNoteAdded: (info) => {
+        emit({ type: 'note.added', ...info });
+      },
+      onWriteScopeViolation: (violation) => {
+        emit({ type: 'write-scope.violation', ...violation });
+      },
     },
-    onWriteScopeViolation: (violation) => {
-      emit({ type: 'write-scope.violation', ...violation });
-    },
-  });
-  const noted = withResultBudgetNotes(inner, resultByteLimit(options.budgetProfile));
+    () => credential.token,
+  );
+  const noted = withResultBudgetNotes(
+    inner,
+    config.effort === undefined
+      ? resultByteLimit(options.budgetProfile)
+      : effortBudget(config.effort).maxToolResultBytes,
+  );
   // A run that loops on one call is ended here: `stop` aborts the stream, and the
   // guard's own signal (when a limit is set) still ends it as `exhausted`.
   const stop = new AbortController();
@@ -136,6 +152,7 @@ async function runOnce(
     // apart from a later one: during sign-in any client error is the credential.
     const token = 'token' in config.auth ? config.auth.token : await transport.signIn(config.auth);
     tally.signingIn = false;
+    credential.token = token;
     const report = await runAgent({
       prompt: promptWithInstructions(prompt, config.systemPrompt),
       toolkit,
@@ -149,12 +166,10 @@ async function runOnce(
       onMemoryUnchanged: (info) => {
         emit({ type: 'thread.memory-unchanged', ...info });
       },
-      deadlineMs: config.deadlineMs,
+      deadlineMs: config.deadlineMs ?? effortDeadlineMs(config),
       transport,
       signal: runSignal,
-      ...(options.maxTurns === undefined
-        ? {}
-        : { budget: { maxModelTurns: options.maxTurns, maxToolRounds: options.maxTurns } }),
+      ...budgetFor(config, options),
       onStarted: (run) => {
         tally.runId = run.runId;
         session.threadId = run.threadId;
@@ -317,4 +332,61 @@ function redacted(message: string, config: AgentConfig): string {
   const secret = 'token' in config.auth ? config.auth.token : config.auth.password;
   const withoutSecret = secret.length === 0 ? message : message.split(secret).join('[redacted]');
   return redactText(withoutInstructions(withoutSecret, config.systemPrompt));
+}
+
+/** The wall clock the effort table gives, when an effort was named and no deadline was. */
+function effortDeadlineMs(config: AgentConfig): number | undefined {
+  return config.effort === undefined ? undefined : effortBudget(config.effort).maxRuntimeMs;
+}
+
+/** The run budget fields this configuration sets: the effort's table, narrowed by `maxTurns`. */
+function budgetFor(
+  config: AgentConfig,
+  options: AgentRunCallOptions,
+): { budget?: Partial<Record<AgentBudgetField, number>> } {
+  const base = config.effort === undefined ? {} : effortBudget(config.effort);
+  const turns =
+    options.maxTurns === undefined
+      ? {}
+      : { maxModelTurns: options.maxTurns, maxToolRounds: options.maxTurns };
+  const budget = { ...base, ...turns };
+  return Object.keys(budget).length === 0 ? {} : { budget };
+}
+
+/**
+ * The prompt with the run's context, or a finished result when the context
+ * cannot be built. A missing file or a bad range is a usage problem found
+ * before any request, so it ends the run as `unusable` (exit 2) and nothing is sent.
+ */
+async function contextualized(
+  config: AgentConfig,
+  prompt: string,
+  options: AgentRunCallOptions,
+): Promise<string | AgentResult> {
+  if (config.context === undefined) return prompt;
+  try {
+    const built = await promptWithContext(
+      { workspaceRoot: config.workspaceRoot, context: config.context, speed: config.speed },
+      prompt,
+    );
+    options.onEvent?.({
+      type: 'context.collected',
+      mode: built.resolved,
+      included: built.receipt?.included.length ?? 0,
+      excluded: built.receipt?.excluded.length ?? 0,
+      truncated: built.receipt?.truncated ?? false,
+    });
+    return built.prompt;
+  } catch (error: unknown) {
+    const result: AgentResult = {
+      outcome: 'unusable',
+      exitCode: headlessExitCode('unusable'),
+      toolCalls: 0,
+      deniedCalls: 0,
+      text: '',
+      error: redactText(error instanceof Error ? error.message : 'The context could not be built.'),
+    };
+    options.onEvent?.({ type: 'run.finished', result });
+    return result;
+  }
 }
