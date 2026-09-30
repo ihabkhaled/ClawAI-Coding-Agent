@@ -108,6 +108,10 @@ from an older or stricter backend is one `thread.memory-unchanged { status }` ev
 run continues; transient errors retry like every runtime call, and any other failure (a 401,
 a 5xx after the retries) fails the run. Cross-thread context is already off by default.
 
+**Known server gap (2026-10-01):** `memory: off` only means the flag was set. chat-service's runtime path does not
+read `useMemory`, so stored memories can still reach a run; the change needed is in
+[PARTIAL_REMAINDERS.md](parity/PARTIAL_REMAINDERS.md).
+
 ## Operator instructions
 
 `--append-system-prompt` and `--system-prompt-file` (SDK: `systemPrompt`) add

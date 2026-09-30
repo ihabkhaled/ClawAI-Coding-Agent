@@ -5,8 +5,8 @@ import path from 'node:path';
 
 import { afterEach, describe, expect, it, vi } from 'vitest';
 
-import { executeWorkspaceTool, gitArguments } from '../../src/sdk/workspace-tool-executor';
 import { permissionsForMode } from '../../src/sdk/permission-modes';
+import { executeWorkspaceTool, gitArguments } from '../../src/sdk/workspace-tool-executor';
 import {
   offeredDefinitions,
   toolCategory,

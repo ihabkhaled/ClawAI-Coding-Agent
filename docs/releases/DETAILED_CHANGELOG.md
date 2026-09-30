@@ -2,6 +2,18 @@
 
 This is the full engineering log for ClawAI Coding Agent: every release with its internal notes, decisions and verification detail. The short, user-facing release notes are in [CHANGELOG.md](../../CHANGELOG.md).
 
+## 1.88.0
+
+Fixes from the composer, approval and research QA (2026-10-01).
+
+- **Approval options (legacy edit-proposal path, `src/core/permission-policy.ts`).** Both policies are live: the webview's Approval dropdown reaches `evaluatePolicyV2` for runtime-v2 tool calls (already correct per `PERMISSION_MATRIX.md`: Strict asks like Ask and refuses delete-class work, Autonomous Scoped asks for R3/R4) and `decidePermission` for context, edit, command and final-diff operations. There Strict was a synonym of Ask and Autonomous Scoped answered `fullAccess`. Now Strict answers `strictApproval` for every operation and `SessionControlService` neither reads nor writes the remembered routine-access approval for it; Autonomous Scoped answers `scopedAccess` (edits inside the workspace, commands and external output still ask); the Plan permission mode answers `planReadContext` for workspace context in a trusted workspace and denies edits and commands. `fullAccess` is gone from `PermissionReason`. Tests name every option (`tests/unit/permission-policy.test.ts`, `policy-mutation-kills`, `session-control-service`).
+- **Persistence.** Run, Context and Web research are kept in the webview state (`REMEMBERED_CONTROLS` in `media/chat.js`) and restored only when the select still offers the saved value. Playwright tests reload the page with the saved state and with a stale value.
+- **Bare tool name.** `toolIdentifiers` also returns the bare tool name, so `--disallowed-tools workspace.file` (and `--allowed-tools`) match every operation. Documented in HEADLESS.md.
+- **Plan mode refusal.** `AgentPermissions.offerRefused` (set by `permissionsForMode('plan')`) lists every operation in the catalog; a withheld one is refused on arrival as `PERMISSION_DENIED`. Before, the write was absent from the catalog and the server ended the run (`tool outside admitted catalog`, exit 1). Exit codes are unchanged (`0` after a completed run, `4` if the run then fails).
+- **Memory marker.** Not this repository: the thread flag is set and reported correctly; chat-service's runtime path never reads it. Exact cause and fix in `docs/parity/PARTIAL_REMAINDERS.md`.
+
+F095: attaching to a runner session now reconciles it with the window (`src/core/runner-workspace-fit.ts`, called from `attachRemoteSession`): when the runner reports checkouts and none is a folder open here, the session log says continuing in chat cannot reach its files. Best-effort: a failed or missing repository lookup, no open folder, or no runner data never warns. Audit pass over the other ten partial rows found their remainders need a backend route or a product decision; the exact change for each is in docs/parity/PARTIAL_REMAINDERS.md. The F108 audit text that listed metrics as open was stale: OTLP metrics ship (`src/core/otlp-metrics.ts`).
+
 ## 1.87.0
 
 The 11 PARTIAL parity rows were re-audited against the code (docs/parity/HANDOVER.md section 4b). Three had a client-side remainder.
@@ -23,10 +35,6 @@ The 11 PARTIAL parity rows were re-audited against the code (docs/parity/HANDOVE
 - **`crawl`** (`core/web-crawl.ts`): breadth-first over `links` from `/research/fetch`; same host as the start page's final address; at most 30 pages, depth 3, 12 000 characters per page and 120 000 in all; every URL through `assertFetchableUrl`; the answering address is re-checked for a private address and for leaving the host; refusals, 4xx, off-site and private redirects, and errors land in `skipped` with a redacted reason; abort propagates. **`extract`** (`core/web-page-digest.ts`): final address, type, size, cache hit, same-site and external links. `workspace.web` is classified `crawl` and `extract` as R2 reads like `fetch`; `PERMISSION_MATRIX.md` regenerated.
 - **Fix.** The client allowed a fetch timeout up to 120 000 ms and the research service rejects above 60 000; the client now stops at 60 000.
 - **Not built, needs a backend change** (exact change in the parity page): a user-permission route for the `SITE_CRAWL` and `SEARCH_FETCH_EXTRACT` workflows (sitemaps, ranking, 200 pages, extraction profiles); a research field on the Runtime V2 run start; readable fetch strategies. No composer crawl option was added, because the server has no mode for it. Not run live: the new operations are unit tested against a scripted site and a stubbed route.
-
-## Unreleased (parity partials, folds into 1.88.0)
-
-F095: attaching to a runner session now reconciles it with the window (`src/core/runner-workspace-fit.ts`, called from `attachRemoteSession`): when the runner reports checkouts and none is a folder open here, the session log says continuing in chat cannot reach its files. Best-effort: a failed or missing repository lookup, no open folder, or no runner data never warns. Audit pass over the other ten partial rows found their remainders need a backend route or a product decision; the exact change for each is in docs/parity/PARTIAL_REMAINDERS.md. The F108 audit text that listed metrics as open was stale: OTLP metrics ship (`src/core/otlp-metrics.ts`).
 
 ## 1.86.0
 
