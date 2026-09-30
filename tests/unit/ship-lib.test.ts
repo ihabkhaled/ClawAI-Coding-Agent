@@ -14,7 +14,7 @@ const allAssets = releaseAssetPaths('1.90.0');
 
 const EOL = String.fromCharCode(10);
 
-describe('release gates before pushing', () => {
+describe('release intent before pushing', () => {
   it('lists the eight assets the Release workflow requires', () => {
     expect(allAssets).toHaveLength(8);
     expect(allAssets).toContain('builds/clawai-coding-agent-1.90.0.vsix.sha256');
@@ -27,13 +27,14 @@ describe('release gates before pushing', () => {
     ).toEqual([]);
   });
 
-  it('refuses a version whose tag already exists (1.79.0 failed three times)', () => {
-    const problems = releaseGateProblems({
-      version: '1.90.0',
-      remoteTags: ['v1.90.0'],
-      trackedFiles: allAssets,
-    });
-    expect(problems.join('\n')).toMatch(/v1\.90\.0 already exists/u);
+  it('accepts an already-published version as a normal main update', () => {
+    expect(
+      releaseGateProblems({
+        version: '1.90.0',
+        remoteTags: ['v1.90.0'],
+        trackedFiles: [],
+      }),
+    ).toEqual([]);
   });
 
   it('refuses assets that exist on disk but were never git added (builds/ is gitignored)', () => {

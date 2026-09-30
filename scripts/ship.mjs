@@ -56,14 +56,20 @@ function requireCleanCurrentTree() {
 }
 
 function checkReleaseGates() {
-  step('Release gates: new version, committed assets');
+  step('Release intent: publish a new version only when its tag is free');
   const version = JSON.parse(capture('git', ['show', 'HEAD:package.json']).out).version;
   const tags = capture('git', ['ls-remote', '--tags', 'origin']).out.split('\n');
   const remoteTags = tags.map((line) => line.split('refs/tags/')[1]).filter(Boolean);
+  if (remoteTags.includes(`v${version}`)) {
+    process.stdout.write(
+      `version ${version}: already published; normal main update, release assets not required\n`,
+    );
+    return;
+  }
   const trackedFiles = capture('git', ['ls-files', 'builds']).out.split('\n');
   const problems = releaseGateProblems({ version, remoteTags, trackedFiles });
   if (problems.length > 0) fail(problems.join('\n'));
-  process.stdout.write(`version ${version}: tag free, assets committed\n`);
+  process.stdout.write(`version ${version}: new release requested, assets committed\n`);
 }
 
 function checkOutgoingSecrets() {
