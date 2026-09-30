@@ -30,12 +30,13 @@ Router: `AGENTS.md` (gates, blockers) - `docs/RULES.md` (enforced rules) -
 - Read settings any way but `ConfigurationService`; add a secret-bearing setting.
 - `innerHTML` for model/backend data; unvalidated backend or webview input.
 - `--no-verify`, gate bypass, VSIX at repo root (goes in `builds/`).
+- `git push` to main by hand: use `npm run ship` (Linux gate, release gates, secret scan, then watch GitHub CI + Release until green). A red gate is fixed before any other work. `docs/CI_FAILURES.md`.
 
 ## Gates
 
 `npm run check` = format:check, l10n:verify, lint, typecheck, scan:paths,
 inventory:verify, coverage:scope, test (vitest + coverage), build,
-package:audit. Also before a release: `npm run test:host`, `npm run package`,
+package:audit. Before every push: `npm run preflight` (or `npm run ship`). Also before a release: `npm run test:host`, `npm run package`,
 `npm audit --omit=dev --audit-level=high`. Fix with `npm run format`,
 `npm run l10n:build`, `npm run inventory:surface`.
 

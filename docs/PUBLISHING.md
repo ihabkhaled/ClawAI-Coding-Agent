@@ -143,3 +143,7 @@ The mechanical sequence is `skills/land-a-release/SKILL.md`. In short:
 
 The older preflight above says `git add` on the VSIX only; that predates the
 SBOM and provenance assets and is superseded by step 5.
+
+## Pushing
+
+Push with `npm run ship`, not `git push`. It checks that the version tag is free and the eight release assets are tracked, scans the outgoing commits for secret-shaped literals, runs the Linux gate, pushes with the `gh` credential helper, and watches CI and Release until both are green. See `docs/CI_FAILURES.md`.

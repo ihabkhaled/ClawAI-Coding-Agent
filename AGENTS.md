@@ -66,3 +66,7 @@ npm run test:host:installed <tmp>/extensions
   listed in `docs/parity/PROGRAM.md`.
 - Keep this repository independently buildable; do not import parent-monorepo
   source or dependencies.
+
+## Pushing to main
+
+Only through `npm run ship` (`skills/ship-to-main-safely/SKILL.md`): it runs the GitHub gates on Linux first and watches CI and Release until green. Twelve red pushes are catalogued in `docs/CI_FAILURES.md`. Never push by hand, never bypass hooks.

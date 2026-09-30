@@ -89,7 +89,11 @@ export class CrossWindowMailbox implements CrossWindowMailboxPort {
   async dispose(): Promise<void> {
     if (this.timer !== undefined) clearInterval(this.timer);
     this.timer = undefined;
-    await remove(this.peerFile(this.self));
+    try {
+      await remove(this.peerFile(this.self));
+    } catch {
+      // Leaving is best effort too; a stale heartbeat file expires by itself.
+    }
   }
 
   /** Announcing is best effort: an unwritable storage folder must not surface as a crash. */
