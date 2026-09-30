@@ -107,3 +107,40 @@ describe('GitAgentService in a repository with no commit yet', () => {
     ]);
   });
 });
+
+describe('GitAgentService staged secret scan', () => {
+  beforeEach(() => {
+    runCommandSpec.mockReset();
+  });
+
+  function stagedDiff(diff: string): void {
+    runCommandSpec.mockImplementation(async (spec: { arguments: string[] }) => {
+      if (spec.arguments[0] === 'rev-parse') return { ...ok, stdout: 'a'.repeat(40) };
+      if (spec.arguments[0] === 'diff') return { ...ok, stdout: diff };
+      return ok;
+    });
+  }
+
+  it('blocks a commit whose staged diff shows a redaction mask, before asking anyone', async () => {
+    // The runner masks vendor keys in its output; the scan then sees only the mask.
+    stagedDiff('+export const KEY = "[REDACTED]";\n');
+    const approve = vi.fn(async () => true);
+    const service = new GitAgentService(files() as never, approve);
+
+    await expect(
+      service.execute({ rootKey: 'source', operation: 'commit', message: 'chore: add config' }),
+    ).rejects.toThrow(/Staged secret scan blocked/u);
+    expect(approve).not.toHaveBeenCalled();
+  });
+
+  it('still reaches the approval step for an ordinary diff', async () => {
+    stagedDiff('+export const greeting = "hello";\n');
+    const approve = vi.fn(async () => false);
+    const service = new GitAgentService(files() as never, approve);
+
+    await expect(
+      service.execute({ rootKey: 'source', operation: 'commit', message: 'feat: greet' }),
+    ).rejects.toThrow(/not approved/u);
+    expect(approve).toHaveBeenCalled();
+  });
+});

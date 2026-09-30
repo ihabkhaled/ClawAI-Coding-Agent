@@ -31,13 +31,13 @@ export function prepareArtifact(input: { path: string; content: string }): Prepa
       detail: `The file is larger than ${String(MAX_ARTIFACT_BYTES)} bytes.`,
     };
   }
-  let redactedLines = 0;
-  const lines = input.content.split('\n').map((line) => {
-    const clean = redactText(line);
-    if (clean !== line) redactedLines += 1;
-    return clean;
-  });
-  const scrubbed = lines.join('\n');
+  // Whole text, not line by line: a private key block spans lines and only
+  // its BEGIN line would be masked if each line were scrubbed alone.
+  const scrubbed = redactText(input.content);
+  const redactedLines = input.content
+    .split('\n')
+    .filter((line) => redactText(line) !== line).length;
+  const lines = scrubbed.split('\n');
   const leftover = findStagedSecret(lines.map((line) => `+${line}`).join('\n'));
   if (leftover !== undefined) {
     return {

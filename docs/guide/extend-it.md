@@ -6,8 +6,10 @@ safe to commit and share with your team as long as it holds no secrets.
 
 ## The .clawai folder
 
-Run **ClawAI: Initialize .clawai** to create the starter files. It only adds files
-that are missing and needs a trusted workspace.
+Run **ClawAI: Initialize .clawai** to create starter files: `rules.md`,
+`architecture.md`, `memory.md`, `ignore`, four notes in `context/`, four in `skills/`
+and two in `prompts/`. It asks you to confirm, only adds files that are missing, and
+needs a trusted workspace. The other items in the table you create yourself.
 
 | Path                           | What it is for                                                      |
 | ------------------------------ | ------------------------------------------------------------------- |
@@ -25,10 +27,12 @@ that are missing and needs a trusted workspace.
 | `.clawai/workflows/*.json`     | Saved workflows and templates (below).                              |
 | `.clawai/plugins/`             | Plugins installed for this project.                                 |
 
-A subfolder can have its own `rules.md`, `architecture.md` and `memory.md`. The
-files closest to the code you are working on are read last. **ClawAI: Open Global
-Rules** and **ClawAI: Open Global Skills** edit guidance that applies to all your
-projects and is read first. The full layout is in
+Only `rules.md`, `architecture.md` and `memory.md` are read automatically. A subfolder
+can have its own `.clawai` with the same three files, and the ones closest to the
+file you have open are read last. The notes in `context/` and `prompts/` are for you
+and your team; ClawAI does not load them by itself. **ClawAI: Open Global Rules** and
+**ClawAI: Open Global Skills** open a notes file that applies to all your projects in
+this VS Code profile and is read first. The full layout is in
 [the folder specification](../CLAWAI_FOLDER_SPEC.md).
 
 ## Skills and slash commands
@@ -50,6 +54,8 @@ Review $ARGUMENTS for correctness, security and missing tests.
   Names use lowercase letters, digits and hyphens.
 - `$ARGUMENTS` is everything typed after the command. `$1` to `$9` are single words.
   If the file has no placeholder, what you typed is added to the end.
+- The starter skill files (`typescript.md`, `react.md`, `node.md`, `nestjs.md`) become
+  commands too, such as `/typescript`. Delete the ones you do not want.
 - ClawAI ships `/security-review`. A command with the same name in your project
   replaces it.
 - An unknown command is sent as ordinary text.
@@ -62,9 +68,9 @@ setting. Built in: `default`, `concise`, `explanatory` and `learning`.
 
 ## Hooks
 
-A hook runs your own command at a moment in a run. Add them in your **user**
-settings under `clawAI.hooks`, not in `.clawai`, so that cloning a repository can
-never run code on your machine.
+A hook runs your own command at a moment in a run. Add them in VS Code
+settings under `clawAI.hooks`, not in `.clawai`, so that cloning a repository is not
+enough to run code on your machine. Keep hooks you trust in your **user** settings.
 
 ```json
 "clawAI.hooks": [
@@ -133,6 +139,11 @@ times." It creates a scheduled task after you approve.
 - Repeats run every 5 minutes to 7 days, up to 100 times (10 unless you say
   otherwise). A one-off can be set up to 30 days ahead. Up to 20 tasks per project.
 - Tasks run only while VS Code is open. A one-off that came due while it was
-  closed is dropped. Only trusted workspaces can schedule.
+  closed is dropped, and a repeating task carries on from the next interval without
+  catching up. Only trusted workspaces can schedule.
 - Each run uses your normal approval mode and asks like any other run.
 - **ClawAI: Manage Scheduled Tasks** lists them and deletes any you pick.
+
+## Verified against
+
+ClawAI Coding Agent 1.84.0 (package.json, package.nls.json and the source).

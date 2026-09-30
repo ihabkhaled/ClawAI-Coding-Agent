@@ -6,6 +6,7 @@ import { env } from 'node:process';
 import { inheritedEnvironment } from '../core/inherited-environment';
 import { containedPath } from '../core/workspace-containment';
 import { isAllowedExecutable } from '../headless/headless-command-policy';
+import { prepareGitSpawn } from '../infrastructure/hardened-git';
 
 import {
   AGENT_GIT_LOG_MAX,
@@ -119,12 +120,13 @@ export function gitArguments(
 }
 
 function spawnBounded(executable: string, argumentList: string[], cwd: string): unknown {
-  const finished = spawnSync(executable, argumentList, {
+  const prepared = prepareGitSpawn(executable, argumentList, cwd, inheritedEnvironment(env));
+  const finished = spawnSync(executable, prepared.arguments, {
     cwd,
     encoding: 'utf8',
     timeout: AGENT_TOOL_TIMEOUT_MS,
     shell: false,
-    env: inheritedEnvironment(env),
+    env: prepared.environment,
   });
   return {
     exitCode: finished.status ?? -1,

@@ -2,6 +2,10 @@
 
 This is the full engineering log for ClawAI Coding Agent: every release with its internal notes, decisions and verification detail. The short, user-facing release notes are in [CHANGELOG.md](../../CHANGELOG.md).
 
+## 1.85.0
+
+Secure-by-default plugin scope, hook digest approval, private-address refusal, git hardening, notebook path guard, channel quoting, permission classification table and matrix (docs/PERMISSION_MATRIX.md), redaction corpus and leaks fixed (headless output, feedback), walkthrough and first-run notices, headless MCP login and budgets, history render O(n^2) fix, message page contract fix, 29 manifest strings translated, live proofs (custom-stage goal delivery, headless CLI, live API lane, rounds), platform fixes (executable resolution, path containment), staged-secret scan hardened against masked diffs. See docs/parity/HANDOVER.md.
+
 ## 1.84.0
 
 Cross-window mailbox (F010), runner session attach and hand-back (F095, F098), plugin publisher signatures (F081), QR pairing (F097), client zero-retention refusals (F055), SDK/headless depth (F086, F087), 13 security fixes, VSIX 17.8 MB to 6.5 MB, device-matrix and extension-host QA lanes. See docs/parity/AUDIT_*.md.

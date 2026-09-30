@@ -24,6 +24,7 @@ import { toPublicChatState } from './chat-public-state';
 import { ChatSessionRegistry } from './chat-session-registry';
 import { markSessionRead, syncSessions } from './chat-session-sync';
 import { runPromptAdmissionFlow } from './prompt-admission-flow';
+import { runSetupAction } from './setup-action';
 
 import type { PlacementMemory } from './chat-placement.types';
 import type { ChatViewActions } from './chat-view-actions';
@@ -404,7 +405,8 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       await vscode.commands.executeCommand('clawAI.attachBrowserState');
     } else if (request.type === 'openFolder') {
       await this.actions.openFolder();
-    } else return false;
+    } else if (request.type === 'setupAction') await runSetupAction(request.action);
+    else return false;
     return true;
   }
 

@@ -11,6 +11,7 @@ import {
   type ElevationRecipe,
   type ElevationReceipt,
 } from '../core/elevation-contract';
+import { isPathInside } from '../core/path-inside';
 import { resolveExecutable } from '../infrastructure/bounded-command-runner';
 
 import type { CommandResult } from '../core/command-spec';
@@ -120,7 +121,7 @@ export class ElevationBrokerService {
       .digest('hex')}`;
     const cwd = await realpath(path.resolve(binding.workspaceRoot, recipe.command.cwd));
     const workspaceRoot = await realpath(binding.workspaceRoot);
-    if (cwd !== workspaceRoot && !cwd.startsWith(`${workspaceRoot}${path.sep}`))
+    if (!isPathInside(workspaceRoot, cwd))
       throw new Error('Elevation cwd escaped the workspace binding');
     return { cwd, executableHash, executablePath, workspaceRoot };
   }

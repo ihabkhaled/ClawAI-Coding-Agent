@@ -28,6 +28,8 @@ Other environment: `CLAW_MODEL`, `CLAW_PROVIDER`, `CLAW_BACKEND_URL` (default
 | `--output-format text\|json\|stream-json` | `text` (default), one final JSON object, or one JSON event per line. See [Events](#events).                                                  |
 | `--json`                                  | Older spelling of `--output-format json`.                                                                                                    |
 | `--max-turns <n>`                         | Model-turn budget, 1 to 1000. Running out exits 5.                                                                                           |
+| `--max-tool-calls <n>`                    | Stop the run after `n` tool calls (1 to 10000). Exits 5. See [Run guards](#run-guards).                                                      |
+| `--max-duration <seconds>`                | Stop the run after this wall-clock time (1 to 86400). Exits 5. See [Run guards](#run-guards).                                                |
 | `--allow-tools <list>`                    | Categories granted: `read,write,command,git,mcp`. Default `read,git`; `read,git,mcp` with `--mcp-config`; all five with `--permission-mode`. |
 | `--allow-command <name>`                  | Adds an executable to the command allowlist (default `node`, `npm`, `npx`). Repeatable.                                                      |
 | `--allowed-tools <globs>`                 | Tool patterns to allow. Empty means no restriction. Comma list, repeatable. See [Tool patterns](#tool-patterns).                             |
@@ -38,6 +40,8 @@ Other environment: `CLAW_MODEL`, `CLAW_PROVIDER`, `CLAW_BACKEND_URL` (default
 | `--append-system-prompt <t\|@f>`          | Operator instructions: literal text, or `@path` to read a file.                                                                              |
 | `--system-prompt-file <file>`             | Operator instructions from a file. When both are given the file comes first.                                                                 |
 | `--mcp-config <file>`                     | MCP servers. See [MCP](#mcp).                                                                                                                |
+| `--mcp-login <server>`                    | Sign in to an OAuth MCP server named in `--mcp-config`. No `-p`. See [MCP sign-in](#mcp-sign-in).                                            |
+| `--mcp-token-file <file>`                 | Token file: `--mcp-login` writes it; a run reads it and keeps refreshed tokens in memory only.                                               |
 | `-h`, `--help`                            | Usage.                                                                                                                                       |
 
 A usage mistake, an unreadable file or an oversized prompt is exit 2 **before any request is made**.
@@ -151,8 +155,68 @@ operations: `servers`, `tools`, `call`.
 - Servers you name on the command line count as user-declared and the workspace as trusted, so stdio servers start.
 - `mcp` must be granted: `--mcp-config` adds it to the default `--allow-tools`; an explicit `--allow-tools` list must include it.
 - Results are marked `untrusted: true`; tool descriptions and output are server text, not instructions.
-- **Not supported:** servers configured with `oauth`. Signing in needs a person and a browser, so such a server fails with a clear error instead of connecting half-way.
+- Servers configured with `oauth` need a token first: sign in once with `clawai --mcp-login <server>` ([MCP sign-in](#mcp-sign-in)). A run never opens a browser; it uses the stored token, refreshes it when it expires, and otherwise fails naming `--mcp-login`. SDK: pass `mcp.tokens`, otherwise an OAuth server is refused as before.
 - Server processes are closed when the run ends.
+
+## MCP sign-in
+
+`clawai --mcp-login <server> --mcp-config <file>` runs OAuth 2.1 authorization code with
+PKCE (S256) for a server whose entry has `oauth`, with no editor. It uses the extension's
+own OAuth code (`src/services/mcp-oauth-service.ts`, [ADR 0002](adr/0002-mcp-oauth-uses-the-loopback-callback.md)),
+so endpoints, discovery and refresh behave the same way. The config `policy` applies: a
+denied server is exit 2.
+
+1. It prints the authorization URL on stdout. Only when stdin and stdout are a terminal does it
+   also hand the URL to the platform opener (`rundll32 url.dll,FileProtocolHandler`, `open`,
+   `xdg-open`, no shell). In CI, copy the URL to a browser yourself.
+2. It listens on `127.0.0.1` at an ephemeral port for the redirect. The `state` must match, or the
+   request is answered 400 and the wait continues; a `Host` other than the listener's own is
+   refused. The wait ends after 5 minutes.
+3. It exchanges the code (with the PKCE verifier) and stores the token.
+
+Exit 0 signed in, 1 the sign-in failed or timed out, 2 the server is unknown, not `oauth`, denied by
+policy, or `--mcp-config` is missing. **A token is never printed or logged**; a failed exchange
+does not echo the response.
+
+**Where tokens live.** One JSON file, written atomically with mode `0600` in a `0700` directory:
+
+| Platform | Default file                                                     |
+| -------- | ---------------------------------------------------------------- |
+| Windows  | `%APPDATA%\clawai\mcp-tokens.json`                               |
+| macOS    | `~/Library/Application Support/clawai/mcp-tokens.json`           |
+| Linux    | `$XDG_CONFIG_HOME/clawai/mcp-tokens.json` (else `~/.config/...`) |
+
+`CLAW_CONFIG_DIR` replaces the directory. Windows ignores the mode bits; the per-user
+`%APPDATA%` ACL is what protects the file there. `--mcp-token-file <file>` replaces the whole path
+for `--mcp-login`; for a **run** it makes the file read-only input, and a refreshed token stays in
+memory for that process (a mounted CI secret is never rewritten). Without it a run uses the default
+file and writes a refreshed token back.
+
+**Key binding.** Each token is keyed by server name plus a hash of the server URL, client id, both
+endpoints and the resource. Changing any of them, for example a config that points the same server
+at another token endpoint, finds no token, so a stored refresh token is never sent to a different
+authority. A refused refresh drops the stored set; the next step is `--mcp-login` again.
+
+```sh
+clawai --mcp-login tickets --mcp-config ci/mcp.json
+clawai -p "Look up the ticket" --mcp-config ci/mcp.json --allowed-tools 'mcp__tickets__get*'
+# CI: a token file mounted as a secret, never rewritten
+clawai -p "..." --mcp-config ci/mcp.json --mcp-token-file /run/secrets/mcp-tokens.json
+```
+
+## Run guards
+
+Runtime events carry no cost, so the guards are on what the runner can see. Either stops the run
+cleanly with **exit 5**, `outcome: "exhausted"`, and a `budget.exhausted` event (stream-json) before
+`run.finished`; `result.error` says which.
+
+- `--max-tool-calls <n>` (SDK `run(prompt, { maxToolCalls })`): the model may request `n` calls. The
+  `n+1`th is refused, never executed, and ends the run. `toolCalls` never exceeds `n`.
+- `--max-duration <seconds>` (SDK `maxDurationMs`): a wall-clock limit for the whole run. It cancels
+  a call in flight and closes the event stream. This is separate from the runtime's own deadline.
+
+A Ctrl-C or aborted signal is still `cancelled` (130), not `exhausted`. Both are checked before the
+run starts: a non-positive or non-integer value is exit 2 (SDK: `RangeError`).
 
 ## Events
 
@@ -161,15 +225,16 @@ operations: `servers`, `tools`, `call`.
 and `tests/unit/headless-event-schema.test.ts` validates real runs against it.
 `--output-format json` prints only the final result object (the `result` shape below).
 
-| `type`         | Fields                                    | When                                        |
-| -------------- | ----------------------------------------- | ------------------------------------------- |
-| `run.started`  | `runId`, `threadId`                       | The runtime accepted the run.               |
-| `text`         | `text`                                    | A fragment of the model's answer.           |
-| `tool.call`    | `toolName`, `operation`, `arguments`      | A call was authorized and is about to run.  |
-| `tool.denied`  | `toolName`, `operation`                   | A call was refused.                         |
-| `tool.result`  | `toolName`, `operation`, `ok`, `message?` | A call finished; `message` only on failure. |
-| `runtime`      | `name`, `payload?`                        | Any other runtime event, passed through.    |
-| `run.finished` | `result`                                  | Always last, including when the run threw.  |
+| `type`             | Fields                                    | When                                                                                                                                              |
+| ------------------ | ----------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------- |
+| `run.started`      | `runId`, `threadId`                       | The runtime accepted the run.                                                                                                                     |
+| `text`             | `text`                                    | A fragment of the model's answer.                                                                                                                 |
+| `tool.call`        | `toolName`, `operation`, `arguments`      | A call was authorized and is about to run.                                                                                                        |
+| `tool.denied`      | `toolName`, `operation`                   | A call was refused.                                                                                                                               |
+| `tool.result`      | `toolName`, `operation`, `ok`, `message?` | A call finished; `message` only on failure.                                                                                                       |
+| `runtime`          | `name`, `payload?`                        | Any other runtime event, passed through.                                                                                                          |
+| `budget.exhausted` | `budget`, `limit`                         | A run guard stopped the run. `budget` is `tool-calls` or `duration`; `limit` is a count, or milliseconds. Followed by `run.finished` with exit 5. |
+| `run.finished`     | `result`                                  | Always last, including when the run threw.                                                                                                        |
 
 `result`: `outcome`, `exitCode`, `toolCalls`, `deniedCalls`, `text`, and when known
 `runId`, `threadId`, `terminalEvent`, `error`.
@@ -251,5 +316,6 @@ what a toolkit holds open.
 - **`--max-budget-usd` or a token budget.** Runtime events report turns, tool calls and
   bytes (`--max-turns`, and the run budget), but no token counts or cost, so there is
   nothing to guard against. It is not faked; it needs the backend to report usage on the stream.
-- **OAuth MCP servers** (above).
+  `--max-tool-calls` and `--max-duration` ([Run guards](#run-guards)) guard what can be seen.
+- **Dynamic client registration and protected-resource discovery** for MCP OAuth: `oauth.clientId` is required (ADR 0002).
 - **Replacing the runtime's system prompt.** Only adding to it (above).

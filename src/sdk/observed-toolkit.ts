@@ -5,7 +5,7 @@ import type { AgentEvent } from './create-agent.types';
 export function observedToolkit(
   inner: AgentToolkit,
   emit: (event: AgentEvent) => void,
-  tally: { denied: number },
+  tally: { denied: number; calls: number },
 ): AgentToolkit {
   const label = (call: AgentToolCall): { toolName: string; operation: string } => ({
     toolName: call.toolName,
@@ -15,7 +15,8 @@ export function observedToolkit(
     definitions: inner.definitions,
     authorize: async (call) => {
       const allowed = inner.authorize === undefined ? true : await inner.authorize(call);
-      if (!allowed) tally.denied += 1;
+      if (allowed) tally.calls += 1;
+      else tally.denied += 1;
       emit(allowed ? { type: 'tool.call', ...call } : { type: 'tool.denied', ...label(call) });
       return allowed;
     },

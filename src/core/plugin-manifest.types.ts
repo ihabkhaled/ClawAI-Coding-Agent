@@ -1,3 +1,4 @@
+import type { HookApproval } from './plugin-hook-approval.types';
 import type { PLUGIN_MARKDOWN_CONTRIBUTIONS, PLUGIN_SCOPES } from './plugin-manifest.constants';
 import type {
   mcpServerDeclarationSchema,
@@ -27,6 +28,11 @@ export interface InstalledPlugin {
   readonly manifest: PluginManifest;
   readonly enabled: boolean;
   readonly hooksEnabled: boolean;
+  /** Digest of the current hooks and version; what an approval is bound to. */
+  readonly hooksDigest: string;
+  readonly hookApproval: HookApproval;
+  /** A workspace plugin the person has not yet enabled: it contributes nothing. */
+  readonly needsApproval: boolean;
   /** Who signed it at install: `{}` is unsigned, absent means installed before this was recorded. */
   readonly signature?: { readonly signedBy?: string | undefined };
 }

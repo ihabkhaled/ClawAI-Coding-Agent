@@ -33,7 +33,11 @@ describe('host-free graph', () => {
     expect(imports).toContain('vscode');
   });
 
-  it.each(['src/sdk/index.ts', 'src/headless/headless-main.ts'])(
+  it.each([
+    'src/sdk/index.ts',
+    'src/headless/headless-main.ts',
+    'src/headless/mcp/mcp-login-command.ts',
+  ])(
     '%s never imports vscode',
     async (entry) => {
       const imports = await importedModules(entry);

@@ -1,5 +1,6 @@
 import { selectedModelRunsTools } from '../core/model-tools';
 import { visibleThreads } from '../core/thread-list';
+import { zeroRetentionPosture } from '../core/zero-retention-posture';
 
 import type { ExtensionSnapshot } from '../core/extension-state';
 import type { ModelCatalogEntry } from '../core/model-catalog';
@@ -209,6 +210,9 @@ export function toPublicChatState(snapshot: ExtensionSnapshot) {
     selectedModel: snapshot.selectedModel,
     usage: snapshot.usage,
     user: snapshot.user,
+    // The panel says why uploads, sharing and comparison are off, so it needs
+    // to know; the posture is process-wide rather than part of the snapshot.
+    zeroRetention: zeroRetentionPosture.active(),
   };
 }
 

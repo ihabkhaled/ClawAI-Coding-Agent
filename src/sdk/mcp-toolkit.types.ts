@@ -1,4 +1,5 @@
-import type { McpServerConfig, McpSession } from '../core/mcp/mcp.types';
+import type { McpHttpServerConfig, McpServerConfig, McpSession } from '../core/mcp/mcp.types';
+import type { McpTokenProvider } from '../infrastructure/mcp/mcp-transport.types';
 
 /**
  * MCP servers a run may use.
@@ -16,4 +17,10 @@ export interface AgentMcpOptions {
   readonly connect?:
     ((server: McpServerConfig, signal?: AbortSignal) => Promise<McpSession>) | undefined;
   readonly clientVersion?: string | undefined;
+  /**
+   * Bearer tokens for servers configured with `oauth`. Without it such a server
+   * is refused, because a headless run cannot sign in. A provider may refresh a
+   * token but must not open a browser; `clawai --mcp-login` does the sign-in.
+   */
+  readonly tokens?: ((server: McpHttpServerConfig) => McpTokenProvider) | undefined;
 }

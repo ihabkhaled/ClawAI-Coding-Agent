@@ -243,6 +243,30 @@ describe('createAgent', () => {
     expect(result).toMatchObject({ outcome: 'failed', exitCode: 1 });
   });
 
+  it('counts granted calls and reports blocked when the runtime rejects the run after a refusal', async () => {
+    const { transport } = fake(
+      [
+        request('workspace.file', 'list', {}),
+        request('workspace.file', 'create', { path: 'a.txt', content: 'x' }),
+      ],
+      {
+        submitResult: async (_token, _run, _epochs, result) =>
+          (result as { status: string }).status === 'failed'
+            ? Promise.reject(new RuntimeHttpError('/results', 422, 'unrepairable'))
+            : Promise.resolve({}),
+      },
+    );
+
+    const result = await agent(transport, { permissions: { allow: ['read'] } }).run('p');
+
+    expect(result).toMatchObject({
+      outcome: 'blocked',
+      exitCode: 4,
+      toolCalls: 1,
+      deniedCalls: 1,
+    });
+  });
+
   it('ends an aborted run as cancelled with exit 130', async () => {
     const controller = new AbortController();
     const { transport } = fake([], {

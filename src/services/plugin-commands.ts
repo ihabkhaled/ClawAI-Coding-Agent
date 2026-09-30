@@ -39,6 +39,25 @@ async function installFromFolder(dependencies: PluginCommandDependencies): Promi
   }
 }
 
+function hooksPrompt(plugin: InstalledPlugin, commands: string): string {
+  const { status } = plugin.hookApproval;
+  if (status === 'changed') {
+    return vscode.l10n.t(
+      'The hooks of {0} changed since you approved them. Approve again? These commands are new or changed: {1}',
+      plugin.id,
+      commands,
+    );
+  }
+  if (status === 'legacy') {
+    return vscode.l10n.t(
+      'Your earlier approval of the hooks of {0} no longer applies, because approvals now cover the exact commands. Approve again? They run: {1}',
+      plugin.id,
+      commands,
+    );
+  }
+  return vscode.l10n.t('Turn on hooks for {0}? They run these commands: {1}', plugin.id, commands);
+}
+
 /**
  * Turning hooks on is the one switch that lets a plugin run commands, so it
  * names every command and needs a trusted workspace and an explicit yes.
@@ -53,10 +72,11 @@ async function enableHooks(
     );
     return;
   }
-  const commands = plugin.manifest.contributes.hooks.map((hook) => hook.command).join(', ');
-  const turnOn = vscode.l10n.t('Turn on');
+  const { status, changedCommands } = plugin.hookApproval;
+  const commands = changedCommands.join(', ');
+  const turnOn = status === 'off' ? vscode.l10n.t('Turn on') : vscode.l10n.t('Approve again');
   const answer = await vscode.window.showWarningMessage(
-    vscode.l10n.t('Turn on hooks for {0}? They run these commands: {1}', plugin.id, commands),
+    hooksPrompt(plugin, commands),
     { modal: true },
     turnOn,
   );
@@ -101,7 +121,13 @@ function actionsFor(
             label: vscode.l10n.t('Turn hooks off'),
             run: () => store.setSwitches(plugin, { enabled: plugin.enabled, hooksEnabled: false }),
           }
-        : { label: vscode.l10n.t('Turn hooks on'), run: () => enableHooks(dependencies, plugin) },
+        : {
+            label:
+              plugin.hookApproval.status === 'off'
+                ? vscode.l10n.t('Turn hooks on')
+                : vscode.l10n.t('Approve again'),
+            run: () => enableHooks(dependencies, plugin),
+          },
     );
   }
   actions.push({

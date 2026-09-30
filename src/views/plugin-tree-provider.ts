@@ -13,13 +13,27 @@ import { recordTreeProbe } from './tree-probe';
 import type { PluginListing, PluginTreeNode } from './plugin-tree-provider.types';
 import type { InstalledPlugin, InvalidPlugin } from '../core/plugin-manifest.types';
 
+function pluginIcon(plugin: InstalledPlugin): string {
+  if (plugin.needsApproval) return 'shield';
+  return plugin.enabled ? 'extensions' : 'circle-slash';
+}
+
 function pluginItem(plugin: InstalledPlugin): vscode.TreeItem {
   const item = new vscode.TreeItem(plugin.id, vscode.TreeItemCollapsibleState.None);
   item.description = pluginStateDescription(plugin);
-  item.tooltip = [plugin.manifest.description, contributionSummary(plugin), plugin.root]
+  item.tooltip = [
+    plugin.needsApproval
+      ? vscode.l10n.t(
+          'Workspace plugin: it came with this repository and does nothing until you enable it.',
+        )
+      : '',
+    plugin.manifest.description,
+    contributionSummary(plugin),
+    plugin.root,
+  ]
     .filter((part) => part.length > 0)
     .join('\n');
-  item.iconPath = new vscode.ThemeIcon(plugin.enabled ? 'extensions' : 'circle-slash');
+  item.iconPath = new vscode.ThemeIcon(pluginIcon(plugin));
   item.contextValue = plugin.enabled ? PLUGIN_CONTEXT_ENABLED : PLUGIN_CONTEXT_DISABLED;
   return item;
 }

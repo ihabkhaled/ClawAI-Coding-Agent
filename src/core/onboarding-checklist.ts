@@ -18,7 +18,7 @@ export const ONBOARDING_STEP_IDS: readonly OnboardingStepId[] = [
 
 const STEP_COMMANDS: Readonly<Record<OnboardingStepId, string>> = {
   connect: 'clawAI.connect',
-  folder: 'clawAI.openFolder',
+  folder: 'workbench.action.files.openFolder',
   trust: 'workbench.trust.manage',
   model: 'clawAI.selectModel',
 };

@@ -1,6 +1,7 @@
 import type { RuntimeTransportPort } from './agent-sdk.types';
 import type { AgentMcpOptions } from './mcp-toolkit.types';
 import type { AgentPermissionMode } from './permission-modes.types';
+import type { RunBudgetKind } from './run-budget.types';
 import type { AgentPermissions } from './workspace-toolkit.types';
 import type { HeadlessExitCode, HeadlessOutcome } from '../core/headless-outcome.types';
 
@@ -44,6 +45,13 @@ export interface AgentRunCallOptions {
   readonly signal?: AbortSignal | undefined;
   /** The runtime's model-turn budget for this run. */
   readonly maxTurns?: number | undefined;
+  /**
+   * Stops the run as `exhausted` (exit 5) when the model asks for more tool
+   * calls than this. The call past the limit is refused and never runs.
+   */
+  readonly maxToolCalls?: number | undefined;
+  /** Stops the run as `exhausted` (exit 5) after this many milliseconds, cancelling a call in flight. */
+  readonly maxDurationMs?: number | undefined;
   readonly title?: string | undefined;
 }
 
@@ -69,6 +77,12 @@ export type AgentEvent =
       readonly type: 'runtime';
       readonly name: string;
       readonly payload?: Readonly<Record<string, unknown>>;
+    }
+  | {
+      readonly type: 'budget.exhausted';
+      readonly budget: RunBudgetKind;
+      /** A call count for `tool-calls`, milliseconds for `duration`. */
+      readonly limit: number;
     }
   | { readonly type: 'run.finished'; readonly result: AgentResult };
 

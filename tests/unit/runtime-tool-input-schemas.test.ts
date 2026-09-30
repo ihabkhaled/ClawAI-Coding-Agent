@@ -1,5 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
+import { flagshipRequestSchema } from '../../src/core/flagship-delivery';
 import { gitOperationSchema } from '../../src/core/git-operation';
 import { subAgentTaskSchema } from '../../src/core/multi-agent-dag';
 import { runtimeToolInputSchemas } from '../../src/core/runtime/runtime-tool-input-schemas';
@@ -68,5 +69,24 @@ describe('workspace.git schema stays in sync with the validator', () => {
     );
 
     expect([...advertised].filter((key) => !accepted.has(key))).toEqual([]);
+  });
+});
+
+/**
+ * `runtime.flagship` integrates only when the request names a mandatory quality
+ * gate, and the model builds that request from this schema. `mandatoryGateIds`
+ * was on the validator and missing here, so every model-issued delivery stopped
+ * at integrate with "requires at least one mandatory quality gate".
+ */
+describe('runtime.flagship request schema stays in sync with the validator', () => {
+  it('offers every request key a model must set, and only keys the validator accepts', () => {
+    const request = asObject(
+      asObject(asObject(runtimeToolInputSchemas.flagship).properties).request,
+    );
+    const advertised = new Set(Object.keys(asObject(request.properties)));
+    const accepted = new Set(Object.keys(flagshipRequestSchema.shape));
+
+    expect([...advertised].filter((key) => !accepted.has(key))).toEqual([]);
+    expect(advertised.has('mandatoryGateIds')).toBe(true);
   });
 });

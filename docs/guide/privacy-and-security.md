@@ -21,8 +21,8 @@ Your backend then routes the request to a model. Choosing **Local models only** 
 Your prompts still go to your backend, which is why the backend's operator is part
 of your trust.
 
-Non-local backends must use HTTPS. Plain HTTP is only accepted for `localhost` and
-`claw.local`.
+Non-local backends must use HTTPS. Plain HTTP is only accepted for `localhost`,
+`127.0.0.1` and `claw.local`.
 
 Sent elsewhere only when you set it up:
 
@@ -34,8 +34,10 @@ Sent elsewhere only when you set it up:
 | MCP servers and plugins | To the servers and catalogs you add.                                 |
 | Feedback                | Only after you read the report and choose **Send to ClawAI**.        |
 
-The feedback report describes your installation, such as versions and settings. It
-has no prompts, file paths or code.
+The feedback report describes your installation: versions, system, language, backend
+address and connection state, chosen modes and model, the last error (with secrets
+hidden) and recent run ids, plus the title and notes you type. It has no prompts,
+file paths or code.
 
 ## Secrets stay secret
 
@@ -107,3 +109,7 @@ rules built into the extension.
 
 See also [Running commands safely](running-commands-safely.md) and
 [Settings](settings.md).
+
+## Verified against
+
+ClawAI Coding Agent 1.84.0 (package.json, package.nls.json and the source).

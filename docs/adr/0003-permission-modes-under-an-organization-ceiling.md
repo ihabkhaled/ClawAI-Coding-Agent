@@ -56,3 +56,12 @@ selection to it. Two gaps remained:
   evaluation-time clamp; `organization-permission-floor.test.ts` and
   `session-control-service.test.ts` were updated for the Strict ranking.
 - The label is translated in all 13 locales (`scripts/permission-mode-translations.mjs`).
+
+## Addendum: the permission matrix
+
+`docs/PERMISSION_MATRIX.md` (`npm run permissions:matrix`) lists every tool operation with its risk
+class and its decision under each mode and ceiling, computed from the real adapter;
+`tests/unit/permission-matrix.test.ts` asserts the invariants and that the file is current.
+Writing it exposed four defects, now fixed: Strict auto-allowed R0-R2 (it now asks like Ask); Plan
+turned an R4 effect into a question instead of a deny; the R4 rail turned a project or
+organization deny into a question; and operations with no explicit class defaulted to read/R0.

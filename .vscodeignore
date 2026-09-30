@@ -24,6 +24,7 @@ eslint.config.mjs
 node_modules/**
 playwright-report/**
 playwright.config.ts
+playwright.vscode.config.ts
 scripts/**
 skills/**
 src/**

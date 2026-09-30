@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { PluginFailure } from '../../src/core/plugin-failure';
+import { hookCommandLines, hooksDigest } from '../../src/core/plugin-hook-approval';
 import {
   contributionFolders,
   describeInstalled,
@@ -19,6 +20,15 @@ function manifest(overrides: Record<string, unknown> = {}): PluginManifest {
   const parsed = parsePluginManifest(manifestJson(overrides));
   if (!parsed.ok) throw new Error(parsed.error);
   return parsed.manifest;
+}
+
+function approved() {
+  return {
+    enabled: true,
+    hooksEnabled: true,
+    hooksDigest: hooksDigest(manifest()),
+    approvedCommands: hookCommandLines(manifest()),
+  };
 }
 
 describe('parsePluginManifest', () => {
@@ -87,7 +97,9 @@ describe('plugin switches and contributions', () => {
     const off = describeInstalled(manifest(), 'user', '/b', {
       '/b': { enabled: false, hooksEnabled: false },
     });
-    const workspace = describeInstalled(manifest(), 'workspace', '/c', {});
+    const workspace = describeInstalled(manifest(), 'workspace', '/c', {
+      '/c': { enabled: true, hooksEnabled: false },
+    });
 
     expect(contributionFolders([on, off, workspace], 'skills', 'user')).toEqual([
       { root: '/a', folder: 'skills' },
@@ -96,7 +108,7 @@ describe('plugin switches and contributions', () => {
 
   it('substitutes the plugin root into hooks that were switched on', () => {
     const on = describeInstalled(manifest(), 'user', '/a', {
-      '/a': { enabled: true, hooksEnabled: true },
+      '/a': approved(),
     });
     const off = describeInstalled(manifest(), 'user', '/b', {});
 
@@ -115,7 +127,7 @@ describe('plugin switches and contributions', () => {
   it('lets the hook service read hooks asynchronously, as plugin hooks are', async () => {
     const run = vi.fn(async () => ({ exitCode: 1, timedOut: false }));
     const hooks = enabledPluginHooks([
-      describeInstalled(manifest(), 'user', '/a', { '/a': { enabled: true, hooksEnabled: true } }),
+      describeInstalled(manifest(), 'user', '/a', { '/a': approved() }),
     ]).map((hook) => ({ ...hook, blocking: true }));
     const service = new LifecycleHookService({
       runner: { run },

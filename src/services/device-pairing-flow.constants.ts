@@ -5,3 +5,6 @@ export const DEVICE_PAIRING_LIMITS: DevicePairingLimits = {
   maxPolls: 120,
   maxConsecutiveErrors: 5,
 };
+
+/** Longest wait between two polls after failures; the server interval applies again once one succeeds. */
+export const DEVICE_PAIRING_MAX_BACKOFF_MS = 30_000;

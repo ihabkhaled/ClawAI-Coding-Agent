@@ -67,7 +67,11 @@ describe('BrowserToolExecutor', () => {
       }),
     );
 
-    expect(wait).toHaveBeenCalled();
+    expect(wait).toHaveBeenCalledExactlyOnceWith(
+      { url: 'http://127.0.0.1:3000' },
+      'runtime-0001',
+      undefined,
+    );
     expect(execute).not.toHaveBeenCalled();
     expect(output).toEqual({ structured: { receipt: { ready: true } } });
   });

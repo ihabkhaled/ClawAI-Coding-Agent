@@ -32,51 +32,61 @@
 Roadmap items do not weaken current trust or approval boundaries and require
 verified backend contracts before implementation.
 
-## Status at 1.83.0 (2026-09-30)
+## Status at 1.84.0 (2026-09-30)
 
-`docs/parity/HANDOVER.md` was written at 1.40.0 and its tallies (61 shipped, 47
-open) are stale. Recounting the four audits (`docs/parity/AUDIT_*.md`) at
-1.83.0 gives **96 SHIPPED, 11 PARTIAL and 1 NARROWED, of 108 rows**; no row is
-MISSING, BLOCKED or in CONFLICT. Recount with the `awk` in HANDOVER.md before
-quoting a number. F028 (deferred tools), F059 (rewind) and F046 (permission
-modes, ADR 0003) were resolved in 1.82.0.
+Recounting the four audits (`docs/parity/AUDIT_*.md`) with the `awk` in
+`docs/parity/HANDOVER.md` gives **97 SHIPPED and 11 PARTIAL, of 108 rows**; no
+row is MISSING, BLOCKED or in CONFLICT. The 1.83.0 count (96 shipped, 1
+narrowed) is superseded: F010 cross-window messaging shipped in 1.84.0
+([ADR 0005](adr/0005-cross-window-mailbox.md)). Recount before quoting a number.
 
 Delivered since 0.40: 1.81.0 (scheduler, session worktrees, agent mailbox,
 background commands, notebook execution, artifact prepare, browser
 coordinates, saved workflows), 1.82.0 (MCP with OAuth, plugins, SDK and
 headless CLI, rewind, deferred tools, sandbox, PRs and review, remote and
-channels, OTLP, zero retention client half) and 1.83.0 (twenty gaps and their
+channels, OTLP, zero retention client half), 1.83.0 (twenty gaps and their
 backend halves: yield, screenshots to vision models, artifacts route, server
 zero retention, organization guardrails, Plugins view and git marketplaces,
 SDK types, active-run resume, prompt routines and runner credentials, usage
-views, goal stages, gateway headers).
+views, goal stages, gateway headers) and 1.84.0 (cross-window mailbox, plugin
+publisher signatures, pairing QR, cloud-session handoff and stop, PDF read by
+page, ship-gate hardening, [ADR 0008](adr/0008-ship-gate-ci-parity.md)).
 
-### Still open (the 12 rows not SHIPPED)
+### Still open (the 11 rows not SHIPPED)
 
-| Row                          | What is left                                                                                                                                           |
-| ---------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------ |
-| F010 Cross-session messaging | Sessions in other VS Code windows; peers that have not started yet.                                                                                    |
-| F030 Computer use            | Desktop-wide input. Browser click, type, scroll and observe are done.                                                                                  |
-| F067 Panel placement         | A `secondarySidebar` views container needs engine `^1.106`; the engine is `^1.98`.                                                                     |
-| F081 Marketplaces            | Publisher signatures (in progress in the working tree, see THREAT_MODEL_RUNTIME_V2.md); the backend serving `allowedPluginMarketplaces`.               |
-| F093 Prompt caching          | Accounting ships. Requesting caching needs a native `/v1/messages` transport plus cache-write usage; the OpenAI-compatible endpoint ignores the marks. |
-| F095 Resume cloud sessions   | Resuming a runner-hosted session.                                                                                                                      |
-| F097 Mobile                  | A native app, a QR code, anything that uses the pairing credential.                                                                                    |
-| F098 Cloud sessions          | Hosted runners, cloning, teardown, handing work back to a thread.                                                                                      |
-| F099 Routines                | Cron and repository-event triggers; secrets isolation.                                                                                                 |
-| F100 Runners                 | Process isolation, attestation, an update channel, organization policy.                                                                                |
-| F101 Integrations            | JetBrains and Desktop are separate products, not started.                                                                                              |
-| F108 Telemetry               | Cost in runtime events (auth-service returns no cost at settlement).                                                                                   |
+| Row                        | Blocked on | What is left                                                                                              |
+| -------------------------- | ---------- | --------------------------------------------------------------------------------------------------------- |
+| F030 Computer use          | decision   | Desktop-wide input. Browser click, type, scroll, observe and screenshots to vision models are done.       |
+| F067 Panel placement       | platform   | A `secondarySidebar` views container needs engine `^1.106`; the engine is `^1.98`.                        |
+| F081 Marketplaces          | backend    | agent-service serving `allowedPluginMarketplaces`. Signatures are done (ADR 0006).                        |
+| F093 Prompt caching        | backend    | Native `/v1/messages` transport plus cache-write usage; the OpenAI-compatible endpoint ignores the marks. |
+| F095 Resume cloud sessions | backend    | Runner-hosted resume: workspace or repository on `createThread`, capability reconciliation.               |
+| F097 Mobile                | product    | A native app that uses the pairing credential. QR and link are done.                                      |
+| F098 Cloud sessions        | backend    | Hosted runners, cloning, teardown. Handoff and stop are done.                                             |
+| F099 Routines              | backend    | Cron and repository-event triggers; secrets isolation. Prompt routines are done.                          |
+| F100 Runners               | backend    | Process isolation, attestation, an update channel, organization policy.                                   |
+| F101 Integrations          | product    | JetBrains and Desktop are separate products, not started. GitHub, GitLab and Slack are done.              |
+| F108 Telemetry             | backend    | Cost in runtime events (auth-service returns no cost at settlement).                                      |
+
+### Next increments, in order
+
+1. F093: one transport change with clear acceptance (cache-write usage billed).
+2. F081 and F108: one backend route or field each.
+3. F067 and F030: record the decision first (raise the engine floor? approve an
+   OS-level input tool?), then implement.
+4. Publish JSON Schemas for `clawai-plugin.json` and `clawai-marketplace.json`
+   (none exist).
+5. Land the defaults in
+   [ADR 0007](adr/0007-secure-by-default-plugins-hooks-network.md), in progress
+   in the working tree on 2026-09-30.
 
 ### Not yet proven
 
 - The 2026-09-30 backend routes (rewind, active-run, artifacts, prompt
   routines, runner credentials, usage breakdown, policy guardrails) are covered
-  by mocked-Fetch tests here, not by a live lane. `npm run check:live` still
-  drives its own tool implementations, not the extension's executors.
+  by mocked-fetch tests here, not by a live lane. `npm run check:live` drives
+  its own tool implementations, not the extension's executors.
 - Sandbox mechanisms on real Linux, macOS and Docker hosts, real MCP servers,
   Jupyter kernels and `gh` flows have unit coverage of the pure logic only.
-- Missing schemas: no JSON Schema for `clawai-plugin.json` or
-  `clawai-marketplace.json`.
 - Older-backend behavior for rewind and deferred-tool loading is unverified
   (see API_CONTRACTS.md); the client has no 404 fallback for them.

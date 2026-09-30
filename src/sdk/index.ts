@@ -51,6 +51,7 @@ export type {
   AgentResult,
   AgentRunCallOptions,
 } from './create-agent.types';
+export type { RunBudgetKind, RunBudgetTrip } from './run-budget.types';
 export type { AgentMcpOptions } from './mcp-toolkit.types';
 export type { AgentPermissionMode } from './permission-modes.types';
 export type { AgentToolFilter } from './tool-filter.types';

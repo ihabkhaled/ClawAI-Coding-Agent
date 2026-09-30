@@ -2,6 +2,21 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.85.0
+
+- Safer by default: plugins that come with a project stay off until you approve them, and a plugin's hooks must be approved again whenever their commands change.
+- Plugin downloads and marketplaces can no longer reach private network addresses unless you turn that on.
+- Git commands the agent runs can no longer execute code hidden in a repository's settings.
+- Alerts sent to your chat from a webhook are clearly marked as data, not instructions.
+- Stronger masking of keys, tokens and cookies in logs, exports, feedback reports and command-line output. A commit that contains a key is still refused.
+- Permission fixes: Strict mode now asks before running things, Plan mode refuses deletions, and a deny rule always wins.
+- A new Getting Started walkthrough, plus clearer messages when you are signed out, offline, untrusted or have no models.
+- Command-line mode can sign in to OAuth MCP servers, and you can cap a run with a maximum number of tool calls or a time limit.
+- Opening a long conversation is much faster: 3,000 messages now appear in under a second.
+- Fixed: chat history did not load with the newer server paging format, and a failed sign-in exited with the wrong code on Windows.
+- More of the menus and settings are translated in all 12 languages.
+- Screenshots and a plain-language user guide in the README.
+
 ## 1.84.0
 
 - Messages between agents now reach your other VS Code windows too.

@@ -18,7 +18,10 @@ const state = vi.hoisted(() => ({
 
 vi.mock('vscode', () => ({
   NotebookCellKind: { Markup: 1, Code: 2 },
-  Uri: { joinPath: (base: string, path: string) => `${base}/${path}` },
+  Uri: {
+    joinPath: (base: { path: string }, path: string) => ({ path: `${base.path}/${path}` }),
+    file: (path: string) => ({ scheme: 'file', fsPath: path }),
+  },
   extensions: { getExtension: () => state.extension },
   workspace: {
     openNotebookDocument: async () => ({
@@ -38,7 +41,8 @@ vi.mock('vscode', () => ({
 
 import { contiguous, VscodeNotebookKernel } from '../../src/infrastructure/vscode-notebook-kernel';
 
-const subject = () => new VscodeNotebookKernel((key) => `root:${key}` as never);
+const subject = () =>
+  new VscodeNotebookKernel(() => ({ scheme: 'remote', path: '/root' }) as never);
 const text = (value: string): Uint8Array => new TextEncoder().encode(value);
 
 describe('VscodeNotebookKernel', () => {
@@ -82,7 +86,7 @@ describe('VscodeNotebookKernel', () => {
     });
     expect(state.execute).toHaveBeenNthCalledWith(2, 'notebook.cell.execute', {
       ranges: [{ start: 1, end: 2 }],
-      document: 'root:w/a.ipynb',
+      document: { path: '/root/a.ipynb' },
     });
     expect(result.status).toBe('completed');
     if (result.status === 'unavailable') throw new Error('unexpected');
@@ -104,7 +108,7 @@ describe('VscodeNotebookKernel', () => {
     expect(state.execute).toHaveBeenCalledTimes(1);
     expect(state.execute).toHaveBeenCalledWith('notebook.cell.execute', {
       ranges: [{ start: 1, end: 3 }],
-      document: 'root:w/a.ipynb',
+      document: { path: '/root/a.ipynb' },
     });
     expect(result.status).toBe('completed');
   });

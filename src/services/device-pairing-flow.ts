@@ -1,4 +1,7 @@
-import { DEVICE_PAIRING_LIMITS } from './device-pairing-flow.constants';
+import {
+  DEVICE_PAIRING_LIMITS,
+  DEVICE_PAIRING_MAX_BACKOFF_MS,
+} from './device-pairing-flow.constants';
 
 import type {
   DevicePairingLimits,
@@ -23,7 +26,7 @@ export async function runDevicePairing(
   const intervalMs = start.intervalSeconds * 1_000;
   let errors = 0;
   for (let attempt = 0; attempt < limits.maxPolls; attempt += 1) {
-    await ports.sleep(intervalMs, signal);
+    await ports.sleep(Math.min(intervalMs * 2 ** errors, DEVICE_PAIRING_MAX_BACKOFF_MS), signal);
     if (signal.aborted) return 'cancelled';
     if (Number.isFinite(deadline) && ports.now() >= deadline) return 'expired';
     const result = await pollOnce(ports, start.pairingCode, signal);

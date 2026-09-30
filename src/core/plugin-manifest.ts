@@ -1,3 +1,4 @@
+import { evaluateHookApproval, hooksDigest } from './plugin-hook-approval';
 import { PLUGIN_MANIFEST_FILE, PLUGIN_ROOT_TOKEN } from './plugin-manifest.constants';
 import { pluginManifestSchema } from './plugin-manifest.schema';
 
@@ -13,8 +14,14 @@ import type {
   PluginSwitches,
 } from './plugin-manifest.types';
 
-/** A plugin nobody has touched: its instructions on, its commands off. */
-const DEFAULT_SWITCHES: PluginSwitches = { enabled: true, hooksEnabled: false };
+/**
+ * A plugin nobody has touched. A user plugin's instructions are on; a workspace
+ * plugin arrived with a repository, so nothing of it runs until it is enabled.
+ * Commands are off either way.
+ */
+function defaultSwitches(scope: PluginScope): PluginSwitches {
+  return { enabled: scope === 'user', hooksEnabled: false };
+}
 
 /**
  * Reads `clawai-plugin.json`.
@@ -54,14 +61,19 @@ export function describeInstalled(
   root: string,
   state: PluginState,
 ): InstalledPlugin {
-  const switches = state[root] ?? DEFAULT_SWITCHES;
+  const stored = state[root];
+  const switches = stored ?? defaultSwitches(scope);
+  const hookApproval = evaluateHookApproval(stored, manifest);
   return {
     id: pluginId(manifest),
     scope,
     root,
     manifest,
     enabled: switches.enabled,
-    hooksEnabled: switches.enabled && switches.hooksEnabled,
+    hooksEnabled: switches.enabled && hookApproval.status === 'approved',
+    hooksDigest: hooksDigest(manifest),
+    hookApproval,
+    needsApproval: scope === 'workspace' && stored === undefined,
   };
 }
 

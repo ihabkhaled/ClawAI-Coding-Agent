@@ -9,7 +9,7 @@ project, proposes changes, and waits for your OK before it touches a file.
 It connects to your ClawAI account, so you can use many AI models from one
 place: hosted models, or models running on your own machine.
 
-Version 1.84.0 delivers a more capable agent that can plan, edit files, run
+Version 1.85.0 delivers a more capable agent that can plan, edit files, run
 commands, use git, and drive a browser, all with your approval, and it keeps
 working with the classic chat-and-review flow if a newer feature is not
 available on your ClawAI server.
@@ -25,7 +25,7 @@ available on your ClawAI server.
 - **Works with your project.** It understands your files, selection, git state,
   and your own project rules.
 - **Private.** Sign-in happens in your browser. A zero-retention mode keeps
-  your work off the server.
+  run history in memory and asks the server not to keep your content.
 - **Your language.** The interface comes in 13 languages, including right-to-left
   Arabic and Persian.
 
@@ -67,13 +67,20 @@ available on your ClawAI server.
 
 ### Approvals and permission modes
 
-- **Manual:** the default. ClawAI asks before it collects context or proposes
-  edits.
-- **Always allow in this workspace:** approve routine steps once and remember
-  it for that trusted workspace.
-- **Full Access:** skips routine prompts and applies checked file changes for
-  you. It never skips Workspace Trust, secret-file protection, or command
-  checks, and you can always cancel.
+Pick the **Approval** level under **More settings** in the chat box:
+
+- **Plan:** read-only. Anything that changes something is refused.
+- **Ask for Approval:** the default. You approve each change and command.
+- **Auto Edit:** routine file edits go through. Commands and riskier actions
+  still ask.
+- **Autonomous Scoped:** low-risk work inside the workspace goes through.
+  Publishing, deleting and similar still ask.
+- **Strict:** asks like Ask for Approval, and refuses deleting, production and
+  admin-level actions.
+
+No level skips Workspace Trust or secret-file protection, and you can always
+cancel. On an approval card, **Always allow in this workspace** remembers your
+choice for that trusted workspace.
 
 ### Sessions, history and resume
 
@@ -117,9 +124,14 @@ available on your ClawAI server.
 ### Remote and command-line use
 
 - Start a cloud coding session, or register your machine as a runner.
-- Pair the editor with your phone and control it remotely.
-- A command-line runner (`clawai -p "your task"`) ships with the project on
-  GitHub for scripts and CI.
+- Pair the editor with your phone from a QR code, then run jobs you created for
+  the paired device.
+- Let ClawAI send commands to this editor after you confirm each one.
+- A command-line runner (`clawai -p "your task"`) is included in the extension
+  (`dist/headless.mjs`) for scripts and CI. It needs Node.js 22.13 or newer and
+  a ClawAI credential in environment variables.
+- Some of these need a ClawAI backend that supports them, or a second machine.
+  See [Remote and automation](docs/guide/remote-and-automation.md).
 
 ### Privacy and zero-retention
 
@@ -177,7 +189,7 @@ Open the Command Palette (`Ctrl+Shift+P`) and type `ClawAI`.
 | ClawAI: Show Logs              | none                           | none                          |
 
 Keyboard shortcuts marked "(selection)" work while text is selected in the
-editor. You can also right-click a selection to ask, fix, or review it.
+editor. Review Selected Code and Generate Tests work while an editor has focus. You can also right-click a selection to ask, fix, or review it.
 
 ## Settings that matter
 
@@ -224,6 +236,18 @@ Run **ClawAI: Refresh Models**. Your account decides which models you can use.
 
 **How do I undo what the agent did?**
 Run **ClawAI: Undo Last ClawAI Edit** (`Ctrl+Alt+Z`), or restore a checkpoint.
+
+## See it in action
+
+These pictures use made-up sample data. Each one also comes in a light version
+in the same folder.
+
+![A chat where the agent fixed a bug and lists the changed files](docs/images/chat-agent-changes-dark.png)
+![An approval request that shows what will change before anything is written](docs/images/approval-request-dark.png)
+![The model picker with the current model and how it was chosen](docs/images/model-picker-dark.png)
+![Attachments you can reorder, with the voice button](docs/images/attachments-voice-dark.png)
+![A plan and findings in Plan mode, with nothing changed yet](docs/images/plan-and-findings-dark.png)
+![Two runs working at the same time](docs/images/parallel-runs-dark.png)
 
 ## Help and links
 

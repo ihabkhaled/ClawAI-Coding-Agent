@@ -3913,3 +3913,11 @@ worked around.
 
 Inventory: 97 PASS, 17 NOT RUN, 2 BLOCKED. The remaining seventeen need a
 container, a live process, a browser or a sub-agent.
+
+## Status as of 2026-09-30 (version 1.84.0)
+
+Appended; the register above is history. The four audits now count **97
+SHIPPED and 11 PARTIAL of 108**, none MISSING, BLOCKED or CONFLICT (command in
+`HANDOVER.md` section 3). Batches after 1.79.0 are recorded in
+`docs/releases/DETAILED_CHANGELOG.md` (1.80.0 to 1.84.0). The open rows and what
+blocks each are in `HANDOVER.md` section 4. New decisions: ADRs 0005 to 0008.

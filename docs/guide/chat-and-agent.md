@@ -24,7 +24,7 @@ Other ways to start:
   **Review Selected Code**. Right-click a file in the Explorer for **Ask About
   File**.
 - Type `@clawai` in VS Code's built-in Chat view.
-- Send messages while a run is going. They queue up and run in order.
+- Send messages while a run is going. They queue up behind the active run.
 - Press the Up and Down arrows in the empty chat box to reuse earlier prompts.
 
 ## Choosing a model
@@ -38,7 +38,7 @@ The **Model** selector offers:
   ClawAI backend serves).
 
 If the list looks out of date, run **ClawAI: Refresh Models**. `Ctrl+Alt+M` opens
-the model picker. **ClawAI: Toggle Fast Mode** switches on the fast-reply goal and
+the model picker (**ClawAI: Select Model**). **ClawAI: Toggle Fast Mode** switches on the fast-reply goal and
 quicker context gathering in one step, and switches back when you toggle again.
 
 ## Effort and speed
@@ -46,11 +46,11 @@ quicker context gathering in one step, and switches back when you toggle again.
 - **Effort** (Low, Medium, High, Max, xHigh, Ultra) limits how much one run may
   spend: how many steps it takes, how many tools it uses, and how long it runs.
   **Low** is for quick edits (about 6 model turns, 5 minutes). **Ultra** is the
-  default and gives the biggest budget (about 40 turns, up to 2 hours). Pick a
+  default and gives the biggest budget (about 100 turns, up to 2 hours). Pick a
   lower level to keep small jobs cheap and short.
-- **Speed** (1X, 1.5X, 2X) controls how many project files are checked at the same
-  time while ClawAI gathers context. It changes how fast context is collected,
-  not what is included and not what needs approval.
+- **Speed** (1X, 1.5X, 2X) controls how many file lookups run at the same time
+  while ClawAI gathers context (one, four or eight). It changes how fast context
+  is collected, not what is included and not what needs approval.
 
 ## Modes and approval
 
@@ -63,13 +63,13 @@ There are two controls under **More settings**.
 
 **Approval** decides how often you are asked:
 
-| Approval              | What it means                                                                                |
-| --------------------- | -------------------------------------------------------------------------------------------- |
-| **Plan**              | Read-only. Anything that changes something is refused.                                       |
-| **Ask for Approval**  | The default. You approve each change and command.                                            |
-| **Auto Edit**         | Routine file edits go through without asking. Commands and riskier actions still ask.        |
-| **Autonomous Scoped** | Low-risk work inside the workspace goes through. Publishing, deleting and similar still ask. |
-| **Strict**            | Asks like Ask for Approval, and also refuses deleting, production and admin-level actions.   |
+| Approval              | What it means                                                                                 |
+| --------------------- | --------------------------------------------------------------------------------------------- |
+| **Plan**              | Read-only. Anything that changes something is refused.                                        |
+| **Ask for Approval**  | The default. You approve each change and command.                                             |
+| **Auto Edit**         | Routine file edits go through without asking. Commands and riskier actions still ask.         |
+| **Autonomous Scoped** | Low-risk work inside the workspace goes through. Publishing, deleting and similar still ask.  |
+| **Strict**            | Sits between Plan and Ask. Deleting, production and admin-level actions are refused outright. |
 
 Some rules never change, whichever level you pick: untrusted workspaces are
 read-only, secret-looking files are off limits, and your organization's rules (if
@@ -84,22 +84,24 @@ sidebar lists everything waiting for you, across chats.
 
 1. Read what the agent wants to do.
 2. Choose **Approve** or **Reject**.
-3. In **Ask for Approval** mode the first routine request offers **Always allow in
-   this workspace**, which is remembered for that trusted folder only.
+3. The first time ClawAI asks to read workspace files and draft edits (titled
+   **Enable routine workspace access**), the button reads **Always allow in this
+   workspace**. Choosing it is remembered for that folder, so this routine access is
+   not asked again. Changing files and running commands still ask.
 
-An approval only covers the exact action shown. If the workspace changes in the
-meantime, you are asked again.
+An approval only covers the action shown.
 
 ## Stopping, undoing, rewinding
 
 - **Stop**: the cancel button in the chat, or `Ctrl+Alt+Escape`.
-- **Undo edits**: `Ctrl+Alt+Z` undoes the last ClawAI edit, up to twenty deep,
-  until you switch folders.
+- **Undo edits**: `Ctrl+Alt+Z` (**ClawAI: Undo Last ClawAI Edit**) undoes the last
+  ClawAI edit, up to twenty deep.
 - **Rewind to here**: on a saved message, choose **Rewind to here** to delete every
   later message in that conversation and continue from that point. You can also
   run **ClawAI: Rewind Conversation** and pick the message. This cannot be
-  undone, so you are asked to confirm, and you must wait for a running reply to
-  finish first. A message that is still streaming has no button yet; reopen the
+  undone, so you are asked to confirm. If you took a checkpoint at that message
+  you can also choose **Rewind Conversation and Code**. You must wait for a running
+  reply to finish first. A message that is still streaming has no button yet; reopen the
   conversation from History to see it.
   **Needs:** your ClawAI backend, which stores the conversation.
 - **Checkpoints**: **ClawAI: Create Checkpoint** remembers the current state of the
@@ -109,11 +111,16 @@ meantime, you are asked again.
 
 ## Long conversations
 
-When a conversation gets close to its limit, the **autoCompact** setting decides
-what happens: do nothing, offer to summarize, or summarize automatically.
+When a conversation gets close to its limit, the `clawAI.autoCompact` setting decides
+what happens: `off` does nothing, `prompt` (the default) offers to summarize, and
+`automatic` summarizes for you.
 **ClawAI: Compact Conversation** does it on demand: it writes a summary and
 continues in a new conversation. The original is kept in your history.
 
 Related helpers: **ClawAI: Ask a Side Question** (answered outside the
 conversation), **ClawAI: Session Recap**, **ClawAI: Show Usage**, and
 **ClawAI: Select Output Style** (see [Extend it](extend-it.md)).
+
+## Verified against
+
+ClawAI Coding Agent 1.84.0 (package.json, package.nls.json and the source).

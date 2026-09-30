@@ -28,7 +28,8 @@ The runner file is `dist/headless.mjs` in the extension's install folder. If a
 - **Safe by default:** only reading and Git information are allowed. Add abilities
   with `--allow-tools read,write,command,git`, and name each program a command may
   use, for example `--allow-command npm`.
-- **Other options:** `--model`, `--provider`, `--max-turns`, and
+- **Other options:** `--model`, `--provider`, `--max-turns`, `--resume <id>`,
+  `--continue`, `--permission-mode plan|ask|accept-edits`, and
   `--output-format text|json|stream-json` (`--json` is a shortcut). Run it with
   `--help` to see every option your version supports.
 - **Exit codes:** 0 done, 1 failed, 2 usage error, 3 sign-in problem, 4 permission
@@ -43,6 +44,8 @@ command line, and can be resumed in VS Code. See
 Lets you send a command to this editor from ClawAI and run it here.
 
 **Needs:** a ClawAI backend that supports remote commands, and a trusted folder open.
+This editor is either a remote-control target or a runner (below), never both at once:
+starting one stops the other.
 
 1. Run **ClawAI: Start Remote Control**.
 2. Commands queued for this editor in ClawAI show a confirmation on this computer
@@ -72,9 +75,9 @@ provide hosted runners.
 
 **Needs a runner:**
 
-- **ClawAI: Register This Machine as a Runner** names this machine, lets you add
-  labels, and asks whether every tool call needs your approval or read-only calls
-  can run alone. Writes and commands always ask.
+- **ClawAI: Register This Machine as a Runner** needs a trusted folder open. It
+  names this machine, lets you add labels, and asks whether every tool call needs
+  your approval or read-only calls can run alone. Writes and commands always ask.
 - **ClawAI: Start Cloud Coding Session** picks an online runner, a repository and a
   branch, then sends one command and follows its progress in an output panel.
   **ClawAI: Attach to Runner Session** follows one that is already running (read
@@ -105,10 +108,15 @@ Get a Slack message when a run finishes or fails while VS Code is in the backgro
 
 1. Create an incoming webhook in Slack.
 2. Run **ClawAI: Configure Slack Notifications**, choose **Set webhook URL**, and
-   paste it. It is kept in your operating system's credential store.
+   paste it (it must be a `https://hooks.slack.com/services/...` address). It is
+   kept in your operating system's credential store. **Remove webhook** turns it off.
 3. Choose **Send test message** to check it.
 
 **Needs:** nothing from your ClawAI account. This goes straight from VS Code to Slack.
 Messages are short pointers, not transcripts.
 
 See also [Extend it](extend-it.md) for scheduled tasks that run inside VS Code.
+
+## Verified against
+
+ClawAI Coding Agent 1.84.0 (package.json, package.nls.json and the source).

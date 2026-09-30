@@ -89,3 +89,11 @@ code --user-data-dir <tmp>/user-data --extensions-dir <tmp>/extensions \
      --install-extension builds/clawai-coding-agent-<version>.vsix --force
 npm run test:host:installed <tmp>/extensions
 ```
+
+## Status as of 2026-09-30 (version 1.84.0)
+
+Appended; nothing above was changed. This file still stops at 0.79.0 and is
+superseded for surface coverage by `SURFACE_INVENTORY.md`. Installed-VSIX lanes
+today: `npm run test:host:installed` (packaged artifact, disposable profile)
+and `npm run test:vscode`. No installed-artifact run for 1.80.0 to 1.84.0 is
+recorded here; treat that as NOT RUN until the inventory says otherwise.

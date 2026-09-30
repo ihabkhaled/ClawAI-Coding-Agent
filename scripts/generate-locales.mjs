@@ -8,6 +8,10 @@ import { integrationTranslations } from './integration-translations.mjs';
 import { pairingRetentionTranslations } from './pairing-retention-translations.mjs';
 import { parityComposerTranslations } from './parity-composer-translations.mjs';
 import { permissionModeTranslations } from './permission-mode-translations.mjs';
+import { pluginApprovalTranslations } from './plugin-approval-translations.mjs';
+import { firstRunTranslations } from './first-run-translations.mjs';
+import { nlsGapTranslations } from './nls-gap-translations.mjs';
+import { pluginNetworkTranslations } from './plugin-network-translations.mjs';
 import { pluginSignatureTranslations } from './plugin-signature-translations.mjs';
 import { pluginTreeTranslations } from './plugin-tree-translations.mjs';
 import { pullRequestTranslations } from './pull-request-translations.mjs';
@@ -4814,6 +4818,8 @@ function translate(locale, message) {
     authorizationPageTranslations[locale][message] ??
     conversationRewindTranslations[locale][message] ??
     pluginTreeTranslations[locale][message] ??
+    pluginApprovalTranslations[locale][message] ??
+    pluginNetworkTranslations[locale][message] ??
     pluginSignatureTranslations[locale][message] ??
     parityComposerTranslations[locale][message] ??
     permissionModeTranslations[locale][message] ??
@@ -4866,6 +4872,8 @@ function translate(locale, message) {
     usageBreakdownTranslations[locale][message] ??
     integrationTranslations[locale][message] ??
     pairingRetentionTranslations[locale][message] ??
+    nlsGapTranslations[locale][message] ??
+    firstRunTranslations[locale][message] ??
     message
   );
 }

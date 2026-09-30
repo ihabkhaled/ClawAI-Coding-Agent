@@ -3,6 +3,8 @@ import * as vscode from 'vscode';
 import { applyRunBudget, boundCellOutput } from '../core/notebook-execution';
 import { JUPYTER_EXTENSION_ID, MAX_CELLS_PER_RUN } from '../core/notebook-execution.constants';
 
+import { resolveNotebookUri } from './notebook-path-guard';
+
 import type {
   NotebookCellRun,
   NotebookKernelRequest,
@@ -34,7 +36,7 @@ export class VscodeNotebookKernel implements NotebookKernelPort {
         reason: `The Jupyter extension (${JUPYTER_EXTENSION_ID}) is not installed, so there is no kernel to run cells on.`,
       };
     }
-    const uri = vscode.Uri.joinPath(this.workspaceRootUri(request.rootKey), request.path);
+    const uri = resolveNotebookUri(this.workspaceRootUri(request.rootKey), request.path);
     const document = await vscode.workspace.openNotebookDocument(uri);
     const targets = this.targets(document, request.index);
     const editor = await vscode.window.showNotebookDocument(document, {

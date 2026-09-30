@@ -23,6 +23,7 @@ import { workspacePluginStore } from './workspace-plugins';
 import type { PluginCommandDependencies } from './plugin-commands.types';
 import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { TrustedPublishers } from '../core/plugin-signature.types';
+import type { PluginNetworkOptions } from '../infrastructure/plugin-network-guard.types';
 
 /**
  * The marketplace allowlist from the project policy.
@@ -77,15 +78,19 @@ export function registerPluginCommands(
       readOrganizationMarketplaceAllowlist(organizationPolicy()),
       await projectAllowlist(workspaceScope),
     );
+  /** Read per call so the opt-in applies to the next download without a reload. */
+  const network = (): PluginNetworkOptions => ({
+    allowPrivate: configuration.allowPrivatePluginSources(),
+  });
   const clones = vscode.Uri.joinPath(context.globalStorageUri, GIT_MARKETPLACE_DIRECTORY).fsPath;
   const dependencies: PluginCommandDependencies = {
     store,
     marketplace: new PluginMarketplaceService({
       store,
       files: new VscodePluginFileSystem(),
-      download: (url) => downloadBytes(url),
+      download: (url) => downloadBytes(url, fetch, network()),
       unzip: unzipPlugin,
-      cloneGit: (location) => cloneGitMarketplace(clones, location),
+      cloneGit: (location) => cloneGitMarketplace(clones, location, network()),
       allowlist,
       signatures: async () => ({
         mode: configuration.pluginSignaturePolicy(),

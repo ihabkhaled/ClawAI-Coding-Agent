@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+import { resolveNotebookUri } from './notebook-path-guard';
+
 import type { NotebookReaderPort } from '../services/notebook-tool.types';
 
 /** Bigger than this is not a notebook anyone is editing a cell of. */
@@ -17,7 +19,7 @@ export class VscodeNotebookReader implements NotebookReaderPort {
   constructor(private readonly workspaceRootUri: (rootKey: string) => vscode.Uri) {}
 
   async read(rootKey: string, path: string): Promise<string> {
-    const uri = vscode.Uri.joinPath(this.workspaceRootUri(rootKey), path);
+    const uri = resolveNotebookUri(this.workspaceRootUri(rootKey), path);
     const bytes = await vscode.workspace.fs.readFile(uri);
     if (bytes.byteLength > MAX_NOTEBOOK_BYTES) {
       throw new Error(`Notebook is larger than ${String(MAX_NOTEBOOK_BYTES)} bytes: ${path}`);

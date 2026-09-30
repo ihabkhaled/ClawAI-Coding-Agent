@@ -8,6 +8,7 @@ import { runAgent } from './agent-sdk';
 import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
 import { agentToolkit } from './agent-toolkit';
 import { observedToolkit } from './observed-toolkit';
+import { assertRunLimits, createRunGuard, describeBudgetTrip } from './run-budget';
 
 import type {
   Agent,
@@ -16,6 +17,7 @@ import type {
   AgentResult,
   AgentRunCallOptions,
 } from './create-agent.types';
+import type { RunBudgetTrip } from './run-budget.types';
 import type { HeadlessOutcome } from '../core/headless-outcome.types';
 
 /**
@@ -47,12 +49,14 @@ async function runOnce(
   prompt: string,
   options: AgentRunCallOptions,
 ): Promise<AgentResult> {
+  assertRunLimits(options);
   const emit = (event: AgentEvent): void => options.onEvent?.(event);
-  const tally = { denied: 0, text: '', signingIn: true, runId: '' };
+  const guard = createRunGuard(options, options.signal);
+  const tally = { denied: 0, calls: 0, text: '', signingIn: true, runId: '' };
   const transport =
     config.transport ?? new HeadlessTransport(config.backendUrl ?? AGENT_SDK_DEFAULTS.backendUrl);
   const inner = agentToolkit(config);
-  const toolkit = observedToolkit(inner, emit, tally);
+  const toolkit = guard.guard(observedToolkit(inner, emit, tally));
   try {
     // Signed in here rather than inside runAgent, so a refusal can be told
     // apart from a later one: during sign-in any client error is the credential.
@@ -68,7 +72,7 @@ async function runOnce(
       threadId: session.threadId,
       deadlineMs: config.deadlineMs,
       transport,
-      signal: options.signal,
+      signal: guard.signal,
       ...(options.maxTurns === undefined
         ? {}
         : { budget: { maxModelTurns: options.maxTurns, maxToolRounds: options.maxTurns } }),
@@ -83,35 +87,86 @@ async function runOnce(
         if (event !== undefined) emit(event);
       },
     });
-    const outcome = withDenials(report.outcome, tally.denied);
-    return finish(emit, {
-      ...report,
-      outcome,
-      exitCode: headlessExitCode(outcome),
-      deniedCalls: tally.denied,
-      text: tally.text,
-    });
+    const trip = guard.tripped();
+    const outcome = trip === undefined ? withDenials(report.outcome, tally.denied) : 'exhausted';
+    return finish(
+      emit,
+      {
+        ...report,
+        outcome,
+        exitCode: headlessExitCode(outcome),
+        deniedCalls: tally.denied,
+        text: tally.text,
+        ...tripFields(trip, report.toolCalls),
+      },
+      trip,
+    );
   } catch (error) {
-    const outcome = outcomeFromError(error, {
-      aborted: options.signal?.aborted === true,
-      signingIn: tally.signingIn,
-    });
-    return finish(emit, {
-      outcome,
-      exitCode: headlessExitCode(outcome),
-      toolCalls: 0,
-      deniedCalls: tally.denied,
-      text: tally.text,
-      ...(tally.runId.length === 0 ? {} : { runId: tally.runId }),
-      ...(session.threadId === undefined ? {} : { threadId: session.threadId }),
-      error: redacted(error instanceof Error ? error.message : 'Agent run failed', config),
-    });
+    const trip = guard.tripped();
+    const aborted = options.signal?.aborted === true;
+    return finish(emit, failedResult(error, { trip, aborted, tally, session, config }), trip);
   } finally {
+    guard.dispose();
     inner.dispose?.();
   }
 }
 
-function finish(emit: (event: AgentEvent) => void, result: AgentResult): AgentResult {
+interface FailureContext {
+  readonly trip: RunBudgetTrip | undefined;
+  readonly aborted: boolean;
+  readonly tally: {
+    denied: number;
+    calls: number;
+    text: string;
+    signingIn: boolean;
+    runId: string;
+  };
+  readonly session: { threadId: string | undefined };
+  readonly config: AgentConfig;
+}
+
+/** The result of a run that threw: an exhausted guard, a cancel, or a failure with a redacted reason. */
+function failedResult(error: unknown, context: FailureContext): AgentResult {
+  const { trip, tally, session } = context;
+  const outcome: HeadlessOutcome =
+    trip === undefined
+      ? withDenials(
+          outcomeFromError(error, { aborted: context.aborted, signingIn: tally.signingIn }),
+          tally.denied,
+        )
+      : 'exhausted';
+  const reason = error instanceof Error ? error.message : 'Agent run failed';
+  return {
+    outcome,
+    exitCode: headlessExitCode(outcome),
+    toolCalls: tally.calls,
+    deniedCalls: tally.denied,
+    text: tally.text,
+    ...(tally.runId.length === 0 ? {} : { runId: tally.runId }),
+    ...(session.threadId === undefined ? {} : { threadId: session.threadId }),
+    error: trip === undefined ? redacted(reason, context.config) : describeBudgetTrip(trip),
+  };
+}
+
+/**
+ * A guard that stopped the run says so in `error`, and its tool count never
+ * exceeds the limit: the refused call past it was not run.
+ */
+function tripFields(
+  trip: RunBudgetTrip | undefined,
+  toolCalls: number,
+): { error?: string; toolCalls?: number } {
+  if (trip === undefined) return {};
+  const capped = trip.budget === 'tool-calls' ? Math.min(toolCalls, trip.limit) : toolCalls;
+  return { error: describeBudgetTrip(trip), toolCalls: capped };
+}
+
+function finish(
+  emit: (event: AgentEvent) => void,
+  result: AgentResult,
+  trip?: RunBudgetTrip,
+): AgentResult {
+  if (trip !== undefined) emit({ type: 'budget.exhausted', ...trip });
   emit({ type: 'run.finished', result });
   return result;
 }

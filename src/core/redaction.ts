@@ -7,7 +7,17 @@ const authorizationSchemePattern =
 /** `scheme://user:password@host` and `https://TOKEN@host` put the secret in the URL. */
 const urlUserinfoPattern = /(\b[a-z][a-z0-9+.-]*:\/\/)[^\s/@]+@/giu;
 const sensitiveQueryPattern =
-  /([?&](?:access_token|refresh_token|token|api_key|apikey|key|secret|password)=)[^&\s]+/giu;
+  /([?&#](?:access_token|refresh_token|id_token|token|api_key|apikey|key|secret|password|code|authorization_code)=)[^&\s]+/giu;
+/** A JSON `"code"` member: an OAuth code is single-use but valid until spent. */
+const jsonOauthPattern = /("(?:code|authorization_code|id_token)"\s*:\s*")[^"]+/giu;
+/** The whole header: `Cookie: a=1; sid=…` carries several secrets, not one. */
+const cookieHeaderPattern = /(\b(?:Set-)?Cookie\s*:\s*)[^\r\n"]+/giu;
+const privateKeyPattern =
+  /-----BEGIN [A-Z ]*PRIVATE KEY-----[\s\S]*?-----END [A-Z ]*PRIVATE KEY-----/gu;
+const jwtPattern = /\beyJ[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}\.[A-Za-z0-9_-]{5,}/gu;
+/** Vendor key formats are a secret wherever they appear, named or not. */
+const vendorKeyPattern =
+  /\b(?:sk-[A-Za-z0-9_-]{16,}|gh[pousr]_[A-Za-z0-9]{16,}|github_pat_[A-Za-z0-9_]{20,}|AKIA[0-9A-Z]{12,}|xox[abprs]-[A-Za-z0-9-]{10,})/gu;
 
 /**
  * A word boundary does not sit between an underscore and a letter, so it
@@ -62,6 +72,11 @@ export function redactValue(value: unknown): unknown {
 
 export function redactText(value: string): string {
   return value
+    .replace(privateKeyPattern, '[REDACTED]')
+    .replace(jwtPattern, '[REDACTED]')
+    .replace(vendorKeyPattern, '[REDACTED]')
+    .replace(cookieHeaderPattern, '$1[REDACTED]')
+    .replace(jsonOauthPattern, '$1[REDACTED]')
     .replace(bearerPattern, '$1[REDACTED]')
     .replace(authorizationSchemePattern, '$1[REDACTED]')
     .replace(urlUserinfoPattern, '$1[REDACTED]@')

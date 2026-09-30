@@ -53,7 +53,7 @@ function parseJson(text: string): unknown {
   }
 }
 
-async function mcpOf(file: string): Promise<AgentMcpOptions> {
+export async function mcpOf(file: string): Promise<AgentMcpOptions> {
   const parsed = parseJson(await readBounded(file, MAX_MCP_CONFIG_BYTES));
   if (typeof parsed !== 'object' || parsed === null || Array.isArray(parsed)) {
     throw new Error('The MCP config must be a JSON object.');

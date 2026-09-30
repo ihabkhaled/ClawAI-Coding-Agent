@@ -11,17 +11,16 @@ server. This page explains how you stay in charge.
   test commands, but anything that publishes, deletes, touches production or needs
   admin rights still asks or is refused. Use it only in projects you trust.
 - **Strict** refuses deleting, production and admin-level actions outright.
-- **Plan** and **Plan mode** allow no commands at all.
+- **Plan** (Approval) and **Plan mode** (Agent) allow no commands at all.
 
 See [Chat and the agent](chat-and-agent.md) for the full table.
 
 Every command also runs with limits:
 
-- A time limit and an output size limit. Output is trimmed and secrets in it are
-  hidden.
-- Only a short list of environment variables is passed on (such as `PATH` and
-  `HOME`). A token or password set in your own environment is not visible to the
-  command.
+- A time limit and an output size limit.
+- Only a short list of environment variables is passed on (such as `PATH`,
+  `HOME` and `TEMP`). A token or password set in your own environment is not
+  passed to the command.
 - It runs in a folder inside your workspace, not somewhere else on disk.
 
 The **Open Run Terminal** command (**ClawAI: Open Run Terminal**) opens a ClawAI
@@ -46,9 +45,9 @@ were already running on your machine.
 VS Code asks whether you trust a folder when you open it. ClawAI follows that
 choice:
 
-- **Untrusted folder:** you can chat and ask read-only questions. ClawAI will not
-  collect your whole workspace, change files, run commands, start local tool
-  servers, run hooks or scheduled tasks.
+- **Untrusted folder:** chat and read-only review still work. ClawAI will not
+  collect your workspace, change files or run commands, and will not start
+  workspace tool servers or plugin hooks.
 - **Trusted folder:** all features work, still within your approval level.
 
 If ClawAI says it needs a trusted workspace, use **Workspaces: Manage Workspace
@@ -61,13 +60,13 @@ By default commands run with your own permissions, bounded by the limits above.
 For stronger isolation, turn on the sandbox with the `clawAI.commandSandbox.mode`
 setting:
 
-| Mode         | What it does                                                                   |
-| ------------ | ------------------------------------------------------------------------------ |
-| `off`        | Default. No sandbox.                                                           |
-| `auto`       | Uses the strongest sandbox your computer offers. Says "none" if there is none. |
-| `bubblewrap` | Linux only. Writes are limited to the workspace and temp folders.              |
-| `seatbelt`   | macOS only. Writes are limited to the workspace and temp folders.              |
-| `docker`     | Runs in a container with only the workspace mounted. Needs an image to be set. |
+| Mode         | What it does                                                                                                     |
+| ------------ | ---------------------------------------------------------------------------------------------------------------- |
+| `off`        | Default. No sandbox.                                                                                             |
+| `auto`       | Uses the first available: bubblewrap, then seatbelt, then docker (needs an image). Says "none" if there is none. |
+| `bubblewrap` | Linux only, needs bubblewrap installed. Writes are limited to the workspace and temp folders.                    |
+| `seatbelt`   | macOS only. Writes are limited to the workspace and temp folders.                                                |
+| `docker`     | Runs in a container with only the workspace mounted. Needs Docker and an image to be set.                        |
 
 Other sandbox settings:
 
@@ -90,3 +89,7 @@ Important details:
   yourself, reject it and say what you want instead.
 - Add project rules that limit the agent further, such as forbidding pushes. See
   [Extend it](extend-it.md) and [Privacy and security](privacy-and-security.md).
+
+## Verified against
+
+ClawAI Coding Agent 1.84.0 (package.json, package.nls.json and the source).

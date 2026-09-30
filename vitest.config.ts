@@ -8,6 +8,7 @@ export default defineConfig({
     // makes the suite cheap enough to run on every batch rather than at the end.
     fsModuleCache: true,
     globals: true,
+    setupFiles: ['tests/setup/unhandled-rejection.setup.ts'],
     include: ['tests/{unit,integration}/**/*.test.ts'],
     coverage: {
       provider: 'v8',

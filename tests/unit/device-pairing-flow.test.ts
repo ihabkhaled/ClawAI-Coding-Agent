@@ -90,4 +90,35 @@ describe('runDevicePairing', () => {
     expect(await runDevicePairing(p, new AbortController().signal)).toBe('approved');
     expect(p.store).toHaveBeenCalledTimes(1);
   });
+
+  it('backs off after failed polls and returns to the server interval once one succeeds', async () => {
+    const answers = [
+      new Error('a'),
+      new Error('b'),
+      new Error('c'),
+      { status: 'pending' as const },
+    ];
+    const p = ports([...answers, { status: 'denied' }]);
+    const waits: number[] = [];
+    p.sleep = (ms) => {
+      waits.push(ms);
+      return Promise.resolve();
+    };
+    await runDevicePairing(p, new AbortController().signal);
+    expect(waits).toEqual([2_000, 4_000, 8_000, 16_000, 2_000]);
+  });
+
+  it('caps the back-off', async () => {
+    const p = ports([new Error('a'), new Error('b'), new Error('c'), new Error('d')]);
+    const waits: number[] = [];
+    p.sleep = (ms) => {
+      waits.push(ms);
+      return Promise.resolve();
+    };
+    await runDevicePairing(p, new AbortController().signal, {
+      maxPolls: 10,
+      maxConsecutiveErrors: 5,
+    });
+    expect(Math.max(...waits)).toBeLessThanOrEqual(30_000);
+  });
 });
