@@ -66,7 +66,7 @@ function invocationFrom(
   const last = (field: string): string | undefined => values.get(field)?.at(-1);
   const checked = checkedFields(last, flags.has('--json'));
   if (typeof checked === 'string') return { kind: 'usage', message: checked };
-  const extras = checkedExtras(values, flags.has('--continue'), cwd);
+  const extras = checkedExtras(values, flags, cwd);
   if (typeof extras === 'string') return { kind: 'usage', message: extras };
   const budgets = checkedBudgets(values, cwd);
   if (typeof budgets === 'string') return { kind: 'usage', message: budgets };

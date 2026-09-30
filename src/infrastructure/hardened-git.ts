@@ -5,6 +5,7 @@ import path from 'node:path';
 import {
   hardenedGitArguments,
   hardenedGitEnvironment,
+  hardenedGitWriteArguments,
   isGitExecutable,
   programSpawningConfigKeys,
 } from '../core/git-hardening';
@@ -89,6 +90,26 @@ export function prepareGitSpawn(
   assertRepositoryConfigSafe(cwd);
   return {
     arguments: hardenedGitArguments(args, os.devNull),
+    environment: hardenedGitEnvironment(base),
+  };
+}
+
+/**
+ * Prepares a git write the caller explicitly granted: hooks run, program-naming
+ * config stays pinned. Refuses outright unless the workspace is trusted, because
+ * a write with hooks enabled runs whatever the repository's hooks contain.
+ * Headless callers pass `true`: granting `git-write` is the trust decision.
+ */
+export function prepareTrustedGitWriteSpawn(
+  args: readonly string[],
+  base: Readonly<Record<string, string | undefined>>,
+  trusted: boolean,
+): HardenedGitCommand {
+  if (!trusted) {
+    throw new Error('Git write operations run repository hooks and need a trusted workspace.');
+  }
+  return {
+    arguments: hardenedGitWriteArguments(args),
     environment: hardenedGitEnvironment(base),
   };
 }

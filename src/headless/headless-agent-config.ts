@@ -26,13 +26,17 @@ export function agentConfigFor(input: {
     permissions: {
       allow: invocation.allowTools,
       allowedExecutables: invocation.allowCommands,
+      writeScope: invocation.writeScope,
+      writeDeny: invocation.writeDeny,
       ...(invocation.permissionMode === undefined ? {} : { approve: approvalFrom(input.io) }),
     },
     permissionMode: invocation.permissionMode,
     allowedTools: invocation.allowedTools,
     disallowedTools: invocation.disallowedTools,
     threadId: input.threadId,
+    useMemory: invocation.useMemory,
     systemPrompt: inputs.systemPrompt,
+    doneChecks: inputs.doneChecks,
     mcp:
       inputs.mcp === undefined
         ? undefined

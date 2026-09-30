@@ -4,7 +4,9 @@ import path from 'node:path';
 import { parseMcpConfig } from '../core/mcp/mcp-config';
 import { MAX_MCP_CONFIG_BYTES } from '../core/mcp/mcp.constants';
 import { systemPromptProblem } from '../sdk/agent-inputs';
+import { doneChecksProblem } from '../sdk/done-checks';
 
+import { parseDoneCheckFile } from './headless-done-checks';
 import {
   HEADLESS_MAX_PROMPT_FILE_BYTES,
   HEADLESS_MCP_POLICY_KEY,
@@ -12,6 +14,7 @@ import {
 
 import type { HeadlessInvocation } from './headless-args.types';
 import type { HeadlessInputs } from './headless-inputs.types';
+import type { DoneCheck } from '../sdk/done-checks.types';
 import type { AgentMcpOptions } from '../sdk/mcp-toolkit.types';
 
 async function readBounded(file: string, limit: number): Promise<string> {
@@ -66,6 +69,20 @@ export async function mcpOf(file: string): Promise<AgentMcpOptions> {
   return { config, ...(policy === undefined ? {} : { policy }) };
 }
 
+/** The checks of `--done-check-file` followed by those of `--done-check`; a bad file throws. */
+async function doneChecksOf(invocation: HeadlessInvocation): Promise<readonly DoneCheck[]> {
+  const fromFlags = invocation.doneChecks ?? [];
+  if (invocation.doneCheckFile === undefined) return fromFlags;
+  const parsed = parseDoneCheckFile(
+    await readBounded(invocation.doneCheckFile, HEADLESS_MAX_PROMPT_FILE_BYTES),
+  );
+  if (typeof parsed === 'string') throw new Error(parsed);
+  const all = [...parsed, ...fromFlags];
+  const problem = doneChecksProblem(all);
+  if (problem !== undefined) throw new Error(problem);
+  return all;
+}
+
 /**
  * Reads what the flags point at. A missing or unusable file is reported before
  * any request is made, so it is a usage error and not a failed run.
@@ -77,8 +94,10 @@ export async function resolveHeadlessInputs(
   try {
     const systemPrompt = await systemPromptOf(invocation, cwd);
     const mcp = invocation.mcpConfig === undefined ? undefined : await mcpOf(invocation.mcpConfig);
+    const doneChecks = await doneChecksOf(invocation);
     return {
       ok: true,
+      ...(doneChecks.length === 0 ? {} : { doneChecks }),
       ...(systemPrompt === undefined ? {} : { systemPrompt }),
       ...(mcp === undefined ? {} : { mcp }),
     };

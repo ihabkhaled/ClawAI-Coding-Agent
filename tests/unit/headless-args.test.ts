@@ -50,6 +50,8 @@ describe('parseHeadlessArgs', () => {
       allowCommands: ['git', 'tsc'],
       outputFormat: 'stream-json',
       maxTurns: 7,
+      budgetProfile: 'long',
+      autoContinue: 3,
       workspace: path.resolve(cwd, 'sub'),
       backendUrl: 'http://x/api',
     });
@@ -227,6 +229,7 @@ describe('parseHeadlessArgs session, prompt, MCP and permission flags', () => {
       'write',
       'command',
       'git',
+      'git-write',
       'mcp',
     ]);
     expect(run(['-p', 'x', '--mcp-config', 'm.json', '--allow-tools', 'read']).allowTools).toEqual([

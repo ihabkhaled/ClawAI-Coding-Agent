@@ -7,6 +7,7 @@ import {
   AGENT_REDACTED_PROMPT_MARK,
   AGENT_THREAD_ID_PATTERN,
 } from './agent-inputs.constants';
+import { writeScopeProblem } from './write-scope';
 
 /** The message naming what is wrong with a thread identifier, or undefined when it is fine. */
 export function threadIdProblem(threadId: string): string | undefined {
@@ -53,17 +54,32 @@ export function withoutInstructions(message: string, systemPrompt: string | unde
   return message.split(systemPrompt).join(AGENT_REDACTED_PROMPT_MARK);
 }
 
+function permissionsProblem(
+  permissions:
+    | { writeScope?: readonly string[] | undefined; writeDeny?: readonly string[] | undefined }
+    | undefined,
+): string | undefined {
+  return writeScopeProblem(permissions?.writeScope ?? [], permissions?.writeDeny ?? []);
+}
+
 /** Throws when an option is unusable, so a bad value fails at `createAgent`, not mid-run. */
 export function assertAgentInputs(config: {
   readonly threadId?: string | undefined;
   readonly systemPrompt?: string | undefined;
   readonly allowedTools?: readonly string[] | undefined;
   readonly disallowedTools?: readonly string[] | undefined;
+  readonly permissions?:
+    | {
+        readonly writeScope?: readonly string[] | undefined;
+        readonly writeDeny?: readonly string[] | undefined;
+      }
+    | undefined;
 }): void {
   const problem =
     (config.threadId === undefined ? undefined : threadIdProblem(config.threadId)) ??
     (config.systemPrompt === undefined ? undefined : systemPromptProblem(config.systemPrompt)) ??
     toolPatternsProblem(config.allowedTools ?? []) ??
-    toolPatternsProblem(config.disallowedTools ?? []);
+    toolPatternsProblem(config.disallowedTools ?? []) ??
+    permissionsProblem(config.permissions);
   if (problem !== undefined) throw new RangeError(problem);
 }

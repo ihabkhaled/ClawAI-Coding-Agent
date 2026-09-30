@@ -2,6 +2,12 @@
 
 This is the full engineering log for ClawAI Coding Agent: every release with its internal notes, decisions and verification detail. The short, user-facing release notes are in [CHANGELOG.md](../../CHANGELOG.md).
 
+## 1.86.0
+
+Host-free SDK toolkit rebuilt from dogfooding the headless agent on the ClawAI monorepo: file tools (ranged read, list, glob, search, stat, update, delete, rename), async command tool (tail-preserving output, tree kill, env filtering, background processes), git write operations (add, unstage, commit with hooks, pull --rebase, push, switch, restore, show, remote) as the `git-write` category, and a result-size guard (first run failed on a 66 KB read rejected by the backend: result.structured.content max 65536). See docs/HEADLESS.md.
+
+Completion gates (`--done-check`, `--done-check-file`, SDK `doneChecks`; `run.checks` event, `checks-failed` continuation, `DONE_CHECKS_FAILED`), access-token renewal mid-run (`session-expired` continuation, email/password auth only) and a blank notebook for new threads. Found by dogfooding: a run that edited one file declared a whole module done; a 3-hour run died on HTTP 401; stale notes steered a fresh run into an old feature.
+
 ## 1.85.0
 
 Secure-by-default plugin scope, hook digest approval, private-address refusal, git hardening, notebook path guard, channel quoting, permission classification table and matrix (docs/PERMISSION_MATRIX.md), redaction corpus and leaks fixed (headless output, feedback), walkthrough and first-run notices, headless MCP login and budgets, history render O(n^2) fix, message page contract fix, 29 manifest strings translated, live proofs (custom-stage goal delivery, headless CLI, live API lane, rounds), platform fixes (executable resolution, path containment), staged-secret scan hardened against masked diffs. See docs/parity/HANDOVER.md.

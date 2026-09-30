@@ -30,8 +30,11 @@ describe('offeredDefinitions', () => {
   it('offers only the granted operations and drops tools with none', () => {
     const offered = offeredDefinitions(['read']) as { name: string; operations: string[] }[];
 
-    expect(offered.map((definition) => definition.name)).toEqual(['workspace.file']);
-    expect(offered[0]?.operations).toEqual(['read', 'list']);
+    expect(offered.map((definition) => definition.name)).toEqual([
+      'workspace.file',
+      'workspace.notes',
+    ]);
+    expect(offered[0]?.operations).toEqual(['read', 'list', 'glob', 'search', 'stat']);
   });
 
   it('offers every tool when every category is granted', () => {
@@ -43,6 +46,7 @@ describe('offeredDefinitions', () => {
       'workspace.file',
       'workspace.command',
       'workspace.git',
+      'workspace.notes',
     ]);
   });
 
@@ -58,7 +62,7 @@ describe('toolCategory', () => {
     expect(toolCategory(call('workspace.file', 'create'))).toBe('write');
     expect(toolCategory(call('workspace.command', 'run'))).toBe('command');
     expect(toolCategory(call('workspace.git', 'diff'))).toBe('git');
-    expect(toolCategory(call('workspace.git', 'push'))).toBeUndefined();
+    expect(toolCategory(call('workspace.git', 'reset'))).toBeUndefined();
     expect(toolCategory(call('workspace.web', 'fetch'))).toBeUndefined();
   });
 });
@@ -97,8 +101,8 @@ describe('executeWorkspaceTool', () => {
       );
 
     expect(run('create', { path: 'a.txt', content: 'hello' })).toEqual({ written: 'a.txt' });
-    expect(run('list', {})).toEqual({ entries: ['a.txt'] });
-    expect(run('read', { path: 'a.txt' })).toEqual({ content: 'hello' });
+    expect(run('list', {})).toMatchObject({ entries: [{ path: 'a.txt', type: 'file', size: 5 }] });
+    expect(run('read', { path: 'a.txt' })).toMatchObject({ content: 'hello', totalLines: 1 });
   });
 
   it('creates an empty file when no content is given', () => {
@@ -113,7 +117,7 @@ describe('executeWorkspaceTool', () => {
         { toolName: 'workspace.file', operation: 'read', arguments: { path: 'e.txt' } },
         limits(root),
       ),
-    ).toEqual({ content: '' });
+    ).toMatchObject({ content: '' });
   });
 
   it('refuses a path that escapes the workspace', () => {
@@ -144,14 +148,14 @@ describe('executeWorkspaceTool', () => {
     ).toThrow(/Unsupported tool/u);
     expect(() =>
       executeWorkspaceTool(
-        { toolName: 'workspace.file', operation: 'delete', arguments: {} },
+        { toolName: 'workspace.file', operation: 'chmod', arguments: {} },
         limits(root),
       ),
     ).toThrow(/Unsupported operation/u);
   });
 
-  it('runs an allowed command without a shell and captures its output', () => {
-    const result = executeWorkspaceTool(
+  it('runs an allowed command without a shell and captures its output', async () => {
+    const result = await executeWorkspaceTool(
       {
         toolName: 'workspace.command',
         operation: 'run',

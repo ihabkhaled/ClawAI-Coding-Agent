@@ -1,4 +1,24 @@
-import { HEADLESS_MAX_CONTENT_BYTES } from '../headless/headless-session.constants';
+import {
+  COMMAND_TOOL_DESCRIPTION,
+  COMMAND_TOOL_INPUT_SCHEMA,
+  COMMAND_TOOL_OPERATIONS,
+} from './command-tool-definition.constants';
+import {
+  FILE_TOOL_DESCRIPTION,
+  FILE_TOOL_INPUT_SCHEMA,
+  FILE_TOOL_OPERATIONS,
+} from './file-tools.constants';
+import {
+  GIT_LOG_MAX_COUNT,
+  GIT_TOOL_DESCRIPTION,
+  GIT_TOOL_INPUT_SCHEMA,
+  GIT_TOOL_OPERATIONS,
+} from './git-tools.constants';
+import {
+  NOTES_TOOL_DESCRIPTION,
+  NOTES_TOOL_INPUT_SCHEMA,
+  NOTES_TOOL_OPERATIONS,
+} from './notes-tool.constants';
 
 import type { AgentToolCategory } from './workspace-toolkit.types';
 
@@ -12,22 +32,23 @@ export const AGENT_TOOL_OUTPUT_CEILING = 16_000;
 export const AGENT_TOOL_TIMEOUT_MS = 30_000;
 
 /** The most commits a `log` call returns, whatever the model asks for. */
-export const AGENT_GIT_LOG_MAX = 50;
+export const AGENT_GIT_LOG_MAX = GIT_LOG_MAX_COUNT;
 
 /** The operations in each category, per tool, so filtering is a lookup. */
 export const AGENT_TOOL_OPERATIONS: Readonly<
   Record<string, Readonly<Record<string, AgentToolCategory>>>
 > = {
-  'workspace.file': { read: 'read', list: 'read', create: 'write' },
-  'workspace.command': { run: 'command' },
-  'workspace.git': { status: 'git', diff: 'git', log: 'git' },
+  'workspace.file': FILE_TOOL_OPERATIONS,
+  'workspace.command': COMMAND_TOOL_OPERATIONS,
+  'workspace.git': GIT_TOOL_OPERATIONS,
+  'workspace.notes': NOTES_TOOL_OPERATIONS,
 };
 
 /**
  * The runtime tool contracts this SDK can execute locally.
  *
- * `workspace.git` is read-only here on purpose: status, diff and log. A
- * host-free run that could commit or push would be one nobody reviews.
+ * `workspace.git` reads under `git`; add, commit, push and the rest need the
+ * separate `git-write` grant, so a run that can only look cannot commit.
  */
 export const AGENT_WORKSPACE_TOOL_DEFINITIONS: readonly {
   readonly name: string;
@@ -38,53 +59,40 @@ export const AGENT_WORKSPACE_TOOL_DEFINITIONS: readonly {
     schemaVersion: '2.0',
     name: 'workspace.file',
     version: '2.0.0',
-    description: 'Read, write and list files in the workspace.',
-    operations: ['read', 'create', 'list'],
+    description: FILE_TOOL_DESCRIPTION,
+    operations: Object.keys(FILE_TOOL_OPERATIONS),
     riskClasses: ['inspect', 'workspace-write'],
     targetIds: ['target:workspace'],
-    inputSchema: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        path: { type: 'string', maxLength: 4096 },
-        content: { type: 'string', maxLength: HEADLESS_MAX_CONTENT_BYTES },
-      },
-    },
+    inputSchema: FILE_TOOL_INPUT_SCHEMA,
   },
   {
     schemaVersion: '2.0',
     name: 'workspace.command',
     version: '2.0.0',
-    description: 'Run a bounded command in the workspace and return its output.',
-    operations: ['run'],
+    description: COMMAND_TOOL_DESCRIPTION,
+    operations: Object.keys(COMMAND_TOOL_OPERATIONS),
     riskClasses: ['process'],
     targetIds: ['target:workspace'],
-    inputSchema: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        executable: { type: 'string', maxLength: 200 },
-        arguments: { type: 'array', items: { type: 'string', maxLength: 4096 }, maxItems: 50 },
-      },
-      required: ['executable'],
-    },
+    inputSchema: COMMAND_TOOL_INPUT_SCHEMA,
   },
   {
     schemaVersion: '2.0',
     name: 'workspace.git',
     version: '2.0.0',
-    description: 'Inspect the workspace Git repository: status, diff and recent log.',
-    operations: ['status', 'diff', 'log'],
+    description: GIT_TOOL_DESCRIPTION,
+    operations: Object.keys(GIT_TOOL_OPERATIONS),
+    riskClasses: ['inspect', 'workspace-write', 'network'],
+    targetIds: ['target:workspace'],
+    inputSchema: GIT_TOOL_INPUT_SCHEMA,
+  },
+  {
+    schemaVersion: '2.0',
+    name: 'workspace.notes',
+    version: '1.0.0',
+    description: NOTES_TOOL_DESCRIPTION,
+    operations: Object.keys(NOTES_TOOL_OPERATIONS),
     riskClasses: ['inspect'],
     targetIds: ['target:workspace'],
-    inputSchema: {
-      type: 'object',
-      additionalProperties: false,
-      properties: {
-        path: { type: 'string', maxLength: 4096 },
-        staged: { type: 'boolean' },
-        maxCount: { type: 'integer', minimum: 1, maximum: AGENT_GIT_LOG_MAX },
-      },
-    },
+    inputSchema: NOTES_TOOL_INPUT_SCHEMA,
   },
 ];

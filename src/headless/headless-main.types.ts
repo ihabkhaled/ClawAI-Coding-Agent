@@ -1,3 +1,5 @@
+import type { WriteScope } from '../sdk/write-scope.types';
+
 /** The shape of a `tool.requested` payload, as far as this runner needs it. */
 export interface ToolRequestPayload {
   readonly invocationId?: string;
@@ -10,4 +12,6 @@ export interface ToolRequestPayload {
 export interface ToolLimits {
   readonly workspace: string;
   readonly allowedExecutables: readonly string[];
+  /** When set, every file and git change is checked against it; see `write-scope.ts`. */
+  readonly writeScope?: WriteScope | undefined;
 }
