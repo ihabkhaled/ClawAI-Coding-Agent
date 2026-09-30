@@ -61,7 +61,9 @@ function checkReleaseGates() {
   const tags = capture('git', ['ls-remote', '--tags', 'origin']).out.split('\n');
   const remoteTags = tags.map((line) => line.split('refs/tags/')[1]).filter(Boolean);
   if (remoteTags.includes(`v${version}`)) {
-    process.stdout.write(`version ${version}: already published; normal main update, release assets not required\n`);
+    process.stdout.write(
+      `version ${version}: already published; normal main update, release assets not required\n`,
+    );
     return;
   }
   const trackedFiles = capture('git', ['ls-files', 'builds']).out.split('\n');
