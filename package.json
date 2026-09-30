@@ -1037,6 +1037,8 @@
     "l10n:build": "node scripts/generate-locales.mjs",
     "l10n:verify": "node scripts/generate-locales.mjs && git diff --exit-code -- l10n package.nls.json package.nls.*.json",
     "package": "npm run build && node scripts/package-extension.mjs",
+    "preflight": "node scripts/ship.mjs --preflight-only",
+    "ship": "node scripts/ship.mjs",
     "check": "npm run format:check && npm run l10n:verify && npm run lint && npm run typecheck && npm run scan:paths && npm run inventory:verify && npm run coverage:scope && npm test && npm run build && npm run package:audit",
     "scan:paths": "node scripts/scan-absolute-paths.mjs",
     "prepublishOnly": "npm run check",

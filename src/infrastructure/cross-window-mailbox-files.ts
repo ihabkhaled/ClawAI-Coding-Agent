@@ -70,5 +70,10 @@ export async function fileSize(path: string): Promise<number> {
 }
 
 export async function remove(path: string): Promise<void> {
-  await rm(path, { force: true });
+  try {
+    await rm(path, { force: true });
+  } catch (error: unknown) {
+    // A parent that is a file (ENOTDIR on Linux) means there is nothing to remove.
+    if ((error as NodeJS.ErrnoException).code !== 'ENOTDIR') throw error;
+  }
 }

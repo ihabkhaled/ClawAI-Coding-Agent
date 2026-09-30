@@ -109,3 +109,7 @@ sandboxes (bubblewrap, seatbelt, docker), Jupyter kernels, `gh` and
 osv-scanner are not exercised by `check`; a claim about them needs the host
 lane or a manual run recorded in a delivery report. The 2026-09-30 backend
 routes are not covered by any lane in this repository against a live backend.
+
+## Before you push
+
+`npm run preflight` runs, on Linux as an unprivileged user, the same steps as GitHub's CI (install, localization, `npm run check`, `npm audit`) against `git archive HEAD`. It exists because a green run on Windows, in a dirty tree, is not evidence about a commit on GitHub. The webview Playwright and extension-host suites are not part of it; run `npm run test:playwright` and `npm run test:host` yourself when you touched `media/`, `src/webview/` or command registration.

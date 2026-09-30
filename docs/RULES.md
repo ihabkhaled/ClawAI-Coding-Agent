@@ -21,6 +21,8 @@ These rules supplement `AGENTS.md` and `CLAUDE.md`. Each says where it is enforc
 12. `npm run scan:paths` rejects machine-local absolute paths (user home, temp) in `src`, `tests`, `media`, `scripts`. `tests/unit/source-control-bytes.test.ts` rejects raw control bytes.
 13. `npm run package:audit` asserts, among others: valid SemVer, lockfile and changelog match, every contributed command is registered in a file calling `registerCommand`, all locale files exist, no VSIX at repo root (artifacts go in `builds/`), CI and release workflow invariants. Runtime dependencies pass `npm audit --omit=dev --audit-level=high`.
 
+14. Nothing reaches `main` without the GitHub gates passing first. Push only with `npm run ship`, which refuses an uncommitted tree, a version tag that already exists, release assets that are not tracked, secret-shaped literals in the outgoing diff, and any failure of the Linux gate (`git archive HEAD` in `node:22`, unprivileged, running `npm ci`, `l10n:build`, `npm run check`, `npm audit`); it then watches CI and Release until both are green. A red gate is fixed before any other work. Enforced by: `scripts/ship.mjs`, `tests/unit/ship-lib.test.ts`, `docs/CI_FAILURES.md`, `skills/ship-to-main-safely/SKILL.md`.
+
 ## Security
 
 14. Never store or log passwords, tokens, cookies, prompts or unredacted backend errors (`src/core/redaction.ts`). No secret-bearing settings.

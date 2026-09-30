@@ -5,6 +5,8 @@ description: Ship a delivery release of the ClawAI Coding Agent end to end - bum
 
 # Land a release
 
+Final step of every release is `npm run ship` (`skills/ship-to-main-safely/SKILL.md`): never push by hand.
+
 Bump-size policy: `skills/version-every-change/SKILL.md`. This is the mechanical sequence.
 
 ## Steps
