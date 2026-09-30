@@ -111,7 +111,7 @@ describe('the Linux gate', () => {
   it('runs as the unprivileged node user, like the GitHub runner', () => {
     const args = dockerRunArgs();
     expect(args[args.indexOf('--user') + 1]).toBe('node');
-    expect(args).toContain('node:22-bookworm-slim');
+    expect(args).toContain('node:22-bookworm');
   });
 
   it('runs the steps CI runs, in the order CI runs them', () => {

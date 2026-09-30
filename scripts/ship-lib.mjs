@@ -1,7 +1,7 @@
 // Pure helpers behind `npm run ship` / `npm run preflight`. No I/O here, so every
 // rule that has ever turned a push red on GitHub can be tested without GitHub.
 
-export const CI_NODE_IMAGE = 'node:22-bookworm-slim';
+export const CI_NODE_IMAGE = 'node:22-bookworm';
 
 // The Linux gate, in the order CI runs it. It runs as the unprivileged `node`
 // user because the GitHub runner is not root: a test that writes to `/global`
