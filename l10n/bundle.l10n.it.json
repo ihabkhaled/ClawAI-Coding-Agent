@@ -378,6 +378,7 @@
   "No workspace": "No workspace",
   "No workspace context attached": "No workspace context attached",
   "None": "Nessuno",
+  "None of the repositories {0} reports is open in this window, so continuing in chat cannot reach its files.": "Nessuno dei repository segnalati da {0} è aperto in questa finestra, quindi continuare nella chat non può raggiungerne i file.",
   "Not a valid plugin: {0}": "Plugin non valido: {0}",
   "Not collected yet": "Non ancora raccolto",
   "Nothing has used tokens in this session yet.": "Niente ha ancora usato token in questa sessione.",

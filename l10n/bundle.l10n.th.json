@@ -378,6 +378,7 @@
   "No workspace": "No workspace",
   "No workspace context attached": "No workspace context attached",
   "None": "ไม่มี",
+  "None of the repositories {0} reports is open in this window, so continuing in chat cannot reach its files.": "ไม่มีที่เก็บใดที่ {0} รายงานถูกเปิดในหน้าต่างนี้ การทำต่อในแชตจึงเข้าถึงไฟล์ของที่เก็บนั้นไม่ได้",
   "Not a valid plugin: {0}": "ไม่ใช่ปลั๊กอินที่ถูกต้อง: {0}",
   "Not collected yet": "ยังไม่ได้รวบรวม",
   "Nothing has used tokens in this session yet.": "ยังไม่มีสิ่งใดใช้โทเค็นในเซสชันนี้",

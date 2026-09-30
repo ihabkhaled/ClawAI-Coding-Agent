@@ -378,6 +378,7 @@
   "No workspace": "No workspace",
   "No workspace context attached": "No workspace context attached",
   "None": "بلا",
+  "None of the repositories {0} reports is open in this window, so continuing in chat cannot reach its files.": "لا يوجد أي مستودع يعرضه {0} مفتوحًا في هذه النافذة، لذلك لا يمكن للمتابعة في الدردشة الوصول إلى ملفاته.",
   "Not a valid plugin: {0}": "ليست إضافة صالحة: {0}",
   "Not collected yet": "لم يُجمع بعد",
   "Nothing has used tokens in this session yet.": "لم يستهلك أي شيء رموزًا في هذه الجلسة بعد.",
