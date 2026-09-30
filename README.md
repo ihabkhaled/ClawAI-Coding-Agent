@@ -9,10 +9,12 @@ project, proposes changes, and waits for your OK before it touches a file.
 It connects to your ClawAI account, so you can use many AI models from one
 place: hosted models, or models running on your own machine.
 
-Version 1.86.0 delivers a more capable agent that can plan, edit files, run
+Version 1.87.0 delivers a more capable agent that can plan, edit files, run
 commands, use git, and drive a browser, all with your approval, and it keeps
 working with the classic chat-and-review flow if a newer feature is not
-available on your ClawAI server.
+available on your ClawAI server. Scheduled tasks can now follow a calendar
+(for example weekdays at 9:00), and commands sent to a runner machine run with
+your sandbox setting and without your editor's private environment.
 
 ## Why use it
 

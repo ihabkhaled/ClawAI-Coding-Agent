@@ -386,6 +386,7 @@
   "Nothing is waiting for you": "ไม่มีอะไรรอคุณอยู่",
   "Off": "Off",
   "Off. Chats are stored as usual.": "ปิด แชตจะถูกเก็บตามปกติ",
+  "on schedule {0}": "ตามกำหนดการ {0}",
   "On, required by your organization.": "เปิด ตามที่องค์กรของคุณกำหนด",
   "On, turned on by your setting.": "เปิด ตามการตั้งค่าของคุณ",
   "once": "ครั้งเดียว",

@@ -19,6 +19,7 @@ import { remoteChannelTranslations } from './remote-channel-translations.mjs';
 import { remoteControlTranslations } from './remote-control-translations.mjs';
 import { runnerHandoffTranslations } from './runner-handoff-translations.mjs';
 import { runnerRoutineTranslations } from './runner-routine-translations.mjs';
+import { cronScheduleTranslations } from './cron-schedule-translations.mjs';
 import { remoteSessionTranslations } from './remote-session-translations.mjs';
 import { usageBreakdownTranslations } from './usage-breakdown-translations.mjs';
 
@@ -4867,6 +4868,7 @@ function translate(locale, message) {
     cachedTokenTranslations[locale][message] ??
     remoteControlTranslations[locale][message] ??
     runnerRoutineTranslations[locale][message] ??
+    cronScheduleTranslations[locale][message] ??
     remoteSessionTranslations[locale][message] ??
     runnerHandoffTranslations[locale][message] ??
     usageBreakdownTranslations[locale][message] ??

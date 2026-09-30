@@ -9,7 +9,8 @@ import {
 } from '../backend/agent-remote-client';
 import { agentOperationErrorMessage } from '../backend/backend-error-message';
 import { devicePairingClient, type PairingDeviceHint } from '../backend/device-pairing-client';
-import { runBoundedCommand } from '../infrastructure/bounded-command-runner';
+import { sandboxedRunnerExecutor } from '../infrastructure/runner-command-executor';
+import { VscodeCommandSandbox } from '../infrastructure/vscode-command-sandbox';
 
 import { runDevicePairing } from './device-pairing-flow';
 import { showPairingPanel } from './pairing-qr-panel';
@@ -36,6 +37,10 @@ interface RemoteControlDependencies {
   readonly secrets: vscode.SecretStorage;
   readonly logger: OutputLogger;
   readonly version: string;
+}
+
+function workspaceRoot(): string | undefined {
+  return vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
 }
 
 /**
@@ -75,15 +80,8 @@ export function registerRemoteControlCommands(
       source: commandSource(deps.backend, registration, runnerPolicy !== undefined),
       approve: approveLocally,
       ...(runnerPolicy === undefined ? {} : { runPrompt: promptRunner(deps, runnerPolicy) }),
-      execute: async (executable, args, cwd, signal) => {
-        const result = await runBoundedCommand(executable, [...args], cwd, signal);
-        return {
-          exitCode: result.exitCode,
-          stdout: result.stdout ?? '',
-          stderr: result.stderr ?? '',
-        };
-      },
-      workspaceRoot: () => vscode.workspace.workspaceFolders?.[0]?.uri.fsPath,
+      execute: sandboxedRunnerExecutor(new VscodeCommandSandbox(), workspaceRoot),
+      workspaceRoot,
       sleep: abortableSleep,
       report: (message) => {
         deps.logger.info(message);

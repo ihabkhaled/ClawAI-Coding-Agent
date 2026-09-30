@@ -2,6 +2,15 @@
 
 This is the full engineering log for ClawAI Coding Agent: every release with its internal notes, decisions and verification detail. The short, user-facing release notes are in [CHANGELOG.md](../../CHANGELOG.md).
 
+## 1.87.0
+
+The 11 PARTIAL parity rows were re-audited against the code (docs/parity/HANDOVER.md section 4b). Three had a client-side remainder.
+
+- **F099 cron.** `runtime.schedule` accepts `kind: "cron"` with a five-field expression (`src/core/cron-expression.ts`: numbers, lists, ranges, `*`, steps; local time; Sunday is 0 or 7; day-of-month and day-of-week combine with OR when both are restricted, as in standard cron). `planCron` refuses an unparsable expression, one that never matches a date, and one whose next 12 gaps include less than 5 minutes (the interval floor). `afterRun` and `restoreTasks` recompute the next run from now (a missed cron run is skipped, not replayed); a stored expression that stops parsing ends the task. Schema accepts the new `cron` schedule kind; the task picker describes it (`on schedule {0}`, 12 locales). The search steps by month, day or hour so a yearly expression is a few hundred iterations, and stops at 200,000 (31 February).
+- **F100 runner isolation.** Runner and remote-control shell commands moved from a bare `spawn` with the editor's whole `process.env` to `runCommandSpec` through `sandboxedRunnerExecutor`: allow-listed environment, `clawAI.commandSandbox.mode` confinement, `SANDBOX_UNAVAILABLE` refusal, and the loop logs which sandbox ran the command (never sent back to the portal). Prompt jobs still run through the SDK executor and are not confined.
+- **F108 audit correction.** OTLP metrics (`otlp-metrics.ts`, `emitUsage`) shipped in 1.82.0; the audit row still listed them as open.
+- Not built, recorded with the backend change each needs: F030, F067, F081, F093, F095, F097, F098, F101 and the remainders of F099, F100, F108.
+
 ## 1.86.0
 
 Host-free SDK toolkit rebuilt from dogfooding the headless agent on the ClawAI monorepo: file tools (ranged read, list, glob, search, stat, update, delete, rename), async command tool (tail-preserving output, tree kill, env filtering, background processes), git write operations (add, unstage, commit with hooks, pull --rebase, push, switch, restore, show, remote) as the `git-write` category, and a result-size guard (first run failed on a 66 KB read rejected by the backend: result.structured.content max 65536). See docs/HEADLESS.md.

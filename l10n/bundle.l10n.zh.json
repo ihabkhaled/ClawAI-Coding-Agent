@@ -386,6 +386,7 @@
   "Nothing is waiting for you": "没有等你处理的事项",
   "Off": "Off",
   "Off. Chats are stored as usual.": "已关闭。聊天照常存储。",
+  "on schedule {0}": "按计划 {0}",
   "On, required by your organization.": "已开启，由您的组织要求。",
   "On, turned on by your setting.": "已开启，由您的设置开启。",
   "once": "一次",

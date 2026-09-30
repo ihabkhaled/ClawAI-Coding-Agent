@@ -129,6 +129,9 @@ export class RemoteCommandLoop {
       }
     }
     const execution = await this.ports.execute(parsed.executable, parsed.args, cwd, signal);
+    if (execution.sandbox !== undefined) {
+      this.ports.report(`Remote command ${command.id} sandbox - ${execution.sandbox}`);
+    }
     return {
       exitCode: execution.exitCode ?? 1,
       stdout: bounded(execution.stdout),

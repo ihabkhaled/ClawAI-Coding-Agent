@@ -92,3 +92,23 @@ describe('nodeTimers', () => {
     expect(fired).toBe(1);
   });
 });
+
+describe('ScheduleToolExecutor cron', () => {
+  it('creates a cron task and lists its kind', async () => {
+    const executor = new ScheduleToolExecutor(fakePort());
+    const created = await executor.execute(
+      call('create', { prompt: 'nightly audit', kind: 'cron', cron: '0 2 * * 1-5', maxRuns: 5 }),
+    );
+    expect(created.structured).toMatchObject({ created: true, maxRuns: 5 });
+    const listed = await executor.execute(call('list', {}));
+    expect(JSON.stringify(listed.structured)).toContain('"kind":"cron"');
+  });
+
+  it('refuses a bad cron expression as a normal result', async () => {
+    const executor = new ScheduleToolExecutor(fakePort());
+    const result = await executor.execute(
+      call('create', { prompt: 'x', kind: 'cron', cron: '* *' }),
+    );
+    expect(result.structured).toMatchObject({ created: false });
+  });
+});

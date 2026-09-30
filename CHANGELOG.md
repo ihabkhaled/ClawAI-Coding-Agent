@@ -2,6 +2,12 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.87.0
+
+- Scheduled tasks can follow a calendar, not just "every N minutes". Ask for "weekdays at 9:00" and the agent schedules it. A schedule cannot fire more than every 5 minutes, and tasks still run only while VS Code is open.
+- Commands sent to a runner or remote-control machine now use the same safety as the agent's own commands: they no longer see the editor's environment variables, and they follow your command sandbox setting. If you require a sandbox your computer does not have, the command is refused.
+- The parity notes now say exactly which remaining features wait on the ClawAI server or on a product decision.
+
 ## 1.86.0
 
 - The command-line agent can now read large files in slices, search, find files, edit text precisely, rename and delete, instead of failing on big files.

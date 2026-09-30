@@ -27,6 +27,8 @@ export interface RemoteExecution {
   readonly exitCode: number | undefined;
   readonly stdout: string;
   readonly stderr: string;
+  /** What confined the process, when the executor reports it: "none: ..." is an unconfined run. */
+  readonly sandbox?: string;
 }
 
 export interface RemoteCommandLoopPorts {

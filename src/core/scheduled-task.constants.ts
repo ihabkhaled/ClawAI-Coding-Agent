@@ -12,6 +12,8 @@ export const DEFAULT_MAX_RUNS = 10;
 export const MAX_SCHEDULED_PROMPT_LENGTH = 2_000;
 export const MAX_SCHEDULED_LABEL_LENGTH = 80;
 export const MS_PER_MINUTE = 60_000;
+/** How many upcoming gaps of a cron expression are checked against the minimum interval. */
+export const CRON_MIN_GAP_CHECKS = 12;
 /**
  * The longest a single timer may be asked to wait.
  *

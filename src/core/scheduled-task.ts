@@ -11,8 +11,14 @@ import {
   MS_PER_MINUTE,
 } from './scheduled-task.constants';
 import { scheduledTaskListSchema } from './scheduled-task.schema';
+import { nextCronTime, planCron } from './scheduled-task-cron';
 
-import type { SchedulePlan, ScheduleRequest, ScheduledTask } from './scheduled-task.types';
+import type {
+  SchedulePlan,
+  ScheduleRequest,
+  ScheduledTask,
+  TaskSchedule,
+} from './scheduled-task.types';
 
 function refuse(refusal: string): SchedulePlan {
   return { planned: false, refusal };
@@ -95,9 +101,9 @@ export function planScheduledTask(
     createdAt: now,
     runs: 0,
   };
-  return request.kind === 'once'
-    ? planOnce(request, common, now)
-    : planInterval(request, common, now);
+  if (request.kind === 'once') return planOnce(request, common, now);
+  if (request.kind === 'cron') return planCron(request, common, now);
+  return planInterval(request, common, now);
 }
 
 /**
@@ -108,7 +114,15 @@ export function planScheduledTask(
 export function afterRun(task: ScheduledTask, now: number): ScheduledTask | undefined {
   const runs = task.runs + 1;
   if (task.schedule.kind === 'once' || runs >= task.maxRuns) return undefined;
-  return { ...task, runs, nextRunAt: now + task.schedule.everyMinutes * MS_PER_MINUTE };
+  const nextRunAt = nextRunFrom(task.schedule, now);
+  return nextRunAt === undefined ? undefined : { ...task, runs, nextRunAt };
+}
+
+/** The next run of a repeating schedule, counted from `now`; undefined when there is none. */
+function nextRunFrom(schedule: TaskSchedule, now: number): number | undefined {
+  if (schedule.kind === 'once') return undefined;
+  if (schedule.kind === 'cron') return nextCronTime(schedule.expression, now);
+  return now + schedule.everyMinutes * MS_PER_MINUTE;
 }
 
 export function dueTasks(tasks: readonly ScheduledTask[], now: number): readonly ScheduledTask[] {
@@ -134,8 +148,9 @@ export function restoreTasks(stored: unknown, now: number): readonly ScheduledTa
   const restored: ScheduledTask[] = [];
   for (const task of parsed.data) {
     if (task.nextRunAt > now) restored.push(task);
-    else if (task.schedule.kind === 'interval') {
-      restored.push({ ...task, nextRunAt: now + task.schedule.everyMinutes * MS_PER_MINUTE });
+    else {
+      const nextRunAt = nextRunFrom(task.schedule, now);
+      if (nextRunAt !== undefined) restored.push({ ...task, nextRunAt });
     }
   }
   return restored;
