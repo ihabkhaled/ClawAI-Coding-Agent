@@ -267,6 +267,22 @@ describe('SessionControlService', () => {
     expect(approvals.request).toHaveBeenCalledTimes(2);
   });
 
+  it('Strict asks every time and never uses or writes the remembered routine access', async () => {
+    configuration.permissionMode = 'ENTERPRISE_LOCKED';
+    const approvals = { request: vi.fn(async () => true) };
+    const approvalMemory = {
+      hasRoutineAccess: vi.fn(() => true),
+      rememberRoutineAccess: vi.fn(async () => undefined),
+    };
+    const service = new SessionControlService(state, configuration, approvals, approvalMemory);
+
+    await expect(service.authorize('workspaceContext')).resolves.toBe(true);
+    await expect(service.authorize('editGeneration')).resolves.toBe(true);
+
+    expect(approvals.request).toHaveBeenCalledTimes(2);
+    expect(approvalMemory.rememberRoutineAccess).not.toHaveBeenCalled();
+  });
+
   it('confirms Full Access inside the workbench once and then persists it', async () => {
     const approvals = {
       request: vi.fn().mockResolvedValueOnce(false).mockResolvedValueOnce(true),
