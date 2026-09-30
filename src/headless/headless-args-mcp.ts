@@ -49,7 +49,12 @@ function isProfile(value: string): value is AgentBudgetProfile {
 function serverBudgetFlags(
   values: Values,
 ): Pick<HeadlessInvocation, 'budgetProfile' | 'autoContinue'> | string {
-  const profile = lastOf(values, 'budgetProfile') ?? HEADLESS_BUDGET_PROFILE_DEFAULT;
+  const named = lastOf(values, 'budgetProfile');
+  // An effort is the run budget, so the default profile would only fight it.
+  if (values.has('effort') && named !== undefined) {
+    return '--effort and --budget both choose the run budget; give one of them.';
+  }
+  const profile = named ?? HEADLESS_BUDGET_PROFILE_DEFAULT;
   if (!isProfile(profile)) {
     return `--budget must be one of ${AGENT_BUDGET_PROFILE_NAMES.join(', ')}.`;
   }
@@ -61,7 +66,10 @@ function serverBudgetFlags(
   ) {
     return `--auto-continue must be a whole number from 0 to ${String(AUTO_CONTINUE_MAX)}.`;
   }
-  return { budgetProfile: profile, autoContinue: count };
+  return {
+    ...(values.has('effort') ? {} : { budgetProfile: profile }),
+    autoContinue: count,
+  };
 }
 
 function checkedGuards(values: Values, cwd: string): Budgets | string {

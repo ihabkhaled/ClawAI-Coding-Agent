@@ -40,7 +40,13 @@ Other environment: `CLAW_MODEL`, `CLAW_PROVIDER`, `CLAW_BACKEND_URL` (default
 | `--write-deny <globs>`                    | Globs no change may match. Wins over `--write-scope`; alone it means "anywhere except there". Repeatable.                                                                               |
 | `--done-check "<label>=<cmd args>"`       | Completion check defined by YOU, run when the model says it is done; exit 0 = pass. No shell; `"..."` and `'...'` group words. Repeatable. See [Completion checks](#completion-checks). |
 | `--done-check-file <json>`                | JSON array of `{ label, executable, args[], cwd?, timeoutMs? }` checks, run before the `--done-check` ones. See [Completion checks](#completion-checks).                                |
-| `--permission-mode <mode>`                | `plan`, `ask` or `accept-edits`. See [Permission modes](#permission-modes).                                                                                                             |
+| `--permission-mode <mode>`                | `plan`, `ask`, `accept-edits`, `autonomous-scoped` or `strict`. See [Permission modes](#permission-modes).                                                                              |
+| `--effort <level>`                        | `LOW`, `MEDIUM`, `HIGH`, `MAX`, `XHIGH` or `ULTRA`: the run budget, from the editor Effort table. Replaces `--budget`. See [Composer controls](#composer-controls).                     |
+| `--speed <1X\|1.5X\|2X>`                  | Workspace lookups in flight while `--context-mode` reads the workspace. See [Composer controls](#composer-controls).                                                                    |
+| `--context-mode <mode>`                   | `none` (default), `file`, `selection`, `smart` or `workspace`: context put in front of the prompt. See [Composer controls](#composer-controls).                                         |
+| `--context-file <path>`                   | The file for `file`, or "a file is open" for `smart`. Workspace-relative.                                                                                                               |
+| `--context-selection <path:a-b>`          | Lines `a` to `b` of `path` for `selection`, or "a selection exists" for `smart`.                                                                                                        |
+| `--research <mode>`                       | `none`, `search`, `search-fetch` or `search-extract`: which web tools the agent is offered. See [Web research](#web-research).                                                          |
 | `--resume <threadId>`                     | Continue an existing thread instead of creating one.                                                                                                                                    |
 | `--use-memory`                            | Keep the account's personal memories on a NEW thread. Default off; `--no-memory` is that default and a no-op. Cannot be combined with `--no-memory` (exit 2). See [Memory](#memory).    |
 | `--continue`                              | Continue the most recent CLI thread for this workspace and backend. Cannot be combined with `--resume`.                                                                                 |
@@ -121,12 +127,21 @@ appear in events, and any error text has them replaced by `[redacted-instruction
 
 ## Permission modes
 
-| Mode           | Grants                  | Asked                                                              |
-| -------------- | ----------------------- | ------------------------------------------------------------------ |
-| (none)         | Exactly `--allow-tools` | Nothing. Unattended, the pre-existing behaviour.                   |
-| `plan`         | `read`, `git` only      | Nothing. Every write, git-write, command and MCP call is denied.   |
-| `ask`          | `--allow-tools`         | Every write, git-write, command and MCP `call`.                    |
-| `accept-edits` | `--allow-tools`         | Every command, git-write and MCP `call`; file writes are accepted. |
+| Mode                | Grants                  | Asked                                                                     |
+| ------------------- | ----------------------- | ------------------------------------------------------------------------- |
+| (none)              | Exactly `--allow-tools` | Nothing. Unattended, the pre-existing behaviour.                          |
+| `plan`              | `read`, `git` only      | Nothing. Every write, git-write, command and MCP call is denied.          |
+| `ask`               | `--allow-tools`         | Every write, git-write, command and MCP `call`.                           |
+| `accept-edits`      | `--allow-tools`         | Every command, git-write and MCP `call`; file writes are accepted.        |
+| `autonomous-scoped` | `--allow-tools`         | Commits, pushes, deletes and MCP `call`; edits, commands and fetches run. |
+| `strict`            | `--allow-tools`         | Everything `ask` asks; a delete is refused without asking.                |
+
+The last two are not new rules: they are the editor's own policy (`evaluatePolicyV2`, the one behind
+[PERMISSION_MATRIX.md](PERMISSION_MATRIX.md)) fed each call's real classification. The older
+`src/core/permission-policy.ts`, which only the editor's legacy edit-proposal flow still uses, asks for every
+command in every mode; the live agent path, which this mirrors, runs R2 commands in Autonomous Scoped, and
+asks for R3 and R4 work (commit, push, delete, MCP call). Reads are never asked about in any mode. There is no
+final-diff review step in a headless run, so none is asked for.
 
 Approval is the SDK's `permissions.approve` callback. The CLI asks on the terminal
 (`Allow workspace.file.create {...}? [y/N]`, arguments redacted and cut to 200
@@ -558,10 +573,63 @@ const result = await agent.run('summarise the repo', { onEvent: (event) => log(e
 console.log(result.exitCode, agent.threadId);
 ```
 
-`run` never throws for a run that went wrong; branch on `result.outcome`. Also exported:
+`run` never throws for a run that went wrong; branch on `result.outcome`. The composer controls are config fields:
+`effort: 'HIGH'`, `speed: '2X'`, `context: { mode: 'smart', file: 'src/a.ts' }`, `research: 'SEARCH_FETCH'`
+(the editor's `ResearchMode` names; `webResearch` replaces the research calls in a test). Also exported:
 `mcpToolkit`, `combineToolkits`, `restrictToolkit`, `permissionsForMode`, `toolPermitted`.
 `AgentToolkit.execute` may be async and receives an `AbortSignal`; `dispose` releases
 what a toolkit holds open.
+
+## Composer controls
+
+Each editor composer control has a flag and an SDK field. A bad value is exit 2 before any request.
+
+| Control (editor)  | Flag and SDK field                                                                              | What it does in a headless run                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
+| ----------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| Run               | (none: a headless run is always the Agent)                                                      | Chat, Compare and Compare + Judge are editor chat surfaces and are not driven here.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Effort            | `--effort`, `effort`                                                                            | Sends the editor's budget for that level as the run budget (model turns, tool calls, tool rounds, repair, wall clock, output and result bytes). `--max-turns` still narrows it. Replaces `--budget`; giving both is exit 2.                                                                                                                                                                                                                                                                                                                         |
+| Agent (Auto/Plan) | `--permission-mode plan`                                                                        | Plan is the read-only mode. Auto is the default.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
+| Speed             | `--speed`, `speed`                                                                              | Sets how many workspace lookups (containment check and stat) run at once while context is read: 1, 4 or 8. It never changes which files are chosen, and does nothing for `none`, `file` or `selection`.                                                                                                                                                                                                                                                                                                                                             |
+| Approval          | `--permission-mode`, `permissionMode`                                                           | Five modes; see [Permission modes](#permission-modes).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
+| Context           | `--context-mode`, `--context-file`, `--context-selection`; `context: { mode, file, selection }` | Built by the editor's own collector and envelope (`core/context-collector`, `core/context-prompt`): secrets and `.env*` are left out, at most 40 files and 200 000 bytes, and the model is told the content is untrusted data. `smart` resolves as the editor does: a selection, else a file, else the workspace. `selection` is `path:a-b`, lines from 1. A missing file, a file outside the workspace, a file over the byte limit or a bad range is exit 2. `--context-file` or `--context-selection` with a mode that would ignore it is exit 2. |
+| Web research      | `--research`, `research`                                                                        | See [Web research](#web-research).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                  |
+
+A `context.collected` event reports the mode that ran, how many files were included and left out, and whether the limit cut it.
+
+### What the backend ignores
+
+The runtime run request has no effort, speed, context, research or approval field. Nothing here is sent to the
+server as a setting:
+
+- **Effort** reaches it only as the budget numbers it already accepts.
+- **Speed** and **Context** are local: they change the prompt text and the local read, nothing else.
+- **Approval** is local: a refused or asked call never leaves the machine.
+- **Research** is local: it decides which tools are offered. The chat path's `researchMode` field is not part of a runtime run.
+
+### Web research
+
+`--research` decides which operations of the editor's `workspace.web` tool the model is offered. It is what the flag does, and nothing more:
+the server is not told a mode.
+
+| `--research`     | Operations offered                    |
+| ---------------- | ------------------------------------- |
+| `none`           | none (default)                        |
+| `search`         | `search`                              |
+| `search-fetch`   | `search`, `fetch`, `crawl`            |
+| `search-extract` | `search`, `fetch`, `crawl`, `extract` |
+
+All go through the research service routes `/research/search` and `/research/fetch` with the run's token; the service
+holds the provider keys, applies `robots.txt` and records the run. A call for an operation the mode does not offer is refused
+(`PERMISSION_DENIED`), not run. Web calls are reads, so no permission mode asks about them. Everything returned is marked
+`untrusted`.
+
+- `fetch`: one page, cleaned text, cut to fit one tool result (`truncated` says so).
+- `crawl`: from one URL, up to `maxPages` (default 10, at most 30) pages of the **same host**, `maxDepth` link hops (default 2, at most 3),
+  one page at a time, through the single-page route. The start URL and every link must be a public http or https address. A page that was
+  refused (robots.txt, HTTP 4xx), that redirected off the host or to a private address, or that could not be read is listed in `skipped` with
+  its reason; it is never reported as an empty page. `stoppedBy` says whether the page, depth or text budget ended it.
+- `extract`: one page with its address after redirects, content type, and its links split into the same site and other sites. It is not the
+  server's table or article extraction, which the research workflow runs and this account cannot call (see [web-research-parity](parity/web-research-parity.md)).
 
 ## Not implemented
 

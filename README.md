@@ -14,7 +14,10 @@ commands, use git, and drive a browser, all with your approval, and it keeps
 working with the classic chat-and-review flow if a newer feature is not
 available on your ClawAI server. Scheduled tasks can now follow a calendar
 (for example weekdays at 9:00), and commands sent to a runner machine run with
-your sandbox setting and without your editor's private environment.
+your sandbox setting and without your editor's private environment. The
+command-line agent can now be set up like the chat box (effort, what it is
+shown first, which web tools it may use, and how much it may do without
+asking), and the agent can read several pages of one website.
 
 ## Why use it
 

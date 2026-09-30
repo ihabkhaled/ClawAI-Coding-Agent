@@ -17,6 +17,10 @@ export { AGENT_BUDGET_PROFILES, AGENT_BUDGET_PROFILE_NAMES } from './budget-prof
 export { AUTO_CONTINUE_MAX } from './server-budget.constants';
 export { AGENT_MAX_SYSTEM_PROMPT_CHARS } from './agent-inputs.constants';
 export { AGENT_PERMISSION_MODES } from './permission-modes.constants';
+export { AGENT_RESEARCH_FLAG_VALUES, WEB_RESEARCH_MODE_OPERATIONS } from './web-toolkit.constants';
+export { promptWithContext } from './agent-context';
+export { webToolkit } from './web-toolkit';
+export { httpWebResearch } from './web-research-http';
 export { permissionsForMode } from './permission-modes';
 export { mcpToolkit } from './mcp-toolkit';
 export { combineToolkits, restrictToolkit } from './toolkit-compose';
@@ -62,6 +66,16 @@ export type {
 } from './done-checks.types';
 export type { RunBudgetKind, RunBudgetTrip } from './run-budget.types';
 export type { AgentMcpOptions } from './mcp-toolkit.types';
+export type {
+  AgentContextConfig,
+  AgentContextFileSystem,
+  AgentContextResult,
+} from './agent-context.types';
+export type { EffortMode } from '../core/effort-mode';
+export type { SpeedMode } from '../core/speed-mode';
+export type { ResearchMode } from '../core/research-mode';
+export type { ContextMode } from '../core/context-mode';
+export type { WebResearchPort } from '../core/web-research.types';
 export type { AgentPermissionMode } from './permission-modes.types';
 export type { AgentToolFilter } from './tool-filter.types';
 export type {

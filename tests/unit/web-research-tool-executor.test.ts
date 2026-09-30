@@ -101,7 +101,7 @@ describe('WebResearchToolExecutor', () => {
   it('refuses an operation it does not advertise', async () => {
     await expect(
       new WebResearchToolExecutor(research()).execute(
-        invocation('crawl', { url: 'https://a.dev' }),
+        invocation('mirror', { url: 'https://a.dev' }),
       ),
     ).rejects.toThrow(/Unknown web operation/u);
   });

@@ -1,4 +1,8 @@
 import type { HeadlessLogin } from './mcp/mcp-login.types';
+import type { EffortMode } from '../core/effort-mode';
+import type { ResearchMode } from '../core/research-mode';
+import type { SpeedMode } from '../core/speed-mode';
+import type { AgentContextConfig } from '../sdk/agent-context.types';
 import type { AgentBudgetProfile } from '../sdk/agent-sdk.types';
 import type { DoneCheck } from '../sdk/done-checks.types';
 import type { AgentPermissionMode } from '../sdk/permission-modes.types';
@@ -45,6 +49,14 @@ export interface HeadlessInvocation {
   readonly doneChecks?: readonly DoneCheck[] | undefined;
   /** `--done-check-file`, resolved against the working directory; read by the runner. */
   readonly doneCheckFile?: string | undefined;
+  /** `--effort`: the run budget from the editor's Effort table. Replaces `--budget`. */
+  readonly effort?: EffortMode | undefined;
+  /** `--speed`: parallel workspace lookups while context is collected. */
+  readonly speed?: SpeedMode | undefined;
+  /** `--context-mode` with `--context-file` and `--context-selection`. */
+  readonly context?: AgentContextConfig | undefined;
+  /** `--research`: which web tools the agent is offered. */
+  readonly research?: ResearchMode | undefined;
 }
 
 /** A parse either yields a run, asks for help, or names the mistake. */

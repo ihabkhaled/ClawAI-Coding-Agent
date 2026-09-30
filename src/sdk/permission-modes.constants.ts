@@ -5,6 +5,8 @@ export const AGENT_PERMISSION_MODES: readonly AgentPermissionMode[] = [
   'plan',
   'ask',
   'accept-edits',
+  'autonomous-scoped',
+  'strict',
 ];
 
 /** Everything a mode-gated run may use unless the caller narrows it. */

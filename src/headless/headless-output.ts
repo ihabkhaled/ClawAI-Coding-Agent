@@ -53,6 +53,9 @@ export function writeResult(
 
 /** The stderr line a person watching a text run sees for a non-text event. */
 export function textLine(event: AgentEvent): string | undefined {
+  if (event.type === 'context.collected') {
+    return `[context] ${event.mode}: ${String(event.included)} included, ${String(event.excluded)} left out${event.truncated ? ', cut to the limit' : ''}\n`;
+  }
   if (event.type === 'tool.call') return `[tool] ${event.toolName}.${event.operation}\n`;
   if (event.type === 'tool.denied') {
     return `[denied] ${event.toolName}.${event.operation}\n`;

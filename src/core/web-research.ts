@@ -17,7 +17,7 @@ export const webSearchSchema = z
 export const webFetchSchema = z
   .object({
     url: z.string().min(1).max(4_096),
-    timeoutMs: z.number().int().min(1_000).max(120_000).optional(),
+    timeoutMs: z.number().int().min(1_000).max(60_000).optional(),
     refresh: z.boolean().optional(),
   })
   .strict();
@@ -74,3 +74,13 @@ export function assertFetchableUrl(raw: string): URL {
   }
   return url;
 }
+
+export const webCrawlSchema = z
+  .object({
+    url: z.string().min(1).max(4_096),
+    maxPages: z.number().int().min(1).max(30).optional(),
+    maxDepth: z.number().int().min(1).max(3).optional(),
+    timeoutMs: z.number().int().min(1_000).max(60_000).optional(),
+    refresh: z.boolean().optional(),
+  })
+  .strict();

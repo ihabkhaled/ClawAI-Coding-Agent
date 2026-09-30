@@ -23,6 +23,8 @@ const HOST_FREE_ROOTS = [
   'src/infrastructure/process-terminator',
   'src/infrastructure/hardened-git',
   'src/services/mcp-server-registry',
+  // Only zod: the research routes the web tool calls.
+  'src/backend/research-client',
 ];
 
 function fromRoot(path: string): string {
