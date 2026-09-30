@@ -16,11 +16,13 @@ export type PermissionReason =
   | 'commandReviewRequired'
   | 'finalDiffRequired'
   | 'externalFinalDiffRequired'
-  | 'fullAccess'
+  | 'scopedAccess'
   | 'manualApproval'
+  | 'planReadContext'
   | 'planReadOnly'
   | 'sensitivePath'
   | 'sessionApproval'
+  | 'strictApproval'
   | 'workspaceUntrusted';
 
 export interface PermissionInput {

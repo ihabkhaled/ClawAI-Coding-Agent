@@ -129,7 +129,10 @@ export class SessionControlService {
     if (decision.outcome === 'deny') {
       return false;
     }
-    const routineOperation = operation === 'workspaceContext' || operation === 'editGeneration';
+    // Strict asks every time: an earlier "yes" is never remembered for it.
+    const routineOperation =
+      decision.reason !== 'strictApproval' &&
+      (operation === 'workspaceContext' || operation === 'editGeneration');
     if (routineOperation && this.approvalMemory?.hasRoutineAccess() === true) {
       return true;
     }

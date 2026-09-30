@@ -181,18 +181,22 @@ describe('permission policy: the guards that flipping a condition would remove',
     for (const operation of ['editGeneration', 'workspaceContext'] as const) {
       expect(decide({ permissionMode: 'ENTERPRISE_LOCKED', operation })).toEqual({
         outcome: 'ask',
-        reason: 'manualApproval',
+        reason: 'strictApproval',
       });
     }
   });
 
-  it('the Plan permission mode denies rather than falling through to full access', () => {
-    for (const operation of ['editGeneration', 'workspaceContext'] as const) {
+  it('the Plan permission mode denies writes rather than falling through to scoped access, and reads context', () => {
+    for (const operation of ['editGeneration', 'commandExecution'] as const) {
       expect(decide({ permissionMode: 'PLAN', operation })).toEqual({
         outcome: 'deny',
         reason: 'planReadOnly',
       });
     }
+    expect(decide({ permissionMode: 'PLAN', operation: 'workspaceContext' })).toEqual({
+      outcome: 'allow',
+      reason: 'planReadContext',
+    });
   });
 
   it('a command is never pre-approved by any permission mode', () => {
@@ -225,7 +229,7 @@ describe('permission policy: the guards that flipping a condition would remove',
   it('final diffs are pre-approved only under full access, and ask with their own reason otherwise', () => {
     expect(decide({ operation: 'finalDiff', permissionMode: 'BYPASS_PERMISSIONS' })).toEqual({
       outcome: 'allow',
-      reason: 'fullAccess',
+      reason: 'scopedAccess',
     });
     for (const permissionMode of ['ASK', 'AUTO_EDIT', 'MANUAL', 'EDIT_AUTOMATICALLY'] as const) {
       expect(decide({ operation: 'finalDiff', permissionMode })).toEqual({
