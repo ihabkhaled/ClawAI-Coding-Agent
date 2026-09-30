@@ -42,17 +42,14 @@ export function releaseAssetPaths(version) {
 }
 
 /**
- * What the Release workflow's first two gates would say, before pushing.
- * `remoteTags` are tag names on origin; `trackedFiles` are files in git HEAD
- * (builds/ is gitignored, so an asset that exists on disk is not enough).
+ * What the Release workflow's release-only gates would say, before pushing.
+ * An existing version tag means this is a normal main update, so no release
+ * assets are required. A new version means release intent and therefore all
+ * committed assets must exist before publication.
  */
 export function releaseGateProblems({ version, remoteTags, trackedFiles }) {
+  if (remoteTags.includes(`v${version}`)) return [];
   const problems = [];
-  if (remoteTags.includes(`v${version}`)) {
-    problems.push(
-      `v${version} already exists on origin: bump the version before every push to main.`,
-    );
-  }
   const tracked = new Set(trackedFiles);
   for (const asset of releaseAssetPaths(version)) {
     if (!tracked.has(asset)) {
