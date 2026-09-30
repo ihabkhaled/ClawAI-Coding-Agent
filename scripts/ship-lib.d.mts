@@ -15,4 +15,4 @@ export function secretShapedAdditions(
 export function gateVerdict(
   runs: readonly { readonly name: string; readonly status: string; readonly conclusion?: string }[],
   expectedWorkflows?: readonly string[],
-): { readonly state: 'red' | 'green' | 'pending'; readonly failed: string[] };
+): { readonly state: 'red' | 'green' | 'pending' | 'superseded'; readonly failed: string[] };

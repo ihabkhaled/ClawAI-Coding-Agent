@@ -108,6 +108,24 @@ describe('GitHub gate verdict', () => {
   });
 });
 
+describe('a superseded run', () => {
+  it('is not red: CI cancels the older run when a newer push arrives', () => {
+    const cancelled = { name: 'CI', status: 'completed', conclusion: 'cancelled' };
+    expect(gateVerdict([cancelled, { name: 'Release', status: 'in_progress' }])).toEqual({
+      state: 'superseded',
+      failed: ['CI'],
+    });
+  });
+
+  it('still reports a real failure next to a cancelled run', () => {
+    const runs = [
+      { name: 'CI', status: 'completed', conclusion: 'cancelled' },
+      { name: 'Release', status: 'completed', conclusion: 'failure' },
+    ];
+    expect(gateVerdict(runs).state).toBe('red');
+  });
+});
+
 describe('the Linux gate', () => {
   it('runs as the unprivileged node user, like the GitHub runner', () => {
     const args = dockerRunArgs();

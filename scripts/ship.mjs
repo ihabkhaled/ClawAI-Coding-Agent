@@ -127,6 +127,11 @@ async function watchGates(sha) {
       process.stdout.write('GitHub gates are green.\n');
       return;
     }
+    if (verdict.state === 'superseded') {
+      fail(
+        `${verdict.failed.join(', ')} was cancelled by a newer push to main. Watch the newest commit instead: gh run list.`,
+      );
+    }
     if (verdict.state === 'red') {
       for (const run of runs.filter((candidate) => verdict.failed.includes(candidate.name))) {
         const log = capture('gh', ['run', 'view', String(run.databaseId), '--log-failed']);
