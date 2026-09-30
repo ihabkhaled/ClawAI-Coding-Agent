@@ -15,7 +15,11 @@ import type {
 } from './session-control.types';
 import type { AgentMode } from '../core/agent-mode.types';
 import type { EffortMode } from '../core/effort-mode';
-import type { PermissionMode, PermissionOperation } from '../core/permission-policy.types';
+import type {
+  PermissionDecision,
+  PermissionMode,
+  PermissionOperation,
+} from '../core/permission-policy.types';
 import type { SpeedMode } from '../core/speed-mode';
 import type { ViewDensity } from '../core/view-density.types';
 
@@ -129,10 +133,7 @@ export class SessionControlService {
     if (decision.outcome === 'deny') {
       return false;
     }
-    // Strict asks every time: an earlier "yes" is never remembered for it.
-    const routineOperation =
-      decision.reason !== 'strictApproval' &&
-      (operation === 'workspaceContext' || operation === 'editGeneration');
+    const routineOperation = isRememberable(operation, decision);
     if (routineOperation && this.approvalMemory?.hasRoutineAccess() === true) {
       return true;
     }
@@ -231,4 +232,12 @@ export class SessionControlService {
     );
     return result;
   }
+}
+
+/** Strict asks every time: an earlier "yes" is never remembered for it or reused. */
+function isRememberable(operation: PermissionOperation, decision: PermissionDecision): boolean {
+  return (
+    decision.reason !== 'strictApproval' &&
+    (operation === 'workspaceContext' || operation === 'editGeneration')
+  );
 }

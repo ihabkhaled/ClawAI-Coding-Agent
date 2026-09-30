@@ -2,6 +2,15 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.88.0
+
+- Approval choices now do what their names say. Strict asks for every action every time and never reuses an earlier yes. Plan can still read your workspace for context while refusing every edit and command. Autonomous Scoped works inside your workspace and still asks before commands and before writing outside it.
+- The chat box now remembers Run, Context and Web research after a reload, like Effort, Speed and Approval.
+- In the command-line agent, `--disallowed-tools workspace.file` (a tool name on its own) now blocks every action of that tool instead of silently doing nothing, and `--allowed-tools` works the same way.
+- In Plan mode, a model that asks to write a file now gets a refusal it can answer with, instead of the whole run ending in an error.
+- Attaching to a runner session now warns when none of the runner's folders is open in this window.
+- Found on the ClawAI server, not fixed here: a run with memory turned off can still read your saved memories. The exact change is written down in `docs/parity/PARTIAL_REMAINDERS.md`.
+
 ## 1.87.0
 
 - Scheduled tasks can follow a calendar, not just "every N minutes". Ask for "weekdays at 9:00" and the agent schedules it. A schedule cannot fire more than every 5 minutes, and tasks still run only while VS Code is open.

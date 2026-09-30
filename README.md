@@ -9,10 +9,13 @@ project, proposes changes, and waits for your OK before it touches a file.
 It connects to your ClawAI account, so you can use many AI models from one
 place: hosted models, or models running on your own machine.
 
-Version 1.87.0 delivers a more capable agent that can plan, edit files, run
+Version 1.88.0 delivers a more capable agent that can plan, edit files, run
 commands, use git, and drive a browser, all with your approval, and it keeps
 working with the classic chat-and-review flow if a newer feature is not
-available on your ClawAI server. Scheduled tasks can now follow a calendar
+available on your ClawAI server. The approval choices now mean what they say
+(Strict asks every time, Plan can still read your workspace), the chat box
+remembers Run, Context and Web research, and in Plan mode the agent answers
+that it cannot write instead of stopping with an error. Scheduled tasks can now follow a calendar
 (for example weekdays at 9:00), and commands sent to a runner machine run with
 your sandbox setting and without your editor's private environment. The
 command-line agent can now be set up like the chat box (effort, what it is
