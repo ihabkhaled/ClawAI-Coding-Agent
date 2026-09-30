@@ -96,10 +96,20 @@ export function secretShapedAdditions(diffText) {
 /**
  * One verdict for the runs GitHub reports on a commit. Any failed run is red
  * even while others are still going: waiting on a doomed commit wastes time.
+ * A cancelled run is not a failure: CI cancels an in-progress run when a newer
+ * push to main arrives, so the verdict is 'superseded' and the newer commit is
+ * the one to watch.
  */
 export function gateVerdict(runs, expectedWorkflows = ['CI', 'Release']) {
-  const failed = runs.filter((run) => run.status === 'completed' && run.conclusion !== 'success');
+  const completed = runs.filter((run) => run.status === 'completed');
+  const failed = completed.filter(
+    (run) => run.conclusion !== 'success' && run.conclusion !== 'cancelled',
+  );
   if (failed.length > 0) return { state: 'red', failed: failed.map((run) => run.name) };
+  const cancelled = completed.filter((run) => run.conclusion === 'cancelled');
+  if (cancelled.length > 0) {
+    return { state: 'superseded', failed: cancelled.map((run) => run.name) };
+  }
   const seen = new Map(runs.map((run) => [run.name, run]));
   const done = expectedWorkflows.every((name) => seen.get(name)?.status === 'completed');
   return done ? { state: 'green', failed: [] } : { state: 'pending', failed: [] };
