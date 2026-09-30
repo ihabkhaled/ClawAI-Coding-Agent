@@ -1,3 +1,5 @@
+import { MAX_RAISED_CONVERSATIONS } from './compaction-trigger.constants';
+
 import type {
   AutoCompactionAction,
   AutoCompactionInput,
@@ -51,6 +53,11 @@ export function trackRaisedConversations(
   const next = new Set(raised);
   if (nearlyFull) {
     next.add(threadId);
+    // A long session cannot grow this without bound: the oldest mark goes first.
+    for (const oldest of next) {
+      if (next.size <= MAX_RAISED_CONVERSATIONS) break;
+      next.delete(oldest);
+    }
   } else {
     next.delete(threadId);
   }

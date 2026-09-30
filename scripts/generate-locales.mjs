@@ -5,12 +5,15 @@ import { cwd, stdout } from 'node:process';
 import { authorizationPageTranslations } from './authorization-page-translations.mjs';
 import { conversationRewindTranslations } from './conversation-rewind-translations.mjs';
 import { integrationTranslations } from './integration-translations.mjs';
+import { pairingRetentionTranslations } from './pairing-retention-translations.mjs';
 import { parityComposerTranslations } from './parity-composer-translations.mjs';
 import { permissionModeTranslations } from './permission-mode-translations.mjs';
+import { pluginSignatureTranslations } from './plugin-signature-translations.mjs';
 import { pluginTreeTranslations } from './plugin-tree-translations.mjs';
 import { pullRequestTranslations } from './pull-request-translations.mjs';
 import { remoteChannelTranslations } from './remote-channel-translations.mjs';
 import { remoteControlTranslations } from './remote-control-translations.mjs';
+import { runnerHandoffTranslations } from './runner-handoff-translations.mjs';
 import { runnerRoutineTranslations } from './runner-routine-translations.mjs';
 import { remoteSessionTranslations } from './remote-session-translations.mjs';
 import { usageBreakdownTranslations } from './usage-breakdown-translations.mjs';
@@ -4754,11 +4757,64 @@ const cachedTokenTranslations = {
   },
 };
 
+const marketplaceDescriptionTranslations = {
+  ar: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      'تحدّث مع الذكاء الاصطناعي ودع وكيل البرمجة يخطط لشيفرتك ويعدّلها ويختبرها داخل VS Code. أنت توافق على كل تغيير.',
+  },
+  de: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      'Chatte mit KI und lass einen Coding-Agenten deinen Code in VS Code planen, ändern und testen. Du genehmigst jede Änderung.',
+  },
+  es: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      'Chatea con IA y deja que un agente de código planifique, edite y pruebe tu código en VS Code. Tú apruebas cada cambio.',
+  },
+  fa: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      'با هوش مصنوعی گفتگو کنید و بگذارید یک عامل کدنویسی کد شما را در VS Code طراحی، ویرایش و آزمایش کند. هر تغییر با تأیید شماست.',
+  },
+  fr: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      "Discutez avec l'IA et laissez un agent de code planifier, modifier et tester votre code dans VS Code. Vous validez chaque changement.",
+  },
+  hi: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      'AI से चैट करें और कोडिंग एजेंट को VS Code में आपका कोड प्लान, एडिट और टेस्ट करने दें। हर बदलाव आप ही मंज़ूर करते हैं।',
+  },
+  it: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      "Chatta con l'IA e lascia che un agente di codice pianifichi, modifichi e testi il tuo codice in VS Code. Approvi tu ogni modifica.",
+  },
+  ja: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      'AIとチャットし、コーディングエージェントにVS Code上でコードの計画・編集・テストを任せられます。変更はすべてあなたが承認します。',
+  },
+  pt: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      'Converse com a IA e deixe um agente de código planejar, editar e testar seu código no VS Code. Você aprova cada mudança.',
+  },
+  ru: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      'Общайтесь с ИИ и поручайте агенту планировать, менять и тестировать код в VS Code. Каждое изменение вы подтверждаете сами.',
+  },
+  th: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      'แชตกับ AI และให้เอเจนต์เขียนโค้ดวางแผน แก้ไข และทดสอบโค้ดใน VS Code ทุกการเปลี่ยนแปลงต้องผ่านการอนุมัติจากคุณ',
+  },
+  zh: {
+    'Chat with AI and let a coding agent plan, edit and test your code in VS Code. You approve every change.':
+      '与 AI 聊天，让编码代理在 VS Code 中规划、修改并测试你的代码。每项更改都由你批准。',
+  },
+};
+
 function translate(locale, message) {
   return (
+    marketplaceDescriptionTranslations[locale][message] ??
     authorizationPageTranslations[locale][message] ??
     conversationRewindTranslations[locale][message] ??
     pluginTreeTranslations[locale][message] ??
+    pluginSignatureTranslations[locale][message] ??
     parityComposerTranslations[locale][message] ??
     permissionModeTranslations[locale][message] ??
     pullRequestTranslations[locale][message] ??
@@ -4806,8 +4862,10 @@ function translate(locale, message) {
     remoteControlTranslations[locale][message] ??
     runnerRoutineTranslations[locale][message] ??
     remoteSessionTranslations[locale][message] ??
+    runnerHandoffTranslations[locale][message] ??
     usageBreakdownTranslations[locale][message] ??
     integrationTranslations[locale][message] ??
+    pairingRetentionTranslations[locale][message] ??
     message
   );
 }

@@ -6,7 +6,7 @@ import { connectionOperationErrorMessage } from '../backend/backend-error-messag
 import { channelClient } from '../backend/channel-client';
 import { remoteJobClient } from '../backend/remote-job-client';
 import { CHANNEL_ENABLED_MEMORY_KEY } from '../core/channel-inbox.constants';
-import { channelMessageBlock } from '../core/channel-message-format';
+import { channelMessageBlock, safeChannelUrl, singleLine } from '../core/channel-message-format';
 
 import { ChannelInboxWatcher } from './channel-inbox-watcher';
 
@@ -18,16 +18,21 @@ import type { ExtensionState } from '../core/extension-state';
 function surface(dependencies: RemoteChannelDependencies, message: ChannelMessage): void {
   const sendToChat = vscode.l10n.t('Send to Chat');
   const openLink = vscode.l10n.t('Open Link');
-  const actions = message.url === null ? [sendToChat] : [sendToChat, openLink];
+  const link = message.url === null ? undefined : safeChannelUrl(message.url);
+  const actions = link === undefined ? [sendToChat] : [sendToChat, openLink];
   void vscode.window
     .showInformationMessage(
-      vscode.l10n.t('Channel message from {0}: {1}', message.source, message.title),
+      vscode.l10n.t(
+        'Channel message from {0}: {1}',
+        singleLine(message.source),
+        singleLine(message.title),
+      ),
       ...actions,
     )
     .then(async (choice) => {
       if (choice === sendToChat) await dependencies.insert(channelMessageBlock(message));
-      if (choice === openLink && message.url !== null)
-        await vscode.env.openExternal(vscode.Uri.parse(message.url));
+      if (choice === openLink && link !== undefined)
+        await vscode.env.openExternal(vscode.Uri.parse(link));
     });
 }
 

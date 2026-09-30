@@ -1659,6 +1659,7 @@ pre {
 }
 
 .message-action {
+  min-height: 24px;
   padding: 2px var(--sp-2);
   border: 1px solid transparent;
   border-radius: var(--radius-xs);
@@ -2420,8 +2421,8 @@ body[data-view-density='focus'] .conversation {
 }
 
 .attachment-remove {
-  width: 22px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
   border-radius: var(--radius-xs);
@@ -2442,8 +2443,8 @@ body[data-view-density='focus'] .conversation {
 }
 
 .attachment-move {
-  width: 18px;
-  height: 22px;
+  width: 24px;
+  height: 24px;
   padding: 0;
   border: 0;
   border-radius: var(--radius-xs);

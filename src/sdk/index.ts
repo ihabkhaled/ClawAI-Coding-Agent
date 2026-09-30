@@ -13,6 +13,12 @@ export { runAgent } from './agent-sdk';
 export { toolResultFor } from './agent-tool-result';
 export { workspaceToolkit, offeredDefinitions, toolCategory } from './workspace-toolkit';
 export { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
+export { AGENT_MAX_SYSTEM_PROMPT_CHARS } from './agent-inputs.constants';
+export { AGENT_PERMISSION_MODES } from './permission-modes.constants';
+export { permissionsForMode } from './permission-modes';
+export { mcpToolkit } from './mcp-toolkit';
+export { combineToolkits, restrictToolkit } from './toolkit-compose';
+export { toolIdentifiers, toolPermitted } from './tool-filter';
 export {
   AGENT_DEFAULT_TOOL_CATEGORIES,
   AGENT_WORKSPACE_TOOL_DEFINITIONS,
@@ -45,6 +51,9 @@ export type {
   AgentResult,
   AgentRunCallOptions,
 } from './create-agent.types';
+export type { AgentMcpOptions } from './mcp-toolkit.types';
+export type { AgentPermissionMode } from './permission-modes.types';
+export type { AgentToolFilter } from './tool-filter.types';
 export type {
   AgentApprovalRequest,
   AgentPermissions,

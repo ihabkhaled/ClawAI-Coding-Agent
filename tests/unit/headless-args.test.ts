@@ -152,3 +152,86 @@ describe('authFromEnvironment', () => {
     expect(authFromEnvironment({ CLAW_EMAIL: '', CLAW_PASSWORD: 'x' })).toBeUndefined();
   });
 });
+
+describe('parseHeadlessArgs session, prompt, MCP and permission flags', () => {
+  it('reads --resume and --continue, and refuses both together or a bad id', () => {
+    expect(run(['-p', 'x', '--resume', 'thread_9-A']).resume).toBe('thread_9-A');
+    expect(run(['-p', 'x', '--continue']).continueLast).toBe(true);
+    for (const argv of [
+      ['-p', 'x', '--resume', 'a', '--continue'],
+      ['-p', 'x', '--resume', '../etc'],
+    ]) {
+      expect(parseHeadlessArgs(argv, {}, cwd).kind).toBe('usage');
+    }
+  });
+
+  it('keeps an invocation that uses none of the new flags exactly as before', () => {
+    const invocation = run(['-p', 'x']);
+
+    for (const key of ['resume', 'continueLast', 'mcpConfig', 'permissionMode', 'allowedTools']) {
+      expect(invocation).not.toHaveProperty(key);
+    }
+  });
+
+  it('resolves prompt and MCP files against the working directory', () => {
+    const invocation = run([
+      '-p',
+      'x',
+      '--append-system-prompt',
+      '@rules.md',
+      '--system-prompt-file',
+      'base.md',
+      '--mcp-config',
+      'mcp.json',
+    ]);
+
+    expect(invocation.appendSystemPrompt).toBe('@rules.md');
+    expect(invocation.systemPromptFile).toBe(path.resolve(cwd, 'base.md'));
+    expect(invocation.mcpConfig).toBe(path.resolve(cwd, 'mcp.json'));
+  });
+
+  it('reads comma lists and repeats of --allowed-tools and --disallowed-tools', () => {
+    const invocation = run([
+      '-p',
+      'x',
+      '--allowed-tools',
+      'workspace.file.*,mcp__echo__*',
+      '--allowed-tools',
+      'workspace.git.status',
+      '--disallowed-tools',
+      'workspace.command.*',
+    ]);
+
+    expect(invocation.allowedTools).toEqual([
+      'workspace.file.*',
+      'mcp__echo__*',
+      'workspace.git.status',
+    ]);
+    expect(invocation.disallowedTools).toEqual(['workspace.command.*']);
+  });
+
+  it('accepts the three permission modes and names the valid ones otherwise', () => {
+    for (const mode of ['plan', 'ask', 'accept-edits']) {
+      expect(run(['-p', 'x', '--permission-mode', mode]).permissionMode).toBe(mode);
+    }
+    const bad = parseHeadlessArgs(['-p', 'x', '--permission-mode', 'yolo'], {}, cwd);
+
+    expect(bad).toMatchObject({ kind: 'usage' });
+    expect(JSON.stringify(bad)).toContain('plan, ask, accept-edits');
+  });
+
+  it('widens the default tool grant for MCP and for a permission mode, never an explicit one', () => {
+    expect(run(['-p', 'x', '--mcp-config', 'm.json']).allowTools).toEqual(['read', 'git', 'mcp']);
+    expect(run(['-p', 'x', '--permission-mode', 'ask']).allowTools).toEqual([
+      'read',
+      'write',
+      'command',
+      'git',
+      'mcp',
+    ]);
+    expect(run(['-p', 'x', '--mcp-config', 'm.json', '--allow-tools', 'read']).allowTools).toEqual([
+      'read',
+    ]);
+    expect(parseToolList('read,mcp')).toEqual(['read', 'mcp']);
+  });
+});

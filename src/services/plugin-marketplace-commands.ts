@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { marketplaceAllowed } from '../core/plugin-marketplace';
 
 import { pluginFailureMessage } from './plugin-failure-message';
+import { verdictLabel } from './plugin-labels';
 
 import type {
   MarketplaceEntryItem,
@@ -53,12 +54,14 @@ async function installFromMarketplace(
   source: string,
 ): Promise<void> {
   const opened = await dependencies.marketplace.open(source);
-  const items: MarketplaceEntryItem[] = opened.catalog.plugins.map((entry) => ({
-    label: `${entry.publisher}.${entry.name}`,
-    description: entry.version,
-    detail: entry.description,
-    entry,
-  }));
+  const items: MarketplaceEntryItem[] = await Promise.all(
+    opened.catalog.plugins.map(async (entry) => ({
+      label: `${entry.publisher}.${entry.name}`,
+      description: `${entry.version} · ${verdictLabel(await dependencies.marketplace.verdictOf(entry))}`,
+      detail: entry.description,
+      entry,
+    })),
+  );
   const picked = await vscode.window.showQuickPick(items, {
     placeHolder: vscode.l10n.t('Pick a plugin to install'),
     matchOnDetail: true,

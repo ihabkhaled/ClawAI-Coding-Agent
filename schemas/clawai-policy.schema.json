@@ -153,6 +153,18 @@
         "maxLength": 2048
       },
       "maxItems": 100
+    },
+    "trustedPluginPublishers": {
+      "type": "object",
+      "description": "Publisher id to base64 Ed25519 public key (raw 32 bytes or SPKI DER) trusted for plugin signatures. A project policy can only narrow the trusted set.",
+      "propertyNames": {
+        "pattern": "^[a-z0-9][a-z0-9-]{0,62}$"
+      },
+      "additionalProperties": {
+        "type": "string",
+        "minLength": 1,
+        "maxLength": 200
+      }
     }
   }
 }

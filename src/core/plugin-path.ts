@@ -7,7 +7,8 @@
  */
 export function isContainedRelativePath(path: string): boolean {
   if (path.length === 0 || path.includes('\\') || path.includes('\0')) return false;
-  if (path.startsWith('/') || /^[A-Za-z]:/u.test(path)) return false;
+  // A colon is a drive on Windows and an alternate data stream after a file name.
+  if (path.startsWith('/') || path.includes(':')) return false;
   return path.split('/').every((segment) => segment !== '..' && segment !== '');
 }
 

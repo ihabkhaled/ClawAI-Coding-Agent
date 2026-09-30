@@ -1,196 +1,238 @@
 # ClawAI Coding Agent for VS Code
 
-ClawAI Coding Agent is the secure VS Code client for a ClawAI backend. It brings
-streaming chat, backend-owned AUTO routing, manual model selection, model
-comparison and judging, project-aware code workflows, explainable context
-receipts, and preview-before-apply edits into the editor.
+**Every AI, one workspace — right inside VS Code.**
 
-The extension remains a thin client. Authentication, entitlements, quotas,
-thread history, provider credentials, routing, inference, and audit records stay
-in the ClawAI platform.
+ClawAI Coding Agent puts a chat and a coding agent in your editor. Ask a
+question, fix a bug, write tests, or hand over a bigger task. It reads your
+project, proposes changes, and waits for your OK before it touches a file.
 
-## Runtime foundation
+It connects to your ClawAI account, so you can use many AI models from one
+place: hosted models, or models running on your own machine.
 
-Version 1.83.0 delivers the model-neutral Runtime Protocol V2 studio. Bounded
-workspace, command, process, Git, container, database, quality, browser,
-planning, service, journal, and evidence capabilities share one ordered,
-policy-controlled execution loop. An unavailable or incompatible additive
-endpoint keeps the supported V1 chat and reviewed edit workflow active.
+Version 1.84.0 delivers a more capable agent that can plan, edit files, run
+commands, use git, and drive a browser, all with your approval, and it keeps
+working with the classic chat-and-review flow if a newer feature is not
+available on your ClawAI server.
 
-## Highlights
+## Why use it
 
-- Stream responses from local or hosted ClawAI deployments.
-- Keep multiple titled ClawAI chat tabs open, run two independent chats
-  concurrently with different models, restore backend history in place, and
-  preserve ordered follow-ups within each conversation.
-- Use backend AUTO routing or reliably choose an entitled cloud, Ollama, or
-  llama.cpp model manually.
-- Chat from a workspace even when no editor tab is open.
-- Paste, drop, or pick screenshots, images, videos, documents, and source files
-  into the composer. Attachments stay visibly bound to the request that owns
-  them and upload only when that queued request starts. A file whose name looks
-  like it stores credentials â€” `.env`, `id_rsa`, `passwords.csv` â€” is refused by
-  name, the same way context collection and every tool refuse it.
-- Recall submitted prompts with Arrow Up and move forward again with Arrow Down.
-- Switch between Auto execution and read-only Plan mode.
-- Choose manual approvals, persistent per-workspace routine consent, or Full
-  Access while immutable safety boundaries remain enforced.
-- Compare two to five models in structured responsive result cards and
-  optionally request a judge response.
-- Ask about a selection, active file, or bounded workspace context.
-- Type `path:L-L` in a message to pull that exact line range of a workspace
-  file into context, independent of what is open or selected.
-- Generate, fix, review, test, document, plan, and audit code.
-- Follow two request-owned run lanes and vivid reported/estimated token use for
-  prompts, reasoning status, tools, files, responses, comparisons, and the
-  current conversation.
-- Approve changes inside the ClawAI workbench and open proposed VS Code diffs
-  only when **Review changes** is selected.
-- Run bounded development commands in visible VS Code task terminals after
-  approved edits.
-- Undo ClawAI edits step by step, up to twenty applied changes deep, until the
-  workspace folder changes.
-- Keep project rules in `.clawai/` and profile-wide rules in extension storage.
-- Use the interface in 13 locales, including RTL Arabic and Persian.
+- **You stay in control.** You see every change as a diff before it is applied,
+  and you can undo it.
+- **Pick your model, or let ClawAI pick.** Use automatic routing, or choose a
+  cloud or local model yourself.
+- **Safe by default.** Secret files are never read, commands are limited, and
+  approvals are on until you say otherwise.
+- **Works with your project.** It understands your files, selection, git state,
+  and your own project rules.
+- **Private.** Sign-in happens in your browser. A zero-retention mode keeps
+  your work off the server.
+- **Your language.** The interface comes in 13 languages, including right-to-left
+  Arabic and Persian.
+
+## What you can do
+
+### Chat and agent
+
+- Chat in the ClawAI panel, in an editor tab, or with `@clawai` in VS Code Chat.
+- Keep several chats open at once, and run two at the same time with different
+  models.
+- Choose **Auto** (the agent acts, with your approvals) or **Plan mode**
+  (read-only: it thinks and suggests, but changes nothing).
+- Compare two to five models on the same question, then ask a judge model to
+  pick the best answer.
+- Ask about a selection, the current file, or your whole workspace. Type
+  `src/app.ts:10-40` in a message to pull in exactly those lines.
+- Ask a quick side question without derailing the main task.
+- Choose how answers are written: default, concise, explanatory, or learning.
+
+### Files and code changes
+
+- Generate code, fix a selection, review code, write tests, write docs, make a
+  plan, or audit the whole workspace.
+- Review changes as a normal VS Code diff before anything is written.
+- Undo your last ClawAI edits, step by step.
+- Create checkpoints and restore them later, or rewind a conversation to an
+  earlier point.
+
+### Running commands safely
+
+- The agent can run development commands (tests, builds, linters) in a visible
+  VS Code terminal that you can cancel.
+- Commands are checked first. Dangerous or unknown ones are refused or need
+  your approval.
+- Optional sandbox: run commands inside your operating system's sandbox or a
+  Docker container, with network access off unless you turn it on.
+- The agent can open pages in a browser to check your web app, and you can
+  attach what it saw to your chat.
+
+### Approvals and permission modes
+
+- **Manual:** the default. ClawAI asks before it collects context or proposes
+  edits.
+- **Always allow in this workspace:** approve routine steps once and remember
+  it for that trusted workspace.
+- **Full Access:** skips routine prompts and applies checked file changes for
+  you. It never skips Workspace Trust, secret-file protection, or command
+  checks, and you can always cancel.
+
+### Sessions, history and resume
+
+- Your conversations are saved. Reopen, rename, archive, group, or restore
+  them, and open one in a new window.
+- Search your run history, export a transcript, and see a session recap.
+- Resume a conversation that started somewhere else, such as the ClawAI web app.
+- Long chats can be summarized (compacted) so they can keep going.
+- See how much you have used with **ClawAI: Show Usage**.
+
+### Attachments: images, PDF and voice
+
+- Paste, drop, or pick screenshots, images, videos, documents, PDFs, and source
+  files into the message box.
+- Attach terminal output with one command.
+- Dictate your message by voice in the composer. If your setup does not allow
+  it, ClawAI tells you how to use your system's dictation instead.
+- Files whose names look like secrets (such as `.env` or `id_rsa`) are refused.
+
+### Git and pull requests
+
+- The agent can look at your git changes, make commits, and help prepare pull
+  requests when you allow git.
+- Post a code review comment to GitHub or GitLab straight from VS Code.
+- Optional Slack notifications about your runs.
+
+### Plugins, MCP and skills
+
+- Add tools with **MCP servers** (local or remote) in your settings.
+- Browse, install, enable, and disable **plugins** from plugin marketplaces.
+- Teach ClawAI your project with **skills**, rules, and named sub-agents kept in
+  a `.clawai` folder. Create it with **ClawAI: Initialize .clawai**.
+- Run your own commands at set points in a run with hooks.
+
+### Workflows and scheduled tasks
+
+- Run saved workflows from the Command Palette.
+- Manage scheduled tasks and cloud routines that run on their own.
+- Run a remote job on demand.
+
+### Remote and command-line use
+
+- Start a cloud coding session, or register your machine as a runner.
+- Pair the editor with your phone and control it remotely.
+- A command-line runner (`clawai -p "your task"`) ships with the project on
+  GitHub for scripts and CI.
+
+### Privacy and zero-retention
+
+- You sign in through your browser. The extension never sees your password.
+- Tokens are kept in VS Code's secure storage, never in settings or files.
+- Turn on **Zero data retention** to keep run history in memory only, ask the
+  server not to keep your content, and block uploads and sharing.
+- Nothing is sent to a telemetry service unless you set one up yourself.
 
 ## Requirements
 
 - VS Code 1.98 or newer.
-- A reachable ClawAI backend and a ClawAI account.
-- Workspace Trust for workspace-wide collection or any file modification.
-
-Node.js is only required when developing or packaging the extension.
+- A ClawAI account and a ClawAI server you can reach: **Local**
+  (`https://claw.local`) or **Cloud** (`https://claw-ai.co`), or your own.
+- A trusted workspace to let ClawAI change files. In an untrusted workspace,
+  chat and read-only review still work.
+- Optional: Docker, if you want commands to run in a container.
 
 ## Quick start
 
-1. Install the VSIX or Marketplace release.
-2. The focused connection screen offers **Local** (`https://claw.local`),
-   **Cloud** (`https://claw-ai.co`), and **Custom** for the backend and the
-   frontend separately. Keep Local, pick Cloud for the hosted deployment, or
-   enter another ClawAI app origin such as `https://localhost`; `/api/v1` is
-   added automatically.
-3. Choose **Connect to ClawAI**, then approve VS Code in the ClawAI web app.
-   Credentials are entered only in the web app; the extension receives a
-   one-time authorization code and stores the resulting tokens in VS Code
-   `SecretStorage`. The full workbench appears only after this succeeds.
-4. Keep **Automatic routing** selected or choose an entitled cloud/local model
-   in the composer.
-5. Choose **Auto** or **Plan mode**, then select the permission level appropriate
-   for this workspace.
-6. Ask a question, compare models, or run a ClawAI command from the Command
-   Palette. Smart context works with a selection, file, workspace, or no files.
+1. **Install** ClawAI Coding Agent from the VS Code Marketplace.
+2. **Open the claw icon** in the Activity Bar, or press `Ctrl+Shift+A`
+   (`Cmd+Shift+A` on macOS).
+3. **Pick a server** on the connection screen: Local, Cloud, or Custom.
+4. **Choose Connect to ClawAI.** Your browser opens. Sign in and approve VS
+   Code. You never type a password into the extension.
+5. **Ask something.** Try "explain this file", or select some code and press
+   `Ctrl+Shift+Enter`. Keep **Automatic routing** on, or pick a model.
 
-Use `Ctrl+Shift+A` (`Cmd+Shift+A` on macOS) to open chat and
-`Ctrl+Shift+Enter` (`Cmd+Shift+Enter`) to ask about a selection.
-You can also open VS Code Chat and address the stable `@clawai` participant.
+## Commands and shortcuts
 
-## Local and hosted backends
+Open the Command Palette (`Ctrl+Shift+P`) and type `ClawAI`.
 
-Backend and Frontend are chosen independently. **Local** resolves both to
-`https://claw.local`. **Cloud** resolves both to `https://claw-ai.co`, the
-hosted deployment that serves the API and the web app from one origin under a
-publicly trusted certificate. **Custom** takes any other ClawAI origin.
+| Command                        | Shortcut (Windows/Linux)       | macOS shortcut                |
+| ------------------------------ | ------------------------------ | ----------------------------- |
+| ClawAI: Open Chat              | `Ctrl+Shift+A`                 | `Cmd+Shift+A`                 |
+| ClawAI: Ask About Selection    | `Ctrl+Shift+Enter` (selection) | `Cmd+Shift+Enter` (selection) |
+| ClawAI: Select Model           | `Ctrl+Alt+M`                   | `Cmd+Alt+M`                   |
+| ClawAI: Review Selected Code   | `Ctrl+Alt+R`                   | `Cmd+Alt+R`                   |
+| ClawAI: Generate Tests         | `Ctrl+Alt+U`                   | `Cmd+Alt+U`                   |
+| ClawAI: Fix Selected Code      | `Ctrl+Alt+X` (selection)       | `Cmd+Alt+X` (selection)       |
+| ClawAI: Cancel Active Request  | `Ctrl+Alt+Escape`              | `Cmd+Alt+Escape`              |
+| ClawAI: Undo Last ClawAI Edit  | `Ctrl+Alt+Z`                   | `Cmd+Alt+Z`                   |
+| ClawAI: Search Run History     | `Ctrl+Alt+H`                   | `Cmd+Alt+H`                   |
+| ClawAI: Reopen Closed Chat     | `Ctrl+Alt+T`                   | `Cmd+Alt+T`                   |
+| ClawAI: Toggle Focus View      | `Ctrl+Alt+F`                   | `Cmd+Alt+F`                   |
+| ClawAI: Compare Models         | none                           | none                          |
+| ClawAI: Generate Plan          | none                           | none                          |
+| ClawAI: Audit Workspace        | none                           | none                          |
+| ClawAI: Initialize .clawai     | none                           | none                          |
+| ClawAI: Create Checkpoint      | none                           | none                          |
+| ClawAI: Manage Plugins         | none                           | none                          |
+| ClawAI: Manage Scheduled Tasks | none                           | none                          |
+| ClawAI: Show Usage             | none                           | none                          |
+| ClawAI: Show Logs              | none                           | none                          |
 
-Sessions are stored per backend origin, so Local and Cloud each keep their own
-credentials. Switching lanes disconnects the current one and restores the other
-if it was already authorized; it never deletes the session you left.
+Keyboard shortcuts marked "(selection)" work while text is selected in the
+editor. You can also right-click a selection to ask, fix, or review it.
 
-The extension adds `/api/v1` to the configured backend origin. A pasted
-trailing `/api/v1` is removed automatically. Do not include
-credentials, tokens, query strings, or fragments in the URL.
+## Settings that matter
 
-Plain HTTP is accepted only for `localhost`, `127.0.0.1`, `::1`, or
-`claw.local`. Every non-local backend must use HTTPS. The extension validates
-every backend response at runtime and refreshes an expired session once before
-retrying the request.
+Open Settings and search for `clawAI`.
 
-## Coding workflows
+| Setting                                      | What it does                                                                |
+| -------------------------------------------- | --------------------------------------------------------------------------- |
+| `clawAI.backendEnvironment`                  | Local, Cloud, or Custom server. Use `clawAI.backendCustomUrl` for a custom. |
+| `clawAI.permissionMode`                      | How much ClawAI must ask before it acts.                                    |
+| `clawAI.agentMode`                           | Automatic execution, or read-only planning.                                 |
+| `clawAI.routingMode`                         | Automatic model choice, or a strategy such as local-only or cost saver.     |
+| `clawAI.effortMode`                          | How much work a single run may do, from low to ultra.                       |
+| `clawAI.zeroDataRetention`                   | Keep run history in memory only and ask the server not to keep content.     |
+| `clawAI.commandSandbox.mode`                 | Run agent commands in an OS sandbox or Docker.                              |
+| `clawAI.exclude`                             | Files ClawAI must never read as context.                                    |
+| `clawAI.maxContextFiles` / `maxContextBytes` | How much of your project goes into one request.                             |
+| `clawAI.autosave`                            | Save your unsaved files before a reviewed edit.                             |
+| `clawAI.outputStyle`                         | How answers are written.                                                    |
 
-Read-only workflows return analysis in chat. Edit workflows require the backend
-to return a bounded, validated edit plan. The extension rejects absolute paths,
-parent traversal, `.git`, environment files, credential-like paths, malformed
-operations, and oversized plans.
+Secrets such as tokens and API keys are never settings.
 
-For every valid plan, the extension:
+## FAQ and troubleshooting
 
-1. freezes the selected workspace root and stages before/after diff previews
-   from the live editor buffer without opening files;
-2. offers an explicit **Review changes** action and requests approval inside the
-   ClawAI workbench when required;
-3. checks Workspace Trust, canonical path containment, and the reviewed
-   before-state again;
-4. rejects stale reviews or applies one atomic `WorkspaceEdit`;
-5. runs validated development commands in a visible, cancellable task terminal;
-6. offers a session-scoped undo.
+**I can't connect.**
+Check the server address on the connection screen. Local is
+`https://claw.local` and Cloud is `https://claw-ai.co`. Non-local servers
+must use `https://`. Run **ClawAI: Show Logs** for details.
 
-In Manual mode, the first routine context/edit-generation prompt offers
-**Always allow in this workspace**. That consent survives reloads and restarts
-for the same trusted workspace. Full Access skips repeated routine context
-and proposal-generation prompts and applies validated file changes
-automatically. Development commands still require in-extension approval. Full
-Access never bypasses Workspace Trust, secret/path exclusions, command
-validation, or cancellation.
+**The browser opens but VS Code stays signed out.**
+Approve the request in the browser tab, then return to VS Code. If it
+still fails, run **ClawAI: Log Out**, then connect again.
 
-## Context and `.clawai`
+**ClawAI will not edit my files.**
+Trust the workspace (VS Code shows a banner or use **Workspaces: Manage
+Workspace Trust**). In an untrusted workspace ClawAI only chats and reviews.
 
-Workspace context is size- and file-bounded, excludes binary content, applies
-VS Code and `.clawai/ignore` patterns, and always denies common secret paths.
-The **Context** view shows exactly what was included, excluded, and truncated.
+**A command was refused.**
+Commands are checked for safety. Approve it when asked, or check that you are
+in the right permission mode. Secret files and paths outside your workspace are
+always blocked.
 
-Run **ClawAI: Initialize .clawai** to create the documented project structure
-without overwriting existing files. Use **Open Global Rules** and
-**Open Global Skills** for profile-wide guidance. Global guidance is read before
-project rules. Optionally define named sub-agent presets in
-`.clawai/agents/agents.json`; a sub-agent graph can then reference one by
-name instead of restating its identity on every fork.
+**I don't see any models.**
+Run **ClawAI: Refresh Models**. Your account decides which models you can use.
 
-See [the `.clawai` specification](docs/CLAWAI_FOLDER_SPEC.md) for the complete
-layout.
+**How do I undo what the agent did?**
+Run **ClawAI: Undo Last ClawAI Edit** (`Ctrl+Alt+Z`), or restore a checkpoint.
 
-## Configuration
+## Help and links
 
-| Setting                      | Scope     | Default                                 |
-| ---------------------------- | --------- | --------------------------------------- |
-| `clawAI.backendUrl`          | machine   | `https://claw.local`                    |
-| `clawAI.backendEnvironment`  | machine   | `LOCAL` (`LOCAL`, `CLOUD`, `CUSTOM`)    |
-| `clawAI.frontendEnvironment` | machine   | `LOCAL` (`LOCAL`, `CLOUD`, `CUSTOM`)    |
-| `clawAI.requestTimeoutMs`    | machine   | `60000`                                 |
-| `clawAI.effortMode`          | resource  | `ULTRA` (`LOW`â€¦`ULTRA`)               |
-| `clawAI.speedMode`           | resource  | `1X` (`1X`, `1.5X`, `2X`)               |
-| `clawAI.routingMode`         | workspace | `AUTO`                                  |
-| `clawAI.agentMode`           | workspace | `AUTO`                                  |
-| `clawAI.permissionMode`      | workspace | `MANUAL`                                |
-| `clawAI.selectedModel`       | workspace | empty                                   |
-| `clawAI.maxContextBytes`     | workspace | `200000`                                |
-| `clawAI.maxContextFiles`     | workspace | `40`                                    |
-| `clawAI.exclude`             | workspace | generated, build, secret, and VCS globs |
-| `clawAI.historyLimit`        | window    | `50`                                    |
-
-Secrets are deliberately not settings.
-
-## Development
-
-```bash
-npm ci --ignore-scripts
-npm run check
-npm run test:host
-npm run test:playwright
-npm run package
-```
-
-Press `F5` to launch the Extension Development Host. CI runs formatting, lint,
-strict typechecking, unit/integration coverage, bundling, package security
-invariants, runtime dependency audit, VSIX creation, and a real VS Code
-activation test.
-
-Architecture, API, security, test, publishing, UX, and UAT references live in
-[`docs/`](docs/).
-
-## Status
-
-Version `1.83.0` is current and implements the extension surface from the ClawAI
-VS Code coding-agent plan. See [CHANGELOG.md](CHANGELOG.md) and
-[ROADMAP.md](docs/ROADMAP.md).
+- Report a problem or ask a question: use **ClawAI: Send Feedback**, or open an
+  issue on [GitHub](https://github.com/ihabkhaled/ClawAI-Coding-Agent/issues).
+- What changed: [CHANGELOG](CHANGELOG.md).
+- Security and privacy: [SECURITY.md](docs/SECURITY.md).
+- Project rules and skills: [the `.clawai` folder guide](docs/CLAWAI_FOLDER_SPEC.md).
+- Technical details for developers: [ARCHITECTURE](docs/ARCHITECTURE.md).
 
 ## License
 

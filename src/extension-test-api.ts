@@ -1,5 +1,7 @@
 import * as vscode from 'vscode';
 
+import { probeTreeChildren, probedViewIds } from './views/tree-probe';
+
 import type { ClawTestApi } from './extension-test-api.types';
 import type { RuntimeConfiguration } from './services/configuration-service';
 import type { RuntimeToolRouter } from './services/runtime-tool-router';
@@ -27,5 +29,7 @@ export function testApiFor(
     configuration,
     toolDefinitions: () => router().definitions(),
     executeTool: (invocation, signal) => router().execute(invocation, signal),
+    viewRowCount: probeTreeChildren,
+    viewIds: probedViewIds,
   };
 }

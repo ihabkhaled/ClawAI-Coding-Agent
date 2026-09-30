@@ -14,7 +14,7 @@ export interface ZeroRetentionInput {
 }
 
 /** A feature that only works by storing content on the server. */
-export type ZeroRetentionBlockedFeature = 'upload' | 'artifact-publish' | 'share';
+export type ZeroRetentionBlockedFeature = 'upload' | 'artifact-publish' | 'share' | 'compare';
 
 export type ZeroRetentionMethod = 'GET' | 'POST' | 'PATCH' | 'DELETE';
 

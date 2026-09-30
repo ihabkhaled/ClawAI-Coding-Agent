@@ -3,6 +3,7 @@ import { randomUUID } from 'node:crypto';
 import { contextModeForCommand } from '../core/command-context';
 
 import { pickCompareInput } from './agent-coordinator-prompts';
+import { refuseCompareCommand } from './zero-retention-compare-guard';
 
 import type { CompareInput, RequestAdmission } from './agent-coordinator.types';
 import type { ExtensionState } from '../core/extension-state';
@@ -27,6 +28,7 @@ export async function compareModels(
   },
   judgeEnabled: boolean,
 ): Promise<void> {
+  if (await refuseCompareCommand()) return;
   const input = await pickCompareInput(session.state.snapshot.models, judgeEnabled);
   if (input === null) return;
   const admission = session.captureAdmission();

@@ -21,5 +21,7 @@ export function registerConnectedCommands(deps: ConnectedCommandDependencies): v
     context,
     workspaceScope,
     () => state.snapshot.organizationPolicy?.allowedPluginMarketplaces,
+    undefined,
+    () => state.snapshot.organizationPolicy?.trustedPluginPublishers,
   );
 }

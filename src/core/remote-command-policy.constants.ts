@@ -36,3 +36,34 @@ export const REMOTE_WRITE_FLAGS: readonly string[] = [
   'remove',
   'rename',
 ];
+
+/**
+ * Flags that write, or read outside the tree, whatever follows them. Matched by
+ * prefix so `--output=/tmp/x` is caught as well as `--output /tmp/x`.
+ */
+export const REMOTE_UNSAFE_FLAG_PREFIXES: readonly string[] = [
+  '--output',
+  '--no-index',
+  '--ext-diff',
+  '--exec',
+];
+
+/**
+ * Arguments a read-only subcommand may take after its name. `git branch x`
+ * creates a branch and `git remote set-url` rewrites one, so these two are
+ * read-only only in their listing forms; anything else needs a local approval.
+ */
+export const REMOTE_SUBCOMMAND_ALLOWED_ARGUMENTS: Readonly<Record<string, readonly string[]>> = {
+  'git branch': [
+    '-a',
+    '-r',
+    '-v',
+    '-vv',
+    '--list',
+    '--all',
+    '--remotes',
+    '--verbose',
+    '--show-current',
+  ],
+  'git remote': ['-v', '--verbose'],
+};

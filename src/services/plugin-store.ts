@@ -10,8 +10,10 @@ import {
 } from '../core/plugin-manifest.constants';
 import { pluginStateSchema } from '../core/plugin-manifest.schema';
 import { isContainedRelativePath } from '../core/plugin-path';
+import { PLUGIN_PROVENANCE_FILE } from '../core/plugin-signature.constants';
+import { pluginProvenanceSchema } from '../core/plugin-signature.schema';
 
-import type { PluginFileSystemPort, PluginRoots } from './plugin-store.types';
+import type { PluginFileSystemPort, PluginProvenance, PluginRoots } from './plugin-store.types';
 import type { SkillFile } from './skill-catalog.types';
 import type {
   InstalledPlugin,
@@ -46,6 +48,7 @@ export class PluginStore {
 
   async list(): Promise<{ plugins: InstalledPlugin[]; invalid: InvalidPlugin[] }> {
     const state = await this.readState();
+    const provenance = await this.readProvenance();
     const plugins: InstalledPlugin[] = [];
     const invalid: InvalidPlugin[] = [];
     for (const scope of ['user', 'workspace'] as const) {
@@ -55,8 +58,11 @@ export class PluginStore {
         if (entry.kind !== 'directory') continue;
         const root = this.files.join(base, entry.name);
         const parsed = await this.readManifest(root);
-        if (parsed.ok) plugins.push(describeInstalled(parsed.manifest, scope, root, state));
-        else invalid.push({ scope, root, error: parsed.error });
+        if (parsed.ok) {
+          const installed = describeInstalled(parsed.manifest, scope, root, state);
+          const signature = provenance[root];
+          plugins.push(signature === undefined ? installed : { ...installed, signature });
+        } else invalid.push({ scope, root, error: parsed.error });
       }
     }
     return { plugins: plugins.sort((a, b) => a.id.localeCompare(b.id)), invalid };
@@ -86,11 +92,32 @@ export class PluginStore {
     for (const file of bundle) {
       await this.files.writeFile(this.files.join(root, ...file.path.split('/')), file.bytes);
     }
+    // The person approved the hook commands of the version they saw. New bytes
+    // may carry different commands, so that approval does not carry over.
+    const state = await this.readState();
+    const previous = state[root];
+    if (previous?.hooksEnabled === true) {
+      await this.writeState({
+        ...state,
+        [root]: { enabled: previous.enabled, hooksEnabled: false },
+      });
+    }
     return root;
+  }
+
+  /** Remembers who signed what was just installed at `root`; no signer records it as unsigned. */
+  async recordSignature(root: string, signedBy: string | undefined): Promise<void> {
+    const provenance = await this.readProvenance();
+    const entry = signedBy === undefined ? {} : { signedBy };
+    await this.writeProvenance({ ...provenance, [root]: entry });
   }
 
   async uninstall(plugin: InstalledPlugin): Promise<void> {
     await this.files.delete(plugin.root);
+    const provenance = await this.readProvenance();
+    await this.writeProvenance(
+      Object.fromEntries(Object.entries(provenance).filter(([root]) => root !== plugin.root)),
+    );
     const state = await this.readState();
     const remaining = Object.fromEntries(
       Object.entries(state).filter(([root]) => root !== plugin.root),
@@ -164,6 +191,27 @@ export class PluginStore {
       // A damaged switch file resets to defaults, and defaults keep hooks off.
       return {};
     }
+  }
+
+  private async readProvenance(): Promise<PluginProvenance> {
+    const bytes = await this.files.readFile(
+      this.files.join(this.roots.user(), PLUGIN_PROVENANCE_FILE),
+    );
+    if (bytes === undefined) return {};
+    try {
+      return pluginProvenanceSchema.safeParse(JSON.parse(decoder.decode(bytes))).data ?? {};
+    } catch {
+      return {};
+    }
+  }
+
+  private async writeProvenance(provenance: PluginProvenance): Promise<void> {
+    const text = `${JSON.stringify(provenance, null, 2)}
+`;
+    await this.files.writeFile(
+      this.files.join(this.roots.user(), PLUGIN_PROVENANCE_FILE),
+      new TextEncoder().encode(text),
+    );
   }
 
   private async writeState(state: PluginState): Promise<void> {

@@ -4,6 +4,7 @@ import { nextOnboardingStep, onboardingChecklist } from '../core/onboarding-chec
 import { groupedThreads } from '../core/thread-group';
 
 import { attentionItems } from './attention-items';
+import { recordTreeProbe } from './tree-probe';
 
 import type { ChatThread } from '../backend/contracts';
 import type { AgentTaskStatus } from '../core/agent-tasks';
@@ -286,6 +287,7 @@ export class StateTreeProvider
     this.unsubscribe = state.subscribe(() => {
       this.changeEmitter.fire(undefined);
     });
+    recordTreeProbe(`clawAI.${kind}`, this);
   }
 
   /** Redraws when something outside the snapshot changed, such as a group. */

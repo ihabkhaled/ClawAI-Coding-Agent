@@ -2,6 +2,7 @@ import { threadOriginForSource } from '../core/thread-source';
 
 import { paginatedSchema, threadSchema, type ChatThread } from './contracts';
 import {
+  cloudTaskPageSchema,
   cloudTaskSchema,
   runnerRepoPageSchema,
   runnerSessionPageSchema,
@@ -79,5 +80,32 @@ export const remoteSessionClient = {
 
   async task(request: RemoteRequester, taskId: string): Promise<CloudTask> {
     return request(`/agent/commands/${encodeURIComponent(taskId)}`, cloudTaskSchema);
+  },
+
+  /** Every runner of this user, connected or not (F095). */
+  async allRunners(request: RemoteRequester): Promise<RunnerSession[]> {
+    const page = await request('/agent/sessions?pageSize=50', runnerSessionPageSchema);
+    return page.data;
+  },
+
+  /** Commands dispatched to one runner, as the server lists them. */
+  async sessionCommands(request: RemoteRequester, sessionId: string): Promise<CloudTask[]> {
+    const page = await request(
+      `/agent/commands?sessionId=${encodeURIComponent(sessionId)}&pageSize=20`,
+      cloudTaskPageSchema,
+    );
+    return page.data;
+  },
+
+  /** Cancels a command that has not finished; the server refuses a finished one. */
+  async cancelCommand(
+    request: RemoteRequester,
+    taskId: string,
+    reason: string,
+  ): Promise<CloudTask> {
+    return request(`/agent/commands/${encodeURIComponent(taskId)}/cancel`, cloudTaskSchema, {
+      method: 'POST',
+      body: { reason },
+    });
   },
 };

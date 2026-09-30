@@ -142,10 +142,20 @@ export function isTokenFresh(tokens: McpTokenSet, now: number): boolean {
 }
 
 /**
- * Keyed by name and URL, so re-pointing a server name at another URL never
- * sends the old server's token to the new one.
+ * Keyed by name, URL and the OAuth endpoints and client, so re-pointing a
+ * server name at another URL, or a workspace file naming its own token
+ * endpoint for the same URL, never hands a stored refresh token to a
+ * different authority.
  */
 export function tokenSecretKey(server: McpHttpServerConfig): string {
-  const digest = createHash('sha256').update(server.url).digest('hex').slice(0, 16);
+  const oauth = server.oauth;
+  const identity = JSON.stringify([
+    server.url,
+    oauth?.clientId,
+    oauth?.authorizationEndpoint,
+    oauth?.tokenEndpoint,
+    oauth?.resource,
+  ]);
+  const digest = createHash('sha256').update(identity).digest('hex').slice(0, 16);
   return `${MCP_OAUTH_SECRET_PREFIX}${server.name}.${digest}`;
 }

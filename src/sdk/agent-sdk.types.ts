@@ -22,13 +22,16 @@ export interface AgentToolCall {
  */
 export interface AgentToolkit {
   readonly definitions: readonly unknown[];
-  readonly execute: (call: AgentToolCall) => unknown;
+  /** May return a promise; `signal` aborts a slow call when the run is cancelled. */
+  readonly execute: (call: AgentToolCall, signal?: AbortSignal) => unknown;
   /**
    * Asked before `execute`. Returning false sends the model a
    * `PERMISSION_DENIED` result instead of running the tool. Absent means every
    * call the toolkit offers is allowed.
    */
   readonly authorize?: (call: AgentToolCall) => boolean | Promise<boolean>;
+  /** Releases anything the toolkit holds open, such as MCP server processes. */
+  readonly dispose?: () => void;
 }
 
 /** What a transport must do, so a caller can substitute one. */
@@ -72,6 +75,8 @@ export interface AgentRunOptions {
   readonly provider?: string | undefined;
   readonly model?: string | undefined;
   readonly title?: string | undefined;
+  /** Continues this existing thread instead of creating one. */
+  readonly threadId?: string | undefined;
   readonly deadlineMs?: number | undefined;
   /** Substituted in tests, and by a caller speaking to a different backend. */
   readonly transport?: RuntimeTransportPort | undefined;
@@ -82,6 +87,7 @@ export interface AgentRunResult {
   readonly outcome: HeadlessOutcome;
   readonly toolCalls: number;
   readonly runId: string;
+  readonly threadId: string;
   readonly terminalEvent?: string;
 }
 

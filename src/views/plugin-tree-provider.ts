@@ -6,7 +6,9 @@ import {
   PLUGIN_CONTEXT_DISABLED,
   PLUGIN_CONTEXT_ENABLED,
   PLUGIN_CONTEXT_INVALID,
+  PLUGIN_VIEW_ID,
 } from './plugin-tree-provider.constants';
+import { recordTreeProbe } from './tree-probe';
 
 import type { PluginListing, PluginTreeNode } from './plugin-tree-provider.types';
 import type { InstalledPlugin, InvalidPlugin } from '../core/plugin-manifest.types';
@@ -43,7 +45,9 @@ export class PluginTreeProvider implements vscode.TreeDataProvider<PluginTreeNod
   private readonly changeEmitter = new vscode.EventEmitter<PluginTreeNode | undefined>();
   readonly onDidChangeTreeData = this.changeEmitter.event;
 
-  constructor(private readonly listing: PluginListing) {}
+  constructor(private readonly listing: PluginListing) {
+    recordTreeProbe(PLUGIN_VIEW_ID, this);
+  }
 
   refresh(): void {
     this.changeEmitter.fire(undefined);

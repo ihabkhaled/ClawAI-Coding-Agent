@@ -17,6 +17,7 @@ SECURITY.md
 builds/**
 coverage/**
 dist/**/*.map
+dist/prebuilds/**/*.pdb
 docs/**
 esbuild.mjs
 eslint.config.mjs

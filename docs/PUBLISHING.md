@@ -96,3 +96,50 @@ push to `main` that does not.
 To withdraw a bad version, publish a higher one. Unpublishing is a manual
 action in the Marketplace UI and removes the extension for everyone on that
 version.
+
+## Release steps as of 1.83.0
+
+The mechanical sequence is `skills/land-a-release/SKILL.md`. In short:
+
+1. **Version.** One coherent batch, one SemVer bump of the second component.
+   Change `package.json` and both version fields in `package-lock.json` (the
+   top level and `packages[""]`). The public README states the current version
+   in more than one place and `CHANGELOG.md` needs a `## <version>` heading
+   (`package:audit` fails without it). Add the engineering entry to
+   `docs/releases/DETAILED_CHANGELOG.md`.
+2. **Gates.** `npm run l10n:build`, `npm run format`, `npm run check`,
+   `npm run test:host`, `npm audit --omit=dev --audit-level=high`.
+3. **Stage sources by explicit path** (never `git add -A`). Regenerated
+   `l10n/`, `package.nls*.json` and the surface inventory must be staged.
+4. **Package and supply chain need a clean tree.** `npm run package` writes
+   `builds/clawai-coding-agent-<version>.vsix` and its `.sha256`.
+   `npm run supply-chain` refuses to run when the source tree has uncommitted
+   changes (`generate-supply-chain.mjs` checks `releaseIdentity.dirty`), and
+   records the commit in the provenance. So commit the source first, then
+   package and generate, then commit the assets. Any source change after
+   packaging means rebuilding.
+5. **`builds/` is git-ignored: `git add -f` eight files**, all named
+   `builds/clawai-coding-agent-<version>` plus `.vsix`, `.cdx.json`,
+   `.spdx.json`, `.provenance.json`, each with `.sha256`. The Release workflow's
+   "Require committed release assets" step fails when any is missing or
+   untracked.
+6. **Push.** Commit (hooks run; never bypass them), then push `main`. If the
+   Windows git credential manager hangs, run `gh auth setup-git` so the `gh`
+   credential helper is used, and retry.
+7. **Release workflow gates** (`.github/workflows/release.yml`): the tag must
+   not already exist; committed assets must be present and tracked; `npm ci
+--ignore-scripts`; generated localization verified; `npm run check`;
+   extension-host tests under `xvfb-run`; Playwright; `npm audit`; package;
+   supply-chain; then the artifact is compared with the committed one by
+   extracted contents; then the tag and GitHub Release are created and, when
+   `VSCE_PAT` or `OVSX_PAT` exist, the Marketplace and Open VSX publish run.
+   CI (`ci.yml`) runs the same checks plus the extension-host job on every push.
+8. **Verify.** `gh run list --branch main --limit 3` until both are green,
+   `gh release view v<version>`, then
+   `code --install-extension builds/clawai-coding-agent-<version>.vsix --force`
+   and `npm run test:host:installed <disposable-extensions-dir>`.
+9. The parent monorepo submodule pointer is a separate commit in the parent
+   repository.
+
+The older preflight above says `git add` on the VSIX only; that predates the
+SBOM and provenance assets and is superseded by step 5.

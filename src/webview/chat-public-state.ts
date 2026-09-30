@@ -2,6 +2,7 @@ import { selectedModelRunsTools } from '../core/model-tools';
 import { visibleThreads } from '../core/thread-list';
 
 import type { ExtensionSnapshot } from '../core/extension-state';
+import type { ModelCatalogEntry } from '../core/model-catalog';
 import type { RuntimeSnapshot } from '../core/runtime/runtime-event-reducer';
 
 export interface PublicRuntimeBudgetState {
@@ -132,6 +133,30 @@ function publicTitle(value: string | null | undefined): string {
   return title === undefined || title.length === 0 ? 'Untitled conversation' : title;
 }
 
+/**
+ * What the panel reads of a catalog entry. The four capability flags stay in the
+ * host (modelRunsTools is already derived from them): this projection is
+ * re-sent on every state change, and a catalog of hundreds of models made those
+ * flags a large share of every message.
+ */
+export type PublicModelEntry = Pick<
+  ModelCatalogEntry,
+  'id' | 'key' | 'provider' | 'model' | 'displayName' | 'isLocal' | 'source' | 'contextTokens'
+>;
+
+export function publicModelEntry(entry: ModelCatalogEntry): PublicModelEntry {
+  return {
+    id: entry.id,
+    key: entry.key,
+    provider: entry.provider,
+    model: entry.model,
+    displayName: entry.displayName,
+    isLocal: entry.isLocal,
+    source: entry.source,
+    contextTokens: entry.contextTokens,
+  };
+}
+
 export function toPublicChatState(snapshot: ExtensionSnapshot) {
   return {
     agentRun: snapshot.agentRun,
@@ -175,7 +200,7 @@ export function toPublicChatState(snapshot: ExtensionSnapshot) {
     // is deliberately free of the extension host and its translator: a test
     // proves it can be imported without one.
     modelRunsTools: selectedModelRunsTools(snapshot),
-    models: snapshot.models,
+    models: snapshot.models.map(publicModelEntry),
     effortMode: snapshot.effortMode,
     speedMode: snapshot.speedMode,
     permissionMode: snapshot.permissionMode,

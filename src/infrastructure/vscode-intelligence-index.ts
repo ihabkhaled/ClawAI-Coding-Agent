@@ -49,29 +49,36 @@ const symbolPattern =
 export class VscodeIntelligenceIndex implements IntelligenceIndexPort, vscode.Disposable {
   private readonly parsed = new Map<string, ParsedIntelligenceFile>();
   private readonly dirty = new Set<string>();
-  private readonly watcher: vscode.FileSystemWatcher;
+  private watcher: vscode.FileSystemWatcher | undefined;
 
   constructor(
     private readonly files: VscodeFileTransactionAdapter,
     private readonly rootKey: () => string,
     private readonly now: () => Date = () => new Date(),
-  ) {
-    this.watcher = vscode.workspace.createFileSystemWatcher('**/*');
-    this.watcher.onDidCreate((uri) => {
+  ) {}
+
+  /**
+   * A workspace-wide watcher costs the host an event per file change in the whole
+   * workspace, so it exists only once a graph has been built. Before the first
+   * build there is nothing cached to invalidate.
+   */
+  private ensureWatcher(): void {
+    if (this.watcher !== undefined) return;
+    const watcher = vscode.workspace.createFileSystemWatcher('**/*');
+    const invalidate = (uri: vscode.Uri): void => {
       this.invalidate([uri.toString()]);
-    });
-    this.watcher.onDidChange((uri) => {
-      this.invalidate([uri.toString()]);
-    });
-    this.watcher.onDidDelete((uri) => {
-      this.invalidate([uri.toString()]);
-    });
+    };
+    watcher.onDidCreate(invalidate);
+    watcher.onDidChange(invalidate);
+    watcher.onDidDelete(invalidate);
+    this.watcher = watcher;
   }
 
   async build(
     identity: IntelligenceCacheIdentity,
     signal?: AbortSignal,
   ): Promise<WorkspaceIntelligenceGraph> {
+    this.ensureWatcher();
     const root = this.files.workspaceRootUri(this.rootKey());
     const uris = await vscode.workspace.findFiles(
       new vscode.RelativePattern(root, '**/*'),
@@ -126,7 +133,8 @@ export class VscodeIntelligenceIndex implements IntelligenceIndexPort, vscode.Di
   }
 
   dispose(): void {
-    this.watcher.dispose();
+    this.watcher?.dispose();
+    this.watcher = undefined;
     this.parsed.clear();
     this.dirty.clear();
   }

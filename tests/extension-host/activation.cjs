@@ -1,3 +1,4 @@
+const process = require('node:process');
 const assert = require('node:assert/strict');
 const { setTimeout: delay } = require('node:timers/promises');
 const vscode = require('vscode');
@@ -12,10 +13,14 @@ async function run() {
     `the v${manifest.version} release activates`,
   );
 
+  const wasActive = extension.isActive;
   const start = Date.now();
   await extension.activate();
+  const activationMs = Date.now() - start;
+  process.stdout.write(`ACTIVATION_MS=${String(activationMs)} alreadyActive=${String(wasActive)}
+`);
   assert.ok(extension.isActive, 'ClawAI extension activates');
-  assert.ok(Date.now() - start < 2_000, 'activation stays below the 2 second host budget');
+  assert.ok(activationMs < 2_000, 'activation stays below the 2 second host budget');
 
   const commands = await vscode.commands.getCommands(true);
   const contributed = extension.packageJSON.contributes.commands.map((entry) => entry.command);

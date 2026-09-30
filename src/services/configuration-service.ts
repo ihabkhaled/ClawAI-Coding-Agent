@@ -21,6 +21,7 @@ import {
 import { normalizeEffortMode } from '../core/effort-mode';
 import { lifecycleHooksSchema } from '../core/lifecycle-hook';
 import { normalizeOutputStyle } from '../core/output-style';
+import { readSignaturePolicy, readTrustedPublishers } from '../core/plugin-signature-policy';
 import { normalizeSpeedMode } from '../core/speed-mode';
 import { normalizeViewDensity } from '../core/view-density';
 
@@ -31,6 +32,7 @@ import type { EffortMode } from '../core/effort-mode';
 import type { LifecycleHook } from '../core/lifecycle-hook.types';
 import type { OutputStyle } from '../core/output-style.types';
 import type { PermissionMode } from '../core/permission-policy.types';
+import type { PluginSignaturePolicy, TrustedPublishers } from '../core/plugin-signature.types';
 import type { SpeedMode } from '../core/speed-mode';
 import type { ViewDensity } from '../core/view-density.types';
 
@@ -155,6 +157,24 @@ export class ConfigurationService {
     return (
       vscode.workspace.getConfiguration('clawAI').get<unknown[]>('pluginMarketplaces') ?? []
     ).filter((source): source is string => typeof source === 'string');
+  }
+
+  /** Publisher id to base64 Ed25519 public key; a malformed value trusts nobody. */
+  trustedPluginPublishers(): TrustedPublishers {
+    return (
+      readTrustedPublishers(
+        vscode.workspace.getConfiguration('clawAI').inspect<unknown>('trustedPluginPublishers')
+          ?.globalValue,
+      ) ?? {}
+    );
+  }
+
+  /** `off`, `warn` or `require`; the user-level setting only, as a repository must not loosen it. */
+  pluginSignaturePolicy(): PluginSignaturePolicy {
+    return readSignaturePolicy(
+      vscode.workspace.getConfiguration('clawAI').inspect<unknown>('pluginSignaturePolicy')
+        ?.globalValue,
+    );
   }
 
   async savePluginMarketplaces(sources: readonly string[]): Promise<void> {

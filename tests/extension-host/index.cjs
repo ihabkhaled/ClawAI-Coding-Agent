@@ -5,6 +5,7 @@ const { runActivation } = require('./activation.cjs');
 const { runRealTools } = require('./real-tools.cjs');
 const { runRuntimeTools } = require('./runtime-tools.cjs');
 const { runSettings } = require('./settings.cjs');
+const { runSurface } = require('./surface.cjs');
 
 async function run() {
   await runActivation();
@@ -13,6 +14,7 @@ async function run() {
   // The test API exists only under the test runner. Its presence here, and its
   // absence from an installed extension, are both part of the contract.
   assert.ok(api, 'the extension exposes its test API under the test runner');
+  await runSurface(api);
   await runRealTools(api);
   await runRuntimeTools(api);
   await runSettings(api);

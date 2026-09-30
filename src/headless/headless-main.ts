@@ -1,4 +1,5 @@
-import { argv, cwd, env, exit, stderr, stdout } from 'node:process';
+import { argv, cwd, env, exit, stderr, stdin, stdout } from 'node:process';
+import { createInterface } from 'node:readline/promises';
 
 import { headlessExitCode } from '../core/headless-outcome';
 
@@ -18,12 +19,26 @@ process.on('SIGINT', () => {
   controller.abort();
 });
 
+async function confirmOnTerminal(question: string): Promise<boolean> {
+  const lines = createInterface({ input: stdin, output: stderr });
+  try {
+    return /^y(?:es)?$/iu.test((await lines.question(question)).trim());
+  } finally {
+    lines.close();
+  }
+}
+
 try {
   exit(
     await runHeadlessCli(
       argv.slice(2),
       env,
-      { stdout: (text) => stdout.write(text), stderr: (text) => stderr.write(text) },
+      {
+        stdout: (text) => stdout.write(text),
+        stderr: (text) => stderr.write(text),
+        // Only a person at a terminal can approve; a pipe cannot, so it is denied.
+        ...(stdin.isTTY ? { confirm: confirmOnTerminal } : {}),
+      },
       { cwd: cwd(), signal: controller.signal },
     ),
   );

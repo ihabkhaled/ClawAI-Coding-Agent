@@ -8,6 +8,8 @@ import {
   sessionUsageAttribution,
   type UsageAttributionLedger,
 } from '../core/usage-attribution';
+import { threadTitleFor } from '../core/zero-retention';
+import { zeroRetentionPosture } from '../core/zero-retention-posture';
 
 import type { RoutingMode } from '../core/configuration';
 import type { ContextCandidate, ContextReceipt } from '../core/context-collector';
@@ -91,7 +93,7 @@ function threadRequest(
   input: Pick<ChatSendInput, 'content' | 'model' | 'provider' | 'routingMode'>,
 ) {
   return {
-    title: input.content.trim().slice(0, 80),
+    title: threadTitleFor(input.content, zeroRetentionPosture.current()),
     routingMode: input.routingMode,
     ...(input.provider === undefined ? {} : { preferredProvider: input.provider }),
     ...(input.model === undefined ? {} : { preferredModel: input.model }),

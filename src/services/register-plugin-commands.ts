@@ -5,6 +5,7 @@ import {
   effectiveMarketplaceAllowlist,
   readOrganizationMarketplaceAllowlist,
 } from '../core/plugin-marketplace-policy';
+import { effectiveTrustedPublishers, readTrustedPublishers } from '../core/plugin-signature-policy';
 import { unzipPlugin } from '../infrastructure/plugin-archive';
 import { downloadBytes } from '../infrastructure/plugin-download';
 import { cloneGitMarketplace } from '../infrastructure/plugin-git-clone';
@@ -12,6 +13,7 @@ import { VscodePluginFileSystem } from '../infrastructure/vscode-plugin-file-sys
 
 import { ConfigurationService } from './configuration-service';
 import { managePlugins } from './plugin-commands';
+import { signatureWarningMessage } from './plugin-failure-message';
 import { browsePluginMarketplaces } from './plugin-marketplace-commands';
 import { PluginMarketplaceService } from './plugin-marketplace-service';
 import { ProjectPolicyService } from './project-policy-service';
@@ -20,6 +22,7 @@ import { workspacePluginStore } from './workspace-plugins';
 
 import type { PluginCommandDependencies } from './plugin-commands.types';
 import type { WorkspaceScopeService } from './workspace-scope-service';
+import type { TrustedPublishers } from '../core/plugin-signature.types';
 
 /**
  * The marketplace allowlist from the project policy.
@@ -38,17 +41,31 @@ async function projectAllowlist(
   }
 }
 
+/** The project policy's trusted publishers; unreadable narrows to none, as above. */
+async function projectPublishers(
+  workspaceScope: WorkspaceScopeService,
+): Promise<TrustedPublishers | undefined> {
+  if (workspaceScope.refresh().selectedFolderKey === undefined) return undefined;
+  try {
+    return (await new ProjectPolicyService(workspaceScope).load()).trustedPluginPublishers;
+  } catch {
+    return {};
+  }
+}
+
 /**
  * Registers the plugin manager, the marketplace browser and the Plugins view.
  *
  * `organizationPolicy` is the managed policy's `allowedPluginMarketplaces`,
  * as it arrived; the organization's list wins over the project's.
+ * `organizationPublishers` is the managed policy's `trustedPluginPublishers`.
  */
 export function registerPluginCommands(
   context: vscode.ExtensionContext,
   workspaceScope: WorkspaceScopeService,
   organizationPolicy: () => unknown = () => undefined,
   configuration: ConfigurationService = new ConfigurationService(),
+  organizationPublishers: () => unknown = () => undefined,
 ): void {
   const folder = (): vscode.Uri | undefined =>
     workspaceScope.refresh().selectedFolderKey === undefined
@@ -70,6 +87,17 @@ export function registerPluginCommands(
       unzip: unzipPlugin,
       cloneGit: (location) => cloneGitMarketplace(clones, location),
       allowlist,
+      signatures: async () => ({
+        mode: configuration.pluginSignaturePolicy(),
+        trusted: effectiveTrustedPublishers(
+          readTrustedPublishers(organizationPublishers()),
+          await projectPublishers(workspaceScope),
+          configuration.trustedPluginPublishers(),
+        ),
+      }),
+      onUnverified: (entry, verdict) => {
+        void vscode.window.showWarningMessage(signatureWarningMessage(entry, verdict));
+      },
     }),
     trusted: () => vscode.workspace.isTrusted,
     marketplaces: () => configuration.pluginMarketplaces(),

@@ -1,4 +1,6 @@
 import type { RuntimeTransportPort } from './agent-sdk.types';
+import type { AgentMcpOptions } from './mcp-toolkit.types';
+import type { AgentPermissionMode } from './permission-modes.types';
 import type { AgentPermissions } from './workspace-toolkit.types';
 import type { HeadlessExitCode, HeadlessOutcome } from '../core/headless-outcome.types';
 
@@ -17,6 +19,21 @@ export interface AgentConfig {
   /** Defaults to read and git only; writing and commands are opt-in. */
   readonly permissions?: AgentPermissions | undefined;
   readonly deadlineMs?: number | undefined;
+  /** Continues this existing thread; `agent.threadId` is set once a run has started. */
+  readonly threadId?: string | undefined;
+  /**
+   * Operator instructions, up to 20,000 characters. They travel as a framed block
+   * ahead of the task and add to the runtime's own instructions; they never
+   * appear in events or error text.
+   */
+  readonly systemPrompt?: string | undefined;
+  /** MCP servers offered as `runtime.mcp`; needs the `mcp` grant, added by default. */
+  readonly mcp?: AgentMcpOptions | undefined;
+  /** `plan`, `ask` or `accept-edits`, applied over `permissions` and its `approve` callback. */
+  readonly permissionMode?: AgentPermissionMode | undefined;
+  /** Glob lists over tool identifiers, see `AgentToolFilter`. Deny wins. */
+  readonly allowedTools?: readonly string[] | undefined;
+  readonly disallowedTools?: readonly string[] | undefined;
   /** Substituted in tests, and by a caller speaking to a different backend. */
   readonly transport?: RuntimeTransportPort | undefined;
 }
@@ -63,11 +80,15 @@ export interface AgentResult {
   /** The model's streamed answer, concatenated. */
   readonly text: string;
   readonly runId?: string;
+  /** The thread the run used; pass it as `threadId` to continue the conversation. */
+  readonly threadId?: string;
   readonly terminalEvent?: string;
   /** Why the run could not proceed, when it threw rather than ended. Never a secret. */
   readonly error?: string;
 }
 
 export interface Agent {
+  /** The conversation this agent continues: the one given, else the first run's. */
+  readonly threadId?: string | undefined;
   run(prompt: string, options?: AgentRunCallOptions): Promise<AgentResult>;
 }

@@ -10,6 +10,7 @@ import {
   sha256Hex,
 } from '../core/plugin-marketplace';
 import { marketplaceCatalogSchema } from '../core/plugin-marketplace.schema';
+import { signatureOutcome, verifyEntrySignature } from '../core/plugin-signature';
 
 import type { OpenedMarketplace, PluginMarketplaceDependencies } from './plugin-marketplace.types';
 import type { PluginBundleFile, PluginScope } from '../core/plugin-manifest.types';
@@ -19,6 +20,7 @@ import type {
   PluginContentLocation,
   ReadableMarketplaceLocation,
 } from '../core/plugin-marketplace.types';
+import type { SignatureVerdict } from '../core/plugin-signature.types';
 
 const decoder = new TextDecoder('utf-8', { fatal: false });
 
@@ -27,9 +29,10 @@ const decoder = new TextDecoder('utf-8', { fatal: false });
  *
  * The integrity check is a sha256 the catalog pins for each plugin, compared
  * before anything is written. That proves the bytes are the ones the catalog
- * named; it does not prove who wrote the catalog. There is no publisher
- * signature, and nothing here claims otherwise — trust in a marketplace is the
- * user's decision to add it, narrowed by any policy allowlist.
+ * named, not who wrote the catalog. Who did is a separate question, answered by
+ * the entry's detached Ed25519 signature against a trusted publisher key; the
+ * signature covers the sha256, so a valid one vouches for the bytes too. What a
+ * missing or bad signature costs is the `pluginSignaturePolicy` mode.
  */
 export class PluginMarketplaceService {
   constructor(private readonly dependencies: PluginMarketplaceDependencies) {}
@@ -58,6 +61,15 @@ export class PluginMarketplaceService {
   ): Promise<string> {
     // Checked again: policy can change between browsing and choosing.
     await this.permitted(marketplace.source);
+    const verdict = await this.verdictOf(entry);
+    const settings = await this.dependencies.signatures?.();
+    const outcome = settings === undefined ? 'accept' : signatureOutcome(verdict, settings.mode);
+    if (outcome === 'refuse') {
+      throw new PluginFailure(
+        'signature-rejected',
+        `${entry.publisher}.${entry.name}: ${verdict.status}`,
+      );
+    }
     const content = entryContentLocation(marketplace.location, entry);
     if (content === undefined) throw new PluginFailure('invalid-source', entry.source);
     const files = await this.verifiedContent(content, entry);
@@ -67,13 +79,28 @@ export class PluginMarketplaceService {
     if (name !== entry.name || publisher !== entry.publisher || version !== entry.version) {
       throw new PluginFailure('name-mismatch', `${publisher}.${name}@${version}`);
     }
-    return this.dependencies.store.install(scope, files);
+    const root = await this.dependencies.store.install(scope, files);
+    await this.dependencies.store.recordSignature(
+      root,
+      verdict.status === 'signed' ? verdict.signer : undefined,
+    );
+    if (outcome === 'warn') this.dependencies.onUnverified?.(entry, verdict);
+    return root;
+  }
+
+  /** What the entry's signature amounts to; `unsigned` where signatures are not configured. */
+  async verdictOf(entry: MarketplaceEntry): Promise<SignatureVerdict> {
+    const settings = await this.dependencies.signatures?.();
+    if (settings === undefined || settings.mode === 'off') return { status: 'unsigned' };
+    return verifyEntrySignature(entry, entry.signature, settings.trusted);
   }
 
   /** A folder the user picked themselves. No digest: they are the source. */
   async installFolder(path: string, scope: PluginScope): Promise<string> {
     const files = await this.dependencies.store.readTree(path);
-    return this.dependencies.store.install(scope, files);
+    const root = await this.dependencies.store.install(scope, files);
+    await this.dependencies.store.recordSignature(root, undefined);
+    return root;
   }
 
   private async permitted(source: string): Promise<MarketplaceLocation> {

@@ -3,6 +3,8 @@ import * as vscode from 'vscode';
 import { PluginFailure } from '../core/plugin-failure';
 
 import type { PluginFailureCode } from '../core/plugin-manifest.types';
+import type { MarketplaceEntry } from '../core/plugin-marketplace.types';
+import type { SignatureVerdict } from '../core/plugin-signature.types';
 
 function messageFor(code: PluginFailureCode, detail: string): string {
   switch (code) {
@@ -18,6 +20,11 @@ function messageFor(code: PluginFailureCode, detail: string): string {
       return vscode.l10n.t('The plugin source is not usable: {0}', detail);
     case 'name-mismatch':
       return vscode.l10n.t('The plugin does not match its marketplace entry: {0}', detail);
+    case 'signature-rejected':
+      return vscode.l10n.t(
+        'The plugin has no valid signature from a trusted publisher, and the signature policy requires one. Nothing was installed: {0}',
+        detail,
+      );
     case 'not-allowed':
       return vscode.l10n.t('Policy does not allow this marketplace: {0}', detail);
     case 'too-large':
@@ -33,4 +40,16 @@ function messageFor(code: PluginFailureCode, detail: string): string {
 export function pluginFailureMessage(error: unknown): string {
   if (error instanceof PluginFailure) return messageFor(error.code, error.detail);
   return error instanceof Error ? error.message : String(error);
+}
+
+/** The warning `warn` mode shows when it installs a plugin it could not verify. */
+export function signatureWarningMessage(
+  entry: MarketplaceEntry,
+  verdict: SignatureVerdict,
+): string {
+  return vscode.l10n.t(
+    'Installed {0} without a trusted publisher signature ({1}).',
+    `${entry.publisher}.${entry.name}`,
+    verdict.status,
+  );
 }

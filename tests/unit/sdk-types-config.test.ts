@@ -13,7 +13,16 @@ import { describe, expect, it } from 'vitest';
  */
 const CONFIG_PATH = resolve('tsconfig.sdk-types.json');
 const SMOKE_FILE = resolve('tests/types/sdk-public-api.ts');
-const HOST_FREE_ROOTS = ['src/sdk/', 'src/core/', 'src/headless/'];
+// The MCP client is host-free too: its files are listed by name, not by folder,
+// because `infrastructure/` and `services/` otherwise hold editor code.
+const HOST_FREE_ROOTS = [
+  'src/sdk/',
+  'src/core/',
+  'src/headless/',
+  'src/infrastructure/mcp/',
+  'src/infrastructure/process-terminator',
+  'src/services/mcp-server-registry',
+];
 
 function fromRoot(path: string): string {
   return relative(resolve('.'), resolve(path)).split(sep).join('/');

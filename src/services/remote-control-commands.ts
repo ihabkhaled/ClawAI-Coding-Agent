@@ -7,10 +7,12 @@ import {
   type AgentHostIdentity,
   type AgentRegistration,
 } from '../backend/agent-remote-client';
+import { agentOperationErrorMessage } from '../backend/backend-error-message';
 import { devicePairingClient, type PairingDeviceHint } from '../backend/device-pairing-client';
 import { runBoundedCommand } from '../infrastructure/bounded-command-runner';
 
 import { runDevicePairing } from './device-pairing-flow';
+import { showPairingPanel } from './pairing-qr-panel';
 import { RemoteCommandLoop } from './remote-command-loop';
 import {
   PAIRED_DEVICE_SECRET_KEY,
@@ -62,7 +64,13 @@ export function registerRemoteControlCommands(
       return undefined;
     }
     stop();
-    const registration = await register(hostIdentity(deps.version));
+    let registration: AgentRegistration;
+    try {
+      registration = await register(hostIdentity(deps.version));
+    } catch (error: unknown) {
+      await vscode.window.showErrorMessage(agentOperationErrorMessage(error));
+      return undefined;
+    }
     const current = new RemoteCommandLoop({
       source: commandSource(deps.backend, registration, runnerPolicy !== undefined),
       approve: approveLocally,
@@ -239,34 +247,25 @@ async function approveLocally(request: RemoteCommandApproval): Promise<boolean> 
 async function pairFromPhone(deps: RemoteControlDependencies): Promise<DevicePairingOutcome> {
   const controller = new AbortController();
   const request = deps.backend().agentKeyRequest;
-  return runDevicePairing(
-    {
-      start: () => devicePairingClient.start(request, pairingHint(deps.version)),
-      poll: (code, signal) => devicePairingClient.poll(request, code, signal),
-      present: (start) => {
-        void presentPairingLink(start.verificationUrl);
+  const shown: { panel?: vscode.Disposable } = {};
+  try {
+    return await runDevicePairing(
+      {
+        start: () => devicePairingClient.start(request, pairingHint(deps.version)),
+        poll: (code, signal) => devicePairingClient.poll(request, code, signal),
+        present: (start) => {
+          shown.panel = showPairingPanel(start.verificationUrl);
+        },
+        store: async (tokens) => {
+          await deps.secrets.store(PAIRED_DEVICE_SECRET_KEY, JSON.stringify(tokens));
+        },
+        sleep: abortableSleep,
+        now: () => Date.now(),
       },
-      store: async (tokens) => {
-        await deps.secrets.store(PAIRED_DEVICE_SECRET_KEY, JSON.stringify(tokens));
-      },
-      sleep: abortableSleep,
-      now: () => Date.now(),
-    },
-    controller.signal,
-  );
-}
-
-async function presentPairingLink(url: string): Promise<void> {
-  const copy = vscode.l10n.t('Copy Link');
-  const choice = await vscode.window.showInformationMessage(
-    vscode.l10n.t(
-      'Open this link on your phone, signed in to ClawAI, and approve this editor: {0}',
-      url,
-    ),
-    copy,
-  );
-  if (choice === copy) {
-    await vscode.env.clipboard.writeText(url);
+      controller.signal,
+    );
+  } finally {
+    shown.panel?.dispose();
   }
 }
 

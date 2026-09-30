@@ -3,7 +3,18 @@ import { redactText, redactValue } from '../core/redaction';
 import type * as vscode from 'vscode';
 
 export class OutputLogger implements vscode.Disposable {
-  constructor(private readonly channel: vscode.OutputChannel) {}
+  /**
+   * `debugEnabled` follows the host's own log level (Developer: Set Log Level),
+   * so timing marks cost nothing and appear nowhere unless someone asks.
+   */
+  constructor(
+    private readonly channel: vscode.OutputChannel,
+    private readonly debugEnabled: () => boolean = () => false,
+  ) {}
+
+  debug(message: string, details?: unknown): void {
+    if (this.debugEnabled()) this.append('DEBUG', message, details);
+  }
 
   info(message: string, details?: unknown): void {
     this.append('INFO', message, details);

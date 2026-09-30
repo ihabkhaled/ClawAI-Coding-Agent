@@ -33,3 +33,22 @@ upgrade.
 - Backend responses are runtime-validated before use.
 
 See [docs/SECURITY.md](docs/SECURITY.md) for the threat model.
+
+## Controls added in 1.81.0 to 1.83.0
+
+- MCP servers, plugins and marketplaces are untrusted content: stdio servers
+  start only in a trusted workspace, every MCP tool call asks, plugin archives
+  are sha256-pinned and path-contained, and organization or project policy can
+  only narrow (allow/deny lists, marketplace allowlist).
+- MCP OAuth uses PKCE and the loopback callback; tokens live in `SecretStorage`.
+- Remote commands and runner prompt jobs run without a shell, under a read-only
+  allowlist or a category policy, with local approval.
+- Published artifacts are scrubbed and re-scanned for secrets; a surviving
+  credential blocks the publish.
+- Zero data retention refuses uploads, artifact publishing and sharing on this
+  machine before any request is sent.
+- The command sandbox never silently downgrades: a named mechanism the host
+  lacks stops the command.
+- Telemetry is opt-in; custom OTLP headers are stored in `SecretStorage`.
+
+Details and known gaps: [docs/THREAT_MODEL_RUNTIME_V2.md](docs/THREAT_MODEL_RUNTIME_V2.md).

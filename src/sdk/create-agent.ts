@@ -1,13 +1,14 @@
 import { headlessExitCode, outcomeFromError } from '../core/headless-outcome';
+import { redactText } from '../core/redaction';
 import { HeadlessTransport } from '../headless/headless-transport';
 
 import { agentEventFrom } from './agent-events';
+import { assertAgentInputs, promptWithInstructions, withoutInstructions } from './agent-inputs';
 import { runAgent } from './agent-sdk';
 import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
-import { workspaceToolkit } from './workspace-toolkit';
-import { AGENT_DEFAULT_TOOL_CATEGORIES } from './workspace-toolkit.constants';
+import { agentToolkit } from './agent-toolkit';
+import { observedToolkit } from './observed-toolkit';
 
-import type { AgentToolCall, AgentToolkit } from './agent-sdk.types';
 import type {
   Agent,
   AgentConfig,
@@ -23,15 +24,26 @@ import type { HeadlessOutcome } from '../core/headless-outcome.types';
  * `run` never throws for a run that went wrong: it resolves with an outcome and
  * the exit code the headless contract promises for it, so a caller can branch
  * on a value instead of guessing what an exception meant. Local tools — files,
- * a bounded command, read-only git — execute on this machine inside
- * `workspaceRoot`, and only within `permissions`.
+ * a bounded command, read-only git, and MCP servers when configured — execute
+ * on this machine, and only within `permissions`.
+ *
+ * The agent is one conversation: the first run's thread (or the `threadId`
+ * given) is reused by every later run, and is readable as `agent.threadId`.
  */
 export function createAgent(config: AgentConfig): Agent {
-  return { run: (prompt, options = {}) => runOnce(config, prompt, options) };
+  assertAgentInputs(config);
+  const session: { threadId: string | undefined } = { threadId: config.threadId };
+  return {
+    get threadId() {
+      return session.threadId;
+    },
+    run: (prompt, options = {}) => runOnce(config, session, prompt, options),
+  };
 }
 
 async function runOnce(
   config: AgentConfig,
+  session: { threadId: string | undefined },
   prompt: string,
   options: AgentRunCallOptions,
 ): Promise<AgentResult> {
@@ -39,26 +51,21 @@ async function runOnce(
   const tally = { denied: 0, text: '', signingIn: true, runId: '' };
   const transport =
     config.transport ?? new HeadlessTransport(config.backendUrl ?? AGENT_SDK_DEFAULTS.backendUrl);
-  const toolkit = observedToolkit(
-    workspaceToolkit(
-      config.workspaceRoot,
-      config.permissions ?? { allow: AGENT_DEFAULT_TOOL_CATEGORIES },
-    ),
-    emit,
-    tally,
-  );
+  const inner = agentToolkit(config);
+  const toolkit = observedToolkit(inner, emit, tally);
   try {
     // Signed in here rather than inside runAgent, so a refusal can be told
     // apart from a later one: during sign-in any client error is the credential.
     const token = 'token' in config.auth ? config.auth.token : await transport.signIn(config.auth);
     tally.signingIn = false;
     const report = await runAgent({
-      prompt,
+      prompt: promptWithInstructions(prompt, config.systemPrompt),
       toolkit,
       token,
       provider: config.provider,
       model: config.model,
       title: options.title,
+      threadId: session.threadId,
       deadlineMs: config.deadlineMs,
       transport,
       signal: options.signal,
@@ -67,6 +74,7 @@ async function runOnce(
         : { budget: { maxModelTurns: options.maxTurns, maxToolRounds: options.maxTurns } }),
       onStarted: (run) => {
         tally.runId = run.runId;
+        session.threadId = run.threadId;
         emit({ type: 'run.started', ...run });
       },
       onEvent: (raw) => {
@@ -95,8 +103,11 @@ async function runOnce(
       deniedCalls: tally.denied,
       text: tally.text,
       ...(tally.runId.length === 0 ? {} : { runId: tally.runId }),
+      ...(session.threadId === undefined ? {} : { threadId: session.threadId }),
       error: redacted(error instanceof Error ? error.message : 'Agent run failed', config),
     });
+  } finally {
+    inner.dispose?.();
   }
 }
 
@@ -113,40 +124,9 @@ function withDenials(outcome: HeadlessOutcome, denied: number): HeadlessOutcome 
   return outcome === 'failed' && denied > 0 ? 'blocked' : outcome;
 }
 
-/** Wraps a toolkit so every decision and every result becomes an event. */
-function observedToolkit(
-  inner: AgentToolkit,
-  emit: (event: AgentEvent) => void,
-  tally: { denied: number },
-): AgentToolkit {
-  const label = (call: AgentToolCall): { toolName: string; operation: string } => ({
-    toolName: call.toolName,
-    operation: call.operation,
-  });
-  return {
-    definitions: inner.definitions,
-    authorize: async (call) => {
-      const allowed = inner.authorize === undefined ? true : await inner.authorize(call);
-      if (!allowed) tally.denied += 1;
-      emit(allowed ? { type: 'tool.call', ...call } : { type: 'tool.denied', ...label(call) });
-      return allowed;
-    },
-    execute: (call) => {
-      try {
-        const result = inner.execute(call);
-        emit({ type: 'tool.result', ...label(call), ok: true });
-        return result;
-      } catch (error) {
-        const message = error instanceof Error ? error.message : 'Tool failed';
-        emit({ type: 'tool.result', ...label(call), ok: false, message });
-        throw error;
-      }
-    },
-  };
-}
-
-/** An error message with the configured secret removed, in case a server echoed it. */
+/** An error message with the credential and the operator instructions removed. */
 function redacted(message: string, config: AgentConfig): string {
   const secret = 'token' in config.auth ? config.auth.token : config.auth.password;
-  return secret.length === 0 ? message : message.split(secret).join('[redacted]');
+  const withoutSecret = secret.length === 0 ? message : message.split(secret).join('[redacted]');
+  return redactText(withoutInstructions(withoutSecret, config.systemPrompt));
 }

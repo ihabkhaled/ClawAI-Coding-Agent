@@ -1,0 +1,6 @@
+{
+  "name": "qa-fixture",
+  "publisher": "clawai-qa",
+  "version": "1.0.0",
+  "description": "Fixture plugin the extension-host lane expects the Plugins view to list."
+}

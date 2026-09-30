@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "1.83.0",
+  "version": "1.84.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -21,16 +21,31 @@
   "categories": [
     "AI",
     "Chat",
-    "Programming Languages",
+    "Machine Learning",
     "Other"
   ],
   "keywords": [
     "ai",
+    "ai-agent",
     "coding-agent",
-    "local-first",
-    "ollama",
+    "ai-assistant",
+    "chatbot",
+    "copilot",
+    "llm",
+    "code-generation",
     "code-review",
-    "clawai"
+    "refactoring",
+    "test-generation",
+    "autocomplete",
+    "pull-request",
+    "git",
+    "mcp",
+    "multi-model",
+    "ollama",
+    "local-first",
+    "privacy",
+    "clawai",
+    "claw"
   ],
   "main": "./dist/extension.js",
   "bin": {
@@ -251,6 +266,16 @@
       {
         "command": "clawAI.startCloudSession",
         "title": "%command.startCloudSession%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.attachRemoteSession",
+        "title": "%command.attachRemoteSession%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.stopCloudSession",
+        "title": "%command.stopCloudSession%",
         "category": "ClawAI"
       },
       {
@@ -528,6 +553,26 @@
           "items": {
             "type": "string"
           }
+        },
+        "clawAI.trustedPluginPublishers": {
+          "type": "object",
+          "default": {},
+          "scope": "application",
+          "markdownDescription": "%config.trustedPluginPublishers%",
+          "additionalProperties": {
+            "type": "string"
+          }
+        },
+        "clawAI.pluginSignaturePolicy": {
+          "type": "string",
+          "enum": [
+            "off",
+            "warn",
+            "require"
+          ],
+          "default": "warn",
+          "scope": "application",
+          "markdownDescription": "%config.pluginSignaturePolicy%"
         },
         "clawAI.hooks": {
           "type": "array",

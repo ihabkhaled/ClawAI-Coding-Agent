@@ -38,9 +38,12 @@ export const cloudTaskSchema = z
     stderr: z.string().nullable().optional(),
     exitCode: z.number().int().nullable().optional(),
     rejectionReason: z.string().nullable().optional(),
+    command: z.string().nullable().optional(),
+    createdAt: z.string().nullable().optional(),
   })
   .loose();
 
+export const cloudTaskPageSchema = agentPageSchema(cloudTaskSchema);
 export const runnerSessionPageSchema = agentPageSchema(runnerSessionSchema);
 export const runnerRepoPageSchema = agentPageSchema(runnerRepoSchema);
 

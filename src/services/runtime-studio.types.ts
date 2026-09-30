@@ -15,6 +15,7 @@ import type { ArtifactPublisherPort } from '../backend/artifact-client';
 import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { RemoteJobPort } from '../backend/remote-job.types';
 import type { AgentMailbox } from '../core/agent-mailbox.types';
+import type { CrossWindowMailboxPort } from '../core/cross-window-mailbox.types';
 import type { DeferredToolLoaderPort } from '../core/runtime/runtime-deferred-tools.types';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -71,6 +72,8 @@ export interface RuntimeStudioAnalysisTools {
     read: () => AgentMailbox;
     write: (mailbox: AgentMailbox) => void;
   };
+  /** Other VS Code windows of this user; refuses under zero retention or an untrusted workspace. */
+  readonly windowMail?: CrossWindowMailboxPort;
   /** Where an imported scanner report is recorded, beside a reviewer's own. */
   readonly findings: FindingsService;
   /** The epoch generation a loaded workflow must be re-stamped with. */

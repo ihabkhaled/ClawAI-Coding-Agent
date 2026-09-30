@@ -6,7 +6,9 @@
  * lines with no further filtering.
  */
 export const STAGED_SECRET_FORMAT_PATTERNS: readonly RegExp[] = [
-  /-----BEGIN (?:RSA |EC |DSA |OPENSSH |PGP )?PRIVATE KEY-----/u,
+  // Any armored private key: RSA/EC/OPENSSH, `ENCRYPTED PRIVATE KEY` and the
+  // PGP `PRIVATE KEY BLOCK` form the narrower list missed.
+  /-----BEGIN [A-Z ]*PRIVATE KEY(?: BLOCK)?-----/u,
   /\bAKIA[0-9A-Z]{16}\b/u,
   /\bgh[pousr]_[A-Za-z0-9]{36,}\b/u,
   /\bxox[abprs]-[A-Za-z0-9-]{10,}/u,
@@ -19,6 +21,13 @@ export const STAGED_SECRET_FORMAT_PATTERNS: readonly RegExp[] = [
   // prefix keeps ordinary `sk-` identifiers out.
   /\bsk-[A-Za-z0-9_-]{40,}/u,
   /\bAIza[0-9A-Za-z_-]{35}\b/u,
+  /\bgithub_pat_[A-Za-z0-9_]{22,}/u,
+  /\bnpm_[A-Za-z0-9]{36,}/u,
+  /\bglpat-[A-Za-z0-9_-]{20,}/u,
+  /\bSG\.[A-Za-z0-9_-]{16,}\.[A-Za-z0-9_-]{16,}/u,
+  /\bwhsec_[A-Za-z0-9]{20,}/u,
+  /\bxapp-\d-[A-Za-z0-9-]{20,}/u,
+  /\bya29\.[A-Za-z0-9_-]{20,}/u,
   /\beyJ[A-Za-z0-9_-]{8,}\.eyJ[A-Za-z0-9_-]{8,}\.[A-Za-z0-9_-]{8,}\b/u,
 ];
 

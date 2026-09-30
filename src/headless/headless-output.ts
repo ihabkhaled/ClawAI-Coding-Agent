@@ -36,6 +36,7 @@ export function writeResult(
   io.stderr(
     `${describeHeadlessOutcome(result.outcome)} ${String(result.toolCalls)} tool call(s). exit ${String(result.exitCode)}\n`,
   );
+  if (result.threadId !== undefined) io.stderr(`thread ${result.threadId}\n`);
   if (result.error !== undefined) io.stderr(`${result.error}\n`);
 }
 

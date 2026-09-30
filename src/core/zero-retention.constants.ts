@@ -29,7 +29,16 @@ export const ZERO_RETENTION_BLOCKED_ROUTES: readonly ZeroRetentionBlockedRoute[]
   { method: 'POST', pattern: /^\/artifacts(?:[/?]|$)/u, feature: 'artifact-publish' },
   { method: 'POST', pattern: /^\/chat-threads\/[^/?]+\/share(?:[/?]|$)/u, feature: 'share' },
   { method: 'PATCH', pattern: /^\/chat-threads\/[^/?]+\/share(?:[/?]|$)/u, feature: 'share' },
+  // The parallel route is not redacted server-side: every model's answer is stored.
+  { method: 'POST', pattern: /^\/chat-messages\/parallel(?:[/?]|$)/u, feature: 'compare' },
 ];
+
+/**
+ * The thread title sent instead of the first prompt while retention is on.
+ * A title made from the prompt would store a slice of the conversation on the
+ * server, and the server does not derive or redact one for us.
+ */
+export const ZERO_RETENTION_THREAD_TITLE = 'Private chat';
 
 /** English refusal reasons; the translated ones come from `zeroRetentionRefusalMessage`. */
 export const ZERO_RETENTION_REFUSALS: Readonly<Record<ZeroRetentionBlockedFeature, string>> = {
@@ -39,4 +48,6 @@ export const ZERO_RETENTION_REFUSALS: Readonly<Record<ZeroRetentionBlockedFeatur
     'Zero data retention is on, so nothing is published: a published page is stored on the server.',
   share:
     'Zero data retention is on, so this chat cannot be shared: a share is stored on the server.',
+  compare:
+    'Zero data retention is on, so models are not compared: every answer of a comparison is stored on the server.',
 };

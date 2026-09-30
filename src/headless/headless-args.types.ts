@@ -1,3 +1,4 @@
+import type { AgentPermissionMode } from '../sdk/permission-modes.types';
 import type { AgentToolCategory } from '../sdk/workspace-toolkit.types';
 
 export type HeadlessOutputFormat = 'text' | 'json' | 'stream-json';
@@ -13,6 +14,16 @@ export interface HeadlessInvocation {
   readonly allowCommands: readonly string[];
   readonly outputFormat: HeadlessOutputFormat;
   readonly maxTurns?: number | undefined;
+  /** Thread to continue: from `--resume`, or resolved from the store for `--continue`. */
+  readonly resume?: string | undefined;
+  readonly continueLast?: true | undefined;
+  /** Text, or `@path`; read by the runner, not the parser. */
+  readonly appendSystemPrompt?: string | undefined;
+  readonly systemPromptFile?: string | undefined;
+  readonly mcpConfig?: string | undefined;
+  readonly permissionMode?: AgentPermissionMode | undefined;
+  readonly allowedTools?: readonly string[] | undefined;
+  readonly disallowedTools?: readonly string[] | undefined;
 }
 
 /** A parse either yields a run, asks for help, or names the mistake. */
@@ -28,4 +39,9 @@ export type HeadlessEnvironment = Readonly<Record<string, string | undefined>>;
 export interface HeadlessIo {
   readonly stdout: (text: string) => void;
   readonly stderr: (text: string) => void;
+  /**
+   * Asks a person a yes/no question. Absent when nobody can answer, in which
+   * case anything that needs approval is denied rather than assumed.
+   */
+  readonly confirm?: ((question: string) => Promise<boolean>) | undefined;
 }

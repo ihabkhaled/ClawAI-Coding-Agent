@@ -350,6 +350,8 @@ export const organizationPolicySchema = z
      * malformed list as refusing every marketplace.
      */
     allowedPluginMarketplaces: z.unknown().optional(),
+    /** Trusted plugin publisher keys; `plugin-signature-policy.ts` reads a malformed block as trusting nobody. */
+    trustedPluginPublishers: z.unknown().optional(),
   })
   .strict();
 

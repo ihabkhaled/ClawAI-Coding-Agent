@@ -14,6 +14,11 @@ export function zeroRetentionRefusalMessage(feature: ZeroRetentionBlockedFeature
       'Zero data retention is on, so nothing is published: a published page is stored on the server.',
     );
   }
+  if (feature === 'compare') {
+    return vscode.l10n.t(
+      'Zero data retention is on, so models are not compared: every answer of a comparison is stored on the server.',
+    );
+  }
   return vscode.l10n.t(
     'Zero data retention is on, so this chat cannot be shared: a share is stored on the server.',
   );
