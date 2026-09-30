@@ -35,7 +35,9 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
     options.transport ?? new HeadlessTransport(options.backendUrl ?? AGENT_SDK_DEFAULTS.backendUrl);
   const deadlineMs = options.deadlineMs ?? AGENT_SDK_DEFAULTS.deadlineMs;
   const token = await accessToken(transport, options);
-  const threadId = await transport.createThread(token, options.title ?? AGENT_SDK_DEFAULTS.title);
+  const threadId =
+    options.threadId ??
+    (await transport.createThread(token, options.title ?? AGENT_SDK_DEFAULTS.title));
   const epochs = { account: 1, workspace: 1, target: 1, policy: 1 };
 
   const started = await transport.startRun(token, {
@@ -66,7 +68,7 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
         token,
         run,
         epochs,
-        toolResultFor(event, options.toolkit, denial),
+        await toolResultFor(event, options.toolkit, denial, options.signal),
       );
     },
     now: options.now ?? ((): number => Date.now()),
@@ -75,7 +77,7 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
     ...(options.signal === undefined ? {} : { signal: options.signal }),
   });
 
-  return { ...report, runId: run.runId };
+  return { ...report, runId: run.runId, threadId };
 }
 
 /**

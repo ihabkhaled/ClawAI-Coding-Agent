@@ -2,6 +2,7 @@ import {
   ZERO_RETENTION_BLOCKED_ROUTES,
   ZERO_RETENTION_HEADER,
   ZERO_RETENTION_OFF,
+  ZERO_RETENTION_THREAD_TITLE,
 } from './zero-retention.constants';
 
 import type {
@@ -39,6 +40,11 @@ export function zeroRetentionBlockedFeature(
 /** Headers that carry the posture to the backend. Empty when retention is normal. */
 export function zeroRetentionHeaders(posture: ZeroRetentionPosture): Record<string, string> {
   return posture.active ? { [ZERO_RETENTION_HEADER]: '1' } : {};
+}
+
+/** The title a new thread is created with: the prompt's opening, or a neutral one under retention. */
+export function threadTitleFor(content: string, posture: ZeroRetentionPosture): string {
+  return posture.active ? ZERO_RETENTION_THREAD_TITLE : content.trim().slice(0, 80);
 }
 
 export function samePosture(left: ZeroRetentionPosture, right: ZeroRetentionPosture): boolean {

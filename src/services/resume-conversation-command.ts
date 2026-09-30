@@ -5,6 +5,7 @@ import { remoteSessionClient } from '../backend/remote-session-client';
 import { resolveRunActivity } from '../core/resume-readiness';
 import { threadSurfaceOf } from '../core/thread-source';
 
+import { attachRemoteSession } from './attach-session-command';
 import {
   RESUME_PROBE_MESSAGES,
   RESUME_WEB_THREAD_LIMIT,
@@ -16,6 +17,14 @@ import type { ThreadSurface } from '../core/thread-source.types';
 
 interface ThreadPick extends vscode.QuickPickItem {
   readonly thread: ChatThread;
+}
+
+interface RunnerPick extends vscode.QuickPickItem {
+  readonly runnerSessions: true;
+}
+
+function isRunnerPick(pick: ThreadPick | RunnerPick): pick is RunnerPick {
+  return 'runnerSessions' in pick;
 }
 
 function titleOf(thread: ChatThread): string {
@@ -95,10 +104,21 @@ async function settleActiveRun(
  */
 export async function resumeConversation(dependencies: RemoteSessionDependencies): Promise<void> {
   const picks = await candidates(dependencies);
-  const picked = await vscode.window.showQuickPick(picks, {
-    placeHolder: vscode.l10n.t('Pick a conversation to resume'),
-    matchOnDescription: true,
-  });
+  const runnerPick: RunnerPick = {
+    label: vscode.l10n.t('Attach to a runner session…'),
+    runnerSessions: true,
+  };
+  const picked = await vscode.window.showQuickPick<ThreadPick | RunnerPick>(
+    [...picks, runnerPick],
+    {
+      placeHolder: vscode.l10n.t('Pick a conversation to resume'),
+      matchOnDescription: true,
+    },
+  );
+  if (picked !== undefined && isRunnerPick(picked)) {
+    await attachRemoteSession(dependencies);
+    return;
+  }
   if (picked === undefined || !(await settleActiveRun(dependencies, picked.thread.id))) {
     return;
   }

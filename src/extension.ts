@@ -11,7 +11,7 @@ import { SessionVault } from './core/session-vault';
 import { WorkspaceApprovalMemory } from './core/workspace-approval-memory';
 import { testApiFor } from './extension-test-api';
 import { openAgentTerminal } from './infrastructure/agent-terminal';
-import { OutputLogger } from './infrastructure/output-logger';
+import { createOutputLogger, logActivation, type OutputLogger } from './infrastructure/claw-logger';
 import { VscodeContextRangeReader } from './infrastructure/vscode-context-range-reader';
 import { VscodeMentionIndex } from './infrastructure/vscode-mention-index';
 import { probeRuntimeHost } from './infrastructure/vscode-runtime-host-probe';
@@ -224,7 +224,7 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
     user: undefined,
     workspaceScope: workspaceScope.snapshot(),
   });
-  const logger = new OutputLogger(vscode.window.createOutputChannel('ClawAI'));
+  const logger = createOutputLogger('ClawAI');
   const externalOutputStore = new ExternalOutputGrantStore(context.workspaceState);
   const externalOutputGrants = new ExternalOutputGrantService(externalOutputStore);
   const editAdapter = new VscodeWorkspaceEditAdapter(workspaceScope, externalOutputStore);
@@ -518,7 +518,7 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
     version: extensionPackage.version,
   });
   registerChatParticipant(context, coordinator);
-  void coordinator.initialize();
+  void logActivation(logger, coordinator.initialize());
   // Undefined everywhere except under the test runner. See extension-test-api.
   return testApiFor(
     context.extensionMode,

@@ -4,6 +4,7 @@ import { z } from 'zod';
 
 import { mcpServerPolicySchema } from './mcp/mcp-server-policy';
 import { organizationTrustDecision, organizationTrustSchema } from './organization-trust';
+import { trustedPublishersSchema } from './plugin-signature-policy';
 import { ruleMatches } from './policy-rule-match';
 
 export const POLICY_MODES = [
@@ -132,6 +133,12 @@ export const projectPolicySchema = z
      * not name. It can only narrow, like everything else in this file.
      */
     allowedPluginMarketplaces: z.array(z.string().min(1).max(2_048)).max(100).optional(),
+    /**
+     * Publisher id to base64 Ed25519 public key. A project can only narrow the
+     * trusted set: an entry counts only where the user's or organization's list
+     * names the same key. See `plugin-signature-policy.ts`.
+     */
+    trustedPluginPublishers: trustedPublishersSchema.optional(),
   })
   .strict();
 

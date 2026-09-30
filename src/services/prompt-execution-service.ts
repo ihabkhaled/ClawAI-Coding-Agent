@@ -12,6 +12,7 @@ import {
 } from './agent-coordinator-prompts';
 import { generationConcurrencyKey } from './generation-scheduler';
 import { buildAnalysisPrompt } from './workflow-service';
+import { refuseCompareUnderZeroRetention } from './zero-retention-compare-guard';
 
 import type { ChatPromptInput, CompareInput, RequestAdmission } from './agent-coordinator.types';
 import type { AttachmentRequestService } from './attachment-request-service';
@@ -137,6 +138,7 @@ export class PromptExecutionService {
   }
 
   async compare(input: CompareInput): Promise<void> {
+    refuseCompareUnderZeroRetention();
     const { admission, session } = await this.admit(input.admission);
     const configuration = this.dependencies.configuration.read();
     const modelCatalog = [...this.dependencies.state.snapshot.models];

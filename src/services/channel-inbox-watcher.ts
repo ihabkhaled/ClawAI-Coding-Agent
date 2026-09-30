@@ -26,6 +26,8 @@ export class ChannelInboxWatcher {
   private timer: ChannelTimer | undefined;
   private polls = 0;
   private failures = 0;
+  /** Bumped by every start and dispose, so a read that outlives its session ends there. */
+  private session = 0;
   private stateValue: ChannelWatchState = 'idle';
 
   constructor(private readonly dependencies: ChannelWatcherDependencies) {}
@@ -37,6 +39,7 @@ export class ChannelInboxWatcher {
   /** Starts (or restarts) a watch session and reads immediately. */
   start(): void {
     this.cancel();
+    this.session += 1;
     this.polls = 0;
     this.failures = 0;
     this.stateValue = 'watching';
@@ -55,6 +58,7 @@ export class ChannelInboxWatcher {
 
   dispose(): void {
     this.cancel();
+    this.session += 1;
     this.stateValue = 'idle';
   }
 
@@ -65,15 +69,18 @@ export class ChannelInboxWatcher {
       return;
     }
     this.polls += 1;
+    const session = this.session;
     if (!this.dependencies.signedIn()) {
       this.next(CHANNEL_POLL_INTERVAL_MS);
       return;
     }
     try {
       await this.checkNow();
+      if (session !== this.session) return;
       this.failures = 0;
       this.next(CHANNEL_POLL_INTERVAL_MS);
     } catch {
+      if (session !== this.session) return;
       this.failures += 1;
       if (this.failures >= CHANNEL_MAX_CONSECUTIVE_FAILURES) {
         this.stateValue = 'stopped-failures';
@@ -85,6 +92,7 @@ export class ChannelInboxWatcher {
 
   private next(delayMs: number): void {
     if (this.stateValue !== 'watching') return;
+    this.cancel();
     this.timer = this.dependencies.schedule(() => {
       void this.poll();
     }, delayMs);

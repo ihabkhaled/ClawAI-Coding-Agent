@@ -149,6 +149,18 @@ export function dockerArguments(
 ): string[] {
   // `--mount` is comma-separated, so a comma in the path would inject options.
   if (launch.workspaceRoot.includes(',')) throw new Error('SANDBOX_WORKSPACE_PATH_UNSUPPORTED');
+  // The image sits among docker's own arguments: a leading `-` would be read as
+  // a flag (`--privileged`, `-v`), and whitespace or a control character is not
+  // part of any image reference.
+  const image = settings.dockerImage.trim();
+  let unprintable = false;
+  for (let index = 0; index < image.length; index += 1) {
+    const code = image.charCodeAt(index);
+    if (code <= 0x20 || code === 0x7f) unprintable = true;
+  }
+  if (image.startsWith('-') || unprintable) {
+    throw new Error('SANDBOX_IMAGE_UNSUPPORTED');
+  }
   const environment = Object.entries(launch.declaredEnvironment).flatMap(([key, value]) => [
     '--env',
     `${key}=${value}`,
@@ -170,7 +182,7 @@ export function dockerArguments(
     '--workdir',
     containerWorkdir(launch, host),
     ...environment,
-    settings.dockerImage.trim(),
+    image,
     launch.executable,
     ...launch.arguments,
   ];

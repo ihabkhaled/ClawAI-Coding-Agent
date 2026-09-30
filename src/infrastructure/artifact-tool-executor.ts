@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import { prepareArtifact } from '../core/artifact-publication';
+import { isContainedRelativePath } from '../core/plugin-path';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
 import type { ArtifactPublisherPort } from '../backend/artifact-client';
@@ -55,6 +56,10 @@ export class ArtifactToolExecutor implements RuntimeToolExecutorPort {
       throw new Error('Unknown artifact operation');
     }
     const input = inputSchema.parse(invocation.arguments);
+    // `..` or an absolute path would upload a file the workspace never held.
+    if (!isContainedRelativePath(input.path.replaceAll('\\', '/'))) {
+      throw new Error('Artifact path must stay inside the workspace');
+    }
     const prepared = prepareArtifact({
       path: input.path,
       content: await this.reader.read(input.rootKey, input.path),

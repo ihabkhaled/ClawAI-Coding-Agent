@@ -3,6 +3,8 @@ import {
   REMOTE_COMMAND_MAX_LENGTH,
   REMOTE_READ_ONLY_COMMANDS,
   REMOTE_SHELL_OPERATOR_PATTERN,
+  REMOTE_SUBCOMMAND_ALLOWED_ARGUMENTS,
+  REMOTE_UNSAFE_FLAG_PREFIXES,
   REMOTE_WRITE_FLAGS,
 } from './remote-command-policy.constants';
 
@@ -54,7 +56,7 @@ export function classifyRemoteCommand(
   if (!Object.hasOwn(REMOTE_READ_ONLY_COMMANDS, name)) {
     return 'R2';
   }
-  if (args.some((argument) => REMOTE_WRITE_FLAGS.includes(argument))) {
+  if (args.some((argument) => isWriteOrEscape(argument))) {
     return 'R2';
   }
   const subcommands = REMOTE_READ_ONLY_COMMANDS[name];
@@ -62,7 +64,29 @@ export function classifyRemoteCommand(
     return 'R1';
   }
   const first = args[0];
-  return first !== undefined && subcommands.includes(first) ? 'R1' : 'R2';
+  if (first === undefined || !subcommands.includes(first)) return 'R2';
+  const allowed = REMOTE_SUBCOMMAND_ALLOWED_ARGUMENTS[`${name} ${first}`];
+  return allowed === undefined || args.slice(1).every((rest) => allowed.includes(rest))
+    ? 'R1'
+    : 'R2';
+}
+
+const PATH_ESCAPE_PATTERN = /^(?:[/\\~]|[A-Za-z]:)/u;
+
+/** A path that names somewhere outside the workspace the command was aimed at. */
+function leavesWorkspace(argument: string): boolean {
+  const value = argument.includes('=') ? argument.slice(argument.indexOf('=') + 1) : argument;
+  return (
+    PATH_ESCAPE_PATTERN.test(value) || value.split(/[/\\]/u).some((segment) => segment === '..')
+  );
+}
+
+function isWriteOrEscape(argument: string): boolean {
+  return (
+    REMOTE_WRITE_FLAGS.includes(argument) ||
+    REMOTE_UNSAFE_FLAG_PREFIXES.some((prefix) => argument.startsWith(prefix)) ||
+    leavesWorkspace(argument)
+  );
 }
 
 function tokenize(text: string): string[] | null {

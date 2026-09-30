@@ -8,6 +8,7 @@ import {
   CLOUD_OUTPUT_TAIL_CHARACTERS,
   CLOUD_WATCH_POLICY,
 } from './remote-session-commands.constants';
+import { offerFollowUp } from './session-followup';
 
 import type { CloudWatchPolicy, RemoteSessionDependencies } from './remote-session-commands.types';
 import type { CloudTask, RunnerRepo, RunnerSession } from '../backend/remote-session-contracts';
@@ -125,7 +126,7 @@ export async function startCloudSession(dependencies: RemoteSessionDependencies)
   });
   const output = vscode.window.createOutputChannel('ClawAI Cloud Session');
   output.show(true);
-  await vscode.window.withProgress(
+  const finished = await vscode.window.withProgress(
     {
       location: vscode.ProgressLocation.Notification,
       title: vscode.l10n.t('Cloud session on {0}', runner.hostname),
@@ -134,4 +135,5 @@ export async function startCloudSession(dependencies: RemoteSessionDependencies)
     (_progress, token) =>
       watchCloudTask(() => remoteSessionClient.task(request, task.id), output, token),
   );
+  await offerFollowUp(dependencies, finished ?? task, runner.hostname);
 }

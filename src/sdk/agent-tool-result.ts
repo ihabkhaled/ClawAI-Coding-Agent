@@ -20,16 +20,17 @@ import type { HeadlessStreamEvent } from '../headless/headless-session.types';
  * The model can read a failure and try something else; an exception out of the
  * loop only tells the operator that something went wrong somewhere.
  */
-export function toolResultFor(
+export async function toolResultFor(
   event: HeadlessStreamEvent,
   toolkit: AgentToolkit,
   denial?: string,
-): unknown {
+  signal?: AbortSignal,
+): Promise<unknown> {
   const payload = (event.payload ?? {}) as ToolRequestPayload;
   const invocationId = payload.invocationId ?? 'invocation.unknown';
   const args = payload.invocation?.arguments ?? {};
   const startedAt = new Date().toISOString();
-  const attempt = attemptFor(event, toolkit, denial);
+  const attempt = await attemptFor(event, toolkit, denial, signal);
   const modelText =
     attempt.structured === undefined ? null : JSON.stringify(attempt.structured).slice(0, 2_000);
   const canonical = canonicalJson({
@@ -82,17 +83,28 @@ function denied(message: string): ToolAttempt {
   };
 }
 
-function attemptFor(
+async function attemptFor(
   event: HeadlessStreamEvent,
   toolkit: AgentToolkit,
   denial: string | undefined,
-): ToolAttempt {
-  return denial === undefined ? attempt_(toolkit, toolCallOf(event)) : denied(denial);
+  signal: AbortSignal | undefined,
+): Promise<ToolAttempt> {
+  return denial === undefined ? attempt_(toolkit, toolCallOf(event), signal) : denied(denial);
 }
 
-function attempt_(toolkit: AgentToolkit, call: AgentToolCall): ToolAttempt {
+async function attempt_(
+  toolkit: AgentToolkit,
+  call: AgentToolCall,
+  signal: AbortSignal | undefined,
+): Promise<ToolAttempt> {
   try {
-    return { structured: toolkit.execute(call) };
+    // The signal is passed only when there is one, so a toolkit written before
+    // it existed sees the call it always saw.
+    return {
+      structured: await (signal === undefined
+        ? toolkit.execute(call)
+        : toolkit.execute(call, signal)),
+    };
   } catch (error) {
     return {
       failure: {

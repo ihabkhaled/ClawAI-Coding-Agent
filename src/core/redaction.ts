@@ -1,6 +1,11 @@
 const sensitiveKeyPattern =
   /(?:access.?token|refresh.?token|authorization|cookie|password|passphrase|secret|api.?key|client.?secret|credential|token)/iu;
 const bearerPattern = /(\bBearer\s+)[A-Za-z0-9._~+/=-]+/giu;
+/** `Authorization: Basic …` carries a reusable password in base64. */
+const authorizationSchemePattern =
+  /(\bAuthorization\s*[:=]\s*(?:Basic|Digest|Token)\s+)[^\s"',}]+/giu;
+/** `scheme://user:password@host` and `https://TOKEN@host` put the secret in the URL. */
+const urlUserinfoPattern = /(\b[a-z][a-z0-9+.-]*:\/\/)[^\s/@]+@/giu;
 const sensitiveQueryPattern =
   /([?&](?:access_token|refresh_token|token|api_key|apikey|key|secret|password)=)[^&\s]+/giu;
 
@@ -58,6 +63,8 @@ export function redactValue(value: unknown): unknown {
 export function redactText(value: string): string {
   return value
     .replace(bearerPattern, '$1[REDACTED]')
+    .replace(authorizationSchemePattern, '$1[REDACTED]')
+    .replace(urlUserinfoPattern, '$1[REDACTED]@')
     .replace(sensitiveQueryPattern, '$1[REDACTED]')
     .replace(sensitiveAssignmentPattern, '$1[REDACTED]');
 }

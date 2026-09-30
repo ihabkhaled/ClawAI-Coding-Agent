@@ -151,13 +151,16 @@ export function analysisToolRegistrations(
       // The main session's own address. Sub-agents are answered inside their
       // scope, so a call reaching this executor is always the main session.
       definition: agentMailboxToolDefinition,
-      executor: new AgentMailboxToolExecutor({
-        read: () => parts.mailbox.read(),
-        write: (mailbox) => {
-          parts.mailbox.write(mailbox);
+      executor: new AgentMailboxToolExecutor(
+        {
+          read: () => parts.mailbox.read(),
+          write: (mailbox) => {
+            parts.mailbox.write(mailbox);
+          },
+          callerAddress: () => MAIN_ADDRESS,
         },
-        callerAddress: () => MAIN_ADDRESS,
-      }),
+        parts.windowMail,
+      ),
     },
     {
       definition: sarifImportToolDefinition,

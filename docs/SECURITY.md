@@ -122,3 +122,26 @@ Approved generated code can still be incorrect. Users must review diffs and run
 their repository gates. Workspace content sent to a configured hosted backend
 leaves the local machine; the context receipt makes that set visible, but the
 backend operator remains part of the trust model.
+
+## Runtime V2 tools and integrations (1.81.0 to 1.83.0)
+
+The controls for MCP servers and OAuth, plugins and marketplaces (including git
+marketplace clones), remote commands and runners, the channels inbox, artifact
+publishing, browser coordinates, the command sandbox, the agent mailbox, the
+scheduler, deferred tools, zero data retention and telemetry are tabulated,
+with their known gaps, in
+[THREAT_MODEL_RUNTIME_V2.md](THREAT_MODEL_RUNTIME_V2.md). The invariants that
+matter most across them:
+
+- Nothing an external party supplies (a repository's `.clawai` files, a plugin,
+  a marketplace catalog, a channel message, a remote command, a server's tool
+  result) can widen access. Policy fields only narrow; organization policy is a
+  ceiling; rule outcomes are `ask` or `deny`, never `allow`.
+- Every new tool goes through the same policy gate, workspace trust, approval
+  and redaction as the older ones. A plugin never starts a process itself.
+- One-way publication (artifacts) is scrubbed twice on the exact bytes sent.
+- Secrets (MCP OAuth tokens, telemetry headers, runner tokens shown once) are
+  kept in `SecretStorage` or held only in memory, never in settings or files.
+- Failing open is allowed for exactly one endpoint, the organization policy,
+  because it can only tighten. Every other absent backend route degrades a
+  feature (see API_CONTRACTS.md) and never grants anything.

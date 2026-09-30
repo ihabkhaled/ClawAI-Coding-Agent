@@ -29,4 +29,7 @@ export interface ClawTestApi {
     invocation: ToolInvocation,
     signal?: AbortSignal,
   ) => Promise<RuntimeToolExecutionOutput>;
+  /** Top-level rows a registered tree view returns; undefined when no provider is registered. */
+  readonly viewRowCount: (viewId: string) => Promise<number | undefined>;
+  readonly viewIds: () => readonly string[];
 }

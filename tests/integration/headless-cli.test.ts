@@ -1,136 +1,18 @@
-import { mkdtempSync, readFileSync, rmSync } from 'node:fs';
-import { createServer } from 'node:http';
-import { tmpdir } from 'node:os';
+import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { afterEach, describe, expect, it } from 'vitest';
 
 import { runHeadlessCli } from '../../src/headless/headless-cli';
+import {
+  capture,
+  cleanupRuntimes,
+  startRuntime,
+  stateDir,
+  workspace,
+} from '../helpers/fake-runtime-server';
 
-import type { IncomingMessage, Server, ServerResponse } from 'node:http';
-import type { AddressInfo } from 'node:net';
-
-/**
- * A fake Runtime V2 backend on a real socket, driven through the real HTTP
- * transport. The stream asks for one file write, waits until the result has
- * been posted back, then completes — so a pass proves the whole round trip:
- * start, stream, local execution, receipt submission, terminal event.
- */
-interface FakeRuntime {
-  readonly url: string;
-  readonly requests: { method: string; path: string; auth?: string; body: unknown }[];
-  readonly close: () => Promise<void>;
-}
-
-const cleanups: (() => Promise<void>)[] = [];
-
-afterEach(async () => {
-  for (const cleanup of cleanups.splice(0)) await cleanup();
-});
-
-function workspace(): string {
-  const directory = mkdtempSync(path.join(tmpdir(), 'claw-headless-cli-'));
-  cleanups.push(async () => {
-    rmSync(directory, { force: true, recursive: true });
-    return Promise.resolve();
-  });
-  return directory;
-}
-
-async function readBody(request: IncomingMessage): Promise<unknown> {
-  const chunks: Buffer[] = [];
-  for await (const chunk of request) chunks.push(chunk as Buffer);
-  const text = Buffer.concat(chunks).toString('utf8');
-  return text.length === 0 ? undefined : JSON.parse(text);
-}
-
-function send(response: ServerResponse, status: number, body: unknown): void {
-  response.writeHead(status, { 'Content-Type': 'application/json' });
-  response.end(JSON.stringify(body));
-}
-
-async function startRuntime(options: { rejectToken?: boolean } = {}): Promise<FakeRuntime> {
-  const requests: FakeRuntime['requests'] = [];
-  let resultPosted: () => void = () => undefined;
-  const posted = new Promise<void>((resolve) => {
-    resultPosted = resolve;
-  });
-
-  const server: Server = createServer((request, response) => {
-    void (async () => {
-      const url = new URL(request.url ?? '/', 'http://fake');
-      const body = await readBody(request);
-      requests.push({
-        method: request.method ?? '',
-        path: url.pathname,
-        ...(request.headers.authorization === undefined
-          ? {}
-          : { auth: request.headers.authorization }),
-        body,
-      });
-      if (options.rejectToken === true) {
-        send(response, 401, { message: 'Unauthorized' });
-        return;
-      }
-      if (url.pathname === '/api/v1/chat-threads') {
-        send(response, 201, { id: 'thread-1' });
-        return;
-      }
-      if (url.pathname === '/api/v1/chat-messages/runtime/runs') {
-        send(response, 202, { runId: 'run-1', generation: 'gen-1' });
-        return;
-      }
-      if (url.pathname === '/api/v1/chat-messages/runtime/runs/run-1/results') {
-        send(response, 202, { accepted: true });
-        resultPosted();
-        return;
-      }
-      if (url.pathname === '/api/v1/chat-messages/stream/thread-1') {
-        response.writeHead(200, { 'Content-Type': 'text/event-stream' });
-        const frame = (event: unknown): string => `data: ${JSON.stringify(event)}\n\n`;
-        response.write(frame({ type: 'model.delta', payload: { text: 'Writing ' } }));
-        response.write(
-          frame({
-            type: 'tool.requested',
-            payload: {
-              invocationId: 'invocation-1',
-              toolName: 'workspace.file',
-              operation: 'create',
-              invocation: { arguments: { path: 'hello.txt', content: 'from the agent' } },
-            },
-          }),
-        );
-        await posted;
-        response.write(frame({ type: 'model.delta', payload: { text: 'done.' } }));
-        response.end(frame({ type: 'run.completed' }));
-        return;
-      }
-      send(response, 404, {});
-    })();
-  });
-
-  await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
-  const { port } = server.address() as AddressInfo;
-  const close = async (): Promise<void> =>
-    new Promise((resolve) => {
-      server.closeAllConnections();
-      server.close(() => {
-        resolve();
-      });
-    });
-  cleanups.push(close);
-  return { url: `http://127.0.0.1:${String(port)}/api/v1`, requests, close };
-}
-
-function capture() {
-  const out: string[] = [];
-  const err: string[] = [];
-  return {
-    out,
-    err,
-    io: { stdout: (text: string) => out.push(text), stderr: (text: string) => err.push(text) },
-  };
-}
+afterEach(cleanupRuntimes);
 
 describe('clawai headless runner against a fake Runtime V2 server', () => {
   it('completes a full tool round trip and exits 0', async () => {
@@ -149,7 +31,7 @@ describe('clawai headless runner against a fake Runtime V2 server', () => {
         '--max-turns',
         '4',
       ],
-      { CLAW_TOKEN: 'secret-token', CLAW_BACKEND_URL: runtime.url },
+      { CLAW_TOKEN: 'secret-token', CLAW_BACKEND_URL: runtime.url, CLAW_STATE_DIR: stateDir() },
       io,
       { cwd: root },
     );
@@ -187,7 +69,7 @@ describe('clawai headless runner against a fake Runtime V2 server', () => {
 
     const code = await runHeadlessCli(
       ['-p', 'write hello', '--allow-tools', 'write', '--output-format', 'stream-json'],
-      { CLAW_TOKEN: 't', CLAW_BACKEND_URL: runtime.url },
+      { CLAW_TOKEN: 't', CLAW_BACKEND_URL: runtime.url, CLAW_STATE_DIR: stateDir() },
       io,
       { cwd: workspace() },
     );
@@ -207,7 +89,7 @@ describe('clawai headless runner against a fake Runtime V2 server', () => {
 
     const code = await runHeadlessCli(
       ['-p', 'write hello'],
-      { CLAW_TOKEN: 't', CLAW_BACKEND_URL: runtime.url },
+      { CLAW_TOKEN: 't', CLAW_BACKEND_URL: runtime.url, CLAW_STATE_DIR: stateDir() },
       io,
       { cwd: root },
     );
@@ -229,7 +111,7 @@ describe('clawai headless runner against a fake Runtime V2 server', () => {
 
     const code = await runHeadlessCli(
       ['-p', 'x'],
-      { CLAW_TOKEN: 'secret-token', CLAW_BACKEND_URL: runtime.url },
+      { CLAW_TOKEN: 'secret-token', CLAW_BACKEND_URL: runtime.url, CLAW_STATE_DIR: stateDir() },
       io,
       { cwd: workspace() },
     );
@@ -255,7 +137,7 @@ describe('clawai headless runner against a fake Runtime V2 server', () => {
 
     const code = await runHeadlessCli(
       ['-p', 'x'],
-      { CLAW_TOKEN: 't', CLAW_BACKEND_URL: runtime.url },
+      { CLAW_TOKEN: 't', CLAW_BACKEND_URL: runtime.url, CLAW_STATE_DIR: stateDir() },
       io,
       { cwd: workspace(), signal: controller.signal },
     );

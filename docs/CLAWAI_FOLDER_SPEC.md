@@ -218,3 +218,108 @@ approval (R2 local mutation) and refuses an existing file unless `overwrite`
 is true. Schema: `schemas/clawai-workflow.schema.json`; validators:
 `workflowTemplateSchema` in `src/core/workflow-template.ts` and
 `savedWorkflowSchema` in `src/core/saved-workflow.ts`.
+
+## Plugin marketplace signatures
+
+A marketplace catalog entry may carry a `signature`: a base64 detached Ed25519
+signature by the entry's `publisher`. It is checked against the public key
+that publisher is trusted with, taken from `clawAI.trustedPluginPublishers`
+(publisher id to base64 key, raw 32 bytes or SPKI DER) or the organization
+policy's `trustedPluginPublishers`.
+
+**Canonical form.** The signed bytes are the UTF-8 encoding of a JSON object
+with exactly these five keys, in this alphabetical order, with no whitespace:
+
+```json
+{
+  "name": "review-kit",
+  "publisher": "acme",
+  "sha256": "<64 hex>",
+  "source": "review-kit.zip",
+  "version": "1.0.0"
+}
+```
+
+The order comes from the code, not from the catalog, so reordering keys in the
+file changes nothing. `description` and `signature` are not signed. Because
+`sha256` is signed, a valid signature vouches for the bytes as well as the
+listing, and because `publisher` is signed a signature cannot be replayed under
+another publisher's name. `scripts/sign-plugin-catalog.mjs <key.pem> <catalog.json>`
+prints a catalog with every entry signed.
+
+**Trust.** The organization's `trustedPluginPublishers` replaces the user's
+setting; a member cannot add a key to it. A project policy is repository
+content, so it can only narrow: an entry survives only if the project also names
+that publisher with the same key. A block that cannot be read trusts nobody.
+
+**Mode.** `clawAI.pluginSignaturePolicy` (user level): `off` does not check;
+`warn` (default) installs an unsigned, unknown-publisher or badly signed plugin
+with a warning; `require` refuses it (`signature-rejected`) before anything is
+downloaded. The Plugins view shows "Signed by X" or "Unsigned", recorded at
+install in the profile's `plugin-provenance.json`, never in the repository.
+
+## `plugins/` and marketplaces
+
+A plugin is a folder with `clawai-plugin.json` at its root (a single wrapping
+top-level folder, as GitHub archives produce, is stripped). Plugins install to
+two scopes: `user` (the extension's global storage, `plugins/`) and `workspace`
+(`.clawai/plugins/`). Install state lives in `plugin-state.json` next to the
+user-scope plugins; keep `.clawai/plugins/` in version control only for
+plugins whose contents you have reviewed.
+
+The manifest is strict (at most 64 KB). It has `name` and `publisher` (`a-z`,
+`0-9`, dash, at most 63 characters), a semver `version`, a `description`, and a
+`contributes` object with any of `skills`, `commands`, `outputStyles` and
+`agents` (each a list of at most 20 contained relative paths), `hooks` (at most
+20, the lifecycle-hook schema) and `mcpServers` (at most 20, keyed by name,
+each declaring exactly one of `command` or `url`). `plugin-state.json` maps an
+installed folder to `{ enabled, hooksEnabled }`. `${pluginRoot}`
+expands to the plugin folder. Limits: 500 files, 10 MiB, depth 8. A plugin's
+MCP servers are recorded, not started by the plugin: they run through the MCP
+client and are subject to `mcpServers` policy and per-call approval.
+Validators: `plugin-manifest.schema.ts`, `plugin-path.ts`.
+
+A marketplace is a `clawai-marketplace.json` catalog:
+`{ "name": "...", "plugins": [{ "name", "publisher", "version", "description",
+"source", "sha256" }] }` (at most 500 entries). `source` is an https `.zip`, a
+path relative to the catalog, or a folder in a local marketplace; `sha256` pins
+the exact bytes and a mismatch refuses the install before anything is written.
+List marketplaces in `clawAI.pluginMarketplaces`. A git marketplace is written
+`git+<url>` with an optional ref (letters, digits, `.`, `_`, `/`, `-`, at most
+200 characters); it is shallow-cloned afresh on every open under the extension's
+`plugin-marketplaces` folder, with prompts off.
+
+## `policies/policy.json` additions since 1.82.0
+
+Same narrowing-only rule as above; none of these can allow.
+
+- `mcpServers: { "allow": [...], "deny": [...] }`: `name`, `command` and `url`
+  globs; deny wins. See `mcp.json`.
+- `allowedPluginMarketplaces: [...]`: the only marketplaces this project may
+  install from. Absent means no restriction; present, even empty, refuses every
+  marketplace it does not name.
+- `rules[].domainGlob`: matched against the host a call names, not the URL.
+- At most 200 rules per project file.
+
+The **organization** policy is not a file. It is served by
+`GET /agent/organizations/policy/effective` (see API_CONTRACTS.md), intersected
+across the user's organizations, and applied as a ceiling above the project
+file: `allowedTools`, `maximumRisk`, `deniedEffects`, `requireApproval`, up to
+400 `rules`, `mcpServers`, `allowedPluginMarketplaces`, and `trust`, which lists
+the repositories, domains and commands the organization trusts. When `trust`
+lists are non-empty, a mutating call in a repository, or a call to a domain or
+command, that no entry matches is refused or asked about
+(`core/organization-trust.ts`). A workspace with no git remote cannot prove it
+is a trusted repository.
+
+## Other per-workspace state
+
+- `.clawai/mcp.json`, `.clawai/workflows/*.json`, `.clawai/policies/policy.json`
+  and `.clawai/plugins/` are workspace content and are treated as untrusted:
+  they may narrow, and they run nothing in an untrusted workspace.
+- Scheduled tasks (`runtime.schedule`) are persisted per workspace in VS Code
+  workspace state (`clawAI.scheduledTasks`), not in `.clawai`.
+- JSON Schemas for editor validation: `schemas/clawai-policy.schema.json`,
+  `clawai-mcp.schema.json`, `clawai-workflow.schema.json`,
+  `clawai-agents.schema.json`. There is no schema yet for
+  `clawai-plugin.json` or `clawai-marketplace.json`.

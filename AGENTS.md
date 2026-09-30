@@ -1,17 +1,20 @@
-# ClawAI Coding Agent â€” agent entrypoint
+# ClawAI Coding Agent - agent entrypoint
 
 This repository contains the standalone VS Code extension embedded in the
 ClawAI monorepo as `apps/claw-coding-agent`.
 
 ## Before changing code
 
-Read `CLAUDE.md`, the affected source, its tests, and the relevant document in
+Read `CLAUDE.md` (layers, never-list, traps), the affected source, its tests, and the relevant document in
 `docs/`. Never infer a backend contract from UI needs; verify it against
 `docs/API_CONTRACTS.md` and the ClawAI backend.
 
 In a worktree or clone that has no `node_modules`, apply
 `skills/setup-a-fresh-worktree/SKILL.md` first: plain `npm ci` fails on Windows
 and the obvious repair breaks `npm run build`.
+
+Runbooks: `skills/add-a-runtime-tool`, `add-a-command-or-view`, `add-a-translated-string`,
+`add-a-backend-client-with-fallback`, `run-live-rounds`, `land-a-release`.
 
 Read and apply `skills/version-every-change/SKILL.md` for every publishable
 change. Every push to `main` must carry a new SemVer version, matching changelog
@@ -28,7 +31,8 @@ execution, recovery, provider behavior, or a coding-capability claim.
 ```bash
 npm run l10n:build
 npm run format
-npm run check
+npm run check   # format:check, l10n:verify, lint, typecheck, scan:paths,
+                # inventory:verify, coverage:scope, test, build, package:audit
 npm run test:host
 npm run package
 npm audit --omit=dev --audit-level=high

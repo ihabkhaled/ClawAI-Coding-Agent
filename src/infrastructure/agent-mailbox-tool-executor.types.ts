@@ -11,3 +11,11 @@ export interface AgentMailboxPort {
   write(mailbox: AgentMailbox): void;
   callerAddress(): string;
 }
+
+/** One message from another VS Code window, as the model sees it. */
+export interface WindowMailView {
+  readonly id: string;
+  readonly from: string;
+  readonly fromAddress: string;
+  readonly text: string;
+}

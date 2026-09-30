@@ -5,7 +5,11 @@ import {
   reduceRuntimeEvent,
 } from '../../src/core/runtime/runtime-event-reducer';
 import { parseRuntimeEvent } from '../../src/core/runtime/runtime-protocol.schemas';
-import { toPublicChatState, toPublicRuntimeState } from '../../src/webview/chat-public-state';
+import {
+  publicModelEntry,
+  toPublicChatState,
+  toPublicRuntimeState,
+} from '../../src/webview/chat-public-state';
 
 import type { ExtensionSnapshot } from '../../src/core/extension-state';
 
@@ -378,5 +382,40 @@ describe('toPublicChatState', () => {
       },
     ]);
     expect(publicState.entitlements).toMatchObject({ isAdmin: true, plan: null });
+  });
+});
+
+describe('publicModelEntry', () => {
+  it('drops the capability flags the panel never reads', () => {
+    const entry = {
+      id: 'm1',
+      key: 'k1',
+      provider: 'GEMINI',
+      model: 'gemini-pro',
+      displayName: 'Gemini Pro',
+      isLocal: false,
+      source: 'connector' as const,
+      supportsStreaming: true,
+      supportsTools: true,
+      supportsVision: false,
+      supportsStructuredOutput: true,
+      contextTokens: 32_000,
+    };
+
+    const published = publicModelEntry(entry);
+
+    expect(Object.keys(published).sort()).toEqual(
+      [
+        'contextTokens',
+        'displayName',
+        'id',
+        'isLocal',
+        'key',
+        'model',
+        'provider',
+        'source',
+      ].sort(),
+    );
+    expect(JSON.stringify(published).length).toBeLessThan(JSON.stringify(entry).length - 90);
   });
 });

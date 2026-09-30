@@ -5,6 +5,7 @@ import {
   normalizeAutoCompactionMode,
   trackRaisedConversations,
 } from '../../src/core/compaction-trigger';
+import { MAX_RAISED_CONVERSATIONS } from '../../src/core/compaction-trigger.constants';
 import { selectedModelCapacity } from '../../src/core/model-catalog';
 import { AutoCompactionService } from '../../src/services/auto-compaction-service';
 
@@ -157,5 +158,18 @@ describe('AutoCompactionService', () => {
     expect(await seat.service.observe('thread-1', 9_000)).toBe('compact');
     expect(seat.compactSilently).toHaveBeenCalledTimes(1);
     expect(seat.compact).not.toHaveBeenCalled();
+  });
+});
+
+describe('trackRaisedConversations bound', () => {
+  it('forgets the oldest mark instead of growing without limit', () => {
+    let raised: ReadonlySet<string> = new Set();
+    for (let index = 0; index < MAX_RAISED_CONVERSATIONS + 10; index += 1) {
+      raised = trackRaisedConversations(raised, `thread-${String(index)}`, true);
+    }
+
+    expect(raised.size).toBe(MAX_RAISED_CONVERSATIONS);
+    expect(raised.has('thread-0')).toBe(false);
+    expect(raised.has(`thread-${String(MAX_RAISED_CONVERSATIONS + 9)}`)).toBe(true);
   });
 });

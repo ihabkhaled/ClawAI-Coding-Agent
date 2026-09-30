@@ -3,6 +3,7 @@ import { beforeEach, describe, expect, it, vi } from 'vitest';
 const window = vi.hoisted(() => ({
   showQuickPick: vi.fn(),
   showWarningMessage: vi.fn(),
+  showInformationMessage: vi.fn(),
   showErrorMessage: vi.fn(),
   showInputBox: vi.fn(),
   createOutputChannel: vi.fn(),
@@ -51,6 +52,8 @@ function setup(routes: Record<string, unknown>) {
     integrationRequest: remoteRequest,
     listMessages: vi.fn().mockResolvedValue([]),
     cancelStream: vi.fn().mockResolvedValue(undefined),
+    createThread: vi.fn(),
+    sendMessage: vi.fn(),
   };
   const revealThread = vi.fn().mockResolvedValue('session-1');
   const dependencies: RemoteSessionDependencies = {
@@ -75,7 +78,7 @@ beforeEach(() => {
 });
 
 describe('registerRemoteSessionCommands', () => {
-  it('registers both commands', () => {
+  it('registers every command', () => {
     const { backend, revealThread } = setup({});
     const state = { snapshot: { history: [] } } as unknown as Pick<ExtensionState, 'snapshot'>;
     const disposables = registerRemoteSessionCommands(
@@ -84,7 +87,12 @@ describe('registerRemoteSessionCommands', () => {
       { revealThread },
     );
     const ids = disposables.map((item) => (item as unknown as { id: string }).id);
-    expect(ids).toEqual(['clawAI.resumeConversation', 'clawAI.startCloudSession']);
+    expect(ids).toEqual([
+      'clawAI.resumeConversation',
+      'clawAI.startCloudSession',
+      'clawAI.attachRemoteSession',
+      'clawAI.stopCloudSession',
+    ]);
   });
 });
 
@@ -106,7 +114,7 @@ describe('resumeConversation', () => {
       label: string;
       description: string;
     }[];
-    expect(offered.map((item) => [item.label, item.description])).toEqual([
+    expect(offered.slice(0, -1).map((item) => [item.label, item.description])).toEqual([
       ['From the CLI', 'Coding agent'],
       ['Portal chat', 'Web'],
     ]);
@@ -191,7 +199,7 @@ describe('resumeConversation', () => {
     });
 
     const offered = window.showQuickPick.mock.calls[0]?.[0] as { description: string }[];
-    expect(offered.map((item) => item.description)).toEqual([
+    expect(offered.slice(0, -1).map((item) => item.description)).toEqual([
       'Coding agent (CLI)',
       'Coding agent',
       'Coding agent',

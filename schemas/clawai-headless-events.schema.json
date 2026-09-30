@@ -1,0 +1,123 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clawai.dev/schemas/clawai-headless-events.schema.json",
+  "title": "ClawAI headless event",
+  "description": "One line of `clawai -p ... --output-format stream-json` (newline-delimited JSON), and the shape of `result` inside the closing run.finished event. `--output-format json` prints a single object that is exactly a run result. Mirrors AgentEvent and AgentResult in src/sdk/create-agent.types.ts; tests/unit/headless-event-schema.test.ts holds the two together.",
+  "oneOf": [
+    { "$ref": "#/definitions/runStarted" },
+    { "$ref": "#/definitions/text" },
+    { "$ref": "#/definitions/toolCall" },
+    { "$ref": "#/definitions/toolDenied" },
+    { "$ref": "#/definitions/toolResult" },
+    { "$ref": "#/definitions/runtime" },
+    { "$ref": "#/definitions/runFinished" }
+  ],
+  "definitions": {
+    "outcome": {
+      "enum": [
+        "completed",
+        "failed",
+        "unusable",
+        "unauthenticated",
+        "blocked",
+        "exhausted",
+        "cancelled"
+      ]
+    },
+    "exitCode": { "enum": [0, 1, 2, 3, 4, 5, 130] },
+    "runResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["outcome", "exitCode", "toolCalls", "deniedCalls", "text"],
+      "properties": {
+        "outcome": { "$ref": "#/definitions/outcome" },
+        "exitCode": { "$ref": "#/definitions/exitCode" },
+        "toolCalls": { "type": "integer", "minimum": 0 },
+        "deniedCalls": { "type": "integer", "minimum": 0 },
+        "text": { "type": "string" },
+        "runId": { "type": "string", "minLength": 1 },
+        "threadId": {
+          "type": "string",
+          "minLength": 1,
+          "description": "Pass to --resume to continue this conversation."
+        },
+        "terminalEvent": { "type": "string" },
+        "error": {
+          "type": "string",
+          "description": "Why the run could not proceed. Never a secret."
+        }
+      }
+    },
+    "runStarted": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "runId", "threadId"],
+      "properties": {
+        "type": { "const": "run.started" },
+        "runId": { "type": "string", "minLength": 1 },
+        "threadId": { "type": "string", "minLength": 1 }
+      }
+    },
+    "text": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "text"],
+      "properties": {
+        "type": { "const": "text" },
+        "text": { "type": "string", "description": "A streamed fragment of the model's answer." }
+      }
+    },
+    "toolCall": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "toolName", "operation", "arguments"],
+      "properties": {
+        "type": { "const": "tool.call" },
+        "toolName": { "type": "string", "minLength": 1 },
+        "operation": { "type": "string", "minLength": 1 },
+        "arguments": { "type": "object" }
+      }
+    },
+    "toolDenied": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "toolName", "operation"],
+      "properties": {
+        "type": { "const": "tool.denied" },
+        "toolName": { "type": "string", "minLength": 1 },
+        "operation": { "type": "string", "minLength": 1 }
+      }
+    },
+    "toolResult": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "toolName", "operation", "ok"],
+      "properties": {
+        "type": { "const": "tool.result" },
+        "toolName": { "type": "string", "minLength": 1 },
+        "operation": { "type": "string", "minLength": 1 },
+        "ok": { "type": "boolean" },
+        "message": { "type": "string" }
+      }
+    },
+    "runtime": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "name"],
+      "properties": {
+        "type": { "const": "runtime" },
+        "name": { "type": "string", "minLength": 1 },
+        "payload": { "type": "object" }
+      }
+    },
+    "runFinished": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "result"],
+      "properties": {
+        "type": { "const": "run.finished" },
+        "result": { "$ref": "#/definitions/runResult" }
+      }
+    }
+  }
+}

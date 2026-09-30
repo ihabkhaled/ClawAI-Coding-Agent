@@ -27,6 +27,8 @@ export interface InstalledPlugin {
   readonly manifest: PluginManifest;
   readonly enabled: boolean;
   readonly hooksEnabled: boolean;
+  /** Who signed it at install: `{}` is unsigned, absent means installed before this was recorded. */
+  readonly signature?: { readonly signedBy?: string | undefined };
 }
 
 /** A folder that looked like a plugin and was not one, kept so the user can be told why. */
@@ -53,6 +55,7 @@ export type PluginFailureCode =
   | 'invalid-manifest'
   | 'invalid-source'
   | 'name-mismatch'
+  | 'signature-rejected'
   | 'not-allowed'
   | 'too-large'
   | 'unreachable'

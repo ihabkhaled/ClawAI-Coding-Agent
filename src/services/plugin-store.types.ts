@@ -23,3 +23,6 @@ export interface PluginRoots {
   user(): string;
   workspace(): string | undefined;
 }
+
+/** Who signed each installed plugin, keyed by its folder; `{}` is unsigned. */
+export type PluginProvenance = Readonly<Record<string, { readonly signedBy?: string | undefined }>>;

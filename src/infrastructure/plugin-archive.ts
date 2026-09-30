@@ -1,3 +1,5 @@
+import { Readable } from 'node:stream';
+
 import JSZip from 'jszip';
 
 import { PluginFailure } from '../core/plugin-failure';
@@ -5,6 +7,35 @@ import { MAX_PLUGIN_BYTES, MAX_PLUGIN_FILES } from '../core/plugin-manifest.cons
 import { isContainedRelativePath, stripSharedTopFolder } from '../core/plugin-path';
 
 import type { PluginBundleFile } from '../core/plugin-manifest.types';
+
+/**
+ * One entry's bytes, inflated as a stream and cut off the moment the plugin's
+ * remaining budget is spent. Inflating the whole entry first would let a few
+ * kilobytes of zip allocate gigabytes before any size check ran.
+ */
+function inflateWithin(entry: JSZip.JSZipObject, budget: number): Promise<Uint8Array> {
+  return new Promise((resolve, reject) => {
+    const stream = entry.nodeStream('nodebuffer');
+    const chunks: Buffer[] = [];
+    let size = 0;
+    stream.on('data', (chunk: Buffer) => {
+      size += chunk.byteLength;
+      if (size > budget) {
+        if (stream instanceof Readable) stream.destroy();
+        else stream.pause();
+        reject(new PluginFailure('too-large'));
+        return;
+      }
+      chunks.push(chunk);
+    });
+    stream.once('end', () => {
+      resolve(new Uint8Array(Buffer.concat(chunks)));
+    });
+    stream.once('error', () => {
+      reject(new PluginFailure('invalid-source', 'unreadable archive entry'));
+    });
+  });
+}
 
 /**
  * The files of a plugin `.zip`, checked before a byte of it reaches the disk.
@@ -29,9 +60,8 @@ export async function unzipPlugin(bytes: Uint8Array): Promise<PluginBundleFile[]
   const files: PluginBundleFile[] = [];
   let total = 0;
   for (const [index, entry] of entries.entries()) {
-    const content = await entry.async('uint8array');
+    const content = await inflateWithin(entry, MAX_PLUGIN_BYTES - total);
     total += content.byteLength;
-    if (total > MAX_PLUGIN_BYTES) throw new PluginFailure('too-large');
     files.push({ path: paths[index] ?? entry.name, bytes: content });
   }
   return files;

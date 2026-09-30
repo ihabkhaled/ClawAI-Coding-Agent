@@ -31,6 +31,7 @@ import {
   qualityToolDefinition,
 } from '../infrastructure/quality-tool-executor';
 import { nodeTimers, WorkspaceScheduleStore } from '../infrastructure/schedule-store';
+import { createVscodeCrossWindowMailbox } from '../infrastructure/vscode-cross-window-mailbox';
 import {
   SocketPortInspector,
   VscodeDevelopmentServiceAdapter,
@@ -139,6 +140,8 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
   private readonly processes = new ProcessSupervisorService();
   readonly transport: BackendRuntimeTransport;
   private readonly bindingStore: VscodeRuntimeBindingStore;
+  /** This window's end of the per-user cross-window mailbox; disposed with the studio. */
+  private readonly windowMail: ReturnType<typeof createVscodeCrossWindowMailbox>;
 
   /**
    * Hooks come from VS Code settings, never from `.clawai`: a hook runs a
@@ -190,6 +193,8 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
       nodeTimers,
     );
     this.bindingStore = new VscodeRuntimeBindingStore(context.workspaceState);
+    this.windowMail = createVscodeCrossWindowMailbox(context.globalStorageUri);
+    void this.windowMail.start();
     this.backendTools = backendToolPorts(backend);
     this.advisor = backendAdvisor(backend, this.state);
     this.hooks = workspaceLifecycleHooks(
@@ -385,6 +390,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         remoteJobs: this.backendTools.remoteJobs,
         git: this.git,
         mailbox: this.runContext.mailboxPort(),
+        windowMail: this.windowMail,
         findings: this.stores.findings,
         currentEpochs: () => this.epochs,
         intelligence,
@@ -535,5 +541,6 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     this.pullRequests.monitor.dispose();
     this.processes.dispose();
     this.intelligenceIndex.dispose();
+    void this.windowMail.dispose();
   }
 }

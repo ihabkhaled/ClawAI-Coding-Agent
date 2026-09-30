@@ -6,7 +6,10 @@ import type { RemoteRequester } from '../backend/remote-session-client';
 export interface RemoteSessionDependencies {
   /** The authenticated request seam, read per use: sign-in replaces the client. */
   readonly request: () => RemoteRequester;
-  readonly backend: () => Pick<BackendClient, 'listMessages' | 'cancelStream'>;
+  readonly backend: () => Pick<
+    BackendClient,
+    'listMessages' | 'cancelStream' | 'createThread' | 'sendMessage'
+  >;
   /** The agent history the sidebar already holds: VS Code and CLI threads. */
   readonly agentHistory: () => readonly ChatThread[];
   readonly revealThread: (threadId: string, title: string) => Promise<unknown>;

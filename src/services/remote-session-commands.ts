@@ -1,6 +1,8 @@
 import * as vscode from 'vscode';
 
+import { attachRemoteSession, stopRunnerSession } from './attach-session-command';
 import { startCloudSession } from './cloud-session-command';
+import { withFailureNotice } from './command-failure-notice';
 import { resumeConversation } from './resume-conversation-command';
 
 import type { RemoteSessionDependencies } from './remote-session-commands.types';
@@ -25,10 +27,16 @@ export function registerRemoteSessionCommands(
   };
   return [
     vscode.commands.registerCommand('clawAI.resumeConversation', () =>
-      resumeConversation(dependencies),
+      withFailureNotice(() => resumeConversation(dependencies)),
     ),
     vscode.commands.registerCommand('clawAI.startCloudSession', () =>
-      startCloudSession(dependencies),
+      withFailureNotice(() => startCloudSession(dependencies)),
+    ),
+    vscode.commands.registerCommand('clawAI.attachRemoteSession', () =>
+      withFailureNotice(() => attachRemoteSession(dependencies)),
+    ),
+    vscode.commands.registerCommand('clawAI.stopCloudSession', () =>
+      withFailureNotice(() => stopRunnerSession(dependencies)),
     ),
   ];
 }

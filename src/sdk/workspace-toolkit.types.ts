@@ -1,7 +1,7 @@
 import type { AgentToolCall } from './agent-sdk.types';
 
-/** The four kinds of local work a run can be granted, one flag each. */
-export type AgentToolCategory = 'read' | 'write' | 'command' | 'git';
+/** The kinds of work a run can be granted, one flag each; `mcp` is the configured MCP servers. */
+export type AgentToolCategory = 'read' | 'write' | 'command' | 'git' | 'mcp';
 
 /** One tool call awaiting the caller's decision, with the category it falls in. */
 export interface AgentApprovalRequest extends AgentToolCall {

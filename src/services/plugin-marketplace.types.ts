@@ -4,8 +4,10 @@ import type { PluginBundleFile } from '../core/plugin-manifest.types';
 import type {
   GitMarketplaceLocation,
   MarketplaceCatalog,
+  MarketplaceEntry,
   ReadableMarketplaceLocation,
 } from '../core/plugin-marketplace.types';
+import type { PluginSignatureSettings, SignatureVerdict } from '../core/plugin-signature.types';
 
 /** What installing from a marketplace needs to reach. */
 export interface PluginMarketplaceDependencies {
@@ -20,6 +22,13 @@ export interface PluginMarketplaceDependencies {
   readonly cloneGit?: (location: GitMarketplaceLocation) => Promise<string>;
   /** The policy allowlist; undefined when no policy restricts marketplaces. */
   readonly allowlist: () => Promise<readonly string[] | undefined>;
+  /**
+   * The signature policy and trusted publishers. Absent means signatures are
+   * not checked, which is how an embedder without settings behaves.
+   */
+  readonly signatures?: () => Promise<PluginSignatureSettings>;
+  /** Called when `warn` mode lets a plugin without a trusted signature through. */
+  readonly onUnverified?: (entry: MarketplaceEntry, verdict: SignatureVerdict) => void;
 }
 
 /** A marketplace that was read, with where it was read from. */

@@ -125,8 +125,8 @@ describe('runAgent', () => {
 });
 
 describe('toolResultFor', () => {
-  it('hashes the canonical wrapper the backend verifies, not the payload alone', () => {
-    const result = toolResultFor(toolRequest('demo.tool', 'read', {}), echo) as {
+  it('hashes the canonical wrapper the backend verifies, not the payload alone', async () => {
+    const result = (await toolResultFor(toolRequest('demo.tool', 'read', {}), echo)) as {
       receipt: { resultHash: string; outputBytes: number };
       structured: unknown;
       modelText: string;
@@ -141,27 +141,30 @@ describe('toolResultFor', () => {
     expect(result.receipt.outputBytes).toBe(Buffer.byteLength(canonical, 'utf8'));
   });
 
-  it('turns a throwing toolkit into a failed result the model can read', () => {
-    const result = toolResultFor(toolRequest('demo.tool', 'read', {}), {
+  it('turns a throwing toolkit into a failed result the model can read', async () => {
+    const result = (await toolResultFor(toolRequest('demo.tool', 'read', {}), {
       definitions: [],
       execute: () => {
         throw new Error('disk on fire');
       },
-    }) as { status: string; error: { message: string } };
+    })) as { status: string; error: { message: string } };
 
     expect(result.status).toBe('failed');
     expect(result.error.message).toBe('disk on fire');
   });
 
-  it('never reports both a success and an error, which the backend refuses', () => {
-    const ok = toolResultFor(toolRequest('demo.tool', 'read', {}), echo) as Record<string, unknown>;
+  it('never reports both a success and an error, which the backend refuses', async () => {
+    const ok = (await toolResultFor(toolRequest('demo.tool', 'read', {}), echo)) as Record<
+      string,
+      unknown
+    >;
 
     expect(ok.status).toBe('succeeded');
     expect(ok.error).toBeUndefined();
   });
 
-  it('ties the receipt to the invocation it answers', () => {
-    const result = toolResultFor(toolRequest('demo.tool', 'read', {}), echo) as {
+  it('ties the receipt to the invocation it answers', async () => {
+    const result = (await toolResultFor(toolRequest('demo.tool', 'read', {}), echo)) as {
       invocationId: string;
       receipt: { invocationId: string };
     };

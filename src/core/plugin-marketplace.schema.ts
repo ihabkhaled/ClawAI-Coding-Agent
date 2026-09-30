@@ -12,6 +12,8 @@ export const marketplaceEntrySchema = z
     /** An https `.zip` URL, a path relative to the catalog, or a folder in a local marketplace. */
     source: z.string().min(1).max(2_048),
     sha256: z.string().regex(/^[a-f0-9]{64}$/u),
+    /** Base64 detached Ed25519 signature over `canonicalEntryJson`; see `plugin-signature.ts`. */
+    signature: z.string().max(200).optional(),
   })
   .strict();
 

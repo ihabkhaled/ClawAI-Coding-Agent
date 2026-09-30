@@ -2,18 +2,23 @@ import * as vscode from 'vscode';
 
 import { sessionUsageAttribution } from '../core/usage-attribution';
 import { buildUsageReport } from '../core/usage-report';
+import { zeroRetentionPosture } from '../core/zero-retention-posture';
 
 import { accountUsageLines } from './show-usage-account';
 import { usageAttributionLines } from './show-usage-attribution';
+import { zeroRetentionUsageLines } from './show-usage-retention';
 
 import type { AccountUsageSections } from '../backend/usage-breakdown-client.types';
 import type { ExtensionState } from '../core/extension-state';
 import type { UsageAttributionLedger } from '../core/usage-attribution';
 import type { UsageFeatureLine, UsageWindowLine } from '../core/usage-report';
+import type { ZeroRetentionPosture } from '../core/zero-retention.types';
 
 interface UsageDependencies {
   readonly state: ExtensionState;
   readonly attribution?: UsageAttributionLedger;
+  /** Defaults to the process-wide posture. */
+  readonly retention?: ZeroRetentionPosture;
   /** Server-side attribution; each section is left out when the backend does not answer it. */
   readonly accountUsage?: () => Promise<AccountUsageSections>;
 }
@@ -76,6 +81,7 @@ export async function showUsage(dependencies: UsageDependencies): Promise<void> 
   lines.push(
     ...usageAttributionLines((dependencies.attribution ?? sessionUsageAttribution).summary()),
   );
+  lines.push(...zeroRetentionUsageLines(dependencies.retention ?? zeroRetentionPosture.current()));
   if (dependencies.accountUsage !== undefined) {
     lines.push(...accountUsageLines(await dependencies.accountUsage()));
   }
