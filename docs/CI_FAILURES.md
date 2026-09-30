@@ -11,7 +11,7 @@ tree, files not yet added to git) is not evidence about a commit on GitHub
 
 | #   | Version          | Gate that failed                          | Symptom                                                         | Cause                                                                                          | What prevents it now                                                          |
 | --- | ---------------- | ----------------------------------------- | --------------------------------------------------------------- | ---------------------------------------------------------------------------------------------- | ----------------------------------------------------------------------------- |
-| 1   | 1.79.0 (x3)      | Release: Require a new version            | `v1.79.0 already exists`                                        | Pushed to main without bumping the version                                                     | `ship` refuses when the tag exists on origin (`releaseGateProblems`)          |
+| 1   | 1.79.0 (x3)      | Release: existing tag                     | `v1.79.0 already exists`                                        | Release workflow incorrectly treated every main push as a new release                           | Existing tags now mean “normal main update”: release-only steps are skipped green |
 | 2   | 1.80.0           | Release: Require committed release assets | `Commit builds/...vsix before pushing main`                     | `builds/` is gitignored; assets existed on disk but were never `git add -f`                    | `ship` checks all 8 assets are tracked in HEAD                                |
 | 3   | 1.82.0           | CI: `coverage:scope`                      | 4 new `src/core/runtime/*` files missing from the coverage list | New runtime modules must be in `vitest.config.ts` `coverage.include`                           | Linux gate runs `npm run check` from a git archive of HEAD                    |
 | 4   | 1.82.0           | CI: `package:audit`                       | `clawAI.attachTerminalOutput is contributed but not registered` | Commands moved out of `extension.ts`; the audit only searched that file                        | Audit widened to every file calling `registerCommand`; the Linux gate runs it |
@@ -35,10 +35,10 @@ command: `npm run test:playwright`, `npm run test:host`.
 
 ## After a push
 
-A push is not done until GitHub says so. `ship` polls CI and Release for the
-pushed commit until both are green. On red it prints the failing step's log
-tail and exits non-zero. A red gate is fixed before any other work, and the fix
-gets its own new commit (the version tag is only created by a green Release).
+A push is not done until GitHub says so. CI must be green. Release is either
+green after publishing a fresh version or green after intentionally skipping
+release-only steps because the current tag already exists. Existing tags are
+not a failure condition. A red gate is fixed before any other work.
 
 ## Adding a row
 
