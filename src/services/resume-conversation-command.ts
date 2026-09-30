@@ -1,7 +1,8 @@
 import * as vscode from 'vscode';
 
+import { BackendRequestError } from '../backend/backend-errors';
 import { remoteSessionClient } from '../backend/remote-session-client';
-import { isRunActiveElsewhere } from '../core/resume-readiness';
+import { resolveRunActivity } from '../core/resume-readiness';
 import { threadSurfaceOf } from '../core/thread-source';
 
 import {
@@ -11,6 +12,7 @@ import {
 
 import type { RemoteSessionDependencies } from './remote-session-commands.types';
 import type { ChatThread } from '../backend/contracts';
+import type { ThreadSurface } from '../core/thread-source.types';
 
 interface ThreadPick extends vscode.QuickPickItem {
   readonly thread: ChatThread;
@@ -21,24 +23,31 @@ function titleOf(thread: ChatThread): string {
   return title === undefined || title.length === 0 ? vscode.l10n.t('Untitled conversation') : title;
 }
 
+function surfaceLabel(surface: ThreadSurface): string {
+  if (surface === 'web') return vscode.l10n.t('Web');
+  if (surface === 'cli') return vscode.l10n.t('Coding agent (CLI)');
+  return vscode.l10n.t('Coding agent');
+}
+
 function toPick(thread: ChatThread): ThreadPick {
-  const surface = threadSurfaceOf(thread.origin);
   return {
     label: titleOf(thread),
-    description: surface === 'web' ? vscode.l10n.t('Web') : vscode.l10n.t('Coding agent'),
+    description: surfaceLabel(threadSurfaceOf(thread.origin)),
     thread,
   };
 }
 
 /**
- * Agent threads (this window, another machine, or the headless CLI — they all
- * share one origin) followed by the portal's own conversations. A thread seen
- * in both lists is offered once.
+ * Agent threads (this window, another machine, or the headless CLI — one
+ * shared history, F094) followed by the portal's own conversations. A thread
+ * seen in both lists is offered once. An agent thread keeps the origin it was
+ * stored with, so a CLI thread is labelled as one; only a thread with none is
+ * read as the editor's.
  */
 async function candidates(dependencies: RemoteSessionDependencies): Promise<ThreadPick[]> {
   const agent = dependencies
     .agentHistory()
-    .map((thread) => ({ ...thread, origin: 'CODING_AGENT' }));
+    .map((thread) => ({ ...thread, origin: thread.origin ?? 'CODING_AGENT' }));
   const web = await remoteSessionClient.threadsFrom(
     dependencies.request(),
     'web',
@@ -57,8 +66,12 @@ async function settleActiveRun(
   dependencies: RemoteSessionDependencies,
   threadId: string,
 ): Promise<boolean> {
-  const messages = await dependencies.backend().listMessages(threadId, RESUME_PROBE_MESSAGES);
-  if (!isRunActiveElsewhere(messages)) {
+  const active = await resolveRunActivity({
+    query: () => remoteSessionClient.activeRun(dependencies.request(), threadId),
+    isUnsupported: (error) => error instanceof BackendRequestError && error.status === 404,
+    transcript: () => dependencies.backend().listMessages(threadId, RESUME_PROBE_MESSAGES),
+  });
+  if (!active) {
     return true;
   }
   const stop = vscode.l10n.t('Stop That Run');

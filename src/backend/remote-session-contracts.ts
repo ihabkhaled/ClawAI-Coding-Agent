@@ -47,3 +47,17 @@ export const runnerRepoPageSchema = agentPageSchema(runnerRepoSchema);
 export type RunnerSession = z.infer<typeof runnerSessionSchema>;
 export type RunnerRepo = z.infer<typeof runnerRepoSchema>;
 export type CloudTask = z.infer<typeof cloudTaskSchema>;
+
+/**
+ * `GET /chat-threads/:id/active-run` (F095): whether a Runtime V2 run is still
+ * going on a thread. Carries no content, only enough to decide.
+ */
+export const threadActiveRunSchema = z
+  .object({
+    active: z.boolean(),
+    runId: z.string().min(1).optional(),
+    startedAt: z.string().optional(),
+  })
+  .loose();
+
+export type ThreadActiveRun = z.infer<typeof threadActiveRunSchema>;

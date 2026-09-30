@@ -1,0 +1,57 @@
+{
+  "$schema": "http://json-schema.org/draft-07/schema#",
+  "$id": "https://clawai.dev/schemas/clawai-workflow.schema.json",
+  "title": "ClawAI workflow file",
+  "description": "A file in .clawai/workflows is either a user-defined workflow template (mirrors workflowTemplateSchema in src/core/workflow-template.ts) or a saved agent graph (mirrors savedWorkflowSchema in src/core/saved-workflow.ts). A template is told apart by \"kind\": \"template\"; a saved graph has no kind. Both are re-validated when read, so this schema is editor help, not the gate.",
+  "anyOf": [{ "$ref": "#/definitions/template" }, { "$ref": "#/definitions/savedGraph" }],
+  "definitions": {
+    "template": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["kind", "name", "description", "instruction"],
+      "properties": {
+        "kind": { "const": "template" },
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "instruction": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 8000,
+          "description": "What the agent is asked to do when this workflow runs."
+        },
+        "steps": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "type": "string", "minLength": 1, "maxLength": 1000 },
+          "description": "Ordered steps the agent follows."
+        },
+        "acceptanceChecks": {
+          "type": "array",
+          "maxItems": 20,
+          "items": { "type": "string", "minLength": 1, "maxLength": 2000 },
+          "description": "Checks that must hold, with evidence, before the workflow is reported done."
+        },
+        "requestPrompt": {
+          "type": "string",
+          "minLength": 1,
+          "maxLength": 200,
+          "description": "When set, the person starting the workflow is asked this question and the answer is added as the request."
+        }
+      }
+    },
+    "savedGraph": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["name", "description", "savedAt", "graph"],
+      "properties": {
+        "name": { "type": "string", "minLength": 1, "maxLength": 80 },
+        "description": { "type": "string", "minLength": 1, "maxLength": 500 },
+        "savedAt": { "type": "string", "minLength": 1, "maxLength": 40 },
+        "graph": {
+          "type": "object",
+          "description": "The agent graph passed to runtime.agents. Validated in full by the extension when the workflow is loaded."
+        }
+      }
+    }
+  }
+}

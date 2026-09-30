@@ -52,6 +52,7 @@ import { workspaceRepositoryReader } from '../infrastructure/workspace-repositor
 import { backendAdvisor } from './backend-advisor';
 import { backendToolPorts } from './backend-tool-ports';
 import { BrowserControllerService } from './browser-controller-service';
+import { browserObservationUploader } from './browser-observation-uploader.factory';
 import { ContainerEngineService } from './container-engine-service';
 import { conversationEndPort } from './conversation-end-service';
 import { DatabaseProfileVault } from './database-profile-vault';
@@ -202,7 +203,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     // Off unless an endpoint is configured, and the configuration is the
     // approval: telemetry that turns itself on is the thing people rightly
     // object to, so there is no default endpoint to opt out of.
-    const remote = otlpSink(this.configuration.read(), logger, extensionPackage.version);
+    const remote = otlpSink(this.configuration.read(), logger, extensionPackage.version, context);
     this.observability = new LocalObservabilityService(new VscodeObservabilitySink(logger), remote);
     if (remote !== undefined) this.observability.setRemoteExport(true, true);
     this.targets = new ExecutionTargetRegistry({
@@ -247,10 +248,11 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         approveWrite: databaseWriteApproval(approvals),
       },
     );
-    const browserDriver = new PlaywrightBrowserDriver(
-      this.files,
-      vscode.Uri.joinPath(context.globalStorageUri, 'browser-evidence').fsPath,
-    );
+    const browserArtifactRoot = vscode.Uri.joinPath(
+      context.globalStorageUri,
+      'browser-evidence',
+    ).fsPath;
+    const browserDriver = new PlaywrightBrowserDriver(this.files, browserArtifactRoot);
     const browser = new BrowserControllerService(
       browserDriver,
       () => runtimeBrowserScope(this.configuration.read()),
@@ -361,7 +363,14 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         executor: new DatabaseToolExecutor(profiles, databases, this.files),
       },
       { definition: qualityToolDefinition, executor: quality },
-      { definition: browserToolDefinition, executor: new BrowserToolExecutor(browser, readiness) },
+      {
+        definition: browserToolDefinition,
+        executor: new BrowserToolExecutor(
+          browser,
+          readiness,
+          browserObservationUploader(browserArtifactRoot, this.state, backend, logger),
+        ),
+      },
       mcpToolRegistration(context, this.workspaceScope, this.state, this.configuration),
       ...analysisToolRegistrations({
         questions: this.approvals,

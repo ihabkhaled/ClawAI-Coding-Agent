@@ -19,7 +19,7 @@ function messageFor(code: PluginFailureCode, detail: string): string {
     case 'name-mismatch':
       return vscode.l10n.t('The plugin does not match its marketplace entry: {0}', detail);
     case 'not-allowed':
-      return vscode.l10n.t('Workspace policy does not allow this marketplace: {0}', detail);
+      return vscode.l10n.t('Policy does not allow this marketplace: {0}', detail);
     case 'too-large':
       return vscode.l10n.t('The plugin is too large.');
     case 'unreachable':

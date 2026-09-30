@@ -1,7 +1,13 @@
 import * as vscode from 'vscode';
 
+import { GIT_MARKETPLACE_DIRECTORY } from '../core/plugin-git-marketplace.constants';
+import {
+  effectiveMarketplaceAllowlist,
+  readOrganizationMarketplaceAllowlist,
+} from '../core/plugin-marketplace-policy';
 import { unzipPlugin } from '../infrastructure/plugin-archive';
 import { downloadBytes } from '../infrastructure/plugin-download';
+import { cloneGitMarketplace } from '../infrastructure/plugin-git-clone';
 import { VscodePluginFileSystem } from '../infrastructure/vscode-plugin-file-system';
 
 import { ConfigurationService } from './configuration-service';
@@ -9,6 +15,7 @@ import { managePlugins } from './plugin-commands';
 import { browsePluginMarketplaces } from './plugin-marketplace-commands';
 import { PluginMarketplaceService } from './plugin-marketplace-service';
 import { ProjectPolicyService } from './project-policy-service';
+import { registerPluginTree } from './register-plugin-tree';
 import { workspacePluginStore } from './workspace-plugins';
 
 import type { PluginCommandDependencies } from './plugin-commands.types';
@@ -31,10 +38,16 @@ async function projectAllowlist(
   }
 }
 
-/** Registers the plugin manager and the marketplace browser. */
+/**
+ * Registers the plugin manager, the marketplace browser and the Plugins view.
+ *
+ * `organizationPolicy` is the managed policy's `allowedPluginMarketplaces`,
+ * as it arrived; the organization's list wins over the project's.
+ */
 export function registerPluginCommands(
   context: vscode.ExtensionContext,
   workspaceScope: WorkspaceScopeService,
+  organizationPolicy: () => unknown = () => undefined,
   configuration: ConfigurationService = new ConfigurationService(),
 ): void {
   const folder = (): vscode.Uri | undefined =>
@@ -42,7 +55,12 @@ export function registerPluginCommands(
       ? undefined
       : workspaceScope.selectedFolder().uri;
   const store = workspacePluginStore(context.globalStorageUri, folder);
-  const allowlist = (): Promise<readonly string[] | undefined> => projectAllowlist(workspaceScope);
+  const allowlist = async (): Promise<readonly string[] | undefined> =>
+    effectiveMarketplaceAllowlist(
+      readOrganizationMarketplaceAllowlist(organizationPolicy()),
+      await projectAllowlist(workspaceScope),
+    );
+  const clones = vscode.Uri.joinPath(context.globalStorageUri, GIT_MARKETPLACE_DIRECTORY).fsPath;
   const dependencies: PluginCommandDependencies = {
     store,
     marketplace: new PluginMarketplaceService({
@@ -50,6 +68,7 @@ export function registerPluginCommands(
       files: new VscodePluginFileSystem(),
       download: (url) => downloadBytes(url),
       unzip: unzipPlugin,
+      cloneGit: (location) => cloneGitMarketplace(clones, location),
       allowlist,
     }),
     trusted: () => vscode.workspace.isTrusted,
@@ -57,10 +76,17 @@ export function registerPluginCommands(
     saveMarketplaces: (sources) => configuration.savePluginMarketplaces(sources),
     allowlist,
   };
+  const tree = registerPluginTree(context, dependencies);
   context.subscriptions.push(
-    vscode.commands.registerCommand('clawAI.managePlugins', () => managePlugins(dependencies)),
+    vscode.commands.registerCommand('clawAI.managePlugins', () =>
+      managePlugins(dependencies).finally(() => {
+        tree.refresh();
+      }),
+    ),
     vscode.commands.registerCommand('clawAI.browsePluginMarketplaces', () =>
-      browsePluginMarketplaces(dependencies),
+      browsePluginMarketplaces(dependencies).finally(() => {
+        tree.refresh();
+      }),
     ),
   );
 }

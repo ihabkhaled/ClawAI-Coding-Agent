@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { COMMAND_YIELD_AFTER_MS_MAX, COMMAND_YIELD_AFTER_MS_MIN } from './command-yield.constants';
 import { isSafeRelativeWorkspacePath } from './workspace-path-policy';
 
 import type { CommandSandboxReport } from './command-sandbox.types';
@@ -38,6 +39,17 @@ export const commandSpecSchema = z
      * the caller then polls through `workspace.process` inspect.
      */
     background: z.boolean().optional(),
+    /**
+     * Wait this long for a foreground command, then hand it to the process
+     * supervisor and return the output so far instead of blocking the turn.
+     * Tool results are single-shot, so this is how a long build reports early.
+     */
+    yieldAfterMs: z
+      .number()
+      .int()
+      .min(COMMAND_YIELD_AFTER_MS_MIN)
+      .max(COMMAND_YIELD_AFTER_MS_MAX)
+      .optional(),
     stdin: z.string().max(1_048_576).optional(),
     shell: z
       .object({
@@ -57,6 +69,19 @@ export const commandSpecSchema = z
       context.addIssue({
         code: 'custom',
         message: 'Shell mode must use its declared dialect without argv',
+      });
+    if (specification.yieldAfterMs !== undefined && specification.background === true)
+      context.addIssue({
+        code: 'custom',
+        message: 'yieldAfterMs applies to a foreground command; background already returns at once',
+      });
+    if (
+      specification.yieldAfterMs !== undefined &&
+      specification.yieldAfterMs >= specification.timeoutMs
+    )
+      context.addIssue({
+        code: 'custom',
+        message: 'yieldAfterMs must be shorter than timeoutMs',
       });
   });
 

@@ -91,6 +91,7 @@ describe('WorkflowStoreToolExecutor', () => {
       write: vi.fn(async (workflow: unknown) => {
         written.push(workflow);
       }),
+      writeTemplate: vi.fn(async () => 'saved' as const),
     };
     return {
       store,

@@ -1,6 +1,6 @@
-import { BUILT_IN_SKILLS } from '../core/built-in-skills.constants';
 import { VscodeSkillSource } from '../infrastructure/vscode-skill-source';
 
+import { localizedBuiltInSkills } from './built-in-skill-l10n';
 import { OutputStyleCatalog } from './output-style-catalog';
 import { PluginSkillSource } from './plugin-skill-source';
 import { SkillCatalogService } from './skill-catalog-service';
@@ -32,7 +32,7 @@ export function workspaceSkillCatalog(
       workspacePluginStore(globalStorageUri, folder),
       ['skills', 'commands'],
     ),
-    BUILT_IN_SKILLS,
+    localizedBuiltInSkills(),
   );
 }
 

@@ -2,6 +2,37 @@
 
 All notable changes to ClawAI Coding Agent are documented here.
 
+## 1.83.0
+
+Minor: twenty parity gaps closed or narrowed, most with their backend half.
+Needs ClawAI backend with the 2026-09-30 migrations (chat-service thread
+origin, agent-service policy guardrails and runner credentials, file-service
+artifacts).
+
+- **Long commands yield (F001).** `yieldAfterMs` returns partial output and a
+  process receipt instead of blocking the turn.
+- **The agent sees its screenshots (F030).** Vision models receive the
+  browser `observe` image with the next turn.
+- **Artifacts publish (F025).** A real `/artifacts` route with a sandboxed
+  public link.
+- **Zero data retention on the server (F055).** Content is redacted after the
+  turn or run ends.
+- **Organization guardrails (F053, F054).** Rules, trust lists and MCP
+  allow/deny served by the backend.
+- **Plugins (F080, F081).** A Plugins view, plugin MCP servers and agents,
+  git marketplaces, organization marketplace allowlist.
+- **SDK types (F086).** `dist/sdk.d.mts`.
+- **Sessions (F094, F095).** CLI threads are labelled; resume asks the backend
+  whether a run is active.
+- **Routines and runners (F099, F100).** Prompt routines run on labelled
+  runners; runners have their own revocable tokens and heartbeat expiry.
+- **Usage (F107, F108).** Account and organization usage views; telemetry
+  headers in secret storage.
+- **Workflows and goals (F011, F014).** Save templates from the agent, a JSON
+  schema for `.clawai/workflows`, ADR 0004.
+- **Gateways (F092).** Headers on every chat path and in the connector form.
+- **Security review (F106).** Translated in every locale.
+
 ## 1.82.0
 
 Minor: thirty-three parity features finished or narrowed. Needs ClawAI backend

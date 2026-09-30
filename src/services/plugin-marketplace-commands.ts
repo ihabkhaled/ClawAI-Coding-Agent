@@ -28,7 +28,9 @@ export async function pickScope(
 
 async function addMarketplace(dependencies: PluginCommandDependencies): Promise<void> {
   const source = await vscode.window.showInputBox({
-    prompt: vscode.l10n.t('Marketplace URL (https) or local folder path'),
+    prompt: vscode.l10n.t(
+      'Marketplace: an https catalog URL, git+https://…#ref, or a local folder path',
+    ),
     ignoreFocusOut: true,
   });
   const trimmed = source?.trim() ?? '';
@@ -75,9 +77,7 @@ async function marketplaceItems(
   return [
     ...dependencies.marketplaces().map((source) => ({
       label: `$(package) ${source}`,
-      description: marketplaceAllowed(source, allowlist)
-        ? ''
-        : vscode.l10n.t('Blocked by workspace policy'),
+      description: marketplaceAllowed(source, allowlist) ? '' : vscode.l10n.t('Blocked by policy'),
       source,
     })),
     { label: `$(add) ${vscode.l10n.t('Add a marketplace…')}`, action: 'add' as const },

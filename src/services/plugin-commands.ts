@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { pluginFailureMessage } from './plugin-failure-message';
+import { contributionSummary, pluginStateDescription, scopeLabel } from './plugin-labels';
 import { browsePluginMarketplaces, pickScope } from './plugin-marketplace-commands';
 
 import type {
@@ -8,31 +9,12 @@ import type {
   PluginCommandDependencies,
   PluginPickItem,
 } from './plugin-commands.types';
-import type { InstalledPlugin, PluginScope } from '../core/plugin-manifest.types';
-
-function scopeLabel(scope: PluginScope): string {
-  return scope === 'user' ? vscode.l10n.t('User') : vscode.l10n.t('Workspace');
-}
-
-function contributionSummary(plugin: InstalledPlugin): string {
-  const contributes = plugin.manifest.contributes;
-  return vscode.l10n.t(
-    'Skills {0} · Commands {1} · Styles {2} · Agents {3} · Hooks {4} · MCP servers {5}',
-    contributes.skills.length,
-    contributes.commands.length,
-    contributes.outputStyles.length,
-    contributes.agents.length,
-    contributes.hooks.length,
-    Object.keys(contributes.mcpServers).length,
-  );
-}
+import type { InstalledPlugin } from '../core/plugin-manifest.types';
 
 function pluginItem(plugin: InstalledPlugin): PluginPickItem {
-  const state = plugin.enabled ? vscode.l10n.t('Enabled') : vscode.l10n.t('Disabled');
-  const hooks = plugin.hooksEnabled ? ` · ${vscode.l10n.t('Hooks on')}` : '';
   return {
     label: `$(extensions) ${plugin.id}`,
-    description: `${plugin.manifest.version} · ${scopeLabel(plugin.scope)} · ${state}${hooks}`,
+    description: pluginStateDescription(plugin),
     detail: `${plugin.manifest.description} ${contributionSummary(plugin)}`.trim(),
     plugin,
   };
@@ -82,7 +64,8 @@ async function enableHooks(
   await dependencies.store.setSwitches(plugin, { enabled: true, hooksEnabled: true });
 }
 
-async function uninstall(
+/** Asks first; the tree's uninstall action and the picker's share this. */
+export async function uninstallPlugin(
   dependencies: PluginCommandDependencies,
   plugin: InstalledPlugin,
 ): Promise<void> {
@@ -121,7 +104,10 @@ function actionsFor(
         : { label: vscode.l10n.t('Turn hooks on'), run: () => enableHooks(dependencies, plugin) },
     );
   }
-  actions.push({ label: vscode.l10n.t('Uninstall'), run: () => uninstall(dependencies, plugin) });
+  actions.push({
+    label: vscode.l10n.t('Uninstall'),
+    run: () => uninstallPlugin(dependencies, plugin),
+  });
   return actions;
 }
 

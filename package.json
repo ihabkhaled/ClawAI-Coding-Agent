@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "1.82.0",
+  "version": "1.83.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -334,6 +334,11 @@
         "category": "ClawAI"
       },
       {
+        "command": "clawAI.setTelemetryHeaders",
+        "title": "%command.setTelemetryHeaders%",
+        "category": "ClawAI"
+      },
+      {
         "command": "clawAI.managePlugins",
         "title": "%command.managePlugins%",
         "category": "ClawAI"
@@ -342,6 +347,27 @@
         "command": "clawAI.browsePluginMarketplaces",
         "title": "%command.browsePluginMarketplaces%",
         "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.enablePlugin",
+        "title": "%command.enablePlugin%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.disablePlugin",
+        "title": "%command.disablePlugin%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.uninstallPlugin",
+        "title": "%command.uninstallPlugin%",
+        "category": "ClawAI"
+      },
+      {
+        "command": "clawAI.refreshPlugins",
+        "title": "%command.refreshPlugins%",
+        "category": "ClawAI",
+        "icon": "$(refresh)"
       },
       {
         "command": "clawAI.runSavedWorkflow",
@@ -737,10 +763,18 @@
         {
           "id": "clawAI.artifacts",
           "name": "%view.artifacts%"
+        },
+        {
+          "id": "clawAI.plugins",
+          "name": "%view.plugins%"
         }
       ]
     },
     "viewsWelcome": [
+      {
+        "view": "clawAI.plugins",
+        "contents": "%welcome.plugins%"
+      },
       {
         "view": "clawAI.model",
         "contents": "%welcome.model%\n[Select model](command:clawAI.selectModel)"
@@ -792,6 +826,38 @@
           "command": "clawAI.refreshModels",
           "when": "view == clawAI.model",
           "group": "navigation"
+        },
+        {
+          "command": "clawAI.refreshPlugins",
+          "when": "view == clawAI.plugins",
+          "group": "navigation"
+        },
+        {
+          "command": "clawAI.managePlugins",
+          "when": "view == clawAI.plugins",
+          "group": "clawAI@1"
+        },
+        {
+          "command": "clawAI.browsePluginMarketplaces",
+          "when": "view == clawAI.plugins",
+          "group": "clawAI@2"
+        }
+      ],
+      "view/item/context": [
+        {
+          "command": "clawAI.enablePlugin",
+          "when": "view == clawAI.plugins && viewItem == clawAI.plugin.disabled",
+          "group": "clawAI@1"
+        },
+        {
+          "command": "clawAI.disablePlugin",
+          "when": "view == clawAI.plugins && viewItem == clawAI.plugin.enabled",
+          "group": "clawAI@1"
+        },
+        {
+          "command": "clawAI.uninstallPlugin",
+          "when": "view == clawAI.plugins && viewItem != clawAI.plugin.invalid",
+          "group": "clawAI@2"
         }
       ],
       "editor/title": [
@@ -801,6 +867,18 @@
         }
       ],
       "commandPalette": [
+        {
+          "command": "clawAI.enablePlugin",
+          "when": "false"
+        },
+        {
+          "command": "clawAI.disablePlugin",
+          "when": "false"
+        },
+        {
+          "command": "clawAI.uninstallPlugin",
+          "when": "false"
+        },
         {
           "command": "clawAI.fixCode",
           "when": "clawAI.workspaceTrusted"
@@ -884,6 +962,10 @@
       {
         "fileMatch": "/.clawai/mcp.json",
         "url": "./schemas/clawai-mcp.schema.json"
+      },
+      {
+        "fileMatch": "/.clawai/workflows/*.json",
+        "url": "./schemas/clawai-workflow.schema.json"
       }
     ]
   },

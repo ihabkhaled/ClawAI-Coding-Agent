@@ -91,14 +91,14 @@ MISSING → SHIPPED: **F012, F008**. MISSING → PARTIAL: **F106, F108**.
 - [ ] F010 Cross-session messaging
 - [x] F013 Scheduled tasks
 - [x] F019 Jupyter kernel execution
-- [ ] F025 Artifact publishing
+- [x] F025 Artifact publishing
 - [x] F029 RemoteTrigger
 - [ ] F038 PDF page-range reading
 - [x] F044 Voice dictation
-- [ ] F054 Managed MCP allowlists and denylists
-- [ ] F055 Zero data retention mode
+- [x] F054 Managed MCP allowlists and denylists
+- [x] F055 Zero data retention mode
 - [x] F079 MCP servers with OAuth
-- [ ] F080 Plugin GUI
+- [x] F080 Plugin GUI
 - [ ] F081 Plugin marketplaces
 - [x] F083 Channels
 - [x] F086 Agent SDK
@@ -110,30 +110,30 @@ MISSING → SHIPPED: **F012, F008**. MISSING → PARTIAL: **F106, F108**.
 
 ### PARTIAL (25) — half exists; the row names which half
 
-- [ ] F001 Bash tool
+- [x] F001 Bash tool
 - [x] F009 Agent teams
-- [ ] F011 Dynamic workflows
-- [ ] F014 Goal mode
+- [x] F011 Dynamic workflows
+- [x] F014 Goal mode
 - [x] F017 EnterWorktree / ExitWorktree
 - [ ] F030 Computer use
 - [x] F036 Browser references and integration
 - [x] F037 Shift-drag attachments
 - [x] F039 Image understanding
 - [x] F051 Sandboxed shell
-- [ ] F053 Hard deny rules, trusted repositories and domains
+- [x] F053 Hard deny rules, trusted repositories and domains
 - [x] F057 Checkpoints and rewind
 - [ ] F067 Draggable panel placement
-- [ ] F092 LLM gateway support
+- [x] F092 LLM gateway support
 - [ ] F093 Automatic prompt caching (accounting shipped; requesting caching is backend)
-- [ ] F094 Shared history with CLI
+- [x] F094 Shared history with CLI
 - [ ] F095 Resume cloud sessions
 - [x] F096 Remote control
 - [ ] F099 Routines
 - [x] F103 Native commit and PR creation (readiness shipped; creation is a GitHub API call)
 - [x] F104 Code review and multi-agent review
 - [x] F105 Cloud PR auto-fix and monitoring
-- [ ] F106 Security guidance and vulnerability scanning
-- [ ] F107 Usage dialog and attribution
+- [x] F106 Security guidance and vulnerability scanning
+- [x] F107 Usage dialog and attribution
 - [ ] F108 OpenTelemetry and team analytics
 
 ### BLOCKED (2) and CONFLICT (1)

@@ -1,4 +1,5 @@
 import type {
+  McpConfigLoad,
   McpServerConfig,
   McpServerOrigin,
   McpServerRefusal,
@@ -14,6 +15,8 @@ export interface McpRegistryDependencies {
   readonly projectPolicy: () => Promise<unknown>;
   /** The `mcpServers` block of the managed organization policy. */
   readonly organizationPolicy: () => unknown;
+  /** MCP servers enabled plugins declare; admitted by the same policy and trust rules. */
+  readonly pluginConfig?: () => Promise<McpConfigLoad>;
   readonly workspaceTrusted: () => boolean;
   readonly connect: (server: McpServerConfig, signal?: AbortSignal) => Promise<McpSession>;
 }

@@ -68,10 +68,15 @@ export class McpServerRegistry {
   }
 
   private async evaluate(): Promise<{ config: McpConfigLoad; admission: McpAdmission }> {
-    const config = mergeMcpConfigs(
+    const configured = mergeMcpConfigs(
       parseMcpConfig(this.deps.userConfig(), 'user'),
       await this.workspaceConfig(),
     );
+    // Plugin servers come last, so they never take a name already in use.
+    const config =
+      this.deps.pluginConfig === undefined
+        ? configured
+        : mergeMcpConfigs(configured, await this.deps.pluginConfig());
     const organization = readMcpServerPolicy(this.deps.organizationPolicy());
     const project = readMcpServerPolicy(await this.deps.projectPolicy());
     const admission = admitMcpServers(
@@ -82,7 +87,10 @@ export class McpServerRegistry {
       },
       this.deps.workspaceTrusted(),
     );
-    for (const refusal of admission.refused) this.close(refusal.name);
+    // A server that is refused, or no longer configured at all — a plugin that
+    // was disabled or uninstalled — has its connection closed.
+    const admitted = new Set(admission.admitted.map((server) => server.name));
+    for (const name of [...this.connections.keys()]) if (!admitted.has(name)) this.close(name);
     return { config, admission };
   }
 

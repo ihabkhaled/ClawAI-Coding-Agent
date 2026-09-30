@@ -10,9 +10,15 @@ export type IntegrationRequester = <T>(
 /** agent-service `ScheduledCommand`, reduced to what the extension shows. */
 export const routineSchema = z.object({
   id: z.string(),
-  deviceId: z.string(),
+  /** Null for a PROMPT routine (F099): it runs on a runner, not a device. */
+  deviceId: z.string().nullable(),
+  kind: z.enum(['COMMAND', 'PROMPT']).optional(),
   name: z.string(),
+  /** The shell command, or the prompt of a PROMPT routine. */
   command: z.string(),
+  model: z.string().nullable().optional(),
+  repoRef: z.string().nullable().optional(),
+  runnerLabels: z.array(z.string()).optional(),
   intervalMinutes: z.number().int(),
   status: z.enum(['ENABLED', 'PAUSED', 'DISABLED']),
   lastRunAt: z.string().nullable().optional(),

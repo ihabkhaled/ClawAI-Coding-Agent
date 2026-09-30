@@ -206,3 +206,15 @@ MCP servers the agent may use through the `runtime.mcp` tool (`servers`,
 - `policies/policy.json` may add `mcpServers: { "allow": [...], "deny": [...] }`
   patterns (`name`, `command`, `url` globs); deny wins, and the organization
   policy's `mcpServers` block applies the same way.
+
+## `workflows/*.json`
+
+Saved agent graphs (`runtime.workflows` `save`) and user-defined workflow
+templates (`"kind": "template"`) share this folder and are both listed by
+`ClawAI: Run Saved Workflow`. A template has `name`, `description`,
+`instruction`, optional `steps`, `acceptanceChecks` and `requestPrompt`. The
+agent can write one with `runtime.workflows` `save-template`, which asks for
+approval (R2 local mutation) and refuses an existing file unless `overwrite`
+is true. Schema: `schemas/clawai-workflow.schema.json`; validators:
+`workflowTemplateSchema` in `src/core/workflow-template.ts` and
+`savedWorkflowSchema` in `src/core/saved-workflow.ts`.

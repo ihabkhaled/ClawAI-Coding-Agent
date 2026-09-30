@@ -30,7 +30,12 @@ function harness(withBackground = true) {
   const create = vi.fn(async () => receipt);
   const executor = new StructuredCommandToolExecutor(
     files as never,
-    withBackground ? { supervisor: { create }, ownerId: () => 'account:1' } : undefined,
+    withBackground
+      ? {
+          supervisor: { create, join: vi.fn(), snapshot: vi.fn(), terminate: vi.fn() },
+          ownerId: () => 'account:1',
+        }
+      : undefined,
   );
   return { executor, create, files };
 }

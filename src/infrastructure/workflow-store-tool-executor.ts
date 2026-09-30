@@ -3,6 +3,8 @@ import { z } from 'zod';
 import { subAgentGraphSchema } from '../core/multi-agent-dag';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 import { prepareWorkflowForRun, toSavedWorkflow } from '../core/saved-workflow';
+import { workflowTemplateSchema, workflowTemplateSaveSchema } from '../core/workflow-template';
+import { WORKFLOW_TEMPLATE_KIND } from '../core/workflow-template.constants';
 
 import type { WorkflowStorePort } from './workflow-store-tool-executor.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -28,8 +30,10 @@ export const workflowStoreToolDefinition: ToolDefinition = {
     'graph you would pass to runtime.agents. list returns what this workspace has saved. load ' +
     'takes name and returns the graph ready to run — its epochs are refreshed to the current ' +
     'ones, so a saved workflow is a shape to re-run and never a permission to reuse. Save a ' +
-    'graph that worked, not one you are still shaping.',
-  operations: ['save', 'list', 'load'],
+    'graph that worked, not one you are still shaping. save-template writes a workflow a ' +
+    'person can pick from Run Saved Workflow: name, description, instruction, optional steps, ' +
+    'acceptanceChecks and requestPrompt. It refuses an existing file unless overwrite is true.',
+  operations: ['save', 'list', 'load', 'save-template'],
   riskClasses: ['inspect', 'workspace-write'],
   targetIds: ['target:workspace'],
   inputSchema: runtimeToolInputSchemas.workflows,
@@ -62,6 +66,7 @@ export class WorkflowStoreToolExecutor implements RuntimeToolExecutorPort {
     if (invocation.operation === 'save') return this.save(invocation.arguments);
     if (invocation.operation === 'list') return this.list();
     if (invocation.operation === 'load') return this.load(invocation.arguments);
+    if (invocation.operation === 'save-template') return this.saveTemplate(invocation.arguments);
     throw new Error('Unknown workflow operation');
   }
 
@@ -70,6 +75,21 @@ export class WorkflowStoreToolExecutor implements RuntimeToolExecutorPort {
     const workflow = toSavedWorkflow(name, description, graph, this.now());
     await this.store.write(workflow);
     return { structured: { saved: true, name: workflow.name, tasks: graph.tasks.length } };
+  }
+
+  /**
+   * A template is instructions a person will later run, so it is parsed
+   * through the same schema the loader uses: a file this writes is always one
+   * `listTemplates` can read back.
+   */
+  private async saveTemplate(args: unknown): Promise<RuntimeToolExecutionOutput> {
+    const { overwrite, ...fields } = workflowTemplateSaveSchema.parse(args);
+    const template = workflowTemplateSchema.parse({ kind: WORKFLOW_TEMPLATE_KIND, ...fields });
+    const outcome = await this.store.writeTemplate(template, overwrite);
+    if (outcome === 'exists') {
+      return { structured: { saved: false, name: template.name, reason: 'exists' } };
+    }
+    return { structured: { saved: true, name: template.name, kind: WORKFLOW_TEMPLATE_KIND } };
   }
 
   private async list(): Promise<RuntimeToolExecutionOutput> {

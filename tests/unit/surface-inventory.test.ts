@@ -155,7 +155,7 @@ describe('surface inventory', () => {
       ['Command', 'Setting', 'View', 'Keybinding', 'Runtime tool'].includes(cell[0] ?? ''),
     );
 
-    expect(rows.length).toBe(151);
+    expect(rows.length).toBe(157);
     const status = columnOf('Status');
     for (const cell of rows) {
       expect(['PASS', 'FAIL', 'BLOCKED', 'NOT RUN']).toContain(cell[status]);

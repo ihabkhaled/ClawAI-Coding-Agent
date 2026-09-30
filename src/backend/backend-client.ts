@@ -238,6 +238,9 @@ export class BackendClient {
 
   private readonly catalogRequest: Requester = (path, schema) => this.request(path, schema);
 
+  /** GET seam for the usage breakdown reads. See `usage-breakdown-client`. */
+  readonly usageRequest: Requester = (path, schema) => this.request(path, schema);
+
   private readonly fileRequest = <T>(
     path: string,
     schema: z.ZodType<T>,
@@ -298,6 +301,16 @@ export class BackendClient {
 
   authorizationUrl(path: string): string {
     return `${this.backendUrl}${path}`;
+  }
+
+  /**
+   * F099: the signed-in access token, rotated first when it is about to
+   * expire, for a runner's headless SDK run. Undefined when signed out.
+   */
+  async currentAccessToken(): Promise<string | undefined> {
+    await this.ensureFreshSession();
+    const session = await this.sessionVault.loadBound(this.backendUrl);
+    return session?.tokens.accessToken;
   }
 
   async createThread(input: ThreadCreateInput): Promise<ChatThread> {

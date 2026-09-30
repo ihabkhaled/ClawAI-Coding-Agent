@@ -1,6 +1,7 @@
 import { createHash, randomUUID } from 'node:crypto';
 
 import { threadOriginForSource } from '../core/thread-source';
+import { LEGACY_CLI_THREAD_ORIGIN } from '../core/thread-source.constants';
 
 import { HEADLESS_CALLBACK_URI, HEADLESS_CLIENT_NAME } from './headless-session.constants';
 import { RuntimeHttpError } from './runtime-http-error';
@@ -85,10 +86,24 @@ export class HeadlessTransport {
   }
 
   async createThread(token: string, title: string): Promise<string> {
+    // The CLI's own origin, which the backend lists in the shared agent history
+    // so a CLI run is resumable from VS Code, labelled as a CLI thread (F094).
+    // Omitted, the backend files it as WEB.
+    try {
+      return await this.postThread(token, title, threadOriginForSource('cli'));
+    } catch (error) {
+      // A backend older than CODING_AGENT_CLI rejects it as an unknown origin.
+      // The shared agent origin keeps the run in the same history there.
+      if (error instanceof RuntimeHttpError && error.status === 400) {
+        return this.postThread(token, title, LEGACY_CLI_THREAD_ORIGIN);
+      }
+      throw error;
+    }
+  }
+
+  private async postThread(token: string, title: string, origin: string): Promise<string> {
     const thread = await this.json<{ id?: string; data?: { id: string } }>('/chat-threads', {
-      // Same origin as the editor, so a CLI run is in the shared agent history
-      // and resumable from VS Code (F094). Omitted, the backend files it as WEB.
-      body: { title, routingMode: 'MANUAL_MODEL', origin: threadOriginForSource('cli') },
+      body: { title, routingMode: 'MANUAL_MODEL', origin },
       token,
     });
     const id = thread.id ?? thread.data?.id;
