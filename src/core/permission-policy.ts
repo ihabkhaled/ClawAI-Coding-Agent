@@ -25,7 +25,10 @@ function finalDiffDecision(input: PermissionInput): PermissionDecision | undefin
  * Plan allows only read-only workspace context; Autonomous Scoped works inside
  * the workspace without asking (commands and external output still ask above).
  */
-function modeOutcome(mode: PermissionInput['permissionMode'], input: PermissionInput): PermissionDecision {
+function modeOutcome(
+  mode: PermissionInput['permissionMode'],
+  input: PermissionInput,
+): PermissionDecision {
   if (mode === 'ENTERPRISE_LOCKED') return { outcome: 'ask', reason: 'strictApproval' };
   if (mode === 'ASK') return { outcome: 'ask', reason: 'manualApproval' };
   if (mode === 'AUTO_EDIT') return { outcome: 'allow', reason: 'sessionApproval' };

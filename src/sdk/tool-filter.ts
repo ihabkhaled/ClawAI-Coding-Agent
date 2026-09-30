@@ -5,9 +5,15 @@ import type { AgentToolFilter } from './tool-filter.types';
 
 const MCP_TOOL = 'runtime.mcp';
 
-/** The identifiers a call answers to; a deny on any one of them refuses it. */
+/**
+ * The identifiers a call answers to; a deny on any one of them refuses it.
+ *
+ * Besides `tool.operation` a call answers to the bare tool name, so
+ * `workspace.file` denies (or allows) every operation of that tool and does not
+ * silently match nothing.
+ */
 export function toolIdentifiers(call: AgentToolCall): readonly string[] {
-  if (call.toolName !== MCP_TOOL) return [`${call.toolName}.${call.operation}`];
+  if (call.toolName !== MCP_TOOL) return [`${call.toolName}.${call.operation}`, call.toolName];
   const server = call.arguments.server;
   const name = call.arguments.tool;
   if (call.operation === 'call' && typeof server === 'string' && typeof name === 'string') {

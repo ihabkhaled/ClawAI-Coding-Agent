@@ -28,7 +28,7 @@ const request = (call: AgentToolCall, category: AgentToolCategory): AgentApprova
 
 describe('toolPermitted', () => {
   it('names calls by tool and operation, and MCP calls by server and tool', () => {
-    expect(toolIdentifiers(file('read'))).toEqual(['workspace.file.read']);
+    expect(toolIdentifiers(file('read'))).toEqual(['workspace.file.read', 'workspace.file']);
     expect(toolIdentifiers(mcp('call', { server: 'echo', tool: 'say' }))).toEqual([
       'mcp__echo__say',
     ]);
@@ -44,6 +44,23 @@ describe('toolPermitted', () => {
     expect(toolPermitted(filter, file('read'))).toBe(true);
     expect(toolPermitted(filter, { ...file('status'), toolName: 'workspace.git' })).toBe(true);
     expect(toolPermitted(filter, file('create'))).toBe(false);
+  });
+
+  it('a bare tool name denies every operation of that tool', () => {
+    const filter = { deny: ['workspace.file'] };
+
+    for (const operation of ['read', 'list', 'create', 'delete']) {
+      expect(toolPermitted(filter, file(operation)), operation).toBe(false);
+    }
+    expect(toolPermitted(filter, { ...file('status'), toolName: 'workspace.git' })).toBe(true);
+  });
+
+  it('a bare tool name in the allow list admits every operation of that tool only', () => {
+    const filter = { allow: ['workspace.file'] };
+
+    expect(toolPermitted(filter, file('read'))).toBe(true);
+    expect(toolPermitted(filter, file('create'))).toBe(true);
+    expect(toolPermitted(filter, { ...file('status'), toolName: 'workspace.git' })).toBe(false);
   });
 
   it('lets deny win over allow', () => {

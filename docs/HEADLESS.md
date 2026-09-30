@@ -138,7 +138,8 @@ appear in events, and any error text has them replaced by `[redacted-instruction
 
 The last two are not new rules: they are the editor's own policy (`evaluatePolicyV2`, the one behind
 [PERMISSION_MATRIX.md](PERMISSION_MATRIX.md)) fed each call's real classification. The older
-`src/core/permission-policy.ts`, which only the editor's legacy edit-proposal flow still uses, asks for every
+`src/core/permission-policy.ts`, which the editor's legacy edit-proposal flow uses (Strict there asks every time and never
+reuses a remembered approval; Autonomous Scoped edits inside the workspace), asks for every
 command in every mode; the live agent path, which this mirrors, runs R2 commands in Autonomous Scoped, and
 asks for R3 and R4 work (commit, push, delete, MCP call). Reads are never asked about in any mode. There is no
 final-diff review step in a headless run, so none is asked for.
@@ -148,6 +149,12 @@ Approval is the SDK's `permissions.approve` callback. The CLI asks on the termin
 characters) only when stdin is a TTY. **With no terminal, anything that needs
 approval is denied**, never assumed allowed, so a pipeline must say what it allows
 (`--allow-tools`, or `accept-edits` with only writes needed).
+
+Under `plan` the model is still shown every operation, and a write, command or MCP call is refused on arrival
+as `PERMISSION_DENIED` (the result the model reads), so a model that asks for `workspace.file create` can
+answer that it cannot. Before 1.88.0 the write was withheld from the offered catalog and a model that asked
+anyway failed the whole run (exit 1, "tool outside admitted catalog"). The exit code is unchanged: `0` when the
+run completes after the refusal, `4` when it then fails.
 
 A denied call is not an exception: the model receives a `PERMISSION_DENIED` result
 and can try something else. If the run then fails, it is reported as `blocked` (4).
@@ -166,6 +173,8 @@ case-insensitive) over tool identifiers:
 | MCP tool call                       | `mcp__<server>__<tool>`                                                                                                                                                     |
 | MCP tool listing                    | `runtime.mcp.tools`, `mcp__<server>`                                                                                                                                        |
 | MCP server listing                  | `runtime.mcp.servers`                                                                                                                                                       |
+
+A bare tool name (`workspace.file`, `workspace.command`) matches every operation of that tool, in `--disallowed-tools` and `--allowed-tools` alike, so `--disallowed-tools workspace.file` refuses reads and writes. `workspace.file.*` means the same.
 
 ### The command tool
 
