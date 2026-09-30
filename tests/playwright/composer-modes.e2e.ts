@@ -106,3 +106,54 @@ test('offers all six effort modes and keeps a selection through a state round tr
     .poll(() => page.evaluate(() => window.__clawMock.messages.at(-1)))
     .toEqual({ type: 'selectEffortMode', mode: 'XHIGH' });
 });
+
+test('remembers Run, Context and Web research after the webview reloads', async ({ page }) => {
+  await page.locator('#moreSettingsSummary').click();
+  await page.locator('#contextMode').selectOption('workspace');
+  await page.locator('#researchMode').selectOption('SEARCH_FETCH');
+  await page.locator('#runMode').selectOption('chat');
+  const saved = await page.evaluate(() => window.__clawMock.state);
+  expect(saved).toMatchObject({
+    contextMode: 'workspace',
+    researchMode: 'SEARCH_FETCH',
+    runMode: 'chat',
+  });
+
+  // A reload builds a new page; the host hands the saved state back to it.
+  await page.addInitScript((seed) => {
+    let bridge: unknown;
+    Object.defineProperty(window, '__clawMock', {
+      configurable: true,
+      get: () => bridge,
+      set: (value: { state: unknown }) => {
+        value.state = seed;
+        bridge = value;
+      },
+    });
+  }, saved);
+  await page.reload();
+  await sendState(page);
+
+  await expect(page.locator('#contextMode')).toHaveValue('workspace');
+  await expect(page.locator('#researchMode')).toHaveValue('SEARCH_FETCH');
+  await expect(page.locator('#runMode')).toHaveValue('chat');
+});
+
+test('ignores a remembered value the select no longer offers', async ({ page }) => {
+  await page.addInitScript(() => {
+    let bridge: unknown;
+    Object.defineProperty(window, '__clawMock', {
+      configurable: true,
+      get: () => bridge,
+      set: (value: { state: unknown }) => {
+        value.state = { contextMode: 'gone', researchMode: 7 };
+        bridge = value;
+      },
+    });
+  });
+  await page.reload();
+  await sendState(page);
+
+  await expect(page.locator('#contextMode')).toHaveValue('smart');
+  await expect(page.locator('#researchMode')).toHaveValue('NONE');
+});
