@@ -317,3 +317,19 @@ describe('runtime.messages across windows (integration)', () => {
     expect(peers.structured).toEqual({ peers: [], windowsRefused: 'untrusted' });
   });
 });
+
+describe('cross-window mailbox heartbeat resilience', () => {
+  it('does not throw or leave a rejection when the storage folder cannot be written', async () => {
+    const blocker = join(tmpdir(), `clawai-blocker-${String(Date.now())}`);
+    await writeFile(blocker, 'a file where a directory is needed');
+    const mailbox = new CrossWindowMailbox({
+      rootDir: join(blocker, 'mailbox'),
+      identity: { windowId: 'zzzz', workspaceName: 'w' },
+      refusal: () => undefined,
+      now: () => Date.now(),
+    });
+
+    await expect(mailbox.start()).resolves.toBeUndefined();
+    await mailbox.dispose();
+  });
+});

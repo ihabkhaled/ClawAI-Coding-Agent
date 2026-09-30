@@ -79,9 +79,9 @@ export class CrossWindowMailbox implements CrossWindowMailboxPort {
   /** Announces this window and keeps announcing until disposed. */
   async start(): Promise<void> {
     if (this.timer !== undefined || this.options.refusal() !== undefined) return;
-    await this.beat();
+    await this.beatQuietly();
     this.timer = setInterval(() => {
-      void this.beat();
+      void this.beatQuietly();
     }, HEARTBEAT_INTERVAL_MS);
     this.timer.unref();
   }
@@ -90,6 +90,15 @@ export class CrossWindowMailbox implements CrossWindowMailboxPort {
     if (this.timer !== undefined) clearInterval(this.timer);
     this.timer = undefined;
     await remove(this.peerFile(this.self));
+  }
+
+  /** Announcing is best effort: an unwritable storage folder must not surface as a crash. */
+  private async beatQuietly(): Promise<void> {
+    try {
+      await this.beat();
+    } catch {
+      // The next tick tries again; peers simply do not see this window meanwhile.
+    }
   }
 
   /** One heartbeat plus a sweep of expired mail; a refusal stops announcing. */
