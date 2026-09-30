@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { CRON_MAX_LENGTH } from './cron-expression.constants';
 import {
   MAX_INTERVAL_MINUTES,
   MAX_RUNS_LIMIT,
@@ -24,6 +25,9 @@ export const scheduledTaskSchema = z
           kind: z.literal('interval'),
           everyMinutes: z.number().int().min(1).max(MAX_INTERVAL_MINUTES),
         })
+        .strict(),
+      z
+        .object({ kind: z.literal('cron'), expression: z.string().min(9).max(CRON_MAX_LENGTH) })
         .strict(),
     ]),
     nextRunAt: z.number().int().nonnegative(),

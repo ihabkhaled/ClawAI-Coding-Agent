@@ -78,6 +78,7 @@ provide hosted runners.
 - **ClawAI: Register This Machine as a Runner** needs a trusted folder open. It
   names this machine, lets you add labels, and asks whether every tool call needs
   your approval or read-only calls can run alone. Writes and commands always ask.
+- Shell commands a runner (or remote control) receives run like the agent's own commands: they do not see your editor's environment variables, and they follow your `clawAI.commandSandbox.mode` setting (see [Running commands safely](running-commands-safely.md)). A required sandbox that is missing refuses the command. Agent prompt jobs are not sandboxed yet.
 - **ClawAI: Start Cloud Coding Session** picks an online runner, a repository and a
   branch, then sends one command and follows its progress in an output panel.
   **ClawAI: Attach to Runner Session** follows one that is already running (read

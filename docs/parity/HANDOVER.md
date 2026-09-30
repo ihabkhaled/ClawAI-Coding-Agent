@@ -89,6 +89,46 @@ Group by who can unblock. Full "still open" text is in the audit row.
 Realistic next work: F093 (one transport, well-scoped), F081 backend route,
 F108 cost field, then the decision on F067 and F030.
 
+### 4b. What each open row needs (checked at 1.87.0)
+
+Every client-side remainder that could be built without the backend or a
+product decision is built. 1.87.0 closed the last two of those (F099 cron for
+in-editor tasks, F100 command isolation for runners) and corrected F108. What
+is left, exactly:
+
+- **F030 Computer use.** A decision, not code: approve or refuse an OS-level
+  input tool (mouse and keyboard outside the browser). Until someone approves
+  it the row stays open on purpose.
+- **F067 Panel placement.** A decision: raise `engines.vscode` from ^1.98 to
+  ^1.106 so a `secondarySidebar` views container can be declared. It drops
+  VS Code 1.98 to 1.105 users.
+- **F081 Plugin marketplaces.** agent-service must return
+  `allowedPluginMarketplaces` in the organization policy response. The client
+  already reads `organizationPolicy.allowedPluginMarketplaces` and enforces it.
+- **F093 Automatic prompt caching.** The backend needs a native Anthropic
+  `/v1/messages` transport that accepts `cache_control` and returns
+  cache-write usage (`cache_creation_input_tokens`). Sending marks to the
+  OpenAI-compatible endpoint does nothing.
+- **F095 Resume cloud sessions.** chat-service `createThread` must accept a
+  workspace or repository reference, and agent-service must return the
+  capabilities a session ran with so the client can reconcile them on resume.
+- **F097 Mobile app integration.** A native mobile client, plus a
+  mobile-scoped capability on the paired-device token. Product work.
+- **F098 Cloud coding sessions.** Hosted runners that provision, clone a
+  repository and tear down. Backend and infrastructure; ClawAI provides none.
+- **F099 Routines.** The scheduler backend needs cron expressions and
+  repository-event triggers for runner-hosted routines, and a secrets store
+  that routines can read without the prompt seeing values.
+- **F100 Self-hosted runners.** The backend needs runner attestation, an update
+  channel (minimum runner version in the heartbeat reply) and organization
+  policy for runners. Prompt jobs also run outside the command sandbox; that is
+  an SDK change tracked as the next runner step.
+- **F101 Desktop, JetBrains, more.** JetBrains and Desktop clients are separate
+  products that do not exist yet.
+- **F108 Telemetry and analytics.** auth-service must return the settled cost
+  when a run's usage is settled, so `costMicros` reaches runtime events and
+  the `clawai.cost` metric.
+
 ## 5. Run every lane
 
 All commands run in `apps/claw-coding-agent`.

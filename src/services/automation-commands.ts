@@ -23,12 +23,16 @@ export interface AutomationCommands {
   runSavedWorkflow(): Promise<void>;
 }
 
+function describeKind(task: ScheduledTask): string {
+  const schedule = task.schedule;
+  if (schedule.kind === 'interval') return vscode.l10n.t('every {0} min', schedule.everyMinutes);
+  if (schedule.kind === 'cron') return vscode.l10n.t('on schedule {0}', schedule.expression);
+  return vscode.l10n.t('once');
+}
+
 function describeTask(task: ScheduledTask): string {
   const when = new Date(task.nextRunAt).toLocaleString();
-  const kind =
-    task.schedule.kind === 'interval'
-      ? vscode.l10n.t('every {0} min', task.schedule.everyMinutes)
-      : vscode.l10n.t('once');
+  const kind = describeKind(task);
   return `${kind} · ${when} · ${String(task.runs)}/${String(task.maxRuns)}`;
 }
 

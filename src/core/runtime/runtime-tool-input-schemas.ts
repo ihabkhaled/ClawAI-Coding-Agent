@@ -230,6 +230,7 @@ export const runtimeToolInputSchemas = {
       kind: text,
       inMinutes: integer,
       everyMinutes: integer,
+      cron: text,
       maxRuns: integer,
       id: text,
     },

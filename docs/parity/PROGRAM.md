@@ -3921,3 +3921,20 @@ SHIPPED and 11 PARTIAL of 108**, none MISSING, BLOCKED or CONFLICT (command in
 `HANDOVER.md` section 3). Batches after 1.79.0 are recorded in
 `docs/releases/DETAILED_CHANGELOG.md` (1.80.0 to 1.84.0). The open rows and what
 blocks each are in `HANDOVER.md` section 4. New decisions: ADRs 0005 to 0008.
+
+### Batch 1.87.0 — F099 cron, F100 runner isolation, F108 audit correction
+
+Status: code and deterministic gates complete. The eleven PARTIAL rows were
+re-read against the code. Three had a client-side remainder:
+
+- F099: `runtime.schedule` takes `kind: "cron"`. Files: `cron-expression.ts`,
+  `scheduled-task-cron.ts` (+ types, constants). Wired through the schedule
+  tool, the task store and the task picker. Tests: `cron-expression.test.ts`,
+  `scheduled-task.test.ts`, `schedule-tool-executor.test.ts`.
+- F100: runner commands run through `runCommandSpec` via
+  `runner-command-executor.ts`, called from `remote-control-commands.ts`.
+  Tests: `runner-command-executor.test.ts`, `remote-command-loop.sandbox.test.ts`.
+- F108: the row claimed metrics were open; they shipped in 1.82.0. Audit fixed.
+
+The other eight are blocked on the backend or a decision; `HANDOVER.md`
+section 4b says which change each needs. Tally unchanged: 97 SHIPPED, 11 PARTIAL.

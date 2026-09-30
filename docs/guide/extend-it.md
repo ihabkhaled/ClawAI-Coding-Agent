@@ -136,6 +136,7 @@ to save a workflow or template; it asks first and will not overwrite unless told
 Ask the agent, for example: "Every 30 minutes, check whether the build is green, 5
 times." It creates a scheduled task after you approve.
 
+- You can also give a calendar schedule, for example "weekdays at 9:00" or "every Monday at 08:30". The agent turns it into five fields (minute hour day-of-month month day-of-week, in your computer's local time). Names such as `MON` are not understood, and it cannot fire more often than every 5 minutes.
 - Repeats run every 5 minutes to 7 days, up to 100 times (10 unless you say
   otherwise). A one-off can be set up to 30 days ahead. Up to 20 tasks per project.
 - Tasks run only while VS Code is open. A one-off that came due while it was

@@ -386,6 +386,7 @@
   "Nothing is waiting for you": "待っているものはありません",
   "Off": "Off",
   "Off. Chats are stored as usual.": "オフ。チャットは通常どおり保存されます。",
+  "on schedule {0}": "スケジュール {0} で実行",
   "On, required by your organization.": "オン（組織により必須）。",
   "On, turned on by your setting.": "オン（設定によりオン）。",
   "once": "1 回",

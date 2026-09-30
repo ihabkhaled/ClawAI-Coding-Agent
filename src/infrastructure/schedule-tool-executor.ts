@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import { CRON_MAX_LENGTH } from '../core/cron-expression.constants';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 import {
   MAX_INTERVAL_MINUTES,
@@ -21,9 +22,10 @@ import type {
 const createSchema = z.object({
   prompt: z.string().trim().min(1).max(MAX_SCHEDULED_PROMPT_LENGTH),
   label: z.string().trim().max(MAX_SCHEDULED_LABEL_LENGTH).optional(),
-  kind: z.enum(['once', 'interval']),
+  kind: z.enum(['once', 'interval', 'cron']),
   inMinutes: z.number().int().optional(),
   everyMinutes: z.number().int().optional(),
+  cron: z.string().trim().max(CRON_MAX_LENGTH).optional(),
   maxRuns: z.number().int().optional(),
 });
 
@@ -37,6 +39,9 @@ export const scheduleToolDefinition: ToolDefinition = {
     'Schedule a prompt to start a new agent run later. create takes prompt, kind "once" with ' +
     `inMinutes (1 to ${String(MAX_ONCE_DELAY_MINUTES)}), or kind "interval" with everyMinutes ` +
     `(${String(MIN_INTERVAL_MINUTES)} to ${String(MAX_INTERVAL_MINUTES)}) and optional maxRuns ` +
+    '(a repeating task stops by itself after maxRuns), or kind "cron" with cron, five fields ' +
+    '(minute hour day-of-month month day-of-week, local time; numbers, lists, ranges, * and steps, ' +
+    `no names) that may not fire more often than every ${String(MIN_INTERVAL_MINUTES)} minutes, plus optional maxRuns ` +
     `(up to ${String(MAX_RUNS_LIMIT)}); a repeating task stops by itself after maxRuns. At most ` +
     `${String(MAX_SCHEDULED_TASKS)} tasks may exist. Tasks run only while the editor is open, and a ` +
     'one-off missed while it was closed is dropped. list shows what is scheduled; delete takes an id. ' +

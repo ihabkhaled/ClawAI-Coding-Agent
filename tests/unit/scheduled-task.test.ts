@@ -102,3 +102,61 @@ describe('restoreTasks', () => {
     expect(restoreTasks(undefined, NOW)).toEqual([]);
   });
 });
+
+describe('cron tasks', () => {
+  const at = (hour: number, minute: number): number =>
+    new Date(2026, 2, 10, hour, minute, 0, 0).getTime();
+
+  it('plans a cron task at its first match and bounds maxRuns', () => {
+    const now = at(9, 0);
+    const plan = planScheduledTask({ prompt: 'x', kind: 'cron', cron: '30  9 * * *' }, 0, now, 'c');
+    expect(plan.planned && plan.task.nextRunAt).toBe(at(9, 30));
+    expect(plan.planned && plan.task.schedule).toEqual({ kind: 'cron', expression: '30 9 * * *' });
+    expect(plan.planned && plan.task.maxRuns).toBe(10);
+    const tooMany = planScheduledTask(
+      { prompt: 'x', kind: 'cron', cron: '0 9 * * *', maxRuns: 101 },
+      0,
+      now,
+      'c',
+    );
+    expect(tooMany.planned).toBe(false);
+  });
+
+  it('refuses a bad, never-matching or too frequent expression', () => {
+    const plan = (cron: string | undefined): ReturnType<typeof planScheduledTask> =>
+      planScheduledTask({ prompt: 'x', kind: 'cron', cron }, 0, at(9, 0), 'c');
+    expect(plan('nonsense')).toMatchObject({ planned: false });
+    expect(plan(undefined)).toMatchObject({ planned: false });
+    expect(plan('0 0 31 2 *')).toMatchObject({
+      planned: false,
+      refusal: expect.stringContaining('never'),
+    });
+    expect(plan('* * * * *')).toMatchObject({
+      planned: false,
+      refusal: expect.stringContaining('5 minutes'),
+    });
+    expect(plan('0,2 9 * * *')).toMatchObject({ planned: false });
+    expect(plan('*/5 * * * *')).toMatchObject({ planned: true });
+  });
+
+  it('reschedules from now after a run and ends at maxRuns', () => {
+    const task = planned({ prompt: 'x', kind: 'cron', cron: '0 * * * *', maxRuns: 2 });
+    const next = afterRun(task, at(9, 59));
+    expect(next?.runs).toBe(1);
+    expect(next?.nextRunAt).toBe(at(10, 0));
+    expect(next === undefined ? undefined : afterRun(next, at(10, 0))).toBeUndefined();
+  });
+
+  it('ends a task whose stored expression no longer parses', () => {
+    const task = planned({ prompt: 'x', kind: 'cron', cron: '0 * * * *' });
+    const broken = { ...task, schedule: { kind: 'cron' as const, expression: 'not a cron' } };
+    expect(afterRun(broken, NOW)).toBeUndefined();
+    expect(restoreTasks([{ ...broken, nextRunAt: 5 }], NOW)).toEqual([]);
+  });
+
+  it('resumes a missed cron task at its next match, not late', () => {
+    const task = { ...planned({ prompt: 'x', kind: 'cron', cron: '0 * * * *' }), nextRunAt: 5 };
+    const restored = restoreTasks([task], at(9, 30));
+    expect(restored[0]?.nextRunAt).toBe(at(10, 0));
+  });
+});

@@ -1,5 +1,7 @@
 export type TaskSchedule =
-  { readonly kind: 'once' } | { readonly kind: 'interval'; readonly everyMinutes: number };
+  | { readonly kind: 'once' }
+  | { readonly kind: 'interval'; readonly everyMinutes: number }
+  | { readonly kind: 'cron'; readonly expression: string };
 
 export interface ScheduledTask {
   readonly id: string;
@@ -16,11 +18,13 @@ export interface ScheduledTask {
 export interface ScheduleRequest {
   readonly prompt: string;
   readonly label?: string | undefined;
-  readonly kind: 'once' | 'interval';
+  readonly kind: 'once' | 'interval' | 'cron';
   /** For `once`: minutes from now. */
   readonly inMinutes?: number | undefined;
   /** For `interval`: minutes between runs. */
   readonly everyMinutes?: number | undefined;
+  /** For `cron`: minute hour day-of-month month day-of-week, in this machine's local time. */
+  readonly cron?: string | undefined;
   readonly maxRuns?: number | undefined;
 }
 
