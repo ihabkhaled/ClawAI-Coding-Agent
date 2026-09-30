@@ -3,8 +3,10 @@ import * as vscode from 'vscode';
 import { sessionUsageAttribution } from '../core/usage-attribution';
 import { buildUsageReport } from '../core/usage-report';
 
+import { accountUsageLines } from './show-usage-account';
 import { usageAttributionLines } from './show-usage-attribution';
 
+import type { AccountUsageSections } from '../backend/usage-breakdown-client.types';
 import type { ExtensionState } from '../core/extension-state';
 import type { UsageAttributionLedger } from '../core/usage-attribution';
 import type { UsageFeatureLine, UsageWindowLine } from '../core/usage-report';
@@ -12,6 +14,8 @@ import type { UsageFeatureLine, UsageWindowLine } from '../core/usage-report';
 interface UsageDependencies {
   readonly state: ExtensionState;
   readonly attribution?: UsageAttributionLedger;
+  /** Server-side attribution; each section is left out when the backend does not answer it. */
+  readonly accountUsage?: () => Promise<AccountUsageSections>;
 }
 
 function windowRow(line: UsageWindowLine): string {
@@ -72,6 +76,9 @@ export async function showUsage(dependencies: UsageDependencies): Promise<void> 
   lines.push(
     ...usageAttributionLines((dependencies.attribution ?? sessionUsageAttribution).summary()),
   );
+  if (dependencies.accountUsage !== undefined) {
+    lines.push(...accountUsageLines(await dependencies.accountUsage()));
+  }
   const document = await vscode.workspace.openTextDocument({
     content: lines.join('\n'),
     language: 'markdown',

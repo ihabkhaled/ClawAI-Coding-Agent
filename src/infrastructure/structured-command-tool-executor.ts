@@ -3,6 +3,7 @@ import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-sche
 
 import { prepareBackgroundLaunch, runCommandSpec } from './bounded-command-runner';
 import { realPath } from './command-sandbox-host-probe';
+import { awaitOrYield } from './command-yield';
 import { sandboxBackgroundLaunch } from './sandboxed-background-launch';
 
 import type { CommandSandboxPort } from './command-launch-plan.types';
@@ -23,6 +24,7 @@ export const structuredCommandToolDefinition: ToolDefinition = {
     'Use cwd "." for the workspace root.',
     'expectedEffect must be read, build, test, local-mutation, network, or install.',
     'Set background true for a server or watcher that does not exit: the call returns a receipt at once, and you read its output with workspace.process inspect, wait with join, and stop it with terminate. A background command takes no stdin and no timeout.',
+    'Set yieldAfterMs (1000-600000, below timeoutMs) for a long build or test: if it has not exited by then, the call returns the output so far with yielded true and a receipt, and the command keeps running under workspace.process. Output is the merged terminal log. No stdin.',
     'Example arguments: {"executable":"npm","arguments":["test"],"cwdRootKey":"workspace-1","cwd":".","timeoutMs":120000,"outputLimitBytes":524288,"expectedEffect":"test"}.',
   ].join(' '),
   operations: ['run'],
@@ -53,8 +55,8 @@ export class StructuredCommandToolExecutor implements RuntimeToolExecutorPort {
     });
     const rootUri = this.files.workspaceRootUri(specification.cwdRootKey);
     const cwdUri = await this.files.uriFor(specification.cwdRootKey, specification.cwd, 'update');
-    if (specification.background)
-      return this.launchBackground(invocation, specification, cwdUri, rootUri);
+    if (specification.background === true || specification.yieldAfterMs !== undefined)
+      return this.launchBackground(invocation, specification, cwdUri, rootUri, signal);
     if (this.sandbox === undefined) {
       const result = await runCommandSpec(specification, cwdUri.fsPath, signal);
       return { structured: { ...result } };
@@ -84,6 +86,7 @@ export class StructuredCommandToolExecutor implements RuntimeToolExecutorPort {
     specification: ReturnType<typeof commandSpecSchema.parse>,
     cwdUri: { readonly fsPath: string },
     rootUri: { readonly fsPath: string },
+    signal?: AbortSignal,
   ): Promise<RuntimeToolExecutionOutput> {
     if (this.background === undefined)
       throw new Error('Background commands are not available in this host.');
@@ -93,6 +96,7 @@ export class StructuredCommandToolExecutor implements RuntimeToolExecutorPort {
       cwdUri.fsPath,
       this.sandbox?.bind(rootUri.fsPath),
     );
+    const startedAtMs = Date.now();
     const receipt = await this.background.supervisor.create({
       executablePath: plan.executablePath,
       arguments: [...plan.arguments],
@@ -103,6 +107,16 @@ export class StructuredCommandToolExecutor implements RuntimeToolExecutorPort {
       runId: invocation.runId,
       targetId: invocation.targetId,
     });
+    if (specification.yieldAfterMs !== undefined)
+      return awaitOrYield({
+        supervisor: this.background.supervisor,
+        receipt,
+        yieldAfterMs: specification.yieldAfterMs,
+        outputLimitBytes: specification.outputLimitBytes,
+        startedAtMs,
+        ...(signal === undefined ? {} : { signal }),
+        ...(plan.sandbox === undefined ? {} : { sandbox: plan.sandbox }),
+      });
     return {
       structured: {
         background: true,

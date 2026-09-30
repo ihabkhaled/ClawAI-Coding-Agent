@@ -1,8 +1,11 @@
 import { parseOtlpEndpoint } from '../core/otlp-export';
 import { OtlpObservabilitySink } from '../infrastructure/otlp-observability-sink';
 
+import { startTelemetryHeaders } from './telemetry-headers-command';
+
 import type { RuntimeConfiguration } from './configuration-service';
 import type { ObservabilitySinkPort } from './observability-service';
+import type { TelemetryHeaderContext } from './telemetry-header-store.types';
 import type { OutputLogger } from '../infrastructure/output-logger';
 
 /**
@@ -17,15 +20,21 @@ import type { OutputLogger } from '../infrastructure/output-logger';
  * plain `http:` URL to a remote host is a reasonable thing to type and a bad
  * thing to honour, and silently sending nothing would leave someone waiting for
  * traces that were never going to arrive.
+ *
+ * Headers come from SecretStorage, not settings: the store is started here,
+ * before the endpoint check, so an old `clawAI.telemetryHeaders` value is moved
+ * out of settings even when no endpoint is configured.
  */
 export function otlpSink(
   configuration: RuntimeConfiguration,
   logger: OutputLogger,
   version: string,
+  context: TelemetryHeaderContext,
 ): ObservabilitySinkPort | undefined {
+  const headers = startTelemetryHeaders(context, () => configuration.telemetryHeaders, logger);
   const configured = configuration.telemetryEndpoint.trim();
   if (configured.length === 0) return undefined;
-  const endpoint = parseOtlpEndpoint(configured, configuration.telemetryHeaders);
+  const endpoint = parseOtlpEndpoint(configured, headers.headers);
   if (endpoint === undefined) {
     logger.warn(
       'ClawAI telemetry endpoint was ignored: it must be an https URL, or http only on this machine, and must not carry credentials.',

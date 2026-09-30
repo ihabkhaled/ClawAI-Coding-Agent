@@ -13,6 +13,10 @@ import {
   type RuntimeJsonObject,
 } from '../core/runtime/runtime-json-value';
 import {
+  MAX_TOOL_RESULT_FILE_IDS,
+  TOOL_RESULT_FILE_ID_CHARACTERS,
+} from '../core/runtime/runtime-result-files.constants';
+import {
   consumeRuntimeBudget,
   createRuntimeBudgetState,
   restoreRuntimeBudgetState,
@@ -45,6 +49,8 @@ export interface RuntimeToolExecutionOutput {
   /** Adapter output is validated into bounded canonical JSON before it enters runtime state. */
   readonly structured?: Readonly<Record<string, unknown>>;
   readonly modelText?: string;
+  /** F030: images already uploaded for the next model turn to see. */
+  readonly fileIds?: readonly string[];
 }
 
 export interface RuntimeToolExecutorPort {
@@ -57,6 +63,11 @@ const runtimeToolExecutionOutputSchema = z
   .object({
     structured: runtimeJsonObjectSchema.optional(),
     modelText: z.string().max(MAX_RUNTIME_JSON_STRING_LENGTH).optional(),
+    fileIds: z
+      .array(z.string().min(1).max(TOOL_RESULT_FILE_ID_CHARACTERS))
+      .min(1)
+      .max(MAX_TOOL_RESULT_FILE_IDS)
+      .optional(),
   })
   .strict();
 
@@ -102,6 +113,7 @@ interface RuntimeDeadline {
 }
 interface RuntimeToolDispatchOutcome {
   readonly error?: ToolResult['error'];
+  readonly fileIds?: readonly string[];
   readonly modelText?: string;
   readonly status: ToolResult['status'];
   readonly structured?: RuntimeJsonObject;
@@ -414,6 +426,7 @@ export class RuntimeToolDispatcher {
       status: 'succeeded',
       ...(parsed.data.structured === undefined ? {} : { structured: parsed.data.structured }),
       ...(parsed.data.modelText === undefined ? {} : { modelText: parsed.data.modelText }),
+      ...(parsed.data.fileIds === undefined ? {} : { fileIds: parsed.data.fileIds }),
     };
   }
 
@@ -477,6 +490,7 @@ export class RuntimeToolDispatcher {
       ...(outcome.structured === undefined ? {} : { structured: outcome.structured }),
       ...(outcome.modelText === undefined ? {} : { modelText: outcome.modelText }),
       ...(outcome.error === undefined ? {} : { error: outcome.error }),
+      ...(outcome.fileIds === undefined ? {} : { fileIds: outcome.fileIds }),
     });
     const budget = this.consumeResultBudget(result, completedAtMs);
     const lifecycle =

@@ -10,6 +10,7 @@ import { ConfigurationService } from './configuration-service';
 import { McpOAuthService } from './mcp-oauth-service';
 import { McpServerRegistry } from './mcp-server-registry';
 import { ProjectPolicyService } from './project-policy-service';
+import { pluginMcpConfig, workspacePluginStore } from './workspace-plugins';
 
 import type { RuntimeToolRegistration } from './runtime-tool-router';
 import type { WorkspaceScopeService } from './workspace-scope-service';
@@ -63,11 +64,13 @@ export function mcpToolRegistration(
     now: () => Date.now(),
   });
   const policies = new ProjectPolicyService(scope);
+  const plugins = workspacePluginStore(context.globalStorageUri, () => workspaceRoot(scope));
   const registry = new McpServerRegistry({
     userConfig: () => configuration.mcpServers(),
     workspaceConfig: () => readWorkspaceConfig(scope),
     projectPolicy: async () => (await policies.load()).mcpServers,
     organizationPolicy: () => state.snapshot.organizationPolicy?.mcpServers,
+    pluginConfig: () => pluginMcpConfig(plugins),
     workspaceTrusted: () => vscode.workspace.isTrusted,
     connect: (server, signal) =>
       connectMcpServer(

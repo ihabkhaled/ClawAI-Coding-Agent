@@ -1,5 +1,6 @@
 import { createHash } from 'node:crypto';
 
+import { gitMarketplaceLocation } from './plugin-git-marketplace';
 import { isContainedRelativePath } from './plugin-path';
 
 import type { PluginBundleFile } from './plugin-manifest.types';
@@ -7,16 +8,19 @@ import type {
   MarketplaceEntry,
   MarketplaceLocation,
   PluginContentLocation,
+  ReadableMarketplaceLocation,
 } from './plugin-marketplace.types';
 
 /**
  * What a configured marketplace string refers to.
  *
- * `https` or an absolute local folder. Plain `http` is refused: a digest in a
- * catalog fetched in the clear can be swapped along with the archive it pins.
+ * `https`, `git+https://…#ref`, or an absolute local folder. Plain `http` is
+ * refused: a digest in a catalog fetched in the clear can be swapped along
+ * with the archive it pins.
  */
 export function marketplaceLocation(source: string): MarketplaceLocation | undefined {
   const trimmed = source.trim();
+  if (trimmed.startsWith('git+')) return gitMarketplaceLocation(trimmed);
   if (trimmed.startsWith('https://')) {
     return URL.canParse(trimmed) ? { kind: 'url', url: trimmed } : undefined;
   }
@@ -65,7 +69,7 @@ function urlContent(catalog: string, source: string): PluginContentLocation | un
  * point inside its own folder, so a catalog cannot name `C:\Windows` as a plugin.
  */
 export function entryContentLocation(
-  marketplace: MarketplaceLocation,
+  marketplace: ReadableMarketplaceLocation,
   entry: MarketplaceEntry,
 ): PluginContentLocation | undefined {
   if (marketplace.kind === 'url') return urlContent(marketplace.url, entry.source);

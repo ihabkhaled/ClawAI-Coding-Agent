@@ -17,5 +17,9 @@ export function registerConnectedCommands(deps: ConnectedCommandDependencies): v
   registerIntegrations(context, state, backend, (message) => {
     logger.warn(message);
   });
-  registerPluginCommands(context, workspaceScope);
+  registerPluginCommands(
+    context,
+    workspaceScope,
+    () => state.snapshot.organizationPolicy?.allowedPluginMarketplaces,
+  );
 }

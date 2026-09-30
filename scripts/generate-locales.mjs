@@ -7,10 +7,13 @@ import { conversationRewindTranslations } from './conversation-rewind-translatio
 import { integrationTranslations } from './integration-translations.mjs';
 import { parityComposerTranslations } from './parity-composer-translations.mjs';
 import { permissionModeTranslations } from './permission-mode-translations.mjs';
+import { pluginTreeTranslations } from './plugin-tree-translations.mjs';
 import { pullRequestTranslations } from './pull-request-translations.mjs';
 import { remoteChannelTranslations } from './remote-channel-translations.mjs';
 import { remoteControlTranslations } from './remote-control-translations.mjs';
+import { runnerRoutineTranslations } from './runner-routine-translations.mjs';
 import { remoteSessionTranslations } from './remote-session-translations.mjs';
+import { usageBreakdownTranslations } from './usage-breakdown-translations.mjs';
 
 const root = cwd();
 const localeNames = {
@@ -4755,6 +4758,7 @@ function translate(locale, message) {
   return (
     authorizationPageTranslations[locale][message] ??
     conversationRewindTranslations[locale][message] ??
+    pluginTreeTranslations[locale][message] ??
     parityComposerTranslations[locale][message] ??
     permissionModeTranslations[locale][message] ??
     pullRequestTranslations[locale][message] ??
@@ -4800,7 +4804,9 @@ function translate(locale, message) {
     telemetryTranslations[locale][message] ??
     cachedTokenTranslations[locale][message] ??
     remoteControlTranslations[locale][message] ??
+    runnerRoutineTranslations[locale][message] ??
     remoteSessionTranslations[locale][message] ??
+    usageBreakdownTranslations[locale][message] ??
     integrationTranslations[locale][message] ??
     message
   );

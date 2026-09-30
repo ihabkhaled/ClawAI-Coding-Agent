@@ -111,6 +111,63 @@ describe('McpServerRegistry', () => {
     const untrusted = registry({ workspaceTrusted: () => false });
     expect((await untrusted.registry.servers()).refused[0]?.code).toBe('MCP_WORKSPACE_UNTRUSTED');
   });
+
+  it('admits plugin servers through the same policy, and closes one whose plugin is disabled', async () => {
+    let enabled = true;
+    const pluginServer = {
+      name: 'acme.kit.docs',
+      origin: 'plugin' as const,
+      transport: 'stdio' as const,
+      command: 'docs',
+      args: [],
+      env: {},
+    };
+    const { registry: subject, clients } = registry({
+      pluginConfig: () =>
+        Promise.resolve({ servers: enabled ? [pluginServer] : [], errors: ['plugin note'] }),
+      projectPolicy: () => Promise.resolve({ deny: [{ name: 'local' }] }),
+    });
+    const report = await subject.servers();
+    expect(report.servers.map((server) => [server.name, server.origin])).toContainEqual([
+      'acme.kit.docs',
+      'plugin',
+    ]);
+    expect(report.errors).toContain('plugin note');
+    await subject.tools('acme.kit.docs');
+    enabled = false;
+    await expect(subject.tools('acme.kit.docs')).rejects.toThrow('No MCP server named');
+    await vi.waitFor(() => {
+      expect(clients[0]?.dispose).toHaveBeenCalled();
+    });
+  });
+
+  it('refuses a plugin server the organization denies or that needs trust', async () => {
+    const pluginConfig = () =>
+      Promise.resolve({
+        servers: [
+          {
+            name: 'acme.kit.docs',
+            origin: 'plugin' as const,
+            transport: 'stdio' as const,
+            command: 'docs',
+            args: [],
+            env: {},
+          },
+        ],
+        errors: [],
+      });
+    const denied = registry({
+      pluginConfig,
+      organizationPolicy: () => ({ deny: [{ name: 'acme.*' }] }),
+    });
+    expect((await denied.registry.servers()).refused).toContainEqual(
+      expect.objectContaining({ name: 'acme.kit.docs', code: 'MCP_SERVER_DENIED' }),
+    );
+    const untrusted = registry({ pluginConfig, workspaceTrusted: () => false });
+    expect((await untrusted.registry.servers()).refused).toContainEqual(
+      expect.objectContaining({ name: 'acme.kit.docs', code: 'MCP_WORKSPACE_UNTRUSTED' }),
+    );
+  });
 });
 
 function invocation(operation: string, args: Record<string, unknown>): ToolInvocation {

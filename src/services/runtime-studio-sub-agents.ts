@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { mergeSubAgentDefinitions } from '../core/plugin-agents';
 import { VscodeSubAgentDiagnosticsSink } from '../infrastructure/vscode-sub-agent-diagnostics-sink';
 import { VscodeSubAgentWorktreeAdapter } from '../infrastructure/vscode-sub-agent-worktree-adapter';
 
@@ -9,6 +10,7 @@ import { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
 import { SubAgentDefinitionsService } from './sub-agent-definitions-service';
 import { SubAgentFindingsObserver } from './sub-agent-findings-observer';
 import { SubAgentWorktreeService } from './sub-agent-worktree-service';
+import { pluginAgents, workspacePluginStore } from './workspace-plugins';
 
 import type { FindingsService } from './findings-service';
 import type { RuntimeSubAgentDependencies } from './runtime-sub-agent-executor';
@@ -31,6 +33,15 @@ interface SubAgentAssemblyInput {
   readonly logger: OutputLogger;
 }
 
+/** The selected root, or none when no folder is open. */
+function selectedRoot(files: RuntimeRootRegistry, key: () => string): vscode.Uri | undefined {
+  try {
+    return vscode.Uri.file(files.workspaceRootUri(key()).fsPath);
+  } catch {
+    return undefined;
+  }
+}
+
 /**
  * Builds the sub-agent lane: executor, worktrees and coordinator.
  *
@@ -50,13 +61,18 @@ export function assembleSubAgents(input: SubAgentAssemblyInput): SubAgentAssembl
   const subAgentDefinitions = new SubAgentDefinitionsService(
     () => input.files.workspaceRootUri(input.selectedFolderKey()).fsPath,
   );
+  const plugins = workspacePluginStore(input.globalStorageUri, () =>
+    selectedRoot(input.files, input.selectedFolderKey),
+  );
   return {
     worktreeAdapter,
     worktrees,
     coordinator: new SubAgentCoordinatorService(
       new RuntimeSubAgentExecutor({
         ...input.runtime,
-        subAgentPresets: () => subAgentDefinitions.load(),
+        // The project's own presets first; enabled plugins add the names left free.
+        subAgentPresets: async () =>
+          mergeSubAgentDefinitions(await subAgentDefinitions.load(), await pluginAgents(plugins)),
       }),
       new FileLeaseManager(),
       input.epochs,

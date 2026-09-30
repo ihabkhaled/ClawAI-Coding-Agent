@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { RemoteRequester } from './remote-session-client';
+import type { RunnerApprovalPolicy } from '../core/runner-prompt-policy.types';
 
 /**
  * The seam `BackendClient.agentKeyRequest` provides: agent-runtime routes that
@@ -16,8 +17,12 @@ export type AgentKeyRequester = <T>(
 export const remoteCommandSchema = z
   .object({
     id: z.string().min(1).max(200),
-    command: z.string().max(4_096),
+    /** A shell command, or the prompt of a PROMPT job (F099). */
+    command: z.string().max(8_000),
     workingDir: z.string().max(1_024).nullable().optional(),
+    kind: z.enum(['SHELL', 'PROMPT']).optional(),
+    model: z.string().max(128).nullable().optional(),
+    repoRef: z.string().max(200).nullable().optional(),
   })
   .loose();
 
@@ -28,10 +33,11 @@ const registeredSessionSchema = z
   .loose()
   .transform((value) => ({ sessionId: value.id, sessionKey: value.sessionKey }));
 
+/** F100: a runner gets its own token, never a session key. It is shown once. */
 const registeredRunnerSchema = z
-  .object({ runnerId: z.string().min(1), sessionKey: z.string().min(1) })
+  .object({ runnerId: z.string().min(1), runnerToken: z.string().min(1) })
   .loose()
-  .transform((value) => ({ sessionId: value.runnerId, sessionKey: value.sessionKey }));
+  .transform((value) => ({ sessionId: value.runnerId, sessionKey: value.runnerToken }));
 
 const acknowledgementSchema = z.unknown();
 
@@ -41,6 +47,7 @@ export interface AgentHostIdentity {
   readonly agentVersion: string;
 }
 
+/** For a runner, `sessionKey` holds its runner token (F100), not a session key. */
 export interface AgentRegistration {
   readonly sessionId: string;
   readonly sessionKey: string;
@@ -69,11 +76,20 @@ export const agentRemoteClient = {
   registerRunner(
     request: RemoteRequester,
     host: AgentHostIdentity,
-    runner: { readonly name: string; readonly labels: readonly string[] },
+    runner: {
+      readonly name: string;
+      readonly labels: readonly string[];
+      readonly approvalPolicy: RunnerApprovalPolicy;
+    },
   ): Promise<AgentRegistration> {
     return request('/agent/runners', registeredRunnerSchema, {
       method: 'POST',
-      body: { ...host, name: runner.name, labels: runner.labels },
+      body: {
+        ...host,
+        name: runner.name,
+        labels: runner.labels,
+        approvalPolicy: runner.approvalPolicy,
+      },
     });
   },
 
@@ -89,16 +105,38 @@ export const agentRemoteClient = {
     });
   },
 
-  /** One approved job for a runner, or none. */
+  /** One approved job addressed to this runner, or none. Runner token only. */
   claim(
     request: AgentKeyRequester,
-    sessionKey: string,
+    runnerToken: string,
     signal?: AbortSignal,
   ): Promise<RemoteCommand[]> {
-    return request('/agent/runners/claim', z.array(remoteCommandSchema), sessionKey, {
+    return request('/agent/runners/claim', z.array(remoteCommandSchema), runnerToken, {
       method: 'POST',
       ...(signal === undefined ? {} : { signal }),
     });
+  },
+
+  /** F100: keeps a runner eligible for jobs; a stale runner gets none. */
+  async runnerHeartbeat(request: AgentKeyRequester, runnerToken: string): Promise<void> {
+    await request('/agent/runners/heartbeat', acknowledgementSchema, runnerToken, {
+      method: 'POST',
+    });
+  },
+
+  /** F100: reports a job's result; the server refuses a job not addressed to this runner. */
+  async runnerComplete(
+    request: AgentKeyRequester,
+    runnerToken: string,
+    commandId: string,
+    result: RemoteCommandResult,
+  ): Promise<void> {
+    await request(
+      `/agent/runners/jobs/${encodeURIComponent(commandId)}/complete`,
+      acknowledgementSchema,
+      runnerToken,
+      { method: 'POST', body: result },
+    );
   },
 
   async heartbeat(request: AgentKeyRequester, registration: AgentRegistration): Promise<void> {

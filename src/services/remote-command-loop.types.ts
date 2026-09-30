@@ -16,6 +16,13 @@ export interface RemoteCommandApproval {
   readonly workingDir: string;
 }
 
+export interface RemotePromptJob {
+  readonly id: string;
+  readonly prompt: string;
+  readonly model: string | undefined;
+  readonly repoRef: string | undefined;
+}
+
 export interface RemoteExecution {
   readonly exitCode: number | undefined;
   readonly stdout: string;
@@ -35,6 +42,11 @@ export interface RemoteCommandLoopPorts {
   /** The workspace root commands run in; undefined when no folder is open. */
   workspaceRoot(): string | undefined;
   sleep(ms: number, signal: AbortSignal): Promise<void>;
+  /**
+   * F099: runs a PROMPT job through the headless SDK under this runner's
+   * approval policy. Absent on a remote-control session, which refuses them.
+   */
+  runPrompt?(job: RemotePromptJob, signal: AbortSignal): Promise<RemoteCommandResult>;
   report(message: string): void;
   stateChanged?(state: RemoteLoopState): void;
 }

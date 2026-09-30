@@ -29,4 +29,5 @@ src/**
 test-results/**
 tests/**
 tsconfig.json
+tsconfig.*.json
 vitest.config.ts

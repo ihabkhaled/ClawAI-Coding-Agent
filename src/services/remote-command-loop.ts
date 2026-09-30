@@ -106,6 +106,9 @@ export class RemoteCommandLoop {
   }
 
   private async decide(command: RemoteCommand, signal: AbortSignal): Promise<RemoteCommandResult> {
+    if (command.kind === 'PROMPT') {
+      return this.runPrompt(command, signal);
+    }
     const parsed = parseRemoteCommand(command.command);
     if (parsed.kind === 'refused') {
       return refused(parsed.reason);
@@ -130,6 +133,30 @@ export class RemoteCommandLoop {
       exitCode: execution.exitCode ?? 1,
       stdout: bounded(execution.stdout),
       stderr: bounded(execution.stderr),
+    };
+  }
+
+  /** Prompt jobs run only where a runner wired a prompt executor. */
+  private async runPrompt(
+    command: RemoteCommand,
+    signal: AbortSignal,
+  ): Promise<RemoteCommandResult> {
+    if (this.ports.runPrompt === undefined) {
+      return refused('This machine does not run prompt jobs.');
+    }
+    const result = await this.ports.runPrompt(
+      {
+        id: command.id,
+        prompt: command.command,
+        model: command.model ?? undefined,
+        repoRef: command.repoRef ?? undefined,
+      },
+      signal,
+    );
+    return {
+      exitCode: result.exitCode,
+      stdout: bounded(result.stdout),
+      stderr: bounded(result.stderr),
     };
   }
 

@@ -61,6 +61,7 @@ export interface RuntimeConfiguration extends GlobalConfiguration {
   autoCompact: AutoCompactionMode;
   browserOrigins: string[];
   telemetryEndpoint: string;
+  /** Legacy: read only to move it into SecretStorage once, then cleared. Never sent. */
   telemetryHeaders: Record<string, string>;
   /** Malformed entries are dropped as a group rather than half-applied. */
   hooks: readonly LifecycleHook[];

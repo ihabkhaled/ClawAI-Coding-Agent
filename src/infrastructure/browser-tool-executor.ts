@@ -2,6 +2,7 @@ import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-sche
 
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { BrowserControllerService } from '../services/browser-controller-service';
+import type { BrowserObservationUploadPort } from '../services/browser-observation-upload.types';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
@@ -58,6 +59,8 @@ export class BrowserToolExecutor implements RuntimeToolExecutorPort {
   constructor(
     private readonly controller: BrowserControllerService,
     private readonly readiness: ServerReadinessService,
+    // F030: absent in hosts that cannot upload; `observe` then returns evidence only.
+    private readonly observations?: BrowserObservationUploadPort,
   ) {}
 
   async execute(
@@ -76,6 +79,10 @@ export class BrowserToolExecutor implements RuntimeToolExecutorPort {
       { ...invocation.arguments, operation: invocation.operation },
       signal,
     );
-    return { structured: { evidence: result.evidence, result: result.structured } };
+    const structured = { evidence: result.evidence, result: result.structured };
+    if (invocation.operation !== 'observe' || this.observations === undefined)
+      return { structured };
+    const fileId = await this.observations.upload(result.evidence, signal);
+    return fileId === undefined ? { structured } : { structured, fileIds: [fileId] };
   }
 }

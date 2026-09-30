@@ -4,7 +4,10 @@ import { savedWorkflowSchema, workflowFileName } from '../core/saved-workflow';
 import { workflowTemplateSchema } from '../core/workflow-template';
 
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
-import type { WorkflowStorePort } from './workflow-store-tool-executor.types';
+import type {
+  WorkflowStorePort,
+  WorkflowTemplateWriteOutcome,
+} from './workflow-store-tool-executor.types';
 import type { SavedWorkflow } from '../core/saved-workflow';
 import type { WorkflowTemplate } from '../core/workflow-template';
 import type { ZodType } from 'zod';
@@ -73,6 +76,35 @@ export class VscodeWorkflowStore implements WorkflowStorePort {
     const uri = vscode.Uri.joinPath(directory, workflowFileName(workflow.name));
     const body = `${JSON.stringify(workflow, null, 2)}\n`;
     await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(body));
+  }
+
+  /**
+   * A template shares the folder and the slugged file name with saved graphs,
+   * so an existing file of either kind is refused unless the caller asked to
+   * replace it: a hand-written template must not vanish under a model's save.
+   */
+  async writeTemplate(
+    template: WorkflowTemplate,
+    overwrite: boolean,
+  ): Promise<WorkflowTemplateWriteOutcome> {
+    const directory = this.directory();
+    if (directory === undefined) throw new Error('No workspace folder to save a workflow in');
+    await vscode.workspace.fs.createDirectory(directory);
+    const uri = vscode.Uri.joinPath(directory, workflowFileName(template.name));
+    if (!overwrite && (await this.exists(uri))) return 'exists';
+    const body = `${JSON.stringify(template, null, 2)}
+`;
+    await vscode.workspace.fs.writeFile(uri, new TextEncoder().encode(body));
+    return 'saved';
+  }
+
+  private async exists(uri: vscode.Uri): Promise<boolean> {
+    try {
+      await vscode.workspace.fs.stat(uri);
+      return true;
+    } catch {
+      return false;
+    }
   }
 
   private directory(): vscode.Uri | undefined {

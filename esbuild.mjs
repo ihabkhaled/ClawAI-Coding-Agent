@@ -1,6 +1,7 @@
 import { build, context } from 'esbuild';
 import { copyFile, cp, rm } from 'node:fs/promises';
 import { argv } from 'node:process';
+import { emitSdkTypes } from './scripts/emit-sdk-types.mjs';
 
 const watch = argv.includes('--watch');
 const options = {
@@ -66,5 +67,7 @@ if (watch) {
   await build(options);
   await build(headlessOptions);
   await build(sdkOptions);
+  // dist/sdk.d.mts: the SDK's public types, emitted from tsconfig.sdk-types.json.
+  await emitSdkTypes();
   await copyNativeRuntime();
 }

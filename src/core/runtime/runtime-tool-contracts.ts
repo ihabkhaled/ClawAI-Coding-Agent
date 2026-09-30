@@ -11,6 +11,10 @@ import {
   RUNTIME_PROTOCOL_V2,
   SHA256_PATTERN,
 } from './runtime-protocol.constants';
+import {
+  MAX_TOOL_RESULT_FILE_IDS,
+  TOOL_RESULT_FILE_ID_CHARACTERS,
+} from './runtime-result-files.constants';
 
 const TOOL_ARGUMENT_BYTES = 262_144;
 const TOOL_RESULT_BYTES = 1_048_576;
@@ -139,11 +143,21 @@ export const toolResultSchema = z
     structured: boundedRuntimeJsonObject(TOOL_RESULT_BYTES).optional(),
     modelText: z.string().max(MAX_RUNTIME_JSON_STRING_LENGTH).optional(),
     error: toolErrorSchema.optional(),
+    // F030: uploaded images (a browser `observe` screenshot) the next model
+    // turn is shown. Covered by the receipt's resultHash.
+    fileIds: z
+      .array(z.string().min(1).max(TOOL_RESULT_FILE_ID_CHARACTERS))
+      .min(1)
+      .max(MAX_TOOL_RESULT_FILE_IDS)
+      .optional(),
     receipt: toolReceiptSchema,
     continuation: continuationSchema,
   })
   .strict()
   .superRefine((result, context) => {
+    if (result.fileIds !== undefined && new Set(result.fileIds).size !== result.fileIds.length) {
+      context.addIssue({ code: 'custom', message: 'Result file ids must be distinct' });
+    }
     if (result.status === 'succeeded' && result.error !== undefined) {
       context.addIssue({ code: 'custom', message: 'Succeeded result cannot contain an error' });
     }

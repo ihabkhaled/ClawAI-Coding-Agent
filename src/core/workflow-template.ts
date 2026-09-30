@@ -40,6 +40,16 @@ export const workflowTemplateSchema = z
 
 export type WorkflowTemplate = z.infer<typeof workflowTemplateSchema>;
 
+/**
+ * What `runtime.workflows` `save-template` takes: a template without its
+ * `kind` (the tool supplies it), plus whether an existing file may be
+ * replaced. Replacing is off unless asked, because the file may be one a
+ * person wrote by hand.
+ */
+export const workflowTemplateSaveSchema = workflowTemplateSchema
+  .omit({ kind: true })
+  .extend({ overwrite: z.boolean().default(false) });
+
 function numbered(title: string, lines: readonly string[]): string[] {
   if (lines.length === 0) return [];
   return [title, ...lines.map((line, index) => `${String(index + 1)}. ${line}`)];

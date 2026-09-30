@@ -17,6 +17,7 @@ import type {
   MarketplaceEntry,
   MarketplaceLocation,
   PluginContentLocation,
+  ReadableMarketplaceLocation,
 } from '../core/plugin-marketplace.types';
 
 const decoder = new TextDecoder('utf-8', { fatal: false });
@@ -34,7 +35,7 @@ export class PluginMarketplaceService {
   constructor(private readonly dependencies: PluginMarketplaceDependencies) {}
 
   async open(source: string): Promise<OpenedMarketplace> {
-    const location = await this.permitted(source);
+    const location = await this.fetched(await this.permitted(source));
     const bytes = await this.readCatalog(location);
     let candidate: unknown;
     try {
@@ -84,7 +85,19 @@ export class PluginMarketplaceService {
     return location;
   }
 
-  private async readCatalog(location: MarketplaceLocation): Promise<Uint8Array> {
+  /**
+   * A git marketplace, cloned and from then on a local folder. The catalog and
+   * every plugin are read from the clone, and each plugin's sha256 still has
+   * to match; the clone only moves the bytes, it does not vouch for them.
+   */
+  private async fetched(location: MarketplaceLocation): Promise<ReadableMarketplaceLocation> {
+    if (location.kind !== 'git') return location;
+    const clone = this.dependencies.cloneGit;
+    if (clone === undefined) throw new PluginFailure('invalid-source', location.url);
+    return { kind: 'folder', path: await clone(location) };
+  }
+
+  private async readCatalog(location: ReadableMarketplaceLocation): Promise<Uint8Array> {
     if (location.kind === 'url') return this.dependencies.download(location.url);
     const bytes = await this.dependencies.files.readFile(
       catalogPath(location.path, MARKETPLACE_CATALOG_FILE),

@@ -1,3 +1,5 @@
+import { securityTelemetryTranslations } from './security-telemetry-translations.mjs';
+
 const keys = [
   'Move earlier',
   'Move later',
@@ -1340,6 +1342,7 @@ export const parityComposerTranslations = Object.fromEntries(
     {
       ...Object.fromEntries(keys.map((key, index) => [key, list[index]])),
       ...pluginTranslations[locale],
+      ...securityTelemetryTranslations[locale],
     },
   ]),
 );

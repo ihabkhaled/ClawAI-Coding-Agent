@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { fetchAccountUsageSections } from '../backend/usage-breakdown-client';
 import { parseRewindRequest } from '../core/conversation-rewind';
 import { toggleViewDensity } from '../core/view-density';
 
@@ -132,7 +133,11 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
     exportTranscript: () =>
       exportTranscript({ conversations: parts.conversations(), state: parts.state() }),
     searchRunHistory: () => searchRunHistory({ journals: parts.journals() }),
-    showUsage: () => showUsage({ state: parts.state() }),
+    showUsage: () =>
+      showUsage({
+        state: parts.state(),
+        accountUsage: () => fetchAccountUsageSections(parts.backend().usageRequest),
+      }),
     createCheckpoint: () => createCheckpoint(pairedCheckpoints(parts)),
     restoreCheckpoint: () => restoreCheckpoint(pairedCheckpoints(parts)),
     rewindConversation: (request) =>

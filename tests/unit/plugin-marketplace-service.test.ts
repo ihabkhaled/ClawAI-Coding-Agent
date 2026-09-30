@@ -196,6 +196,50 @@ describe('PluginMarketplaceService', () => {
     });
   });
 
+  it('clones a git marketplace and installs from it by digest, like a folder', async () => {
+    const { files, store } = setup();
+    const source = 'git+https://git.example/market.git#v1';
+    files.put('/clones/abc/kits/review/clawai-plugin.json', manifestJson());
+    const digest = folderDigest([
+      { path: 'clawai-plugin.json', bytes: encoder.encode(manifestJson()) },
+    ]);
+    const pinned = entry({ source: 'kits/review', sha256: digest });
+    files.files.set('/clones/abc/clawai-marketplace.json', catalog([pinned]));
+    const cloneGit = vi.fn(async () => '/clones/abc');
+    const service = new PluginMarketplaceService({
+      store,
+      files,
+      download: vi.fn(),
+      unzip: unzipPlugin,
+      cloneGit,
+      allowlist: async () => [source],
+    });
+
+    const opened = await service.open(source);
+
+    expect(cloneGit).toHaveBeenCalledWith({
+      kind: 'git',
+      url: 'https://git.example/market.git',
+      ref: 'v1',
+    });
+    expect(opened.location).toEqual({ kind: 'folder', path: '/clones/abc' });
+    await expect(service.install(opened, pinned, 'user')).resolves.toBe(
+      '/profile/plugins/acme.review-kit',
+    );
+    await expect(
+      service.install(opened, { ...pinned, sha256: 'b'.repeat(64) }, 'user'),
+    ).rejects.toMatchObject({ code: 'digest-mismatch' });
+  });
+
+  it('refuses a git marketplace where no clone can run, or policy does not list it', async () => {
+    await expect(setup().service.open('git+https://git.example/market.git')).rejects.toMatchObject({
+      code: 'invalid-source',
+    });
+    await expect(
+      setup({ allowlist: ['https://other'] }).service.open('git+https://git.example/market.git'),
+    ).rejects.toMatchObject({ code: 'not-allowed' });
+  });
+
   it('installs a folder the user picked without a digest', async () => {
     const { service, files } = setup();
     files.put('/picked/clawai-plugin.json', manifestJson());

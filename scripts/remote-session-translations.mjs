@@ -18,6 +18,7 @@ const keys = [
   'That branch name or command cannot be sent to a runner.',
   'Cloud session {0}: {1}',
   'Cloud session on {0}',
+  'Coding agent (CLI)',
 ];
 
 function table(values) {
@@ -43,6 +44,7 @@ export const remoteSessionTranslations = {
     'لا يمكن إرسال اسم الفرع أو الأمر هذا إلى مشغّل.',
     'الجلسة السحابية {0}: {1}',
     'جلسة سحابية على {0}',
+    'وكيل البرمجة (سطر الأوامر)',
   ]),
   de: table([
     'Unterhaltung von einer anderen Oberfläche fortsetzen',
@@ -62,6 +64,7 @@ export const remoteSessionTranslations = {
     'Dieser Branch-Name oder Befehl kann nicht an einen Runner gesendet werden.',
     'Cloud-Sitzung {0}: {1}',
     'Cloud-Sitzung auf {0}',
+    'Coding-Agent (CLI)',
   ]),
   es: table([
     'Reanudar conversación desde otra superficie',
@@ -81,6 +84,7 @@ export const remoteSessionTranslations = {
     'Ese nombre de rama o comando no se puede enviar a un runner.',
     'Sesión en la nube {0}: {1}',
     'Sesión en la nube en {0}',
+    'Agente de programación (CLI)',
   ]),
   fa: table([
     'ادامه گفتگو از یک محیط دیگر',
@@ -100,6 +104,7 @@ export const remoteSessionTranslations = {
     'این نام شاخه یا دستور را نمی‌توان به اجراکننده فرستاد.',
     'جلسه ابری {0}: {1}',
     'جلسه ابری روی {0}',
+    'عامل کدنویسی (خط فرمان)',
   ]),
   fr: table([
     'Reprendre une conversation depuis une autre interface',
@@ -119,6 +124,7 @@ export const remoteSessionTranslations = {
     'Ce nom de branche ou cette commande ne peut pas être envoyé à un runner.',
     'Session cloud {0} : {1}',
     'Session cloud sur {0}',
+    'Agent de code (CLI)',
   ]),
   hi: table([
     'किसी अन्य सतह से बातचीत फिर से शुरू करें',
@@ -138,6 +144,7 @@ export const remoteSessionTranslations = {
     'यह ब्रांच नाम या कमांड रनर को नहीं भेजा जा सकता।',
     'क्लाउड सत्र {0}: {1}',
     '{0} पर क्लाउड सत्र',
+    'कोडिंग एजेंट (CLI)',
   ]),
   it: table([
     'Riprendi conversazione da un’altra interfaccia',
@@ -157,6 +164,7 @@ export const remoteSessionTranslations = {
     'Questo nome di branch o comando non può essere inviato a un runner.',
     'Sessione cloud {0}: {1}',
     'Sessione cloud su {0}',
+    'Agente di programmazione (CLI)',
   ]),
   ja: table([
     '別の画面から会話を再開',
@@ -176,6 +184,7 @@ export const remoteSessionTranslations = {
     'そのブランチ名またはコマンドはランナーに送信できません。',
     'クラウド セッション {0}: {1}',
     '{0} 上のクラウド セッション',
+    'コーディング エージェント (CLI)',
   ]),
   pt: table([
     'Retomar conversa de outra superfície',
@@ -195,6 +204,7 @@ export const remoteSessionTranslations = {
     'Esse nome de branch ou comando não pode ser enviado a um runner.',
     'Sessão na nuvem {0}: {1}',
     'Sessão na nuvem em {0}',
+    'Agente de programação (CLI)',
   ]),
   ru: table([
     'Продолжить разговор из другого интерфейса',
@@ -214,6 +224,7 @@ export const remoteSessionTranslations = {
     'Это имя ветки или команду нельзя отправить раннеру.',
     'Облачный сеанс {0}: {1}',
     'Облачный сеанс на {0}',
+    'Агент программирования (CLI)',
   ]),
   th: table([
     'ทำการสนทนาต่อจากอินเทอร์เฟซอื่น',
@@ -233,6 +244,7 @@ export const remoteSessionTranslations = {
     'ไม่สามารถส่งชื่อแบรนช์หรือคำสั่งนี้ไปยังรันเนอร์ได้',
     'เซสชันคลาวด์ {0}: {1}',
     'เซสชันคลาวด์บน {0}',
+    'เอเจนต์เขียนโค้ด (CLI)',
   ]),
   zh: table([
     '从其他界面恢复对话',
@@ -252,5 +264,6 @@ export const remoteSessionTranslations = {
     '无法将该分支名称或命令发送到运行器。',
     '云端会话 {0}：{1}',
     '{0} 上的云端会话',
+    '编码代理（命令行）',
   ]),
 };

@@ -3,10 +3,12 @@ import type { ProcessSupervisorService } from '../services/process-supervisor-se
 /**
  * What a backgrounded command needs from the process supervisor.
  *
- * Narrowed to `create` so the executor cannot reach the supervisor's control
- * operations, which belong to `workspace.process` and its own policy.
+ * Narrowed so the executor cannot reach the supervisor's interactive control
+ * operations, which belong to `workspace.process` and its own policy. `join`
+ * and `snapshot` let a yielding command wait and read what it printed;
+ * `terminate` stops one whose turn was cancelled before it yielded.
  */
 export interface BackgroundCommandPort {
-  readonly supervisor: Pick<ProcessSupervisorService, 'create'>;
+  readonly supervisor: Pick<ProcessSupervisorService, 'create' | 'join' | 'snapshot' | 'terminate'>;
   readonly ownerId: () => string;
 }

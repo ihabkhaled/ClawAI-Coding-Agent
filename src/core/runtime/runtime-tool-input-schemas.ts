@@ -1,5 +1,6 @@
 import { REVIEW_DIMENSIONS } from '../code-review.constants';
 import { COMMAND_EXPECTED_EFFECTS } from '../command-spec';
+import { COMMAND_YIELD_AFTER_MS_MAX, COMMAND_YIELD_AFTER_MS_MIN } from '../command-yield.constants';
 import { CONVENTIONAL_TYPES } from '../pull-request.constants';
 
 import { flagshipStagesInputSchema } from './flagship-stage-input-schema';
@@ -205,7 +206,19 @@ export const runtimeToolInputSchemas = {
   messages: strict({ to: text, text: text, since: integer }, []),
   scan: strict({ path: text }, ['path']),
   dependencyAudit: strict({ scanner: text }, []),
-  workflows: strict({ name: text, description: text, graph: subAgentGraph }, []),
+  workflows: strict(
+    {
+      name: text,
+      description: text,
+      graph: subAgentGraph,
+      instruction: text,
+      steps: texts,
+      acceptanceChecks: texts,
+      requestPrompt: text,
+      overwrite: flag,
+    },
+    [],
+  ),
   worktree: strict({ branch: text, startPoint: text, discard: flag }, []),
   schedule: strict(
     {
@@ -287,6 +300,11 @@ export const runtimeToolInputSchemas = {
       expectedEffect: { type: 'string', enum: [...COMMAND_EXPECTED_EFFECTS] },
       elevation: flag,
       background: flag,
+      yieldAfterMs: {
+        type: 'integer',
+        minimum: COMMAND_YIELD_AFTER_MS_MIN,
+        maximum: COMMAND_YIELD_AFTER_MS_MAX,
+      },
       stdin: text,
       shell: opaque,
     },

@@ -5,11 +5,11 @@
 export type ThreadSource = 'vscode' | 'cli' | 'web';
 
 /** The thread origin the chat-service persists (`ThreadOrigin` in its schema). */
-export type ThreadOrigin = 'CODING_AGENT' | 'WEB';
+export type ThreadOrigin = 'CODING_AGENT' | 'CODING_AGENT_CLI' | 'WEB';
 
 /**
- * What can be read back from a stored thread. The backend persists only the
- * origin, and both agent surfaces share one origin, so a stored thread can say
- * "agent" or "web" but not which agent surface wrote it.
+ * What can be read back from a stored thread. `cli` is a thread the headless
+ * CLI started; `agent` is one VS Code started, or one an older CLI build wrote
+ * before it had its own origin (F094).
  */
-export type ThreadSurface = 'agent' | 'web';
+export type ThreadSurface = 'agent' | 'cli' | 'web';

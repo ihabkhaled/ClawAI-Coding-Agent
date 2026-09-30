@@ -4,7 +4,8 @@ import { z } from 'zod';
 export const remoteJobSchema = z
   .object({
     id: z.string().min(1),
-    deviceId: z.string().min(1),
+    /** Null for a PROMPT routine (F099), which runs on a runner. */
+    deviceId: z.string().min(1).nullable(),
     name: z.string(),
     command: z.string(),
     workingDir: z.string().nullable().optional(),

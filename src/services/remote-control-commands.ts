@@ -16,6 +16,7 @@ import {
   PAIRED_DEVICE_SECRET_KEY,
   REMOTE_APPROVAL_TIMEOUT_MS,
 } from './remote-control-commands.constants';
+import { runnerPromptExecutor } from './runner-prompt-executor';
 
 import type { DevicePairingOutcome } from './device-pairing-flow.types';
 import type {
@@ -24,7 +25,9 @@ import type {
   RemoteLoopState,
 } from './remote-command-loop.types';
 import type { BackendClient } from '../backend/backend-client';
+import type { RunnerApprovalPolicy } from '../core/runner-prompt-policy.types';
 import type { OutputLogger } from '../infrastructure/output-logger';
+import type { AgentApprovalRequest } from '../sdk/workspace-toolkit.types';
 
 interface RemoteControlDependencies {
   readonly backend: () => BackendClient;
@@ -46,9 +49,10 @@ export function registerRemoteControlCommands(
     loop?.stop();
     loop = null;
   };
+  /** `runnerPolicy` is set for a runner (F100) and undefined for remote control (F096). */
   const begin = async (
     register: (host: AgentHostIdentity) => Promise<AgentRegistration>,
-    runner: boolean,
+    runnerPolicy: RunnerApprovalPolicy | undefined,
   ): Promise<string | undefined> => {
     const root = vscode.workspace.workspaceFolders?.[0]?.uri.fsPath;
     if (!vscode.workspace.isTrusted || root === undefined) {
@@ -60,8 +64,9 @@ export function registerRemoteControlCommands(
     stop();
     const registration = await register(hostIdentity(deps.version));
     const current = new RemoteCommandLoop({
-      source: commandSource(deps.backend, registration, runner),
+      source: commandSource(deps.backend, registration, runnerPolicy !== undefined),
       approve: approveLocally,
+      ...(runnerPolicy === undefined ? {} : { runPrompt: promptRunner(deps, runnerPolicy) }),
       execute: async (executable, args, cwd, signal) => {
         const result = await runBoundedCommand(executable, [...args], cwd, signal);
         return {
@@ -89,7 +94,7 @@ export function registerRemoteControlCommands(
     vscode.commands.registerCommand('clawAI.remoteControl.start', async () => {
       const started = await begin(
         (host) => agentRemoteClient.registerSession(deps.backend().remoteRequest, host),
-        false,
+        undefined,
       );
       if (started !== undefined) {
         await vscode.window.showInformationMessage(
@@ -114,13 +119,16 @@ export function registerRemoteControlCommands(
       });
       if (labelText === undefined) return;
       const labels = runnerLabels(labelText);
+      const approvalPolicy = await pickApprovalPolicy();
+      if (approvalPolicy === undefined) return;
       const runnerId = await begin(
         (host) =>
           agentRemoteClient.registerRunner(deps.backend().remoteRequest, host, {
             name: name.trim(),
             labels,
+            approvalPolicy,
           }),
-        true,
+        approvalPolicy,
       );
       if (runnerId !== undefined) {
         await vscode.window.showInformationMessage(
@@ -138,25 +146,81 @@ export function registerRemoteControlCommands(
   ];
 }
 
+/**
+ * A runner talks only to the runner routes with its runner token (F100); a
+ * remote-control session keeps the session routes and its session key.
+ */
 function commandSource(
   backend: () => BackendClient,
   registration: AgentRegistration,
   runner: boolean,
 ): RemoteCommandSource {
+  const credential = registration.sessionKey;
+  if (runner) {
+    return {
+      fetch: (signal) => agentRemoteClient.claim(backend().agentKeyRequest, credential, signal),
+      heartbeat: () => agentRemoteClient.runnerHeartbeat(backend().agentKeyRequest, credential),
+      complete: (commandId, result) =>
+        agentRemoteClient.runnerComplete(backend().agentKeyRequest, credential, commandId, result),
+    };
+  }
   return {
-    fetch: (signal) =>
-      runner
-        ? agentRemoteClient.claim(backend().agentKeyRequest, registration.sessionKey, signal)
-        : agentRemoteClient.pending(backend().agentKeyRequest, registration.sessionKey, signal),
+    fetch: (signal) => agentRemoteClient.pending(backend().agentKeyRequest, credential, signal),
     heartbeat: () => agentRemoteClient.heartbeat(backend().agentKeyRequest, registration),
     complete: (commandId, result) =>
-      agentRemoteClient.complete(
-        backend().agentKeyRequest,
-        registration.sessionKey,
-        commandId,
-        result,
-      ),
+      agentRemoteClient.complete(backend().agentKeyRequest, credential, commandId, result),
   };
+}
+
+/** F099: prompt jobs run through the headless SDK under the registered policy. */
+function promptRunner(
+  deps: RemoteControlDependencies,
+  policy: RunnerApprovalPolicy,
+): ReturnType<typeof runnerPromptExecutor> {
+  return runnerPromptExecutor({
+    folders: () =>
+      (vscode.workspace.workspaceFolders ?? []).map((folder) => ({
+        name: folder.name,
+        fsPath: folder.uri.fsPath,
+      })),
+    accessToken: () => deps.backend().currentAccessToken(),
+    backendUrl: deps.backend().authorizationUrl(''),
+    policy,
+    ask: approveToolLocally,
+  });
+}
+
+async function pickApprovalPolicy(): Promise<RunnerApprovalPolicy | undefined> {
+  const ask = {
+    label: vscode.l10n.t('Ask me for every tool call'),
+    policy: 'ASK' as const,
+  };
+  const readOnly = {
+    label: vscode.l10n.t('Auto-approve read-only tool calls'),
+    detail: vscode.l10n.t('Writes and commands still wait for your approval.'),
+    policy: 'AUTO_APPROVE_READ_ONLY' as const,
+  };
+  const picked = await vscode.window.showQuickPick([ask, readOnly], {
+    title: vscode.l10n.t('Runner approval policy for prompt jobs'),
+  });
+  return picked?.policy;
+}
+
+async function approveToolLocally(request: AgentApprovalRequest): Promise<boolean> {
+  const allow = vscode.l10n.t('Allow');
+  const answer = vscode.window.showWarningMessage(
+    vscode.l10n.t(
+      'A scheduled prompt job wants to use {0} ({1}). Allow it?',
+      request.toolName,
+      request.category,
+    ),
+    { modal: true, detail: JSON.stringify(request.arguments, null, 2).slice(0, 2_000) },
+    allow,
+  );
+  const timeout = new Promise<undefined>((resolve) => {
+    setTimeout(resolve, REMOTE_APPROVAL_TIMEOUT_MS);
+  });
+  return (await Promise.race([answer, timeout])) === allow;
 }
 
 async function approveLocally(request: RemoteCommandApproval): Promise<boolean> {

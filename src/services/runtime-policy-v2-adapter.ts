@@ -225,6 +225,10 @@ const operationRules: readonly (readonly [RegExp, Classification])[] = [
 
 function classifyOperation(invocation: ToolInvocation, operation: string): Classification {
   if (invocation.toolName === MCP_TOOL_NAME) return classifyMcpOperation(invocation.operation);
+  // F011: a saved template is instructions a later run will follow, so writing
+  // one is a local mutation that outlives this run, not an ordinary file edit.
+  if (invocation.toolName === 'runtime.workflows' && invocation.operation === 'save-template')
+    return { effect: 'local-mutation', risk: 'R2', reversible: false };
   // F029: creating or firing a remote job runs a command on another machine.
   if (
     invocation.toolName === 'runtime.remote' &&

@@ -4,6 +4,8 @@ import { postReviewComment } from './review-comment-command';
 import { manageRoutines } from './routine-commands';
 import { SlackNotifier } from './slack-notifier';
 import { configureSlackNotifications } from './slack-settings-command';
+import { TelemetryHeaderStore } from './telemetry-header-store';
+import { setTelemetryHeaders } from './telemetry-headers-command';
 
 import type { IntegrationDependencies } from './integration-commands.types';
 import type { BackendClient } from '../backend/backend-client';
@@ -31,6 +33,9 @@ export function registerIntegrations(
     vscode.commands.registerCommand('clawAI.postReviewComment', () => postReviewComment(deps)),
     vscode.commands.registerCommand('clawAI.configureSlackNotifications', () =>
       configureSlackNotifications({ secrets: context.secrets, notifier }),
+    ),
+    vscode.commands.registerCommand('clawAI.setTelemetryHeaders', () =>
+      setTelemetryHeaders(new TelemetryHeaderStore(context.secrets)),
     ),
   );
 }

@@ -344,6 +344,12 @@ export const organizationPolicySchema = z
      */
     rules: z.unknown().optional(),
     trust: z.unknown().optional(),
+    /**
+     * The only plugin marketplaces members may install from. Unknown here for
+     * the same reason as `mcpServers`; `plugin-marketplace-policy.ts` reads a
+     * malformed list as refusing every marketplace.
+     */
+    allowedPluginMarketplaces: z.unknown().optional(),
   })
   .strict();
 

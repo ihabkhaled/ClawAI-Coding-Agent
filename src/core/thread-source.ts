@@ -1,4 +1,4 @@
-import { THREAD_ORIGIN_BY_SOURCE } from './thread-source.constants';
+import { THREAD_ORIGIN_BY_SOURCE, THREAD_SURFACE_BY_ORIGIN } from './thread-source.constants';
 
 import type { ThreadOrigin, ThreadSource, ThreadSurface } from './thread-source.types';
 
@@ -14,5 +14,6 @@ export function threadOriginForSource(source: ThreadSource): ThreadOrigin {
  * created without one — which is exactly what an older CLI build did.
  */
 export function threadSurfaceOf(origin: unknown): ThreadSurface {
-  return origin === 'CODING_AGENT' ? 'agent' : 'web';
+  if (typeof origin !== 'string' || !Object.hasOwn(THREAD_SURFACE_BY_ORIGIN, origin)) return 'web';
+  return THREAD_SURFACE_BY_ORIGIN[origin] ?? 'web';
 }

@@ -5,9 +5,11 @@ import {
   cloudTaskSchema,
   runnerRepoPageSchema,
   runnerSessionPageSchema,
+  threadActiveRunSchema,
   type CloudTask,
   type RunnerRepo,
   type RunnerSession,
+  type ThreadActiveRun,
 } from './remote-session-contracts';
 
 import type { ThreadSource } from '../core/thread-source.types';
@@ -38,6 +40,17 @@ export const remoteSessionClient = {
       paginatedSchema(threadSchema),
     );
     return result.data;
+  },
+
+  /**
+   * Whether a Runtime V2 run is still going on a thread (F095). A backend that
+   * predates the query answers 404; callers fall back to the transcript guess.
+   */
+  async activeRun(request: RemoteRequester, threadId: string): Promise<ThreadActiveRun> {
+    return request(
+      `/chat-threads/${encodeURIComponent(threadId)}/active-run`,
+      threadActiveRunSchema,
+    );
   },
 
   /** Runners that are connected now. A disconnected one cannot take work. */

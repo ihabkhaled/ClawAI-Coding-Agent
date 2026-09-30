@@ -39,6 +39,8 @@ export interface RuntimeToolResultInput {
   readonly structured?: RuntimeJsonObject;
   readonly modelText?: string;
   readonly error?: ToolError;
+  /** F030: uploaded images the next model turn is shown; hashed with the output. */
+  readonly fileIds?: readonly string[];
 }
 
 export function canonicalJson(value: unknown): string {
@@ -187,6 +189,24 @@ function boundedOutput(
   };
 }
 
+/**
+ * The body the receipt's resultHash and outputBytes attest to. `fileIds` joins
+ * it only when present (F030), so every other result hashes and counts bytes
+ * exactly as before. claw-chat-service's `canonicalResultOutput` applies the
+ * same rule; the two must not drift.
+ */
+function hashedResultBody(
+  output: ReturnType<typeof boundedOutput>,
+  fileIds: string[] | undefined,
+): Record<string, unknown> {
+  return {
+    structured: output.structured ?? null,
+    modelText: output.modelText ?? null,
+    error: output.error ?? null,
+    ...(fileIds === undefined ? {} : { fileIds }),
+  };
+}
+
 export function buildRuntimeToolResult(input: RuntimeToolResultInput): ToolResult {
   const invocation = parseToolInvocation(input.invocation);
   const startedAtMs = Date.parse(input.startedAt);
@@ -204,11 +224,8 @@ export function buildRuntimeToolResult(input: RuntimeToolResultInput): ToolResul
     input.error,
     input.maxOutputBytes,
   );
-  const resultBody = {
-    structured: output.structured ?? null,
-    modelText: output.modelText ?? null,
-    error: output.error ?? null,
-  };
+  const fileIds = input.fileIds === undefined ? undefined : [...input.fileIds];
+  const resultBody = hashedResultBody(output, fileIds);
   return freezeDeep(
     parseToolResult({
       schemaVersion: '2.0',
@@ -217,6 +234,7 @@ export function buildRuntimeToolResult(input: RuntimeToolResultInput): ToolResul
       ...(output.structured === undefined ? {} : { structured: output.structured }),
       ...(output.modelText === undefined ? {} : { modelText: output.modelText }),
       ...(output.error === undefined ? {} : { error: output.error }),
+      ...(fileIds === undefined ? {} : { fileIds }),
       receipt: {
         schemaVersion: '2.0',
         receiptId: input.receiptId,
@@ -235,7 +253,7 @@ export function buildRuntimeToolResult(input: RuntimeToolResultInput): ToolResul
         startedAt: input.startedAt,
         completedAt: input.completedAt,
         durationMs: completedAtMs - startedAtMs,
-        outputBytes: output.outputBytes,
+        outputBytes: utf8Bytes(canonicalJson(resultBody)),
         truncated: output.truncated,
         redactionApplied: output.redactionApplied,
       },

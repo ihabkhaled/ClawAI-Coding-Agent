@@ -232,7 +232,7 @@ describe('browsePluginMarketplaces', () => {
     await browsePluginMarketplaces(dependencies);
 
     const items = windowMock.showQuickPick.mock.calls[0]?.[0] as { description?: string }[];
-    expect(items[0]?.description).toBe('Blocked by workspace policy');
+    expect(items[0]?.description).toBe('Blocked by policy');
   });
 
   it('adds and removes marketplaces, ignoring blanks and duplicates', async () => {
@@ -282,7 +282,7 @@ describe('browsePluginMarketplaces', () => {
     pickInOrder(byLabel('m.example'));
     await browsePluginMarketplaces(dependencies);
     expect(windowMock.showErrorMessage).toHaveBeenCalledWith(
-      'Workspace policy does not allow this marketplace: x',
+      'Policy does not allow this marketplace: x',
     );
   });
 });

@@ -32,7 +32,16 @@ vi.mock('vscode', () => ({
     }),
   },
   l10n: { t: (message: string) => message },
-  window: { showQuickPick: vi.fn(async () => undefined) },
+  window: {
+    showQuickPick: vi.fn(async () => undefined),
+    registerTreeDataProvider: vi.fn(() => ({ dispose: vi.fn() })),
+  },
+  TreeItemCollapsibleState: { None: 0 },
+  EventEmitter: class {
+    readonly event = vi.fn();
+    fire = vi.fn();
+    dispose = vi.fn();
+  },
   commands: { registerCommand: vscodeMock.registerCommand },
   workspace: {
     fs: vscodeMock.fs,
@@ -110,7 +119,7 @@ describe('registerPluginCommands', () => {
     };
   }
 
-  it('registers the manager and the marketplace browser', async () => {
+  it('registers the Plugins view actions, the manager and the marketplace browser', async () => {
     const subscriptions: unknown[] = [];
     vscodeMock.configuration.get.mockReturnValue(['https://m.example', 3]);
 
@@ -120,11 +129,36 @@ describe('registerPluginCommands', () => {
     );
 
     expect(vscodeMock.registerCommand.mock.calls.map(([command]) => command)).toEqual([
+      'clawAI.enablePlugin',
+      'clawAI.disablePlugin',
+      'clawAI.uninstallPlugin',
+      'clawAI.refreshPlugins',
       'clawAI.managePlugins',
       'clawAI.browsePluginMarketplaces',
     ]);
-    expect(subscriptions).toHaveLength(2);
-    const browse = vscodeMock.registerCommand.mock.calls[1]?.[1];
+    expect(subscriptions).toHaveLength(8);
+    const browse = vscodeMock.registerCommand.mock.calls[5]?.[1];
     await browse?.();
+    const manage = vscodeMock.registerCommand.mock.calls[4]?.[1];
+    await manage?.();
+  });
+
+  it('marks a marketplace the organization allowlist leaves out as blocked', async () => {
+    const vscode = await import('vscode');
+    vscodeMock.configuration.get.mockReturnValue(['https://m.example']);
+
+    registerPluginCommands(
+      { subscriptions: [], globalStorageUri: { fsPath: '/global' } } as never,
+      scope(undefined) as never,
+      () => ['https://only.example'],
+    );
+    let described: string | undefined;
+    vi.mocked(vscode.window.showQuickPick).mockImplementationOnce(async (items) => {
+      described = (await items)[0]?.description;
+      return undefined;
+    });
+    await vscodeMock.registerCommand.mock.calls[5]?.[1]();
+
+    expect(described).toBe('Blocked by policy');
   });
 });

@@ -9,14 +9,16 @@ import { ACTIVE_ELSEWHERE_WINDOW_MS } from '../../src/core/resume-readiness.cons
 import { threadOriginForSource, threadSurfaceOf } from '../../src/core/thread-source';
 
 describe('thread source', () => {
-  it('writes one origin for both agent surfaces so their history is shared', () => {
+  it('gives the CLI its own origin so history can say where a thread began', () => {
     expect(threadOriginForSource('vscode')).toBe('CODING_AGENT');
-    expect(threadOriginForSource('cli')).toBe('CODING_AGENT');
+    expect(threadOriginForSource('cli')).toBe('CODING_AGENT_CLI');
     expect(threadOriginForSource('web')).toBe('WEB');
   });
 
   it('reads an absent origin as web, the backend default', () => {
     expect(threadSurfaceOf('CODING_AGENT')).toBe('agent');
+    expect(threadSurfaceOf('CODING_AGENT_CLI')).toBe('cli');
+    expect(threadSurfaceOf('constructor')).toBe('web');
     expect(threadSurfaceOf('WEB')).toBe('web');
     expect(threadSurfaceOf(undefined)).toBe('web');
   });

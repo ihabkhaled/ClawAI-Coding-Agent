@@ -1,5 +1,8 @@
-/** Where a server was declared. A workspace file is untrusted content. */
-export type McpServerOrigin = 'user' | 'workspace';
+/**
+ * Where a server was declared. A workspace file is untrusted content, and so
+ * is a plugin: it is someone else's manifest, admitted by the same policy.
+ */
+export type McpServerOrigin = 'plugin' | 'user' | 'workspace';
 
 /** Mirrors `mcpOAuthSchema`; declared here so the types do not import the schemas. */
 export interface McpOAuthConfig {

@@ -8,7 +8,7 @@ import {
   type Routine,
 } from './integration-contracts';
 
-import type { RoutineInput, RoutineStatus } from '../core/routine.types';
+import type { PromptRoutineInput, RoutineInput, RoutineStatus } from '../core/routine.types';
 
 const ROUTINES_PATH = '/agent/scheduled-commands';
 
@@ -37,6 +37,22 @@ export const routineClient = {
         name: input.name,
         command: input.command,
         intervalMinutes: input.intervalMinutes,
+      },
+    });
+  },
+
+  /** F099: a prompt routine; it runs on an online runner carrying every label. */
+  createPrompt(request: IntegrationRequester, input: PromptRoutineInput): Promise<Routine> {
+    return request(ROUTINES_PATH, routineSchema, {
+      method: 'POST',
+      body: {
+        kind: 'PROMPT',
+        name: input.name,
+        prompt: input.prompt,
+        runnerLabels: input.runnerLabels,
+        intervalMinutes: input.intervalMinutes,
+        ...(input.model === undefined ? {} : { model: input.model }),
+        ...(input.repoRef === undefined ? {} : { repoRef: input.repoRef }),
       },
     });
   },

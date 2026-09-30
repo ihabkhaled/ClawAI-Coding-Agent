@@ -22,6 +22,7 @@ vi.mock('vscode', () => ({
   ProgressLocation: { Notification: 15 },
 }));
 
+import { BackendRequestError } from '../../src/backend/backend-errors';
 import { startCloudSession, watchCloudTask } from '../../src/services/cloud-session-command';
 import { registerRemoteSessionCommands } from '../../src/services/remote-session-commands';
 import { resumeConversation } from '../../src/services/resume-conversation-command';
@@ -42,7 +43,9 @@ function setup(routes: Record<string, unknown>) {
     calls.push({ path, options });
     const key = Object.keys(routes).find((prefix) => path.startsWith(prefix));
     if (key === undefined) throw new Error(`unrouted ${path}`);
-    return Promise.resolve(schema.parse(routes[key]));
+    const routed = routes[key];
+    if (routed instanceof Error) return Promise.reject(routed);
+    return Promise.resolve(schema.parse(routed));
   });
   const backend = {
     integrationRequest: remoteRequest,
@@ -88,6 +91,7 @@ describe('registerRemoteSessionCommands', () => {
 describe('resumeConversation', () => {
   it('offers agent and web threads once each, then opens the pick with its history', async () => {
     const { calls, dependencies, revealThread } = setup({
+      '/chat-threads/': { active: false },
       '/chat-threads': page([
         { id: 'web-1', title: 'Portal chat', origin: 'WEB' },
         { id: 'agent-1', title: 'dup', origin: 'WEB' },
@@ -110,20 +114,27 @@ describe('resumeConversation', () => {
   });
 
   it('stops a run still live elsewhere before opening, when asked to', async () => {
-    const { backend, dependencies, revealThread } = setup({ '/chat-threads': page([]) });
-    backend.listMessages.mockResolvedValue([{ role: 'USER' }]);
+    const { backend, calls, dependencies, revealThread } = setup({
+      '/chat-threads/': { active: true, runId: 'run-1' },
+      '/chat-threads': page([]),
+    });
     window.showQuickPick.mockImplementation(firstPick);
     window.showWarningMessage.mockResolvedValue('Stop That Run');
 
     await resumeConversation(dependencies);
 
+    // The backend's run store answered (F095), so the transcript is not guessed at.
+    expect(calls.map((call) => call.path)).toContain('/chat-threads/agent-1/active-run');
+    expect(backend.listMessages).not.toHaveBeenCalled();
     expect(backend.cancelStream).toHaveBeenCalledWith('agent-1');
     expect(revealThread).toHaveBeenCalledWith('agent-1', 'From the CLI');
   });
 
   it('opens nothing when the live-run warning is dismissed', async () => {
-    const { backend, dependencies, revealThread } = setup({ '/chat-threads': page([]) });
-    backend.listMessages.mockResolvedValue([{ role: 'USER' }]);
+    const { backend, dependencies, revealThread } = setup({
+      '/chat-threads/': { active: true },
+      '/chat-threads': page([]),
+    });
     window.showQuickPick.mockImplementation(firstPick);
     window.showWarningMessage.mockResolvedValue(undefined);
 
@@ -131,6 +142,60 @@ describe('resumeConversation', () => {
 
     expect(backend.cancelStream).not.toHaveBeenCalled();
     expect(revealThread).not.toHaveBeenCalled();
+  });
+
+  it('opens a finished run straight away, however recent its prompt', async () => {
+    const { backend, dependencies, revealThread } = setup({
+      '/chat-threads/': { active: false },
+      '/chat-threads': page([]),
+    });
+    backend.listMessages.mockResolvedValue([{ role: 'USER' }]);
+    window.showQuickPick.mockImplementation(firstPick);
+
+    await resumeConversation(dependencies);
+
+    expect(window.showWarningMessage).not.toHaveBeenCalled();
+    expect(revealThread).toHaveBeenCalledWith('agent-1', 'From the CLI');
+  });
+
+  it('falls back to the transcript guess against a backend without the query', async () => {
+    const { backend, dependencies, revealThread } = setup({
+      '/chat-threads/': new BackendRequestError('Not found', 404, false),
+      '/chat-threads': page([]),
+    });
+    backend.listMessages.mockResolvedValue([{ role: 'USER' }]);
+    window.showQuickPick.mockImplementation(firstPick);
+    window.showWarningMessage.mockResolvedValue(undefined);
+
+    await resumeConversation(dependencies);
+
+    expect(backend.listMessages).toHaveBeenCalledWith('agent-1', expect.any(Number));
+    expect(window.showWarningMessage).toHaveBeenCalledOnce();
+    expect(revealThread).not.toHaveBeenCalled();
+  });
+
+  it('labels a thread the headless CLI started (F094)', async () => {
+    const { dependencies } = setup({
+      '/chat-threads/': { active: false },
+      '/chat-threads': page([]),
+    });
+    window.showQuickPick.mockResolvedValue(undefined);
+
+    await resumeConversation({
+      ...dependencies,
+      agentHistory: () => [
+        { id: 'cli-1', title: 'Terminal run', origin: 'CODING_AGENT_CLI' },
+        { id: 'vsc-1', title: 'Editor run', origin: 'CODING_AGENT' },
+        { id: 'old-1', title: 'No origin' },
+      ],
+    });
+
+    const offered = window.showQuickPick.mock.calls[0]?.[0] as { description: string }[];
+    expect(offered.map((item) => item.description)).toEqual([
+      'Coding agent (CLI)',
+      'Coding agent',
+      'Coding agent',
+    ]);
   });
 });
 
