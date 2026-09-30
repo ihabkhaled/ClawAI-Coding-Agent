@@ -32,20 +32,23 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Require a new version
+      - name: Resolve release intent
         id: version
         shell: bash
         run: |
           VERSION="$(node -p "require('./package.json').version")"
           TAG="v${VERSION}"
-          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "::error::${TAG} already exists. Increment package.json before every push to main."
-            exit 1
-          fi
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
+          if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
+            echo "publish=false" >> "${GITHUB_OUTPUT}"
+            echo "::notice::${TAG} already exists. This is a normal main update, so release publishing is skipped."
+          else
+            echo "publish=true" >> "${GITHUB_OUTPUT}"
+          fi
 
       - name: Require committed release assets
+        if: ${{ steps.version.outputs.publish == 'true' }}
         env:
           RELEASE_BASE: builds/clawai-coding-agent-${{ steps.version.outputs.version }}
         shell: bash
@@ -69,36 +72,46 @@ jobs:
           done
 
       - name: Install
+        if: ${{ steps.version.outputs.publish == 'true' }}
         run: npm ci --ignore-scripts
 
       - name: Verify generated localization
+        if: ${{ steps.version.outputs.publish == 'true' }}
         shell: bash
         run: |
           npm run l10n:build
           git diff --exit-code -- package.nls.json package.nls.*.json l10n
 
       - name: Run release checks
+        if: ${{ steps.version.outputs.publish == 'true' }}
         run: npm run check
 
       - name: Run extension-host tests
+        if: ${{ steps.version.outputs.publish == 'true' }}
         run: xvfb-run -a npm run test:host
 
       - name: Install Playwright browser
+        if: ${{ steps.version.outputs.publish == 'true' }}
         run: npx playwright install --with-deps chromium
 
       - name: Run webview end-to-end tests
+        if: ${{ steps.version.outputs.publish == 'true' }}
         run: npm run test:playwright
 
       - name: Audit runtime dependencies
+        if: ${{ steps.version.outputs.publish == 'true' }}
         run: npm audit --omit=dev --audit-level=high
 
       - name: Package VSIX
+        if: ${{ steps.version.outputs.publish == 'true' }}
         run: npm run package
 
       - name: Generate supply-chain evidence
+        if: ${{ steps.version.outputs.publish == 'true' }}
         run: npm run supply-chain
 
       - name: Verify release artifact
+        if: ${{ steps.version.outputs.publish == 'true' }}
         env:
           ARTIFACT: builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix
           RELEASE_BASE: builds/clawai-coding-agent-${{ steps.version.outputs.version }}
@@ -152,6 +165,7 @@ jobs:
           NODE
 
       - name: Build full release notes
+        if: ${{ steps.version.outputs.publish == 'true' }}
         env:
           VERSION: ${{ steps.version.outputs.version }}
         shell: bash
@@ -178,6 +192,7 @@ jobs:
           EOF
 
       - name: Create GitHub Release
+        if: ${{ steps.version.outputs.publish == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
         shell: bash
@@ -192,7 +207,7 @@ jobs:
       # this repository before the secret exists, still produces a GitHub
       # release and its attested artifact; only the Marketplace step waits.
       - name: Publish to the VS Code Marketplace
-        if: ${{ env.VSCE_PAT != '' }}
+        if: ${{ steps.version.outputs.publish == 'true' && env.VSCE_PAT != '' }}
         shell: bash
         run: |
           npx --yes @vscode/vsce publish \
@@ -202,7 +217,7 @@ jobs:
       # Open VSX serves VSCodium, Cursor, Windsurf and the other forks. Same
       # artifact, different registry, and the same skip-when-absent rule.
       - name: Publish to Open VSX
-        if: ${{ env.OVSX_PAT != '' }}
+        if: ${{ steps.version.outputs.publish == 'true' && env.OVSX_PAT != '' }}
         shell: bash
         run: |
           npx --yes ovsx publish \
