@@ -86,6 +86,8 @@ Group by who can unblock. Full "still open" text is in the audit row.
 | F067 Panel placement | A `secondarySidebar` views container needs engines `^1.106`; the extension declares `^1.98`. Raising it drops older VS Code users: an explicit decision.    |
 | F030 Computer use    | Browser click, type, scroll, observe and screenshot-to-vision ship. Desktop-wide input is a safety and scope decision (no OS-level tool has been approved). |
 
+Exact backend or product change per partial row: [PARTIAL_REMAINDERS.md](PARTIAL_REMAINDERS.md).
+
 Realistic next work: F093 (one transport, well-scoped), F081 backend route,
 F108 cost field, then the decision on F067 and F030.
 

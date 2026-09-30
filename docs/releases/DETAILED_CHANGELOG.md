@@ -24,6 +24,10 @@ The 11 PARTIAL parity rows were re-audited against the code (docs/parity/HANDOVE
 - **Fix.** The client allowed a fetch timeout up to 120 000 ms and the research service rejects above 60 000; the client now stops at 60 000.
 - **Not built, needs a backend change** (exact change in the parity page): a user-permission route for the `SITE_CRAWL` and `SEARCH_FETCH_EXTRACT` workflows (sitemaps, ranking, 200 pages, extraction profiles); a research field on the Runtime V2 run start; readable fetch strategies. No composer crawl option was added, because the server has no mode for it. Not run live: the new operations are unit tested against a scripted site and a stubbed route.
 
+## Unreleased (parity partials, folds into 1.88.0)
+
+F095: attaching to a runner session now reconciles it with the window (`src/core/runner-workspace-fit.ts`, called from `attachRemoteSession`): when the runner reports checkouts and none is a folder open here, the session log says continuing in chat cannot reach its files. Best-effort: a failed or missing repository lookup, no open folder, or no runner data never warns. Audit pass over the other ten partial rows found their remainders need a backend route or a product decision; the exact change for each is in docs/parity/PARTIAL_REMAINDERS.md. The F108 audit text that listed metrics as open was stale: OTLP metrics ship (`src/core/otlp-metrics.ts`).
+
 ## 1.86.0
 
 Host-free SDK toolkit rebuilt from dogfooding the headless agent on the ClawAI monorepo: file tools (ranged read, list, glob, search, stat, update, delete, rename), async command tool (tail-preserving output, tree kill, env filtering, background processes), git write operations (add, unstage, commit with hooks, pull --rebase, push, switch, restore, show, remote) as the `git-write` category, and a result-size guard (first run failed on a 66 KB read rejected by the backend: result.structured.content max 65536). See docs/HEADLESS.md.

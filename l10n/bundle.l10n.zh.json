@@ -378,6 +378,7 @@
   "No workspace": "No workspace",
   "No workspace context attached": "No workspace context attached",
   "None": "无",
+  "None of the repositories {0} reports is open in this window, so continuing in chat cannot reach its files.": "{0} 报告的仓库均未在此窗口中打开，因此在聊天中继续无法访问其文件。",
   "Not a valid plugin: {0}": "不是有效的插件：{0}",
   "Not collected yet": "尚未收集",
   "Nothing has used tokens in this session yet.": "本次会话尚未使用任何令牌。",

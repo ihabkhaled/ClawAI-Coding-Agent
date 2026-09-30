@@ -4,6 +4,7 @@ import { remoteSessionClient } from '../backend/remote-session-client';
 import { isUnsupportedRoute, orUnsupported } from '../backend/remote-session-fallback';
 import { isCloudTaskFinished } from '../core/cloud-session-command';
 import { redactText } from '../core/redaction';
+import { runnerWorkspaceFit } from '../core/runner-workspace-fit';
 import { newestFirst, outcomeOf, pollWithBackoff } from '../core/session-handoff';
 import { ATTACH_BACKOFF_POLICY } from '../core/session-handoff.constants';
 
@@ -111,6 +112,28 @@ export async function followSession(
   return latest;
 }
 
+/** F095: warns when the runner's checkouts are not the folders open here. */
+async function warnOnWorkspaceMismatch(
+  dependencies: RemoteSessionDependencies,
+  runner: RunnerSession,
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const repos = await remoteSessionClient
+    .runnerRepos(dependencies.request(), runner.id)
+    .catch((): undefined => undefined);
+  const fit = runnerWorkspaceFit({
+    runnerRepos: repos ?? [],
+    workspaceNames: (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.name),
+  });
+  if (fit !== 'mismatch') return;
+  output.appendLine(
+    vscode.l10n.t(
+      'None of the repositories {0} reports is open in this window, so continuing in chat cannot reach its files.',
+      runner.hostname,
+    ),
+  );
+}
+
 /**
  * F095: attaches to a session hosted on a runner. A finished or failed one is
  * shown as it ended; a running one is followed read-only. Either can continue
@@ -123,6 +146,7 @@ export async function attachRemoteSession(dependencies: RemoteSessionDependencie
   if (runner === undefined || task === undefined) return;
   const output = vscode.window.createOutputChannel('ClawAI Runner Session');
   output.show(true);
+  await warnOnWorkspaceMismatch(dependencies, runner, output);
   if (outcomeOf(task) !== 'running') logTask(output, task);
   const latest =
     outcomeOf(task) === 'running'

@@ -1,5 +1,9 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
+const workspace = vi.hoisted(() => ({
+  workspaceFolders: [{ name: 'claw-app' }] as { name: string }[] | undefined,
+}));
+
 const window = vi.hoisted(() => ({
   showQuickPick: vi.fn(),
   showInformationMessage: vi.fn(),
@@ -17,6 +21,7 @@ vi.mock('vscode', () => ({
       ),
   },
   window,
+  workspace,
   ProgressLocation: { Notification: 15 },
 }));
 
