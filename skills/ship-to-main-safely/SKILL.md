@@ -16,20 +16,21 @@ returns.
 
 ## Steps
 
-1. Finish the batch. Bump the version (`skills/land-a-release/SKILL.md`), update
-   both changelogs, run `npm run l10n:build` and `npm run inventory:surface`.
+1. Finish the batch. Decide whether this is a **release** or only a normal main
+   update. Normal main updates keep the current version. For an intentional
+   release, follow `skills/land-a-release/SKILL.md` and update version,
+   changelogs and release assets.
 2. `git add` every new file explicitly, then commit the source. Untracked files are
    invisible to `coverage:scope` and to CI.
-3. Rebuild the release assets AFTER the last source commit: `npm run package`,
-   `npm run supply-chain` (both need a clean tree), then
-   `git add -f builds/clawai-coding-agent-<version>.*` and commit them. Provenance
-   records the source commit, so any later source change means rebuilding.
+3. Only for an intentional release: rebuild the release assets AFTER the last
+   source commit with `npm run package` and `npm run supply-chain`, then
+   commit `builds/clawai-coding-agent-<version>.*`. Normal main updates do not
+   need release artifacts.
 4. `npm run preflight` (dry run) or `npm run ship` (dry run, push, watch). Run it as a
    background task: the Linux gate takes several minutes.
-5. It checks, in order: the tree is committed and not behind origin; the version tag
-   is free and all 8 assets are tracked; the outgoing diff has no secret-shaped
-   literal; then `git archive HEAD` runs in `node:22` as the unprivileged `node`
-   user: `npm ci`, `l10n:build` + diff, `npm run check`, `npm audit`.
+5. GitHub CI still validates the commit. The Release workflow resolves intent:
+   if the current version tag already exists, release-only work is skipped and
+   the job succeeds; if the tag is new, the full release gates run and publish.
 6. On red, read the printed log tail, fix, commit, and run again. Do not start other
    work while a gate is red.
 7. If you changed `media/`, `src/webview/` or command registration, also run
