@@ -1,4 +1,10 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import { join } from 'node:path';
+
 import { afterEach, beforeEach, describe, expect, it, vi } from 'vitest';
+
+const globalStoragePath = mkdtempSync(join(tmpdir(), 'clawai-idle-'));
 
 const host = vi.hoisted(() => {
   const outputLines: string[] = [];
@@ -191,7 +197,7 @@ function fakeContext(): vscode.ExtensionContext {
     extension: { extensionKind: 1 },
     extensionUri: { fsPath: '/ext', path: '/ext', scheme: 'file' },
     extensionPath: '/ext',
-    globalStorageUri: { fsPath: '/global', path: '/global', scheme: 'file' },
+    globalStorageUri: { fsPath: globalStoragePath, path: globalStoragePath, scheme: 'file' },
     globalState: host.memento,
     workspaceState: host.memento,
     secrets: {
