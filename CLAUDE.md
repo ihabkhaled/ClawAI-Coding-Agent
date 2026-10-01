@@ -34,11 +34,11 @@ Router: `AGENTS.md` (gates, blockers) - `docs/RULES.md` (enforced rules) -
 
 ## Gates
 
-`npm run check` = format:check, l10n:verify, lint, typecheck, scan:paths,
-inventory:verify, coverage:scope, test (vitest + coverage), build,
-package:audit. Before every push: `npm run preflight` (or `npm run ship`). Also before a release: `npm run test:host`, `npm run package`,
-`npm audit --omit=dev --audit-level=high`. Fix with `npm run format`,
-`npm run l10n:build`, `npm run inventory:surface`.
+`npm run check` is the local aggregate of `check:quality`,
+`check:unit`, and build. GitHub splits version, quality, unit/coverage,
+extension-host, Playwright, and dependency audit into independent jobs so they
+can run in parallel. The Package VSIX job depends on all of them and runs last.
+Before every push use `npm run preflight` or `npm run ship`.
 
 ## Known traps
 
@@ -55,7 +55,8 @@ package:audit. Before every push: `npm run preflight` (or `npm run ship`). Also 
 `setup-a-fresh-worktree`, `version-every-change`, `verify-coding-agent-readiness`,
 `add-a-runtime-tool`, `add-a-command-or-view`, `add-a-translated-string`,
 `land-a-release`, `add-a-backend-client-with-fallback`, `run-live-rounds`.
-Version bumps are for intentional releases, not every main update. A normal
-main update may keep an already-tagged package version; Release then skips
-publication. Intentional releases still require SemVer + changelogs + rebuilt
-VSIX and supply-chain assets.
+Every main-bound change is a release and advances the delivery minor version.
+The repository pre-commit hook prepares the bump automatically and CI verifies
+it. Release artifacts are generated after all CI gates pass, then the triggered
+Release workflow creates the GitHub Release and publishes the exact final VSIX
+to the VS Code Marketplace.

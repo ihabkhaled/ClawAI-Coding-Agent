@@ -1,65 +1,53 @@
 ---
 name: version-every-change
-description: Apply semantic versioning when intentionally preparing a ClawAI Coding Agent release. Normal main updates may keep the current already-published version.
+description: Every main-bound ClawAI Coding Agent change is a delivery release. Ensure one automatic minor bump, aligned metadata, CI packaging, GitHub Release and Marketplace publication.
 ---
 
-# Version Releases, Not Every Push
+# Version every main change
 
-Versioning is a release concern, not a main-branch tax. A normal code, docs,
-rules, skill or CI update may land on `main` while `package.json` still points
-at an already-published tag. The Release workflow detects that case and skips
-release-only steps successfully.
+Every change that reaches `main` ships a new extension release. There is no
+"normal main update" that reuses an already-published version.
 
-Bump only when intentionally publishing a new extension release.
+## Version rule
 
-## Choose the bump
+- Delivery version: advance the second SemVer component and reset patch to zero.
+- Example: `1.90.0 -> 1.91.0 -> 1.92.0`.
+- One coherent main-bound batch gets one bump.
+- Reusing an existing `v<version>` tag is a hard failure.
 
-Use the highest-impact change in the batch:
+## Automatic commit hook
 
-- **Patch**: compatible bug, reliability, security-hardening, documentation, or
-  tooling fix with no new user workflow.
-- **Minor**: backwards-compatible feature, visible UX improvement, new command,
-  new setting, or intentional permission/workflow expansion.
-- **Major**: incompatible public contract, removed capability, destructive data
-  migration, or stable-release behavior that requires user action. While the
-  extension is `0.x`, use a minor bump for incompatible pre-1.0 behavior unless
-  the release owner explicitly declares `1.0.0`.
+The repository owns `.githooks/pre-commit`. Local installs enable it through
+`scripts/install-git-hooks.mjs` (the package `prepare` script).
 
-Explain the selected level in the changelog. If uncertain between two levels,
-choose the larger safe bump.
+Before a commit, the hook runs:
 
-## Coding Agent release-number policy
+```bash
+node scripts/ensure-release-version.mjs --stage
+node scripts/verify-version-bump.mjs --base origin/main
+```
 
-For this extension, every coherent delivery release advances the **second**
-version component. Do not stop at two digits: `1.46.0` becomes `1.47.0`, then
-`1.99.0`, `1.100.0`, `1.101.0`, and so on. A release that bundles a user-facing
-fix, a capability, documentation, rules, skills, or a rebuilt VSIX is a delivery
-release unless the release owner explicitly designates it patch-only.
+The ensure step derives the required version from `origin/main`, updates
+`package.json`, both root version fields in `package-lock.json`, the README
+version sentence, and creates a CHANGELOG section if missing. It stages only
+those release-metadata files. Never bypass the hook.
 
-Use the third component for a compatible patch within an already-delivered
-release line, for example `1.46.1`, `1.46.2`, or `1.56.3`. It does not reset or
-replace the requirement to issue the next delivery release at `1.47.0`.
+CI independently runs `scripts/verify-version-bump.mjs`, so a missing or stale
+local hook cannot put an unversioned change on main.
 
-Use a major bump only for an incompatible public contract, removed capability,
-or migration that requires user action. Record the reason in the changelog and
-release notes before changing the major component.
+## Release artifact rule
 
-## Release workflow
+Generated release files are **not committed inputs** anymore. CI runs independent
+version, quality, unit/coverage, extension-host, Playwright and dependency-audit
+jobs in parallel. Only after all are green does the final package job create the
+VSIX, checksums, SBOMs and provenance and upload one release artifact.
 
-1. Decide first whether the batch is being **released now**. If not, do not bump.
-2. For an intentional release, read the current `package.json` version and
-   existing `v*` tags, then select the bump.
-3. Update `package.json` and `package-lock.json` together.
-4. Add a user-focused `CHANGELOG.md` section for the new version.
-5. Regenerate locales, format, and run every required gate in `AGENTS.md`.
-6. Generate `builds/clawai-coding-agent-<version>.vsix`; never place a new VSIX
-   at repository root.
-7. Install that exact VSIX with `code --install-extension ... --force` and
-   verify the installed version.
-8. Commit and push the coherent release once. Let the release workflow create
-   `v<version>` and attach the matching VSIX.
-9. Verify CI, the GitHub release asset, and the parent ClawAI submodule pointer.
+A successful push CI on `main` triggers the Release workflow. It downloads that
+exact artifact, verifies its hashes and source commit, creates `v<version>` and
+the GitHub Release, then publishes the same VSIX to the Visual Studio Marketplace.
+`VSCE_PAT` is required. Open VSX remains optional via `OVSX_PAT`.
 
-Do not reuse an existing tag for a new release or publish a stale VSIX. Reusing
-the existing package version on a normal main update is expected and causes the
-Release workflow to skip publication.
+## Definition of done
+
+A main-bound change is done only when CI and Release are green, the GitHub Release
+exists, and the Marketplace publish step succeeds.

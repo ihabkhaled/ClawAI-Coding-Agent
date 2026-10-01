@@ -14,8 +14,24 @@ concurrency:
   cancel-in-progress: true
 
 jobs:
+  version:
+    name: Version
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Verify delivery version bump
+        run: node scripts/verify-version-bump.mjs
+
   quality:
-    name: Quality and VSIX
+    name: Quality
     runs-on: ubuntu-latest
     steps:
       - uses: actions/checkout@v7
@@ -28,35 +44,25 @@ jobs:
       - name: Install
         run: npm ci --ignore-scripts
 
-      - name: Verify generated localization
-        shell: bash
-        run: |
-          npm run l10n:build
-          git diff --exit-code -- package.nls.json package.nls.*.json l10n
+      - name: Run quality checks
+        run: npm run check:quality
 
-      - name: Run source checks
-        run: npm run check
+  unit:
+    name: Unit and coverage
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
 
-      - name: Install Playwright browser
-        run: npx playwright install --with-deps chromium
-
-      - name: Webview end-to-end tests
-        run: npm run test:playwright
-
-      - name: Audit runtime dependencies
-        run: npm audit --omit=dev --audit-level=high
-
-      - name: Package VSIX
-        run: npm run package
-
-      - name: Generate supply-chain evidence
-        run: npm run supply-chain
-
-      - uses: actions/upload-artifact@v4
+      - uses: actions/setup-node@v7
         with:
-          name: clawai-coding-agent-vsix
-          path: 'builds/*.vsix'
-          if-no-files-found: error
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Run unit and coverage checks
+        run: npm run check:unit
 
   extension-host:
     name: Extension host
@@ -74,3 +80,99 @@ jobs:
 
       - name: Run VS Code extension-host tests
         run: xvfb-run -a npm run test:host
+
+  webview:
+    name: Webview end-to-end
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Install Playwright browser
+        run: npx playwright install --with-deps chromium
+
+      - name: Run webview end-to-end tests
+        run: npm run test:playwright
+
+  audit:
+    name: Runtime dependency audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Audit runtime dependencies
+        run: npm audit --omit=dev --audit-level=high
+
+  package:
+    name: Package VSIX
+    needs:
+      - version
+      - quality
+      - unit
+      - extension-host
+      - webview
+      - audit
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+        with:
+          fetch-depth: 0
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+          cache: npm
+
+      - name: Install
+        run: npm ci --ignore-scripts
+
+      - name: Package final VSIX
+        run: npm run package
+
+      - name: Generate supply-chain evidence
+        run: npm run supply-chain
+
+      - name: Resolve version
+        id: version
+        shell: bash
+        run: echo "version=$(node -p "require('./package.json').version")" >> "$GITHUB_OUTPUT"
+
+      - name: Verify final artifact checksums
+        env:
+          RELEASE_BASE: builds/clawai-coding-agent-${{ steps.version.outputs.version }}
+        shell: bash
+        run: |
+          (cd builds && sha256sum -c "clawai-coding-agent-${{ steps.version.outputs.version }}.vsix.sha256")
+          (cd builds && sha256sum -c "clawai-coding-agent-${{ steps.version.outputs.version }}.cdx.json.sha256")
+          (cd builds && sha256sum -c "clawai-coding-agent-${{ steps.version.outputs.version }}.spdx.json.sha256")
+          (cd builds && sha256sum -c "clawai-coding-agent-${{ steps.version.outputs.version }}.provenance.json.sha256")
+          test -f "${RELEASE_BASE}.vsix"
+
+      - uses: actions/upload-artifact@v4
+        with:
+          name: clawai-coding-agent-release
+          path: |
+            builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix
+            builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix.sha256
+            builds/clawai-coding-agent-${{ steps.version.outputs.version }}.cdx.json
+            builds/clawai-coding-agent-${{ steps.version.outputs.version }}.cdx.json.sha256
+            builds/clawai-coding-agent-${{ steps.version.outputs.version }}.spdx.json
+            builds/clawai-coding-agent-${{ steps.version.outputs.version }}.spdx.json.sha256
+            builds/clawai-coding-agent-${{ steps.version.outputs.version }}.provenance.json
+            builds/clawai-coding-agent-${{ steps.version.outputs.version }}.provenance.json.sha256
+          if-no-files-found: error
