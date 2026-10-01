@@ -2,6 +2,10 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.93.0
+
+- Maintenance release: the automated checks on GitHub no longer fail when the VS Code test window occasionally does not come up. The extension-host test lane now retries once before reporting a failure. Nothing changes in the extension itself.
+
 ## 1.92.0
 
 Security hardening and a better command line. Commands the agent runs are still not sandboxed: a command can read or write anywhere you can. These changes make the built-in tools and the checks around commands much harder to get around.
