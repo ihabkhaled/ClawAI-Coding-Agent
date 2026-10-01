@@ -105,3 +105,46 @@ describe('ChatViewProvider.postEvent', () => {
     expect(posted[0]?.event).toEqual({ type: 'CONTENT_DELTA', delta: 'the answer' });
   });
 });
+
+describe('ChatViewProvider.postCompareLive', () => {
+  const REQUEST = '2f1b0c9e-1a2b-4c3d-8e4f-5a6b7c8d9e0f';
+  const lane = {
+    delta: 'Paris.',
+    elapsedMs: 900,
+    errorMessage: null,
+    inputTokens: null,
+    laneId: 'group:OLLAMA:kimi-k2.6',
+    model: 'kimi-k2.6',
+    outputTokens: null,
+    phase: 'generating' as const,
+    provider: 'OLLAMA',
+  };
+
+  it('posts a lane update as its own message, never as a stream event', async () => {
+    const { posted, provider } = resolvedProvider();
+
+    await provider.postCompareLive({ kind: 'lane', lane }, REQUEST);
+
+    expect(posted).toEqual([{ type: 'compareLane', requestId: REQUEST, lane }]);
+  });
+
+  it('posts the judge ranking and then its verdict', async () => {
+    const { posted, provider } = resolvedProvider();
+
+    await provider.postCompareLive({ kind: 'judge-ranking', judgeModel: 'OLLAMA/kimi' }, REQUEST);
+    await provider.postCompareLive({ kind: 'judge-verdict', verdict: null }, REQUEST);
+
+    expect(posted.map((message) => [message.type, message.phase])).toEqual([
+      ['compareJudge', 'ranking'],
+      ['compareJudge', 'verdict'],
+    ]);
+  });
+
+  it('drops a malformed update instead of posting half a card', async () => {
+    const { posted, provider } = resolvedProvider();
+
+    await provider.postCompareLive({ kind: 'lane', lane: { ...lane, laneId: '' } }, REQUEST);
+
+    expect(posted).toEqual([]);
+  });
+});

@@ -59,6 +59,11 @@
 - [ ] Prompt, activity, file, response, and conversation token counters remain
       visible while streaming and distinguish reported values from estimates.
 - [ ] Compare enforces two to five models; judge mode shows judged output.
+- [ ] Compare draws one card per model as that model starts, fills each card as
+      it writes (Connecting, Thinking, Writing, Finishing), shows "The judge is
+      ranking the answers…" while the judge works, then the verdict with a winner,
+      ranks, scores and the rationale. Focus stays in the prompt box throughout;
+      a screen reader hears each phase change but not the answer text.
 - [ ] Paste a screenshot, drop a source file, and select a video. Confirm each
       appears as a removable accessible chip, remains visible on its submitted
       user message, uploads with progress, and reaches chat/agent/compare.

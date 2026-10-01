@@ -22,6 +22,7 @@ import { runnerWorkspaceFitTranslations } from './runner-workspace-fit-translati
 import { runnerRoutineTranslations } from './runner-routine-translations.mjs';
 import { cronScheduleTranslations } from './cron-schedule-translations.mjs';
 import { remoteSessionTranslations } from './remote-session-translations.mjs';
+import { compareLiveTranslations } from './compare-live-translations.mjs';
 import { usageBreakdownTranslations } from './usage-breakdown-translations.mjs';
 
 const root = cwd();
@@ -4816,6 +4817,7 @@ const marketplaceDescriptionTranslations = {
 
 function translate(locale, message) {
   return (
+    compareLiveTranslations[locale][message] ??
     marketplaceDescriptionTranslations[locale][message] ??
     authorizationPageTranslations[locale][message] ??
     conversationRewindTranslations[locale][message] ??

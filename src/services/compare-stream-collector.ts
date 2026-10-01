@@ -1,6 +1,7 @@
 import * as vscode from 'vscode';
 
 import { CompareLaneAccumulator } from '../core/compare-lane-accumulator';
+import { compareVerdictFromMetadata } from '../core/compare-verdict';
 import { SseDecoder } from '../core/sse-decoder';
 
 import { normalizeStreamEvent } from './chat-service';
@@ -35,7 +36,14 @@ export async function runCompare(input: CompareRunInput): Promise<ParallelRespon
     await discardCompareStream(early);
     return accepted;
   }
-  return collectCompareRun({ accepted, backend, early, onProgress: input.onProgress, signal });
+  return collectCompareRun({
+    accepted,
+    backend,
+    early,
+    onLive: input.onLive,
+    onProgress: input.onProgress,
+    signal,
+  });
 }
 
 /** The server answers a compare with `responses: []` and streams the lanes. */
@@ -65,14 +73,21 @@ export async function collectCompareRun(request: CompareStreamRequest): Promise<
   const response = request.early ?? (await backend.openStream(accepted.threadId, signal, true));
   const lanes = new CompareLaneAccumulator(accepted.messageId);
   const startedAt = Date.now();
-  await readUntilDone(response, lanes, request.onProgress);
+  await readUntilDone(response, lanes, request);
   signal.throwIfAborted();
   const streamed = lanes.result(accepted);
   const stored = await storedLaneMessages(backend, accepted);
+  const verdict = compareVerdictFromMetadata(stored.map((message) => message.metadata));
+  if (accepted.judgeEnabled) {
+    // The server stores the verdict on the lane messages and never streams it,
+    // so this read is the first moment it exists to show.
+    request.onLive({ kind: 'judge-verdict', verdict });
+  }
   return {
     ...streamed,
     totalLatencyMs: Date.now() - startedAt,
     responses: streamed.responses.map((lane) => mergeStoredLane(lane, stored)),
+    ...(accepted.judgeEnabled ? { judgeVerdict: verdict } : {}),
   };
 }
 
@@ -89,7 +104,7 @@ function isRunProgress(event: Record<string, unknown>): boolean {
 async function readUntilDone(
   response: Response,
   lanes: CompareLaneAccumulator,
-  onProgress: (event: Record<string, unknown>) => void,
+  sinks: Pick<CompareStreamRequest, 'onLive' | 'onProgress'>,
 ): Promise<void> {
   const body = response.body;
   if (body === null) {
@@ -109,11 +124,14 @@ async function readUntilDone(
         if (event.type === 'HEARTBEAT') {
           continue;
         }
-        lanes.apply(event);
-        // Lane text is rendered as one card per model when the run ends; a
-        // stray delta here would interleave every lane into one bubble.
+        const change = lanes.apply(event);
+        if (change !== undefined) {
+          sinks.onLive(change);
+        }
+        // Lane text goes to its own card through `onLive`; a stray delta in the
+        // progress feed would interleave every lane into one bubble.
         if (isRunProgress(event)) {
-          onProgress(event);
+          sinks.onProgress(event);
         }
       }
     }

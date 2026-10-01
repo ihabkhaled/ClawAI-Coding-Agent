@@ -1,0 +1,497 @@
+{
+  "note": "Real ClawAI Compare run captured 2026-10-01 against https://claw.local (POST /chat-messages/parallel with judgeEnabled, then GET /chat-messages/stream/:threadId and GET /chat-messages/thread/:id). Reasoning text removed; per-lane reasoning_delta frames collapsed to one each.",
+  "accepted": {
+    "messageId": "cmup96r4m000qd9mjjmug584p",
+    "threadId": "cmup96r2g000od9mjf7m2367a",
+    "prompt": "In two short sentences: what is the capital of France and why is it famous? End with the word DONE.",
+    "responses": [],
+    "totalLatencyMs": 0,
+    "completedCount": 0,
+    "failedCount": 0,
+    "judgeEnabled": true,
+    "judgeModel": "OLLAMA:kimi-k2.6"
+  },
+  "events": [
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:1",
+      "sequence": 1,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "request_accepted",
+      "label": "Request accepted",
+      "description": "Claw received your message and is preparing the run.",
+      "actorType": "request",
+      "actorName": "Claw",
+      "stageId": "request:accepted",
+      "status": "active"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:2",
+      "sequence": 2,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "response_streaming",
+      "label": "Launching comparison",
+      "description": "2 models are being executed in parallel.",
+      "actorType": "system",
+      "actorName": "Parallel compare",
+      "status": "active"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:3",
+      "sequence": 3,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "lifecycle",
+      "provider": "OLLAMA",
+      "model": "gpt-oss:120b",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "protocol": "simulated",
+      "stage": "connecting_provider",
+      "label": "Connecting to provider",
+      "actorType": "model",
+      "actorName": "OLLAMA / gpt-oss:120b",
+      "stageId": "stream:cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b:connecting_provider",
+      "status": "active"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:4",
+      "sequence": 4,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "lifecycle",
+      "provider": "OLLAMA",
+      "model": "gpt-oss:120b",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "protocol": "simulated",
+      "stage": "thinking",
+      "label": "Thinking",
+      "actorType": "model",
+      "actorName": "OLLAMA / gpt-oss:120b",
+      "stageId": "stream:cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b:thinking",
+      "status": "active"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:5",
+      "sequence": 5,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "reasoning_delta",
+      "provider": "OLLAMA",
+      "model": "gpt-oss:120b",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "reasoningDelta": "[reasoning text removed]",
+      "reasoningVisibility": "model_emitted",
+      "createdAt": "2026-10-01T08:09:28.397Z"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:52",
+      "sequence": 52,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "metrics",
+      "provider": "OLLAMA",
+      "model": "gpt-oss:120b",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "metrics": {
+        "elapsedMs": 2391,
+        "generatedTokens": 0,
+        "progressPercent": 45,
+        "progressConfidence": "estimated",
+        "estimatedCostUsd": 0
+      },
+      "progressPercent": 45,
+      "progressConfidence": "estimated"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:53",
+      "sequence": 53,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "lifecycle",
+      "provider": "OLLAMA",
+      "model": "gpt-oss:120b",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "protocol": "simulated",
+      "stage": "generating",
+      "label": "Generating response",
+      "actorType": "model",
+      "actorName": "OLLAMA / gpt-oss:120b",
+      "stageId": "stream:cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b:generating",
+      "status": "active"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:54",
+      "sequence": 54,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "content_delta",
+      "provider": "OLLAMA",
+      "model": "gpt-oss:120b",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "delta": "The capital of France is Paris. It is famous for its historic landmarks, art, fashion, and cuisine. DONE",
+      "accumulatedChars": 120
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:55",
+      "sequence": 55,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "metrics",
+      "provider": "OLLAMA",
+      "model": "gpt-oss:120b",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:gpt-oss:120b",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "metrics": {
+        "elapsedMs": 2463,
+        "timeToFirstTokenMs": 2462,
+        "tokensPerSecond": 30000,
+        "generatedTokens": 30,
+        "progressPercent": 96,
+        "progressConfidence": "stage_based",
+        "estimatedCostUsd": 0,
+        "stageTimings": {
+          "connecting_provider": {
+            "startedAtMs": 1790842168396,
+            "endedAtMs": 1790842168397
+          },
+          "thinking": {
+            "startedAtMs": 1790842168397,
+            "endedAtMs": 1790842169144
+          },
+          "generating": {
+            "startedAtMs": 1790842169144,
+            "endedAtMs": 1790842169145
+          }
+        }
+      },
+      "progressPercent": 96,
+      "progressConfidence": "stage_based"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:56",
+      "sequence": 56,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "lifecycle",
+      "provider": "OLLAMA",
+      "model": "kimi-k2.6",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "protocol": "simulated",
+      "stage": "connecting_provider",
+      "label": "Connecting to provider",
+      "actorType": "model",
+      "actorName": "OLLAMA / kimi-k2.6",
+      "stageId": "stream:cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6:connecting_provider",
+      "status": "active"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:57",
+      "sequence": 57,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "metrics",
+      "provider": "OLLAMA",
+      "model": "kimi-k2.6",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "metrics": {
+        "elapsedMs": 3409,
+        "generatedTokens": 0,
+        "progressPercent": 45,
+        "progressConfidence": "estimated",
+        "estimatedCostUsd": 0
+      },
+      "progressPercent": 45,
+      "progressConfidence": "estimated"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:58",
+      "sequence": 58,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "metrics",
+      "provider": "OLLAMA",
+      "model": "kimi-k2.6",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "metrics": {
+        "elapsedMs": 3494,
+        "generatedTokens": 0,
+        "progressPercent": 45,
+        "progressConfidence": "estimated",
+        "estimatedCostUsd": 0
+      },
+      "progressPercent": 45,
+      "progressConfidence": "estimated"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:59",
+      "sequence": 59,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "lifecycle",
+      "provider": "OLLAMA",
+      "model": "kimi-k2.6",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "protocol": "simulated",
+      "stage": "generating",
+      "label": "Generating response",
+      "actorType": "model",
+      "actorName": "OLLAMA / kimi-k2.6",
+      "stageId": "stream:cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6:generating",
+      "status": "active"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:60",
+      "sequence": 60,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "content_delta",
+      "provider": "OLLAMA",
+      "model": "kimi-k2.6",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "delta": "The capital of France is Paris. It is famous for its iconic landmarks like the Eiffel Tower, world-class art museums, and rich cultural history.\n\nDONE",
+      "accumulatedChars": 166
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:61",
+      "sequence": 61,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "metrics",
+      "provider": "OLLAMA",
+      "model": "kimi-k2.6",
+      "streamRunId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "messageId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "laneId": "cmup96r4m000qd9mjjmug584p:OLLAMA:kimi-k2.6",
+      "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+      "metrics": {
+        "elapsedMs": 3509,
+        "timeToFirstTokenMs": 3508,
+        "tokensPerSecond": 42000,
+        "generatedTokens": 42,
+        "progressPercent": 96,
+        "progressConfidence": "stage_based",
+        "estimatedCostUsd": 0,
+        "stageTimings": {
+          "connecting_provider": {
+            "startedAtMs": 1790842170091,
+            "endedAtMs": 1790842170190
+          },
+          "generating": {
+            "startedAtMs": 1790842170190,
+            "endedAtMs": 1790842170191
+          }
+        }
+      },
+      "progressPercent": 96,
+      "progressConfidence": "stage_based"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:62",
+      "sequence": 62,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "judge_evaluating",
+      "judgeModel": "OLLAMA/kimi-k2.6",
+      "label": "Verifying answer",
+      "description": "Checking the draft with OLLAMA/kimi-k2.6.",
+      "actorType": "judge",
+      "actorName": "OLLAMA/kimi-k2.6",
+      "stageId": "judge:OLLAMA/kimi-k2.6",
+      "status": "active"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:63",
+      "sequence": 63,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "response_streaming",
+      "label": "Ranking the answers side by side",
+      "description": "OLLAMA/kimi-k2.6",
+      "actorType": "system",
+      "actorName": "Orchestration",
+      "stageId": "compare-judge:OLLAMA/kimi-k2.6",
+      "status": "active"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:64",
+      "sequence": 64,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "response_streaming",
+      "label": "Ranking the answers side by side",
+      "description": "OLLAMA/kimi-k2.6",
+      "actorType": "system",
+      "actorName": "Orchestration",
+      "stageId": "compare-judge:OLLAMA/kimi-k2.6",
+      "status": "completed"
+    },
+    {
+      "eventId": "cmup96r2g000od9mjf7m2367a:65",
+      "sequence": 65,
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "type": "done",
+      "provider": "parallel",
+      "model": "parallel",
+      "label": "Response complete",
+      "description": "The final answer is ready.",
+      "actorType": "model",
+      "actorName": "parallel / parallel",
+      "stageId": "response:complete",
+      "status": "completed"
+    }
+  ],
+  "stored": [
+    {
+      "id": "cmup96xvi000td9mj3zfjc50x",
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "role": "ASSISTANT",
+      "content": "The capital of France is Paris. It is famous for its iconic landmarks like the Eiffel Tower, world-class art museums, and rich cultural history.\n\nDONE",
+      "provider": "OLLAMA",
+      "model": "kimi-k2.6",
+      "inputTokens": 976,
+      "outputTokens": 41,
+      "latencyMs": 3409,
+      "metadata": {
+        "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+        "judgeState": "ranked",
+        "compareLaneIndex": 0,
+        "compareJudge": {
+          "lanes": [
+            {
+              "rank": 1,
+              "label": "B",
+              "model": "gpt-oss:120b",
+              "score": 9,
+              "reason": "Concisely answers both questions in exactly two short sentences and properly ends with DONE.",
+              "provider": "OLLAMA",
+              "laneIndex": 1,
+              "truncated": false,
+              "criticSummary": null
+            },
+            {
+              "rank": 2,
+              "label": "A",
+              "model": "kimi-k2.6",
+              "score": 8,
+              "reason": "Informative but slightly verbose with 'iconic landmarks like the Eiffel Tower, world-class art museums, and rich cultural history' stretching beyond two short sentences.",
+              "provider": "OLLAMA",
+              "laneIndex": 0,
+              "truncated": false,
+              "criticSummary": null
+            }
+          ],
+          "scale": {
+            "max": 10,
+            "min": 0
+          },
+          "usage": {
+            "source": "NATIVE",
+            "estimated": false,
+            "inputTokens": 1402,
+            "outputTokens": 168
+          },
+          "status": "ranked",
+          "shuffle": {
+            "seed": "cmup96r4m000qd9mjjmug584p",
+            "order": [0, 1],
+            "labels": ["A", "B"]
+          },
+          "version": 1,
+          "judgedAt": "2026-10-01T08:09:34.973Z",
+          "latencyMs": 4781,
+          "rationale": "Both candidates correctly identify Paris and explain its fame while ending with DONE. However, B better adheres to the 'two short sentences' constraint with cleaner brevity, while A's second sentence is longer and more list-like. B's tighter structure more precisely matches the user's formatting request.",
+          "truncated": false,
+          "judgeModel": "OLLAMA/kimi-k2.6",
+          "failureReason": null,
+          "tiedLaneIndices": [],
+          "winnerLaneIndex": 1
+        }
+      }
+    },
+    {
+      "id": "cmup96xvj000ud9mjstcifjad",
+      "threadId": "cmup96r2g000od9mjf7m2367a",
+      "role": "ASSISTANT",
+      "content": "The capital of France is Paris. It is famous for its historic landmarks, art, fashion, and cuisine. DONE",
+      "provider": "OLLAMA",
+      "model": "gpt-oss:120b",
+      "inputTokens": 1023,
+      "outputTokens": 304,
+      "latencyMs": 1714,
+      "metadata": {
+        "parallelGroupId": "cmup96r4m000qd9mjjmug584p",
+        "judgeState": "ranked",
+        "compareLaneIndex": 1,
+        "compareJudge": {
+          "lanes": [
+            {
+              "rank": 1,
+              "label": "B",
+              "model": "gpt-oss:120b",
+              "score": 9,
+              "reason": "Concisely answers both questions in exactly two short sentences and properly ends with DONE.",
+              "provider": "OLLAMA",
+              "laneIndex": 1,
+              "truncated": false,
+              "criticSummary": null
+            },
+            {
+              "rank": 2,
+              "label": "A",
+              "model": "kimi-k2.6",
+              "score": 8,
+              "reason": "Informative but slightly verbose with 'iconic landmarks like the Eiffel Tower, world-class art museums, and rich cultural history' stretching beyond two short sentences.",
+              "provider": "OLLAMA",
+              "laneIndex": 0,
+              "truncated": false,
+              "criticSummary": null
+            }
+          ],
+          "scale": {
+            "max": 10,
+            "min": 0
+          },
+          "usage": {
+            "source": "NATIVE",
+            "estimated": false,
+            "inputTokens": 1402,
+            "outputTokens": 168
+          },
+          "status": "ranked",
+          "shuffle": {
+            "seed": "cmup96r4m000qd9mjjmug584p",
+            "order": [0, 1],
+            "labels": ["A", "B"]
+          },
+          "version": 1,
+          "judgedAt": "2026-10-01T08:09:34.973Z",
+          "latencyMs": 4781,
+          "rationale": "Both candidates correctly identify Paris and explain its fame while ending with DONE. However, B better adheres to the 'two short sentences' constraint with cleaner brevity, while A's second sentence is longer and more list-like. B's tighter structure more precisely matches the user's formatting request.",
+          "truncated": false,
+          "judgeModel": "OLLAMA/kimi-k2.6",
+          "failureReason": null,
+          "tiedLaneIndices": [],
+          "winnerLaneIndex": 1
+        }
+      }
+    }
+  ]
+}

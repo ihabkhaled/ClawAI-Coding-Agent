@@ -41,6 +41,41 @@ the extension acts only on known fields. Individual events are size-bounded.
 The extension uses `replay=false` for active runs so older buffered model,
 failure, and completion events cannot enter a new request on a reused thread.
 
+## Compare: what the server sends and what a card shows
+
+Recorded from a real run against https://claw.local on 2026-10-01 (kimi-k2.6 and
+gpt-oss:120b, judge on; the frames are in `tests/fixtures/compare/real-compare-run.json`).
+`POST /chat-messages/parallel` answers at once with `responses: []`; the work
+then streams on `GET /chat-messages/stream/:threadId`. A lane's id is
+`<messageId>:<provider>:<model>`. Every lane frame carries `laneId`, `provider`
+and `model`; the run-wide frames carry none.
+
+| Frame (type)                                                                                                       | Carries                                                                                | What the extension does                                                                                                     |
+| ------------------------------------------------------------------------------------------------------------------ | -------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------- |
+| `request_accepted`, `response_streaming` "Launching comparison"                                                    | label only                                                                             | Progress feed.                                                                                                              |
+| `lifecycle`                                                                                                        | `stage`: `connecting_provider`, `thinking`, `generating` (others leave the card alone) | Draws the lane's card on its first frame; sets its phase (Connecting, Thinking, Writing).                                   |
+| `reasoning_delta`                                                                                                  | the model's own reasoning text                                                         | Only the fact that the lane is thinking reaches the panel. The text never does.                                             |
+| `content_delta`                                                                                                    | `delta`, `accumulatedChars`                                                            | Appended to that lane's card. Some connector models send the whole answer as one delta.                                     |
+| `metrics`                                                                                                          | `metrics.elapsedMs`, `progressPercent`                                                 | Elapsed time on the card. The final frame of a lane is `progressPercent: 96` with `stageTimings`: the card shows Finishing. |
+| `usage`                                                                                                            | `usage.promptTokens`, `completionTokens`                                               | Token chip (not sent by every provider; the stored copy is read at the end).                                                |
+| `judge_evaluating` and `response_streaming` "Ranking the answers side by side" (`stageId` `compare-judge:<judge>`) | `judgeModel`                                                                           | Shows the judge as ranking, once.                                                                                           |
+| `done`                                                                                                             | none                                                                                   | Ends the run.                                                                                                               |
+
+The judge's verdict is **not streamed**. The server stores it on every lane
+message as `metadata.compareJudge` just before `done`, so the extension reads the
+thread's stored messages after `done` (`GET /chat-messages/thread/:id`) and
+shows the verdict at that moment. Its shape: `status` (`ranked`, `unavailable`,
+`skipped`), `judgeModel`, `lanes[]` (`laneIndex` in the request's model order,
+`label` A to Z, `provider`, `model`, `rank`, `score`, `reason`), `winnerLaneIndex`
+(null on a tie or when nothing was ranked), `tiedLaneIndices`, `rationale` (which
+names candidates by label), `scale` (0 to 10). `metadata.judgeReview` is always null
+for Compare. Cards are matched to the verdict by provider and model.
+
+The host posts these to the panel as `compareLane` and `compareJudge` messages
+(`src/webview/chat-compare-message.ts`, validated before posting); the final
+`result` message carries the same cards plus `compare.judgeVerdict`
+(null: the verdict could not be read; absent: judging was not requested).
+
 Contract changes require synchronized backend and extension tests. Do not use
 undocumented service-private endpoints.
 

@@ -1581,61 +1581,364 @@ function compareReceipt(response) {
   return { input: 0, output, source: 'estimated', total: output };
 }
 
-function renderStructuredCompare(responseBody, compare, requestId) {
+// Compare: live lane cards and the judge verdict.
+//
+// One section per Compare request. A lane's card is drawn on its first stream
+// frame and filled in place as that lane writes; the judge's verdict joins when
+// it arrives; the final `result` then reconciles with what is already on screen
+// instead of replacing it, so nothing a reader is looking at is rebuilt and
+// nothing here ever moves focus. Model text only ever goes through
+// textContent. Lane text is never announced (it would read every token aloud):
+// a hidden polite status line announces each lane's phase and the verdict.
+const compareRuns = new Map();
+
+function compareLaneKey(provider, model) {
+  return `${provider}\u0000${model}`;
+}
+
+function comparePhaseLabel(phase) {
+  if (phase === 'thinking') {
+    return labels.compareThinking;
+  }
+  if (phase === 'generating') {
+    return labels.compareWriting;
+  }
+  if (phase === 'finishing') {
+    return labels.compareFinishing;
+  }
+  return phase === 'failed' ? labels.failed : labels.connecting;
+}
+
+function announceCompare(run, text) {
+  run.status.textContent = text;
+}
+
+function compareRunFor(requestId, responseBody) {
+  const existing = compareRuns.get(requestId);
+  if (existing && existing.section.parentElement === responseBody) {
+    return existing;
+  }
   const section = document.createElement('section');
   section.className = 'compare-results';
   section.setAttribute('aria-label', labels.compareResults);
-  const receipts = [];
-  if (compare.judgeEnabled && typeof compare.judgeModel === 'string') {
-    section.append(
-      textElement('p', 'judge-banner', translatedTemplate(labels.judgeModel, compare.judgeModel)),
-    );
-  }
-  for (const response of compare.responses) {
-    const responseReceipt = compareReceipt(response);
-    receipts.push(responseReceipt);
-    const card = document.createElement('article');
-    card.className = 'compare-card';
-    card.dataset.status = response.status;
-    const header = document.createElement('header');
-    const identity = document.createElement('span');
-    identity.className = 'compare-identity';
-    identity.append(
-      textElement('strong', '', response.provider),
-      textElement('code', '', response.model),
-    );
-    header.append(
-      identity,
-      textElement('span', 'compare-status', compareStatusLabel(response.status)),
-    );
-    const content = textElement(
-      'pre',
-      'compare-content',
-      response.content || response.errorMessage || compareStatusLabel(response.status),
-    );
-    const footer = document.createElement('footer');
-    const receipt = tokenChip(responseReceipt, 'compare-token-chip');
-    const latency = textElement('span', 'compare-latency', `${response.latencyMs} ms`);
-    const copy = textElement('button', 'compare-copy quiet-button', labels.copyModel);
-    copy.type = 'button';
-    copy.addEventListener('click', async () => {
-      await navigator.clipboard.writeText(response.content || response.errorMessage || '');
-      copy.textContent = labels.copied;
-      window.setTimeout(() => {
-        copy.textContent = labels.copyModel;
-      }, 1200);
-    });
-    footer.append(receipt, latency, copy);
-    card.append(header, content);
-    if (response.content && response.errorMessage) {
-      card.append(textElement('p', 'compare-error', response.errorMessage));
-    }
-    card.append(footer);
-    section.append(card);
-  }
+  section.setAttribute('aria-busy', 'true');
+  const status = textElement('p', 'sr-only', '');
+  status.setAttribute('role', 'status');
+  status.setAttribute('aria-live', 'polite');
+  section.append(status);
   responseBody.replaceChildren(section);
   responseBody.dataset.streamPlaceholder = 'false';
   responseBody.closest('.message-card')?.classList.add('compare-message');
+  const run = {
+    banner: null,
+    cards: new Map(),
+    judgeModel: null,
+    section,
+    status,
+    verdict: null,
+    verdictAnnounced: false,
+  };
+  compareRuns.set(requestId, run);
+  return run;
+}
+
+function createCompareCard(provider, model) {
+  const card = document.createElement('article');
+  card.className = 'compare-card';
+  card.dataset.status = 'running';
+  const header = document.createElement('header');
+  const identity = document.createElement('span');
+  identity.className = 'compare-identity';
+  identity.append(textElement('strong', '', provider), textElement('code', '', model));
+  const status = textElement('span', 'compare-status', labels.connecting);
+  header.append(identity, status);
+  const content = textElement('pre', 'compare-content', '');
+  content.dir = 'auto';
+  const text = document.createTextNode('');
+  content.append(text);
+  const footer = document.createElement('footer');
+  const latency = textElement('span', 'compare-latency', '');
+  latency.hidden = true;
+  const copy = textElement('button', 'compare-copy quiet-button', labels.copyModel);
+  copy.type = 'button';
+  footer.append(latency, copy);
+  card.append(header, content, footer);
+  const refs = {
+    card,
+    content,
+    copy,
+    copyText: '',
+    error: null,
+    footer,
+    latency,
+    receipt: null,
+    status,
+    text,
+  };
+  copy.addEventListener('click', async () => {
+    await navigator.clipboard.writeText(refs.copyText);
+    copy.textContent = labels.copied;
+    window.setTimeout(() => {
+      copy.textContent = labels.copyModel;
+    }, 1200);
+  });
+  return refs;
+}
+
+function compareCardFor(run, provider, model) {
+  const key = compareLaneKey(provider, model);
+  const existing = run.cards.get(key);
+  if (existing) {
+    return { isNew: false, refs: existing };
+  }
+  const refs = createCompareCard(provider, model);
+  run.cards.set(key, refs);
+  // Cards sit between the judge banner and the verdict panel.
+  run.section.insertBefore(refs.card, run.verdict);
+  return { isNew: true, refs };
+}
+
+function setCompareLatency(refs, milliseconds) {
+  refs.latency.textContent = `${milliseconds} ms`;
+  refs.latency.hidden = false;
+}
+
+function setCompareReceipt(refs, response) {
+  const receipt = tokenChip(compareReceipt(response), 'compare-token-chip');
+  refs.receipt?.remove();
+  refs.receipt = receipt;
+  refs.footer.insertBefore(receipt, refs.latency);
+}
+
+function applyCompareLane(requestId, lane) {
+  const responseBody = responseBodies.get(requestId);
+  if (!responseBody || typeof lane?.provider !== 'string' || typeof lane?.model !== 'string') {
+    return;
+  }
+  const run = compareRunFor(requestId, responseBody);
+  const { isNew, refs } = compareCardFor(run, lane.provider, lane.model);
+  if (typeof lane.delta === 'string' && lane.delta.length > 0) {
+    refs.text.appendData(lane.delta);
+    refs.copyText += lane.delta;
+  }
+  const label = comparePhaseLabel(lane.phase);
+  const changed = refs.status.textContent !== label;
+  refs.status.textContent = label;
+  refs.card.dataset.phase = String(lane.phase);
+  if (lane.phase === 'failed') {
+    refs.card.dataset.status = 'failed';
+    if (refs.text.data === '' && typeof lane.errorMessage === 'string') {
+      refs.text.data = lane.errorMessage;
+      refs.copyText = lane.errorMessage;
+    }
+  }
+  if (Number.isFinite(lane.elapsedMs)) {
+    setCompareLatency(refs, lane.elapsedMs);
+  }
+  if (Number.isFinite(lane.inputTokens) || Number.isFinite(lane.outputTokens)) {
+    setCompareReceipt(refs, lane);
+  }
+  if (isNew || changed) {
+    announceCompare(run, `${lane.model}: ${label}`);
+  }
+}
+
+function ensureCompareBanner(run, judgeModel) {
+  if (typeof judgeModel !== 'string' || judgeModel.length === 0) {
+    return;
+  }
+  if (!run.banner) {
+    run.banner = textElement('p', 'judge-banner', '');
+    run.section.prepend(run.banner);
+  }
+  run.banner.textContent = translatedTemplate(labels.judgeModel, judgeModel);
+}
+
+function ensureCompareVerdictPanel(run) {
+  if (!run.verdict) {
+    run.verdict = document.createElement('section');
+    run.verdict.className = 'compare-verdict';
+    run.verdict.setAttribute('aria-label', labels.compareVerdict);
+    run.section.append(run.verdict);
+  }
+  return run.verdict;
+}
+
+function compareVerdictSummary(verdict) {
+  const named = (laneIndex) => {
+    const lane = verdict.lanes.find((entry) => entry.laneIndex === laneIndex);
+    return lane ? lane.model : '';
+  };
+  if (verdict.winnerLaneIndex !== null && verdict.winnerLaneIndex !== undefined) {
+    return translatedTemplate(labels.compareWinnerLine, named(verdict.winnerLaneIndex));
+  }
+  if (Array.isArray(verdict.tiedLaneIndices) && verdict.tiedLaneIndices.length > 1) {
+    return translatedTemplate(labels.compareTieLine, verdict.tiedLaneIndices.map(named).join(', '));
+  }
+  return '';
+}
+
+function compareVerdictItem(lane, scale) {
+  const item = document.createElement('li');
+  item.className = 'compare-verdict-item';
+  const head = document.createElement('p');
+  head.className = 'compare-verdict-head';
+  head.append(
+    textElement('span', 'compare-chip', translatedTemplate(labels.compareRank, lane.rank)),
+    textElement('strong', '', lane.model),
+    textElement(
+      'span',
+      'compare-verdict-score',
+      translatedTemplate(labels.compareScore, lane.score, scale.max),
+    ),
+  );
+  if (lane.label) {
+    head.append(
+      textElement(
+        'span',
+        'compare-verdict-label',
+        translatedTemplate(labels.compareCandidate, lane.label),
+      ),
+    );
+  }
+  item.append(head);
+  if (lane.reason) {
+    const reason = textElement('p', 'compare-verdict-reason', lane.reason);
+    reason.dir = 'auto';
+    item.append(reason);
+  }
+  return item;
+}
+
+// A verdict names its lanes by provider and model, never by stream order, so a
+// card is found by the same key that drew it.
+function decorateCompareCards(run, verdict) {
+  for (const lane of verdict.lanes) {
+    const refs = run.cards.get(compareLaneKey(lane.provider, lane.model));
+    if (!refs) {
+      continue;
+    }
+    refs.footer.querySelectorAll('.compare-rank-chip').forEach((chip) => chip.remove());
+    const rank = textElement(
+      'span',
+      'compare-chip compare-rank-chip',
+      `${translatedTemplate(labels.compareRank, lane.rank)} · ${translatedTemplate(labels.compareScore, lane.score, verdict.scale.max)}`,
+    );
+    refs.footer.prepend(rank);
+    const winner = lane.laneIndex === verdict.winnerLaneIndex;
+    refs.card.dataset.winner = winner ? 'true' : 'false';
+    if (winner) {
+      rank.before(
+        textElement(
+          'span',
+          'compare-chip compare-rank-chip compare-winner-chip',
+          labels.compareWinner,
+        ),
+      );
+    }
+  }
+}
+
+function renderCompareVerdict(run, verdict, announce) {
+  const panel = ensureCompareVerdictPanel(run);
+  panel.replaceChildren();
+  if (verdict === null || verdict === undefined) {
+    panel.dataset.state = 'missing';
+    panel.append(textElement('p', 'compare-verdict-status', labels.compareJudgeMissing));
+    return;
+  }
+  ensureCompareBanner(run, verdict.judgeModel);
+  panel.dataset.state = verdict.status;
+  if (verdict.status !== 'ranked') {
+    panel.append(
+      textElement(
+        'p',
+        'compare-verdict-status',
+        verdict.status === 'skipped' ? labels.compareJudgeSkipped : labels.compareJudgeFailed,
+      ),
+    );
+    return;
+  }
+  const summary = compareVerdictSummary(verdict);
+  panel.append(textElement('p', 'compare-verdict-title', labels.compareVerdict));
+  if (summary) {
+    panel.append(textElement('p', 'compare-verdict-summary', summary));
+  }
+  const list = document.createElement('ol');
+  list.className = 'compare-verdict-list';
+  list.append(...verdict.lanes.map((lane) => compareVerdictItem(lane, verdict.scale)));
+  panel.append(list);
+  if (verdict.rationale) {
+    const rationale = textElement('p', 'compare-verdict-rationale', verdict.rationale);
+    rationale.dir = 'auto';
+    panel.append(rationale);
+  }
+  decorateCompareCards(run, verdict);
+  if (announce && !run.verdictAnnounced) {
+    run.verdictAnnounced = true;
+    announceCompare(run, summary ? `${labels.compareVerdict}: ${summary}` : labels.compareVerdict);
+  }
+}
+
+function applyCompareJudge(requestId, message) {
+  const responseBody = responseBodies.get(requestId);
+  if (!responseBody) {
+    return;
+  }
+  const run = compareRunFor(requestId, responseBody);
+  if (message.phase === 'ranking') {
+    run.judgeModel = typeof message.judgeModel === 'string' ? message.judgeModel : run.judgeModel;
+    ensureCompareBanner(run, run.judgeModel);
+    const panel = ensureCompareVerdictPanel(run);
+    panel.dataset.state = 'ranking';
+    panel.replaceChildren(textElement('p', 'compare-verdict-status', labels.compareJudgeRanking));
+    announceCompare(run, labels.compareJudgeRanking);
+  } else if (message.phase === 'verdict') {
+    renderCompareVerdict(run, message.verdict, true);
+  }
+}
+
+function fillCompareCard(refs, response) {
+  const shown = response.content || response.errorMessage || compareStatusLabel(response.status);
+  refs.card.dataset.status = response.status;
+  delete refs.card.dataset.phase;
+  refs.status.textContent = compareStatusLabel(response.status);
+  refs.text.data = shown;
+  refs.copyText = response.content || response.errorMessage || '';
+  setCompareReceipt(refs, response);
+  setCompareLatency(refs, response.latencyMs);
+  refs.error?.remove();
+  refs.error = null;
+  if (response.content && response.errorMessage) {
+    refs.error = textElement('p', 'compare-error', response.errorMessage);
+    refs.content.after(refs.error);
+  }
+}
+
+function renderStructuredCompare(responseBody, compare, requestId) {
+  const run = compareRunFor(requestId, responseBody);
+  const receipts = [];
+  const verdict = compare.judgeVerdict;
+  if (compare.judgeEnabled) {
+    ensureCompareBanner(
+      run,
+      verdict?.judgeModel ??
+        run.judgeModel ??
+        (typeof compare.judgeModel === 'string' ? compare.judgeModel : null),
+    );
+  }
+  for (const response of compare.responses) {
+    const { refs } = compareCardFor(run, response.provider, response.model);
+    fillCompareCard(refs, response);
+    receipts.push(compareReceipt(response));
+  }
+  if (verdict !== undefined) {
+    renderCompareVerdict(run, verdict, false);
+  } else if (run.verdict?.dataset.state === 'ranking') {
+    renderCompareVerdict(run, null, false);
+  }
+  run.section.setAttribute('aria-busy', 'false');
+  compareRuns.delete(requestId);
   const aggregate = receipts.reduce(
     (total, receipt) => ({
       input: total.input + receipt.input,
@@ -3547,6 +3850,7 @@ window.addEventListener('message', (event) => {
     responseBodies.get(message.requestId)?.closest('.timeline-item')?.remove();
     renumberTurns();
     responseBodies.delete(message.requestId);
+    compareRuns.delete(message.requestId);
     streamStates.delete(message.requestId);
     activityLists.delete(message.requestId);
     requestTokens.delete(message.requestId);
@@ -3589,6 +3893,10 @@ window.addEventListener('message', (event) => {
       responseBody.dataset.streamPlaceholder = 'false';
       updateEstimatedOutput(message.requestId, responseBody.textContent);
     }
+  } else if (message?.type === 'compareLane' && typeof message.requestId === 'string') {
+    applyCompareLane(message.requestId, message.lane);
+  } else if (message?.type === 'compareJudge' && typeof message.requestId === 'string') {
+    applyCompareJudge(message.requestId, message);
   } else if (message?.type === 'result') {
     const responseBody = responseBodies.get(message.requestId);
     const streamState = streamStates.get(message.requestId);
@@ -3618,6 +3926,7 @@ window.addEventListener('message', (event) => {
     }
     elements.streamStatus.textContent = labels.completed;
     responseBodies.delete(message.requestId);
+    compareRuns.delete(message.requestId);
     streamStates.delete(message.requestId);
     activityLists.delete(message.requestId);
   } else if (message?.type === 'error') {
@@ -3639,6 +3948,7 @@ window.addEventListener('message', (event) => {
         );
       }
       responseBodies.delete(message.requestId);
+      compareRuns.delete(message.requestId);
       streamStates.delete(message.requestId);
       activityLists.delete(message.requestId);
     }

@@ -132,6 +132,29 @@ body[data-theme='dark'] {
   --claw-surface-sunken: color-mix(in srgb, CanvasText 4%, Canvas);
   --claw-tint: color-mix(in srgb, var(--claw-accent) 8%, Canvas);
   --claw-tint-strong: color-mix(in srgb, var(--claw-accent) 18%, Canvas);
+  /* Status colours are palette values picked for the palette's own background.
+     Pulled toward the forced scheme's text colour they stay readable on the
+     forced background, which the palette's green or gold is not. */
+  --claw-success: color-mix(
+    in srgb,
+    var(--vscode-testing-iconPassed, var(--vscode-charts-green)) 55%,
+    CanvasText
+  );
+  --claw-danger: color-mix(
+    in srgb,
+    var(--vscode-testing-iconFailed, var(--vscode-errorForeground)) 55%,
+    CanvasText
+  );
+  --claw-warning: color-mix(
+    in srgb,
+    var(--vscode-editorWarning-foreground, CanvasText) 55%,
+    CanvasText
+  );
+  --claw-running: color-mix(
+    in srgb,
+    var(--vscode-progressBar-background, var(--vscode-textLink-foreground)) 55%,
+    CanvasText
+  );
 }
 
 /* --------------------------------------------------------------------------
@@ -2078,6 +2101,135 @@ pre {
   margin-inline-start: auto;
 }
 
+/* A lane that is still running reads as in progress, not as done. */
+.compare-card[data-status='running'] .compare-status {
+  border: 1px solid var(--claw-running);
+  color: var(--claw-text);
+  background: color-mix(in srgb, var(--claw-running) 14%, transparent);
+}
+
+.compare-card[data-status='running'] .compare-content:empty {
+  min-height: 2.5em;
+}
+
+.compare-card[data-winner='true'] {
+  border-color: var(--claw-success);
+}
+
+.compare-chip {
+  display: inline-flex;
+  max-width: 100%;
+  align-items: center;
+  padding: 1px var(--sp-2);
+  border: 1px solid var(--claw-line);
+  border-radius: var(--radius-pill);
+  color: var(--claw-text);
+  background: var(--claw-surface-raised);
+  font-size: var(--fs-xs);
+  font-weight: 650;
+  line-height: 1.4;
+  overflow-wrap: anywhere;
+}
+
+.compare-winner-chip {
+  border-color: var(--claw-success);
+  background: color-mix(in srgb, var(--claw-success) 16%, transparent);
+}
+
+/* The judge's verdict spans every column, under the cards it ranks. */
+.compare-verdict {
+  display: grid;
+  min-width: 0;
+  grid-column: 1 / -1;
+  gap: var(--sp-2);
+  padding: var(--sp-3);
+  border: 1px solid var(--claw-line-soft);
+  border-inline-start: 3px solid var(--claw-warning);
+  border-radius: var(--radius-md);
+  background: var(--claw-tint);
+}
+
+.compare-verdict > p,
+.compare-verdict-list {
+  min-width: 0;
+  margin: 0;
+}
+
+.compare-verdict-title {
+  font-size: var(--fs-xs);
+  font-weight: 700;
+  letter-spacing: 0.03em;
+}
+
+.compare-verdict-summary {
+  font-size: var(--fs-sm);
+  font-weight: 650;
+}
+
+.compare-verdict-status,
+.compare-verdict-rationale,
+.compare-verdict-reason {
+  color: var(--claw-muted);
+  font-size: var(--fs-sm);
+  line-height: var(--lh-body);
+  overflow-wrap: anywhere;
+}
+
+.compare-verdict[data-state='ranking'] .compare-verdict-status::before {
+  content: '';
+  display: inline-block;
+  width: 8px;
+  height: 8px;
+  margin-inline-end: var(--sp-2);
+  border-radius: 50%;
+  background: var(--claw-running);
+  animation: compare-ranking-pulse 1.2s ease-in-out infinite;
+}
+
+@keyframes compare-ranking-pulse {
+  50% {
+    opacity: 0.25;
+  }
+}
+
+.compare-verdict-list {
+  display: grid;
+  padding: 0;
+  gap: var(--sp-2);
+  list-style: none;
+}
+
+.compare-verdict-item {
+  display: grid;
+  min-width: 0;
+  gap: 2px;
+}
+
+.compare-verdict-head {
+  display: flex;
+  min-width: 0;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-2);
+  margin: 0;
+  font-size: var(--fs-sm);
+}
+
+.compare-verdict-head > strong {
+  min-width: 0;
+  overflow-wrap: anywhere;
+}
+
+.compare-verdict-score,
+.compare-verdict-label {
+  color: var(--claw-muted);
+  font-size: var(--fs-xs);
+}
+
+.compare-verdict-reason {
+  margin: 0;
+}
+
 /* --------------------------------------------------------------------------
    Model tray
    -------------------------------------------------------------------------- */
@@ -3035,6 +3187,8 @@ body[data-view-density='focus'] .conversation {
   .token-chip,
   .message-model-chip,
   .compare-card,
+  .compare-verdict,
+  .compare-chip,
   .model-group,
   .selected-model-chip,
   .secondary-controls,

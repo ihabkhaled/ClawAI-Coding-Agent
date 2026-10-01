@@ -2,6 +2,13 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.90.0
+
+- Compare and Compare + Judge now show their work as it happens. Each model gets its own card the moment it starts, the card shows whether the model is connecting, thinking, writing or finishing, and the answer fills in as it is written. While the judge works you see that it is ranking the answers; when the verdict is ready it appears with the winner, each model's rank and score, the judge's reason for each, and its overall rationale. The cards you were watching stay in place when the run ends.
+- Screen readers hear each phase change ("kimi-k2.6: Writing", "The judge is ranking the answers…", the winner) without the answer text being read out word by word, and the focus never leaves the box you are typing in. The cards and the verdict fit panels as narrow as 320 pixels, read right to left, and stay legible in light and dark themes.
+- The status words on Compare cards (Connecting, Completed, Failed, Timed out) are now translated; they were English in every other language.
+- In the forced light and dark themes, the green, red, gold and accent status colours are now chosen to be readable on the forced background.
+
 ## 1.89.0
 
 - Compare and Compare + Judge work again. The ClawAI server now answers a comparison straight away and runs the models in the background; the extension used to reject that answer. It now waits on the live stream, shows progress while the models and the judge work, and then shows one card per model with the judge's verdict.

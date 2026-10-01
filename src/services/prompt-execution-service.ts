@@ -212,6 +212,11 @@ export class PromptExecutionService {
             onAccepted: (acceptedThreadId) => {
               this.dependencies.activateThread(acceptedThreadId, requestId);
             },
+            onLive: (change) => {
+              if (!signal.aborted) {
+                void this.dependencies.view()?.postCompareLive(change, requestId);
+              }
+            },
             onProgress: (event) => {
               void this.dependencies.view()?.postEvent(event, requestId);
             },

@@ -82,8 +82,11 @@ export interface ContrastRow {
   ratio: number;
 }
 
-/** Contrast of every visible target control, composited over the first opaque ancestor background. */
-export async function measureContrast(page: Page): Promise<ContrastRow[]> {
+/** Contrast of every visible element matching `targets` (the matrix controls by default), composited over the first opaque ancestor background. */
+export async function measureContrast(
+  page: Page,
+  targets: string = controlSelector,
+): Promise<ContrastRow[]> {
   return page.evaluate((selector) => {
     type Rgba = [number, number, number, number];
     const parse = (value: string): Rgba => {
@@ -132,7 +135,7 @@ export async function measureContrast(page: Page): Promise<ContrastRow[]> {
       rows.push({ name, ratio: (light + 0.05) / (dark + 0.05) });
     });
     return rows;
-  }, controlSelector);
+  }, targets);
 }
 
 export const mediumViewport: Viewport = { label: '400-portrait', width: 400, height: 800 };
