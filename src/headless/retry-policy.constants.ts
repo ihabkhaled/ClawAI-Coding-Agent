@@ -21,6 +21,9 @@ export const TRANSIENT_STATUSES: readonly number[] = [408, 429, 502, 503, 504];
 /** A 500 is retried only when its body says the runtime state was unavailable. */
 export const UNAVAILABLE_BODY_PATTERN = /unavailable/iu;
 
+/** A 400 is retried only when its body says the provider was busy: the same request succeeds shortly. */
+export const BUSY_BODY_PATTERN = /\bbusy\b/iu;
+
 /** Error codes Node and undici put on a failed connection or a dropped socket. */
 export const TRANSIENT_NETWORK_CODES: readonly string[] = [
   'ECONNRESET',

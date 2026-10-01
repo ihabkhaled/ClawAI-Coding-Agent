@@ -4,6 +4,7 @@ import { platform as hostPlatform } from 'node:process';
 
 import { GIT_MATCH_EVERYTHING_PATTERN } from './git-tools.constants';
 import { stagedPaths } from './write-scope-git';
+import { modifiedUnder, normalizeScopedPath, protectedDirectories } from './write-scope-path';
 import {
   WRITE_SCOPE_ALWAYS_DENY,
   WRITE_SCOPE_CASE_INSENSITIVE_PLATFORMS,
@@ -87,6 +88,26 @@ export function compileGlob(pattern: string, caseInsensitive: boolean): RegExp {
   return new RegExp(`^${source}$`, caseInsensitive ? 'iu' : 'u');
 }
 
+function compileScope(
+  scope: readonly string[],
+  deny: readonly string[],
+  options: WriteScopeOptions,
+): WriteScope {
+  const platform = options.platform ?? hostPlatform;
+  const insensitive = WRITE_SCOPE_CASE_INSENSITIVE_PLATFORMS.includes(platform);
+  const denied = [...WRITE_SCOPE_ALWAYS_DENY, ...deny];
+  return {
+    scopeGlobs: scope,
+    denyGlobs: deny.length === 0 && scope.length === 0 ? ['.git/**'] : deny,
+    allow: (scope.length === 0 ? ['**'] : scope).map((glob) => compileGlob(glob, insensitive)),
+    deny: denied.map((glob) => compileGlob(glob, insensitive)),
+    protectedDirs: protectedDirectories(denied),
+    windowsNames: platform === 'win32',
+    insensitive,
+    onViolation: options.onViolation,
+  };
+}
+
 /**
  * The compiled scope, or undefined when nothing restricts writes. A `deny`
  * with no `scope` means "anywhere except there". Throws a RangeError for a
@@ -98,19 +119,10 @@ export function createWriteScope(
 ): WriteScope | undefined {
   const scope = (config.scope ?? []).map(normalizeGlob);
   const deny = (config.deny ?? []).map(normalizeGlob);
-  if (scope.length === 0 && deny.length === 0) return undefined;
+  if (scope.length === 0 && deny.length === 0 && options.alwaysGuard !== true) return undefined;
   const problem = writeScopeProblem(scope, deny);
   if (problem !== undefined) throw new RangeError(problem);
-  const insensitive = WRITE_SCOPE_CASE_INSENSITIVE_PLATFORMS.includes(
-    options.platform ?? hostPlatform,
-  );
-  return {
-    scopeGlobs: scope,
-    denyGlobs: deny,
-    allow: (scope.length === 0 ? ['**'] : scope).map((glob) => compileGlob(glob, insensitive)),
-    deny: [...WRITE_SCOPE_ALWAYS_DENY, ...deny].map((glob) => compileGlob(glob, insensitive)),
-    onViolation: options.onViolation,
-  };
+  return compileScope(scope, deny, options);
 }
 
 function escapesWorkspace(relative: string): boolean {
@@ -118,12 +130,20 @@ function escapesWorkspace(relative: string): boolean {
 }
 
 /** Whether a workspace-relative, forward-slash path may be changed. */
-export function pathInScope(scope: WriteScope, relative: string): boolean {
+export function pathInScope(scope: WriteScope, raw: string): boolean {
+  const relative = normalizeScopedPath(raw, scope.windowsNames);
   if (escapesWorkspace(relative)) return false;
   return (
     scope.allow.some((glob) => glob.test(relative)) &&
     !scope.deny.some((glob) => glob.test(relative))
   );
+}
+
+/** Whether a deny glob covers this directory as a whole, or something below it. */
+export function protectsDenied(scope: WriteScope, raw: string): boolean {
+  const relative = normalizeScopedPath(raw, scope.windowsNames);
+  const fold = (text: string): string => (scope.insensitive ? text.toLowerCase() : text);
+  return scope.protectedDirs.some((dir) => fold(dir) === fold(relative));
 }
 
 function posixRelative(from: string, to: string): string {
@@ -133,7 +153,7 @@ function posixRelative(from: string, to: string): string {
 /** Where a path would really land: the nearest existing ancestor resolved, the rest appended. */
 function realRelative(workspace: string, lexical: string): string {
   try {
-    const root = realpathSync(workspace);
+    const root = realpathSync.native(workspace);
     const target = path.resolve(root, lexical);
     let existing = target;
     const tail: string[] = [];
@@ -143,7 +163,7 @@ function realRelative(workspace: string, lexical: string): string {
       tail.unshift(path.basename(existing));
       existing = parent;
     }
-    return posixRelative(root, path.join(realpathSync(existing), ...tail));
+    return posixRelative(root, path.join(realpathSync.native(existing), ...tail));
   } catch {
     return lexical;
   }
@@ -200,6 +220,45 @@ function refuseOutside(
   throw new Error(scopeRefusal(`${tool} ${operation}`, shown[0] ?? '', scope));
 }
 
+function refuseProtected(
+  tool: string,
+  operation: string,
+  raws: readonly string[],
+  workspace: string,
+  scope: WriteScope,
+): void {
+  const hit = raws.find((raw) =>
+    pathCandidates(workspace, raw).some((candidate) => protectsDenied(scope, candidate)),
+  );
+  if (hit === undefined) return;
+  const shown = shownPath(workspace, hit);
+  scope.onViolation?.({ tool, paths: [shown] });
+  throw new Error(
+    `${tool} ${operation} refused: "${shown}" is a directory the write scope protects (a denied path lives in or below it). Say so in your final report instead of moving, deleting or restoring it.`,
+  );
+}
+
+function refuseRestoreOfDenied(
+  paths: readonly string[],
+  workspace: string,
+  scope: WriteScope,
+): void {
+  refuseProtected('workspace.git', 'restore', paths, workspace, scope);
+  for (const raw of paths) {
+    const denied = modifiedUnder(workspace, shownPath(workspace, raw)).filter(
+      (name) => !pathInScope(scope, name),
+    );
+    if (denied.length === 0) continue;
+    scope.onViolation?.({
+      tool: 'workspace.git',
+      paths: denied.slice(0, WRITE_SCOPE_MAX_REPORTED),
+    });
+    throw new Error(
+      `workspace.git restore refused: "${raw}" covers paths outside the write scope (${denied.slice(0, WRITE_SCOPE_MESSAGE_GLOBS).join(', ')}) and would discard their edits. Name the files you may change.`,
+    );
+  }
+}
+
 function textValues(values: readonly unknown[]): string[] {
   return values.filter((value): value is string => typeof value === 'string');
 }
@@ -241,12 +300,16 @@ export function assertScopedCall(call: AgentToolCall, workspace: string, scope: 
       workspace,
       scope,
     );
+    if (call.operation === 'delete' || call.operation === 'rename') {
+      refuseProtected('workspace.file', call.operation, textValues([args.path]), workspace, scope);
+    }
     return;
   }
   if (call.toolName !== 'workspace.git') return;
   if (WRITE_SCOPE_GIT_PATH_OPERATIONS.includes(call.operation)) {
     const paths = Array.isArray(args.paths) ? textValues(args.paths).filter(isNamedGitPath) : [];
     refuseOutside('workspace.git', call.operation, paths, workspace, scope);
+    if (call.operation === 'restore') refuseRestoreOfDenied(paths, workspace, scope);
   } else if (call.operation === 'commit') {
     commitRefusal(workspace, scope);
   }

@@ -24,7 +24,9 @@ import { createRepetitionGuard } from './repetition-guard';
 import { guardedOutcome, stuckEvent, stuckFields } from './repetition-guard-result';
 import { assertRunLimits, createRunGuard, describeBudgetTrip } from './run-budget';
 import { isRunLostError } from './run-lost';
+import { failureFields, runtimeFailureReason } from './runtime-failure';
 import { isServerBudgetError, isServerBudgetEvent, withResultBudgetNotes } from './server-budget';
+import { describeTools } from './tool-alias';
 import { spentToolAllowance } from './tool-allowance';
 
 import type { AgentBudgetField, AgentRunResult } from './agent-sdk.types';
@@ -60,7 +62,10 @@ export function createAgent(config: AgentConfig): Agent {
   const contextIssue = config.context === undefined ? undefined : contextProblem(config.context);
   if (contextIssue !== undefined) throw new RangeError(contextIssue);
   const checkDone = doneCheckRunner(config.doneChecks, path.resolve(config.workspaceRoot));
-  const session: { threadId: string | undefined } = { threadId: config.threadId };
+  const session: { threadId: string | undefined; tools: string } = {
+    threadId: config.threadId,
+    tools: '',
+  };
   const notes = createNotesStore({
     workspace: path.resolve(config.workspaceRoot),
     threadId: () => session.threadId,
@@ -85,6 +90,7 @@ export function createAgent(config: AgentConfig): Agent {
         options,
         hasThread: () => session.threadId !== undefined,
         withNotes: (text) => promptWithNotes(text, notes),
+        toolList: () => session.tools,
         checkDone,
         runOne: (text, callOptions) => runOnce({ config, session, notes }, text, callOptions),
       });
@@ -112,7 +118,7 @@ function assertSomeToolRemains(config: AgentConfig): void {
 async function runOnce(
   agent: {
     config: AgentConfig;
-    session: { threadId: string | undefined };
+    session: { threadId: string | undefined; tools: string };
     notes: NotesStore;
   },
   prompt: string,
@@ -122,7 +128,15 @@ async function runOnce(
   assertRunLimits(options);
   const emit = (event: AgentEvent): void => options.onEvent?.(event);
   const guard = createRunGuard(options, options.signal);
-  const tally = { denied: 0, calls: 0, text: '', signingIn: true, runId: '', serverBudget: false };
+  const tally = {
+    denied: 0,
+    calls: 0,
+    text: '',
+    signingIn: true,
+    runId: '',
+    serverBudget: false,
+    failure: '',
+  };
   // Calls wait out a runtime that is briefly away, and stop when the guard's
   // signal does, so a cancel or --max-duration ends a wait as well as a run.
   const transport =
@@ -148,6 +162,7 @@ async function runOnce(
     },
     () => credential.token,
   );
+  session.tools = describeTools(inner.definitions);
   const noted = withResultBudgetNotes(
     inner,
     config.effort === undefined
@@ -196,6 +211,9 @@ async function runOnce(
       },
       onEvent: (raw) => {
         if (isServerBudgetEvent(raw)) tally.serverBudget = true;
+        if (raw.type === 'run.failed') {
+          tally.failure = redacted(runtimeFailureReason(raw), config);
+        }
         const event = agentEventFrom(raw);
         if (event?.type === 'text') tally.text += event.text;
         if (event !== undefined) emit(event);
@@ -269,6 +287,7 @@ function reportedResult(
     exitCode: headlessExitCode(outcome),
     deniedCalls: tally.denied,
     text: tally.text,
+    ...failureFields(report, tally.failure),
     ...tripFields(trip, report.toolCalls),
     ...(spent === undefined ? {} : { error: describeBudgetTrip(spent) }),
     ...stuckFields(stuck),
@@ -288,6 +307,7 @@ interface FailureContext {
     signingIn: boolean;
     runId: string;
     serverBudget: boolean;
+    failure: string;
   };
   readonly session: { threadId: string | undefined };
   readonly config: AgentConfig;

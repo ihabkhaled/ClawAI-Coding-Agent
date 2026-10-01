@@ -1,7 +1,13 @@
 import { headlessExitCode } from '../core/headless-outcome';
 import { redactText } from '../core/redaction';
 
-import { checkSummaries, doneChecksPrompt, failingLabels } from './done-checks';
+import {
+  checkSummaries,
+  checkTail,
+  doneChecksPrompt,
+  failingLabels,
+  failureSignature,
+} from './done-checks';
 import { DONE_CHECKS_FAILED_CODE, DONE_CHECKS_REASON } from './done-checks.constants';
 import { stuckPrompt } from './repetition-guard-result';
 import {
@@ -13,6 +19,12 @@ import {
   SESSION_EXPIRED_PROMPT,
   SESSION_EXPIRED_REASON,
 } from './server-budget.constants';
+import { describeTools } from './tool-alias';
+import {
+  UNKNOWN_TOOL_PROMPT_HEAD,
+  UNKNOWN_TOOL_PROMPT_TAIL,
+  UNKNOWN_TOOL_REASON,
+} from './tool-alias.constants';
 
 import type { AgentEvent, AgentResult, AgentRunCallOptions } from './create-agent.types';
 import type { DoneCheckRunner, DoneChecksReport } from './done-checks.types';
@@ -25,6 +37,8 @@ interface ContinuationInput {
   readonly hasThread: () => boolean;
   /** Adds what the agent has noted to a continuation prompt. */
   readonly withNotes?: ((prompt: string) => string) | undefined;
+  /** The offered tools, one per line, for the prompt after an unknown-tool failure. */
+  readonly toolList?: (() => string) | undefined;
   /** The orchestrator's completion checks, run when a run ends `completed`. */
   readonly checkDone?: DoneCheckRunner | undefined;
 }
@@ -87,6 +101,7 @@ export async function runWithContinuations(input: ContinuationInput): Promise<Ag
   let prompt = input.prompt;
   let attempt = 0;
   let checks: DoneChecksReport | undefined;
+  let previousFailure: string | undefined;
   for (;;) {
     const left = guardsLeft(options, totals, Date.now() - started);
     const last = await input.runOne(prompt, { ...options, onEvent: inner, ...runGuards(left) });
@@ -103,7 +118,9 @@ export async function runWithContinuations(input: ContinuationInput): Promise<Ag
       return finalResult(last, totals, end, emit);
     }
     attempt += 1;
-    const next = continuation(last, failing, input.withNotes);
+    const context = continuationContext(failing, previousFailure, input.toolList);
+    previousFailure = context.signature;
+    const next = continuation(last, context, input.withNotes);
     prompt = next.prompt;
     emit({ type: 'run.continued', attempt, reason: next.reason });
   }
@@ -132,25 +149,58 @@ function isContinuable(result: AgentResult): boolean {
     result.budgetExhausted === true ||
     result.runLost === true ||
     result.sessionExpired === true ||
+    result.unknownTool === true ||
     result.stuck !== undefined
   );
+}
+
+/** What a continuation prompt is built from, and whether this failure is the one that just failed before. */
+function continuationContext(
+  failing: DoneChecksReport | undefined,
+  previous: string | undefined,
+  toolList: (() => string) | undefined,
+): {
+  failing: DoneChecksReport | undefined;
+  repeated: boolean;
+  signature: string | undefined;
+  toolList: (() => string) | undefined;
+} {
+  const signature = failing === undefined ? undefined : failureSignature(failing);
+  return { failing, repeated: signature === previous, signature, toolList };
 }
 
 type ContinuationReason = Extract<AgentEvent, { type: 'run.continued' }>['reason'];
 
 function continuation(
   result: AgentResult,
-  failing: DoneChecksReport | undefined,
+  context: {
+    failing: DoneChecksReport | undefined;
+    repeated: boolean;
+    toolList: (() => string) | undefined;
+  },
   withNotes: ((prompt: string) => string) | undefined,
 ): { prompt: string; reason: ContinuationReason } {
+  const { failing } = context;
   const next =
     failing === undefined
-      ? basicContinuation(result)
-      : { prompt: doneChecksPrompt(failing), reason: DONE_CHECKS_REASON };
+      ? basicContinuation(result, context.toolList?.())
+      : { prompt: doneChecksPrompt(failing, context.repeated), reason: DONE_CHECKS_REASON };
   return withNotes === undefined ? next : { ...next, prompt: withNotes(next.prompt) };
 }
 
-function basicContinuation(result: AgentResult): { prompt: string; reason: ContinuationReason } {
+function basicContinuation(
+  result: AgentResult,
+  toolList: string | undefined,
+): { prompt: string; reason: ContinuationReason } {
+  if (result.unknownTool === true) {
+    const names = toolList ?? describeTools([]);
+    return {
+      prompt: `${UNKNOWN_TOOL_PROMPT_HEAD}
+${names}
+${UNKNOWN_TOOL_PROMPT_TAIL}`,
+      reason: UNKNOWN_TOOL_REASON,
+    };
+  }
   if (result.stuck !== undefined) return { prompt: stuckPrompt(result.stuck), reason: 'stuck' };
   if (result.sessionExpired === true) {
     return { prompt: SESSION_EXPIRED_PROMPT, reason: SESSION_EXPIRED_REASON };
@@ -192,12 +242,11 @@ async function checkedDone(
   emit({
     type: 'run.checks',
     passed: report.passed,
-    checks: report.checks.map(({ label, ok, exitCode, durationMs }) => ({
-      label,
-      ok,
-      exitCode,
-      durationMs,
-    })),
+    checks: report.checks.map((outcome) => {
+      const tail = checkTail(outcome);
+      const { label, ok, exitCode, durationMs } = outcome;
+      return { label, ok, exitCode, durationMs, ...(tail === undefined ? {} : { tail }) };
+    }),
   });
   return report;
 }

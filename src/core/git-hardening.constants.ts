@@ -68,3 +68,26 @@ export const GIT_WRITE_NEUTRALISING_CONFIG: readonly string[] = [
   ...GIT_NEUTRALISING_CONFIG.filter((pair) => pair !== 'core.sshCommand='),
   'core.sshCommand=ssh',
 ];
+
+/**
+ * Long flags a command-tool git call may not carry: each one names a program git
+ * runs, a file it writes, or a repository outside the workspace. Matched as
+ * `--flag` or `--flag=value`.
+ */
+export const GIT_REFUSED_LONG_FLAGS: readonly string[] = [
+  '--output',
+  '--upload-pack',
+  '--receive-pack',
+  '--exec',
+  '--exec-path',
+  '--config-env',
+  '--config',
+  '--git-dir',
+  '--work-tree',
+  '--force',
+  '--force-with-lease',
+  '--force-if-includes',
+];
+
+/** Short flags with the same effect: `-c key=value`, the attached `-ckey=value`, and `-f` (force). */
+export const GIT_REFUSED_SHORT_FLAG = /^-(?:c|f$)/u;

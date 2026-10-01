@@ -145,6 +145,23 @@ describe('commandRefusal', () => {
     ['git', ['-C', '..', 'status']],
     ['git', ['branch', '-D', 'x']],
     ['git', ['remote', 'add', 'o', 'u']],
+    ['git', ['diff', '--output=evil.txt']],
+    ['git', ['diff', '--output', 'evil.txt']],
+    ['git', ['fetch', '--upload-pack=calc']],
+    ['git', ['push', '--receive-pack=calc']],
+    ['git', ['fetch', '--upload-pack', 'calc']],
+    ['git', ['log', '--exec=calc']],
+    ['git', ['log', '-c', 'core.pager=calc']],
+    ['git', ['log', '-ccore.pager=calc']],
+    ['git', ['log', '--config-env=core.pager=X']],
+    ['git', ['status', '--git-dir=..\\other']],
+    ['git', ['status', '--work-tree', '..']],
+    ['git', ['push', '--force']],
+    ['git', ['push', '-f', 'origin', 'main']],
+    ['git', ['push', '--force-with-lease']],
+    ['git', ['push', '--force-with-lease=main:abc']],
+    ['git', ['push', 'origin', '+main']],
+    ['git', ['push', 'origin', '+main:main']],
   ])('refuses %s %j', (executable, args) => {
     expect(commandRefusal(executable, args)).toContain('workspace.command refused');
   });
