@@ -60,6 +60,8 @@ export function mcpToolRegistration(
         ),
     },
     openBrowser: async (url) => vscode.env.openExternal(vscode.Uri.parse(url, true)),
+    resolveCallbackUri: async (url) =>
+      (await vscode.env.asExternalUri(vscode.Uri.parse(url, true))).toString(true),
     fetch: (input, init) => fetch(input, init),
     now: () => Date.now(),
   });
