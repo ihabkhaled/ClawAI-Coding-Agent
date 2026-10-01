@@ -2,6 +2,7 @@
 .clawai-lab/**
 .gitattributes
 .github/**
+.githooks/**
 .gitignore
 .husky/**
 .prettierignore

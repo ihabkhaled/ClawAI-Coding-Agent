@@ -16,10 +16,12 @@ and the obvious repair breaks `npm run build`.
 Runbooks: `skills/add-a-runtime-tool`, `add-a-command-or-view`, `add-a-translated-string`,
 `add-a-backend-client-with-fallback`, `run-live-rounds`, `land-a-release`.
 
-Read `skills/version-every-change/SKILL.md` when preparing an intentional
-release. Normal pushes to `main` may keep the current version even when its tag
-already exists; the Release workflow skips publication in that case. Only a
-real release needs a new SemVer, changelog entry, rebuilt VSIX and release asset.
+Read `skills/version-every-change/SKILL.md` for every main-bound change.
+Every push to `main` is a delivery release. The repository pre-commit hook
+automatically advances one minor version and aligns package metadata; CI
+independently verifies the bump. Generated VSIX and supply-chain files are built
+only after every split CI gate passes, then the successful CI artifact is
+released and published to the VS Code Marketplace.
 
 Read `docs/RULES.md` and apply
 `skills/verify-coding-agent-readiness/SKILL.md` whenever a change affects agent
@@ -30,11 +32,11 @@ execution, recovery, provider behavior, or a coding-capability claim.
 ```bash
 npm run l10n:build
 npm run format
-npm run check   # format:check, l10n:verify, lint, typecheck, scan:paths,
-                # inventory:verify, coverage:scope, test, build, package:audit
+npm run check   # local aggregate: quality + unit/coverage + build
 npm run test:host
-npm run package
+npm run test:playwright
 npm audit --omit=dev --audit-level=high
+# CI packages the VSIX only after all split gates are green.
 ```
 
 Packaging is not the same evidence as activating. After `npm run package`,

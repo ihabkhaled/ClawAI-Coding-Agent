@@ -1,11 +1,14 @@
 name: Release
 
 on:
-  push:
-    branches:
-      - main
+  workflow_run:
+    workflows:
+      - CI
+    types:
+      - completed
 
 permissions:
+  actions: read
   contents: write
 
 concurrency:
@@ -14,17 +17,17 @@ concurrency:
 
 jobs:
   release:
-    name: Gate and publish VSIX
+    name: Publish verified VSIX
+    if: ${{ github.event.workflow_run.conclusion == 'success' && github.event.workflow_run.event == 'push' && github.event.workflow_run.head_branch == 'main' }}
     runs-on: ubuntu-latest
-    # Declared at job level because a step's `if` cannot read an env value the
-    # same step defines, and the `secrets` context is not available in a step
-    # condition at all. This is the documented way to make publishing optional.
     env:
       VSCE_PAT: ${{ secrets.VSCE_PAT }}
       OVSX_PAT: ${{ secrets.OVSX_PAT }}
+      SOURCE_SHA: ${{ github.event.workflow_run.head_sha }}
     steps:
       - uses: actions/checkout@v7
         with:
+          ref: ${{ github.event.workflow_run.head_sha }}
           fetch-depth: 0
 
       - uses: actions/setup-node@v7
@@ -32,7 +35,7 @@ jobs:
           node-version: 22
           cache: npm
 
-      - name: Resolve release intent
+      - name: Resolve release version
         id: version
         shell: bash
         run: |
@@ -41,131 +44,43 @@ jobs:
           echo "version=${VERSION}" >> "${GITHUB_OUTPUT}"
           echo "tag=${TAG}" >> "${GITHUB_OUTPUT}"
           if git ls-remote --exit-code --tags origin "refs/tags/${TAG}" >/dev/null 2>&1; then
-            echo "publish=false" >> "${GITHUB_OUTPUT}"
-            echo "::notice::${TAG} already exists. This is a normal main update, so release publishing is skipped."
-          else
-            echo "publish=true" >> "${GITHUB_OUTPUT}"
+            echo "::error::${TAG} already exists. Every main push must carry a fresh delivery minor."
+            exit 1
           fi
 
-      - name: Require committed release assets
-        if: ${{ steps.version.outputs.publish == 'true' }}
+      - name: Download final CI artifact
+        uses: actions/download-artifact@v4
+        with:
+          name: clawai-coding-agent-release
+          path: builds
+          run-id: ${{ github.event.workflow_run.id }}
+          github-token: ${{ github.token }}
+
+      - name: Verify downloaded release artifact
         env:
-          RELEASE_BASE: builds/clawai-coding-agent-${{ steps.version.outputs.version }}
+          VERSION: ${{ steps.version.outputs.version }}
         shell: bash
         run: |
-          mkdir -p "${RUNNER_TEMP}/committed-release"
-          for asset in \
-            "${RELEASE_BASE}.vsix" \
-            "${RELEASE_BASE}.vsix.sha256" \
-            "${RELEASE_BASE}.cdx.json" \
-            "${RELEASE_BASE}.cdx.json.sha256" \
-            "${RELEASE_BASE}.spdx.json" \
-            "${RELEASE_BASE}.spdx.json.sha256" \
-            "${RELEASE_BASE}.provenance.json" \
-            "${RELEASE_BASE}.provenance.json.sha256"; do
-            if ! test -f "${asset}"; then
-              echo "::error::Commit ${asset} before pushing main."
-              exit 1
-            fi
-            git ls-files --error-unmatch "${asset}" >/dev/null
-            cp "${asset}" "${RUNNER_TEMP}/committed-release/"
-          done
-
-      - name: Install
-        if: ${{ steps.version.outputs.publish == 'true' }}
-        run: npm ci --ignore-scripts
-
-      - name: Verify generated localization
-        if: ${{ steps.version.outputs.publish == 'true' }}
-        shell: bash
-        run: |
-          npm run l10n:build
-          git diff --exit-code -- package.nls.json package.nls.*.json l10n
-
-      - name: Run release checks
-        if: ${{ steps.version.outputs.publish == 'true' }}
-        run: npm run check
-
-      - name: Run extension-host tests
-        if: ${{ steps.version.outputs.publish == 'true' }}
-        run: xvfb-run -a npm run test:host
-
-      - name: Install Playwright browser
-        if: ${{ steps.version.outputs.publish == 'true' }}
-        run: npx playwright install --with-deps chromium
-
-      - name: Run webview end-to-end tests
-        if: ${{ steps.version.outputs.publish == 'true' }}
-        run: npm run test:playwright
-
-      - name: Audit runtime dependencies
-        if: ${{ steps.version.outputs.publish == 'true' }}
-        run: npm audit --omit=dev --audit-level=high
-
-      - name: Package VSIX
-        if: ${{ steps.version.outputs.publish == 'true' }}
-        run: npm run package
-
-      - name: Generate supply-chain evidence
-        if: ${{ steps.version.outputs.publish == 'true' }}
-        run: npm run supply-chain
-
-      - name: Verify release artifact
-        if: ${{ steps.version.outputs.publish == 'true' }}
-        env:
-          ARTIFACT: builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix
-          RELEASE_BASE: builds/clawai-coding-agent-${{ steps.version.outputs.version }}
-        shell: bash
-        run: |
-          test -f "${ARTIFACT}"
-          mkdir -p "${RUNNER_TEMP}/committed-vsix" "${RUNNER_TEMP}/fresh-vsix"
-          unzip -qq "${RUNNER_TEMP}/committed-release/$(basename "${ARTIFACT}")" -d "${RUNNER_TEMP}/committed-vsix"
-          unzip -qq "${ARTIFACT}" -d "${RUNNER_TEMP}/fresh-vsix"
-          diff -qr "${RUNNER_TEMP}/committed-vsix" "${RUNNER_TEMP}/fresh-vsix"
-
-          # VSIX archives contain ZIP timestamps, so two archives with identical
-          # extracted content can have different byte hashes. Validate each
-          # archive and its provenance independently, while comparing deterministic
-          # SBOMs and extracted package content above.
-          (cd "${RUNNER_TEMP}/committed-release" && sha256sum -c "$(basename "${RELEASE_BASE}").vsix.sha256")
-          (cd builds && sha256sum -c "$(basename "${RELEASE_BASE}").vsix.sha256")
-          for asset in \
-            "${RELEASE_BASE}.cdx.json" \
-            "${RELEASE_BASE}.cdx.json.sha256" \
-            "${RELEASE_BASE}.spdx.json" \
-            "${RELEASE_BASE}.spdx.json.sha256"; do
-            diff -q "${RUNNER_TEMP}/committed-release/$(basename "${asset}")" "${asset}"
-          done
-          (cd "${RUNNER_TEMP}/committed-release" && sha256sum -c "$(basename "${RELEASE_BASE}").provenance.json.sha256")
-          (cd builds && sha256sum -c "$(basename "${RELEASE_BASE}").provenance.json.sha256")
-          node --input-type=module - \
-            "${RUNNER_TEMP}/committed-release/$(basename "${ARTIFACT}")" \
-            "${RUNNER_TEMP}/committed-release/$(basename "${RELEASE_BASE}").provenance.json" \
-            "${ARTIFACT}" \
-            "${RELEASE_BASE}.provenance.json" <<'NODE'
-          import { createHash } from 'node:crypto';
+          cd builds
+          sha256sum -c "clawai-coding-agent-${VERSION}.vsix.sha256"
+          sha256sum -c "clawai-coding-agent-${VERSION}.cdx.json.sha256"
+          sha256sum -c "clawai-coding-agent-${VERSION}.spdx.json.sha256"
+          sha256sum -c "clawai-coding-agent-${VERSION}.provenance.json.sha256"
+          node --input-type=module - "${VERSION}" "${SOURCE_SHA}" <<'NODE'
           import { readFile } from 'node:fs/promises';
-
-          for (let index = 2; index < process.argv.length; index += 2) {
-            const artifact = await readFile(process.argv[index]);
-            const provenance = JSON.parse(await readFile(process.argv[index + 1], 'utf8'));
-            const actual = createHash('sha256').update(artifact).digest('hex');
-            if (provenance.subject?.[0]?.digest?.sha256 !== actual) {
-              throw new Error(`Provenance digest mismatch for ${process.argv[index]}`);
-            }
-            if (process.argv[index] === process.argv.at(-2)) {
-              const sourceDependency = provenance.predicate?.buildDefinition?.resolvedDependencies?.find(
-                (dependency) => typeof dependency.digest?.gitCommit === 'string',
-              );
-              if (sourceDependency?.digest?.gitCommit !== process.env.GITHUB_SHA) {
-                throw new Error('Fresh provenance does not identify GITHUB_SHA.');
-              }
-            }
+          const [version, sourceSha] = process.argv.slice(2);
+          const provenance = JSON.parse(
+            await readFile(`clawai-coding-agent-${version}.provenance.json`, 'utf8'),
+          );
+          const source = provenance.predicate?.buildDefinition?.resolvedDependencies?.find(
+            (dependency) => typeof dependency.digest?.gitCommit === 'string',
+          );
+          if (source?.digest?.gitCommit !== sourceSha) {
+            throw new Error('Release provenance does not match the successful CI commit.');
           }
           NODE
 
       - name: Build full release notes
-        if: ${{ steps.version.outputs.publish == 'true' }}
         env:
           VERSION: ${{ steps.version.outputs.version }}
         shell: bash
@@ -183,43 +98,39 @@ jobs:
 
           ## Verified release
 
-          - Quality, unit, integration, extension-host, browser, dependency, and packaging gates passed for commit \`${GITHUB_SHA}\`.
-          - The attached VSIX was reproduced during this workflow and compared with the committed artifact before publication.
+          - All split CI gates passed for commit `${SOURCE_SHA}`.
+          - The attached VSIX is the exact final artifact produced after every CI gate passed.
+          - The same VSIX is published to the Visual Studio Marketplace.
 
           ## Installation
 
-          Download \`clawai-coding-agent-${VERSION}.vsix\`, run **Extensions: Install from VSIX...** in VS Code, select the file, and reload the window.
+          Download `clawai-coding-agent-${VERSION}.vsix`, run **Extensions: Install from VSIX...** in VS Code, select the file, and reload the window.
           EOF
 
       - name: Create GitHub Release
-        if: ${{ steps.version.outputs.publish == 'true' }}
         env:
           GH_TOKEN: ${{ github.token }}
+          VERSION: ${{ steps.version.outputs.version }}
+          TAG: ${{ steps.version.outputs.tag }}
         shell: bash
         run: |
-          gh release create "${{ steps.version.outputs.tag }}" \
-            builds/clawai-coding-agent-${{ steps.version.outputs.version }}.* \
-            --target "${GITHUB_SHA}" \
-            --title "ClawAI Coding Agent ${{ steps.version.outputs.version }}" \
-            --notes-file "${RUNNER_TEMP}/release-notes.md"
+          gh release create "${TAG}"             builds/clawai-coding-agent-${VERSION}.*             --target "${SOURCE_SHA}"             --title "ClawAI Coding Agent ${VERSION}"             --notes-file "${RUNNER_TEMP}/release-notes.md"
 
-      # Publishing is skipped, not failed, when the token is absent. A fork, or
-      # this repository before the secret exists, still produces a GitHub
-      # release and its attested artifact; only the Marketplace step waits.
       - name: Publish to the VS Code Marketplace
-        if: ${{ steps.version.outputs.publish == 'true' && env.VSCE_PAT != '' }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         shell: bash
         run: |
-          npx --yes @vscode/vsce publish \
-            --packagePath "builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix" \
-            --pat "${VSCE_PAT}"
+          if test -z "${VSCE_PAT}"; then
+            echo "::error::VSCE_PAT is required because every main release must reach the VS Code Marketplace."
+            exit 1
+          fi
+          npx --yes @vscode/vsce publish             --packagePath "builds/clawai-coding-agent-${VERSION}.vsix"             --pat "${VSCE_PAT}"
 
-      # Open VSX serves VSCodium, Cursor, Windsurf and the other forks. Same
-      # artifact, different registry, and the same skip-when-absent rule.
       - name: Publish to Open VSX
-        if: ${{ steps.version.outputs.publish == 'true' && env.OVSX_PAT != '' }}
+        if: ${{ env.OVSX_PAT != '' }}
+        env:
+          VERSION: ${{ steps.version.outputs.version }}
         shell: bash
         run: |
-          npx --yes ovsx publish \
-            "builds/clawai-coding-agent-${{ steps.version.outputs.version }}.vsix" \
-            --pat "${OVSX_PAT}"
+          npx --yes ovsx publish             "builds/clawai-coding-agent-${VERSION}.vsix"             --pat "${OVSX_PAT}"
