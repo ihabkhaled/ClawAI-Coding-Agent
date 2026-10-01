@@ -16,8 +16,13 @@ passing through that handler, permanently.
 
 1. **Authorization code + PKCE (S256), redirect to `LoopbackAuthorizationServer`**
    on `127.0.0.1`, random port, one-shot, state-validated — the same listener the
-   ClawAI sign-in uses. `vscode.env.openExternal` opens the authorization page.
-   The URI handler is untouched and stays navigation-only.
+   ClawAI sign-in uses. Before the redirect URI is sent to an authorization
+   server, it is resolved with `vscode.env.asExternalUri`; this is a no-op for a
+   local extension host and establishes VS Code-managed forwarding for Remote
+   SSH, Dev Containers, WSL, tunnels, and desktop Codespaces. The resolved URI
+   is used for both authorization and token exchange, while the listener remains
+   bound only to loopback. `vscode.env.openExternal` opens the authorization
+   page. The URI handler is untouched and stays navigation-only.
 2. **Tokens live only in `context.secrets`**, keyed by server name plus a hash of
    the server URL, so re-pointing a name never sends the old token to a new host.
    Tokens are never logged, never put in a tool result, and a failed token

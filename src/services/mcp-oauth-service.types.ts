@@ -20,6 +20,7 @@ export interface McpOAuthDependencies {
   readonly secrets: McpSecretStore;
   readonly callbacks: { open(state: string): Promise<McpAuthorizationCallback> };
   readonly openBrowser: (url: string) => Promise<boolean>;
+  readonly resolveCallbackUri?: ((url: string) => Promise<string>) | undefined;
   readonly fetch: McpFetch;
   readonly now: () => number;
 }

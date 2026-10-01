@@ -102,11 +102,15 @@ export class McpOAuthService {
     const request = createVscodeAuthorizationRequest();
     const callback = await this.deps.callbacks.open(request.state);
     try {
+      const redirectUri =
+        this.deps.resolveCallbackUri === undefined
+          ? callback.callbackUri
+          : await this.deps.resolveCallbackUri(callback.callbackUri);
       const url = buildAuthorizationUrl({
         endpoint: endpoints.authorizationEndpoint,
         server,
         oauth,
-        redirectUri: callback.callbackUri,
+        redirectUri,
         codeChallenge: request.codeChallenge,
         state: request.state,
       });
@@ -119,7 +123,7 @@ export class McpOAuthService {
         authorizationCodeBody({
           code,
           codeVerifier: request.codeVerifier,
-          redirectUri: callback.callbackUri,
+          redirectUri,
           server,
           oauth,
         }),
