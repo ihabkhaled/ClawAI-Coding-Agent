@@ -10,6 +10,7 @@ import {
   formatCompareResponse,
   modelSelectionLabel,
 } from './agent-coordinator-prompts';
+import { runCompare } from './compare-stream-collector';
 import { generationConcurrencyKey } from './generation-scheduler';
 import { buildAnalysisPrompt } from './workflow-service';
 import { refuseCompareUnderZeroRetention } from './zero-retention-compare-guard';
@@ -196,8 +197,9 @@ export class PromptExecutionService {
           if (prompt.contextReceipt !== undefined) {
             this.dependencies.state.update({ contextReceipt: prompt.contextReceipt });
           }
-          const response = await this.dependencies.backend().compare(
-            {
+          const response = await runCompare({
+            backend: this.dependencies.backend(),
+            request: {
               content: prompt.content,
               models,
               ...(input.researchMode === undefined ? {} : { researchMode: input.researchMode }),
@@ -207,9 +209,14 @@ export class PromptExecutionService {
               ...(threadId === undefined ? {} : { threadId }),
             },
             signal,
-          );
+            onAccepted: (acceptedThreadId) => {
+              this.dependencies.activateThread(acceptedThreadId, requestId);
+            },
+            onProgress: (event) => {
+              void this.dependencies.view()?.postEvent(event, requestId);
+            },
+          });
           signal.throwIfAborted();
-          this.dependencies.activateThread(response.threadId, requestId);
           await this.dependencies.view()?.postResult(
             {
               content: formatCompareResponse(response),

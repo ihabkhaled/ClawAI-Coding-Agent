@@ -15,7 +15,7 @@ import { runAgent } from './agent-sdk';
 import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
 import { agentToolkit } from './agent-toolkit';
 import { runWithContinuations } from './auto-continue';
-import { resultByteLimit } from './budget-profiles';
+import { resolveRunBudget, resultByteLimit } from './budget-profiles';
 import { doneCheckRunner, doneChecksProblem } from './done-checks';
 import { createNotesStore } from './notes-store';
 import { promptWithNotes } from './notes-tool';
@@ -25,6 +25,7 @@ import { guardedOutcome, stuckEvent, stuckFields } from './repetition-guard-resu
 import { assertRunLimits, createRunGuard, describeBudgetTrip } from './run-budget';
 import { isRunLostError } from './run-lost';
 import { isServerBudgetError, isServerBudgetEvent, withResultBudgetNotes } from './server-budget';
+import { spentToolAllowance } from './tool-allowance';
 
 import type { AgentBudgetField, AgentRunResult } from './agent-sdk.types';
 import type {
@@ -53,6 +54,7 @@ import type { HeadlessOutcome } from '../core/headless-outcome.types';
  */
 export function createAgent(config: AgentConfig): Agent {
   assertAgentInputs(config);
+  assertSomeToolRemains(config);
   const checkProblem = doneChecksProblem(config.doneChecks ?? []);
   if (checkProblem !== undefined) throw new RangeError(checkProblem);
   const contextIssue = config.context === undefined ? undefined : contextProblem(config.context);
@@ -88,6 +90,23 @@ export function createAgent(config: AgentConfig): Agent {
       });
     },
   };
+}
+
+/**
+ * A tool filter that removes everything is a usage mistake. Left alone the run
+ * would send an empty tool list and die on the server's own validation, so it
+ * is refused here, before anything is sent.
+ */
+function assertSomeToolRemains(config: AgentConfig): void {
+  if ((config.allowedTools ?? []).length + (config.disallowedTools ?? []).length === 0) return;
+  const probe = agentToolkit(config);
+  const none = probe.definitions.length === 0;
+  probe.dispose?.();
+  if (none) {
+    throw new RangeError(
+      'No tool is left for the agent: --allowed-tools and --disallowed-tools together remove every tool. Allow at least one tool.',
+    );
+  }
 }
 
 async function runOnce(
@@ -182,9 +201,11 @@ async function runOnce(
         if (event !== undefined) emit(event);
       },
     });
-    const trip = guard.tripped();
-    const stuck = trip === undefined ? repetition.stuck() : undefined;
-    return finish(emit, reportedResult(report, tally, { trip, stuck }), trip);
+    return finishReport(emit, report, tally, {
+      trip: guard.tripped(),
+      stuck: repetition.stuck(),
+      limit: toolCallLimit(config, options),
+    });
   } catch (error) {
     const trip = guard.tripped();
     const aborted = options.signal?.aborted === true;
@@ -199,14 +220,49 @@ async function runOnce(
   }
 }
 
+/** Ends a run the loop reported: a guard trip wins, then a stuck loop, then a spent tool allowance. */
+function finishReport(
+  emit: (event: AgentEvent) => void,
+  report: AgentRunResult,
+  tally: FailureContext['tally'],
+  seen: {
+    trip: RunBudgetTrip | undefined;
+    stuck: StuckInfo | undefined;
+    limit: number | undefined;
+  },
+): AgentResult {
+  const { trip } = seen;
+  const stuck = trip === undefined ? seen.stuck : undefined;
+  const spent = spentAllowance(report, { trip, stuck }, seen.limit);
+  return finish(emit, reportedResult(report, tally, { trip, stuck, spent }), trip ?? spent);
+}
+
+/** The tool allowance a run spent in full, unless a guard or the repetition check already ended it. */
+function spentAllowance(
+  report: AgentRunResult,
+  ended: { trip: RunBudgetTrip | undefined; stuck: StuckInfo | undefined },
+  limit: number | undefined,
+): RunBudgetTrip | undefined {
+  return ended.trip === undefined && ended.stuck === undefined
+    ? spentToolAllowance(report, limit)
+    : undefined;
+}
+
 /** The result of a run that ended on its own or on a guard, from the loop's report. */
 function reportedResult(
   report: AgentRunResult,
   tally: FailureContext['tally'],
-  guards: { trip: RunBudgetTrip | undefined; stuck: StuckInfo | undefined },
+  guards: {
+    trip: RunBudgetTrip | undefined;
+    stuck: StuckInfo | undefined;
+    spent: RunBudgetTrip | undefined;
+  },
 ): AgentResult {
-  const { trip, stuck } = guards;
-  const outcome = guardedOutcome(withDenials(report.outcome, tally.denied), guards);
+  const { trip, stuck, spent } = guards;
+  const outcome =
+    spent === undefined
+      ? guardedOutcome(withDenials(report.outcome, tally.denied), guards)
+      : 'exhausted';
   return {
     ...report,
     outcome,
@@ -214,8 +270,9 @@ function reportedResult(
     deniedCalls: tally.denied,
     text: tally.text,
     ...tripFields(trip, report.toolCalls),
+    ...(spent === undefined ? {} : { error: describeBudgetTrip(spent) }),
     ...stuckFields(stuck),
-    ...(tally.serverBudget && trip === undefined && stuck === undefined
+    ...((tally.serverBudget || spent !== undefined) && trip === undefined && stuck === undefined
       ? { budgetExhausted: true as const }
       : {}),
   };
@@ -337,6 +394,11 @@ function redacted(message: string, config: AgentConfig): string {
 /** The wall clock the effort table gives, when an effort was named and no deadline was. */
 function effortDeadlineMs(config: AgentConfig): number | undefined {
   return config.effort === undefined ? undefined : effortBudget(config.effort).maxRuntimeMs;
+}
+
+/** The tool calls the run is allowed: the effort table, else the profile's own limit. */
+function toolCallLimit(config: AgentConfig, options: AgentRunCallOptions): number | undefined {
+  return resolveRunBudget(options.budgetProfile, 0, budgetFor(config, options).budget).maxToolCalls;
 }
 
 /** The run budget fields this configuration sets: the effort's table, narrowed by `maxTurns`. */

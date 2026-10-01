@@ -389,8 +389,8 @@ export class BackendClient {
     );
   }
 
-  async openStream(threadId: string, signal?: AbortSignal): Promise<Response> {
-    const path = `/chat-messages/stream/${encodeURIComponent(threadId)}?replay=false`;
+  async openStream(threadId: string, signal?: AbortSignal, replay = false): Promise<Response> {
+    const path = `/chat-messages/stream/${encodeURIComponent(threadId)}?replay=${String(replay)}`;
     return this.openAuthenticatedStream(path, signal);
   }
 
