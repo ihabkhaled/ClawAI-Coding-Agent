@@ -2,6 +2,26 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.92.0
+
+Security hardening and a better command line. Commands the agent runs are still not sandboxed: a command can read or write anywhere you can. These changes make the built-in tools and the checks around commands much harder to get around.
+
+- A folder you limit the agent to (write scope) now also covers `.git`, Windows alternate data streams (`file.txt::$DATA`) and renames of whole folders, so a limited agent can no longer plant a git hook or edit a protected file through an alias.
+- After a command or a git action, the agent now checks for new files in `.git` (hooks and config) and directly beside your workspace, and removes them. It cannot see a write into a deeper folder or to another drive.
+- Windows `npm` and `npx` argument quoting is fixed: arguments that could be read as extra commands (`"`, `&`, `|`, `<`, `>`, `^`) are refused.
+- Git options that run other programs or write to files outside the workspace are refused.
+- Searching with a regular expression or a glob can no longer freeze the agent; patterns that could run forever are refused.
+- Approvals are strict: only a real "yes" approves. Anything else counts as "no".
+- Numbers given to file tools must be whole numbers.
+- Command line: `--list-models` shows the models you can use; busy servers are retried; the reason a run failed is shown; common tool name variants are understood; and a failing check shows the end of its output.
+
+## 1.91.0
+
+- Browser sign-in now works when the ClawAI extension runs on a Remote SSH host or another VS Code remote extension host: the local callback is exposed through VS Code's managed forwarding instead of sending the browser to the wrong machine's localhost. The same protection applies to MCP OAuth.
+- Every change that reaches `main` is a release again. The commit hook automatically advances the delivery minor version, keeps the lockfile and README aligned, and CI refuses a main-bound change whose version did not advance.
+- CI is split into parallel version, quality, unit, extension-host, browser, and dependency-audit gates. The VSIX and supply-chain files are built only after all of those gates pass.
+- A successful `main` CI run now triggers the Release workflow, which downloads that exact final CI artifact, creates the matching GitHub Release, and publishes the same VSIX to the VS Code Marketplace. Marketplace publication is required rather than silently skipped.
+
 ## 1.90.0
 
 - Compare and Compare + Judge now show their work as it happens. Each model gets its own card the moment it starts, the card shows whether the model is connecting, thinking, writing or finishing, and the answer fills in as it is written. While the judge works you see that it is ranking the answers; when the verdict is ready it appears with the winner, each model's rank and score, the judge's reason for each, and its overall rationale. The cards you were watching stay in place when the run ends.

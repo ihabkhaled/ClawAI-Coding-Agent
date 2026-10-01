@@ -53,8 +53,22 @@ export function parseHeadlessArgs(
     index += 1;
   }
   if (flags.has('-h') || flags.has('--help')) return { kind: 'help' };
-  if (values.has('mcpLogin')) return loginFrom(values, cwd);
-  return invocationFrom(values, flags, environment, cwd);
+  return sideCommandFrom(values, flags, cwd) ?? invocationFrom(values, flags, environment, cwd);
+}
+
+/** `--list-models` and `--mcp-login` need no prompt; undefined means an ordinary run. */
+function sideCommandFrom(
+  values: ReadonlyMap<string, readonly string[]>,
+  flags: ReadonlySet<string>,
+  cwd: string,
+): HeadlessParse | undefined {
+  if (flags.has('--list-models')) {
+    return {
+      kind: 'list-models',
+      request: { backendUrl: values.get('backendUrl')?.at(-1), json: flags.has('--json') },
+    };
+  }
+  return values.has('mcpLogin') ? loginFrom(values, cwd) : undefined;
 }
 
 function invocationFrom(

@@ -42,23 +42,15 @@ export function releaseAssetPaths(version) {
 }
 
 /**
- * What the Release workflow's release-only gates would say, before pushing.
- * An existing version tag means this is a normal main update, so no release
- * assets are required. A new version means release intent and therefore all
- * committed assets must exist before publication.
+ * Every main-bound commit is a delivery release. The version must be unused;
+ * VSIX/SBOM/provenance files are generated only by the final CI package job,
+ * after every independent gate has passed.
  */
-export function releaseGateProblems({ version, remoteTags, trackedFiles }) {
-  if (remoteTags.includes(`v${version}`)) return [];
-  const problems = [];
-  const tracked = new Set(trackedFiles);
-  for (const asset of releaseAssetPaths(version)) {
-    if (!tracked.has(asset)) {
-      problems.push(
-        `${asset} is not committed: package, run supply-chain, then git add -f builds/...`,
-      );
-    }
+export function releaseGateProblems({ version, remoteTags }) {
+  if (remoteTags.includes(`v${version}`)) {
+    return [`v${version} already exists: every main-bound change must advance one delivery minor`];
   }
-  return problems;
+  return [];
 }
 
 // Shapes GitHub push protection blocks (GH013). Lengths follow the real formats,

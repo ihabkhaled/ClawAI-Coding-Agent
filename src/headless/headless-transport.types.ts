@@ -19,3 +19,11 @@ export interface HeadlessRunRequest {
   readonly epochs: Readonly<Record<string, number>>;
   readonly budget: Readonly<Record<string, number>>;
 }
+
+/** One connector model, as `--list-models` shows it. */
+export interface HeadlessConnectorModel {
+  readonly provider: string;
+  readonly modelKey: string;
+  readonly displayName: string;
+  readonly supportsTools: boolean;
+}

@@ -10,6 +10,7 @@ const CONTINUE_WHY: Readonly<
   'checks-failed': 'the completion checks failed',
   'run-lost': 'the runtime lost the run',
   'session-expired': 'the sign-in expired and was renewed',
+  'unknown-tool': 'the model named a tool that does not exist',
   'budget-exhausted': 'the server budget was used up',
   stuck: 'the run got stuck repeating a call',
 };

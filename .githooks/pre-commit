@@ -1,0 +1,5 @@
+#!/bin/sh
+set -eu
+
+node scripts/ensure-release-version.mjs --stage
+node scripts/verify-version-bump.mjs --base origin/main

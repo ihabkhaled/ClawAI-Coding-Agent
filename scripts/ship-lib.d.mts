@@ -7,7 +7,6 @@ export function releaseAssetPaths(version: string): string[];
 export function releaseGateProblems(input: {
   readonly version: string;
   readonly remoteTags: readonly string[];
-  readonly trackedFiles: readonly string[];
 }): string[];
 export function secretShapedAdditions(
   diffText: string,

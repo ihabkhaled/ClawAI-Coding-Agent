@@ -14,37 +14,21 @@ const allAssets = releaseAssetPaths('1.90.0');
 
 const EOL = String.fromCharCode(10);
 
-describe('release intent before pushing', () => {
-  it('lists the eight assets the Release workflow requires', () => {
+describe('release version before pushing', () => {
+  it('still knows the eight files produced by the final CI package job', () => {
     expect(allAssets).toHaveLength(8);
     expect(allAssets).toContain('builds/clawai-coding-agent-1.90.0.vsix.sha256');
     expect(allAssets).toContain('builds/clawai-coding-agent-1.90.0.provenance.json');
   });
 
-  it('passes when the tag is free and every asset is tracked', () => {
-    expect(
-      releaseGateProblems({ version: '1.90.0', remoteTags: ['v1.89.0'], trackedFiles: allAssets }),
-    ).toEqual([]);
+  it('passes when the delivery tag is free; generated release assets are not committed inputs', () => {
+    expect(releaseGateProblems({ version: '1.91.0', remoteTags: ['v1.90.0'] })).toEqual([]);
   });
 
-  it('accepts an already-published version as a normal main update', () => {
-    expect(
-      releaseGateProblems({
-        version: '1.90.0',
-        remoteTags: ['v1.90.0'],
-        trackedFiles: [],
-      }),
-    ).toEqual([]);
-  });
-
-  it('refuses assets that exist on disk but were never git added (builds/ is gitignored)', () => {
-    const problems = releaseGateProblems({
-      version: '1.90.0',
-      remoteTags: [],
-      trackedFiles: allAssets.slice(1),
-    });
-    expect(problems).toHaveLength(1);
-    expect(problems[0]).toMatch(/not committed/u);
+  it('refuses an already-published version because every main change is a release', () => {
+    expect(releaseGateProblems({ version: '1.90.0', remoteTags: ['v1.90.0'] })).toEqual([
+      'v1.90.0 already exists: every main-bound change must advance one delivery minor',
+    ]);
   });
 });
 

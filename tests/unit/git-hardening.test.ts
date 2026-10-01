@@ -148,6 +148,7 @@ const SPAWNERS_THAT_MAY_RUN_GIT = new Set([
   'sdk/git-tools-run.ts',
   'sdk/write-scope-git.ts',
   'sdk/workspace-tool-executor.ts',
+  'sdk/write-scope-path.ts',
 ]);
 const SPAWNERS_NEVER_GIT = new Set([
   'infrastructure/mcp/mcp-stdio-transport.ts',

@@ -2,6 +2,7 @@ import { randomUUID } from 'node:crypto';
 
 import { canonicalJson, sha256 } from '../headless/headless-transport';
 
+import { resolveToolAlias } from './tool-alias';
 import { guardToolResult } from './tool-result-guard';
 
 import type { AgentToolCall, AgentToolkit, ToolAttempt } from './agent-sdk.types';
@@ -67,11 +68,11 @@ export async function toolResultFor(
 /** The call a tool request names, as a toolkit receives it. */
 export function toolCallOf(event: HeadlessStreamEvent): AgentToolCall {
   const payload = (event.payload ?? {}) as ToolRequestPayload;
-  return {
+  return resolveToolAlias({
     toolName: payload.toolName ?? '',
     operation: payload.operation ?? '',
     arguments: payload.invocation?.arguments ?? {},
-  };
+  });
 }
 
 /**
