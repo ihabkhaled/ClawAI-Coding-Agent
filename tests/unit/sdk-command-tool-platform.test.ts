@@ -81,7 +81,53 @@ describe('Windows shim resolution', () => {
       launchCommand(request, { ...runtime, environment: { Path: 'C:\\tools' } }),
     ).toThrow(/script shim/u);
     expect(isUnsafeShimArgument('a\nb')).toBe(true);
-    expect(isUnsafeShimArgument('--flag=value & echo')).toBe(false);
+    expect(isUnsafeShimArgument('--flag=value')).toBe(false);
+    expect(isUnsafeShimArgument('plain-arg.txt')).toBe(false);
+  });
+
+  it.each([
+    'x" & whoami & "',
+    'a&b',
+    'a|b',
+    'a<b',
+    'a>b',
+    'a^b',
+    '(a)',
+    'a!b',
+    'ends-in-slash' + '\\',
+    '%PATH%',
+  ])('refuses the cmd.exe metacharacter argument %j', (argument) => {
+    expect(isUnsafeShimArgument(argument)).toBe(true);
+  });
+
+  it('refuses a git flag that names a program, even with no write scope', () => {
+    const runtime = windows(['C:\\tools\\git.EXE']);
+    const request = {
+      executable: 'git',
+      arguments: ['fetch', '--upload-pack=calc'],
+      cwd: 'C:\\work',
+      timeoutMs: 1_000,
+      maxOutputChars: 1_000,
+      background: false,
+    };
+    expect(() =>
+      launchCommand(request, { ...runtime, environment: { Path: 'C:\\tools' } }),
+    ).toThrow(/upload-pack/u);
+  });
+
+  it('refuses a double-quote injection before cmd.exe is started', () => {
+    const runtime = windows(['C:\\tools\\npm.CMD']);
+    const request = {
+      executable: 'npm',
+      arguments: ['run', 'x" & whoami & "'],
+      cwd: 'C:\\work',
+      timeoutMs: 1_000,
+      maxOutputChars: 1_000,
+      background: false,
+    };
+    expect(() =>
+      launchCommand(request, { ...runtime, environment: { Path: 'C:\\tools' } }),
+    ).toThrow(/script shim/u);
   });
 });
 

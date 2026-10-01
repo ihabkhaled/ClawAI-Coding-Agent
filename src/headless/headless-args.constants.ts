@@ -48,6 +48,7 @@ export const HEADLESS_BARE_FLAGS: readonly string[] = [
   '--continue',
   '--use-memory',
   '--no-memory',
+  '--list-models',
 ];
 
 /** Flags that take a value, each mapped to the field it fills. */
@@ -141,6 +142,8 @@ export const HEADLESS_USAGE = [
   '                               thread (0-20, default 3). --max-tool-calls and --max-duration are totals.',
   '  --use-memory                 Keep the account personal memories on a NEW thread. Default: off, so a',
   '                               coding run is deterministic. --no-memory is that default (a no-op).',
+  '  --list-models                Print the connector models this account can use (add --json for JSON);',
+  '                               starts no run, no -p needed.',
   '  -h, --help                   Show this help.',
   '',
   'Auth: CLAW_TOKEN, or CLAW_EMAIL and CLAW_PASSWORD. Never printed.',

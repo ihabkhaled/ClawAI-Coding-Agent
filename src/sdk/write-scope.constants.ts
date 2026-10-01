@@ -5,7 +5,12 @@ export const WRITE_SCOPE_CASE_INSENSITIVE_PLATFORMS: readonly NodeJS.Platform[] 
 ];
 
 /** Denied whatever the operator names: a write into `.git` is a hook, a config or a rewritten history. */
-export const WRITE_SCOPE_ALWAYS_DENY: readonly string[] = ['**/.git/**', '**/.git'];
+export const WRITE_SCOPE_ALWAYS_DENY: readonly string[] = [
+  '**/.git/**',
+  '**/.git',
+  '**/git~1/**',
+  '**/git~1',
+];
 
 export const WRITE_SCOPE_MAX_GLOBS = 64;
 export const WRITE_SCOPE_MAX_GLOB_CHARS = 200;
@@ -84,3 +89,18 @@ export const WRITE_SCOPE_GIT_BRANCH_FLAGS: readonly string[] = [
 
 /** `git remote` may only list. */
 export const WRITE_SCOPE_GIT_REMOTE_FLAGS: readonly string[] = ['-v', '--verbose'];
+
+/** Files under .git whose change runs code or alters what git trusts: hooks, config, exclude, attributes. */
+export const WRITE_SCOPE_GIT_GUARDED_FILES: readonly string[] = [
+  'config',
+  'info/exclude',
+  'info/attributes',
+];
+export const WRITE_SCOPE_GIT_GUARDED_DIRECTORIES: readonly string[] = ['hooks'];
+
+/** Most files and bytes per file the .git snapshot keeps; past them a file is compared by size and time only. */
+export const WRITE_SCOPE_GUARD_MAX_FILES = 200;
+export const WRITE_SCOPE_GUARD_MAX_BYTES = 1024 * 1024;
+
+/** Most entries of the workspace parent folder one snapshot lists. */
+export const WRITE_SCOPE_PARENT_MAX_ENTRIES = 5000;

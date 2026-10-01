@@ -31,3 +31,10 @@ export const DONE_CHECKS_PROMPT_TAIL = 'Fix the real cause, then finish.';
 
 /** The exit code recorded for a check that did not exit: timed out, cancelled or never started. */
 export const DONE_CHECK_NO_EXIT_CODE = -1;
+
+/** Characters of a failing check's output (its end) that the `run.checks` event carries. */
+export const DONE_CHECK_EVENT_TAIL_CHARS = 600;
+
+/** The start of the prompt that follows the same checks failing with the same output twice running. */
+export const DONE_CHECKS_STUCK_HEAD =
+  'The same completion checks failed with identical output twice in a row, so your current approach is not working. Stop repeating it and take a DIFFERENT approach: re-read the failing output below, question your assumptions, and change what you do.';

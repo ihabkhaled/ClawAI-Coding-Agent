@@ -9,7 +9,11 @@ import { readRuntimeEvents } from './runtime-event-stream';
 import { RuntimeHttpError } from './runtime-http-error';
 
 import type { HeadlessStreamEvent } from './headless-session.types';
-import type { HeadlessCredentials, HeadlessRunRequest } from './headless-transport.types';
+import type {
+  HeadlessConnectorModel,
+  HeadlessCredentials,
+  HeadlessRunRequest,
+} from './headless-transport.types';
 import type { RetryContext } from './retry-policy.types';
 
 export function sha256(text: string): string {
@@ -138,6 +142,12 @@ export class HeadlessTransport {
     });
   }
 
+  /** The connector models the account may use (`GET /connectors/available-models`). */
+  async connectorModels(token: string): Promise<readonly HeadlessConnectorModel[]> {
+    const body = await this.json<unknown>('/connectors/available-models', { method: 'GET', token });
+    return connectorModelsFrom(body);
+  }
+
   startRun(
     token: string,
     request: HeadlessRunRequest,
@@ -186,18 +196,18 @@ export class HeadlessTransport {
 
   private async json<T>(
     path: string,
-    options: { body: unknown; token?: string; method?: 'POST' | 'PATCH' },
+    options: { body?: unknown; token?: string; method?: 'POST' | 'PATCH' | 'GET' },
   ): Promise<T> {
     // Serialized once, outside the retry, so every attempt sends identical bytes.
-    const payload = JSON.stringify(options.body);
+    const payload = options.body === undefined ? undefined : JSON.stringify(options.body);
     return withRetries(this.retry, async () => {
       const response = await fetch(this.baseUrl + path, {
         method: options.method ?? 'POST',
         headers: {
-          'Content-Type': 'application/json',
+          ...(payload === undefined ? {} : { 'Content-Type': 'application/json' }),
           ...(options.token === undefined ? {} : { Authorization: `Bearer ${options.token}` }),
         },
-        body: payload,
+        ...(payload === undefined ? {} : { body: payload }),
         ...(this.retry.signal === undefined ? {} : { signal: this.retry.signal }),
       });
       const text = await response.text();
@@ -205,4 +215,22 @@ export class HeadlessTransport {
       return (text.length === 0 ? {} : JSON.parse(text)) as T;
     });
   }
+}
+
+/** The models in a `/connectors/available-models` body; anything that is not a model entry is skipped. */
+function connectorModelsFrom(body: unknown): readonly HeadlessConnectorModel[] {
+  if (!Array.isArray(body)) return [];
+  return body.flatMap((entry: unknown): HeadlessConnectorModel[] => {
+    if (typeof entry !== 'object' || entry === null) return [];
+    const { provider, modelKey, displayName, supportsTools } = entry as Record<string, unknown>;
+    if (typeof provider !== 'string' || typeof modelKey !== 'string') return [];
+    return [
+      {
+        provider,
+        modelKey,
+        displayName: typeof displayName === 'string' ? displayName : modelKey,
+        supportsTools: supportsTools === true,
+      },
+    ];
+  });
 }

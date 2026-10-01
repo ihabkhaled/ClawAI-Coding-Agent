@@ -54,6 +54,10 @@
           "const": true,
           "description": "The last run ended because the runtime's own run budget was used up, not because of the task or a run guard."
         },
+        "unknownTool": {
+          "const": true,
+          "description": "The last run ended because the model named a tool that does not exist (--auto-continue then lists the exact names)."
+        },
         "runLost": {
           "const": true,
           "description": "The last run ended because the runtime no longer knew it (a restart or stale claim), and it could not be continued."
@@ -109,7 +113,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["type", "passed", "checks"],
-      "description": "The run ended completed and the orchestrator's completion checks ran, all of them, in order. passed is false when any failed; the run is then unfinished and --auto-continue starts a new run (run.continued with reason checks-failed). Output is never in the event.",
+      "description": "The run ended completed and the orchestrator's completion checks ran, all of them, in order. passed is false when any failed; the run is then unfinished and --auto-continue starts a new run (run.continued with reason checks-failed). A failing check carries the redacted tail of its output.",
       "properties": {
         "type": { "const": "run.checks" },
         "passed": { "type": "boolean" },
@@ -123,7 +127,12 @@
               "label": { "type": "string", "minLength": 1 },
               "ok": { "type": "boolean" },
               "exitCode": { "type": "integer" },
-              "durationMs": { "type": "integer", "minimum": 0 }
+              "durationMs": { "type": "integer", "minimum": 0 },
+              "tail": {
+                "type": "string",
+                "maxLength": 600,
+                "description": "The last 600 characters of a failing check's output, redacted. Absent for a passing check."
+              }
             }
           }
         }
@@ -233,8 +242,15 @@
           "description": "1 for the first continuation."
         },
         "reason": {
-          "enum": ["budget-exhausted", "run-lost", "stuck", "checks-failed", "session-expired"],
-          "description": "checks-failed: the run said it was done but the orchestrator's completion checks (--done-check) failed. budget-exhausted: the runtime's run budget was used up. run-lost: the runtime no longer knew the run (a restart, a stale claim). stuck: the run was ended for repeating one call. session-expired: the access token expired during the run (email and password only); it signed in again."
+          "enum": [
+            "budget-exhausted",
+            "run-lost",
+            "stuck",
+            "checks-failed",
+            "session-expired",
+            "unknown-tool"
+          ],
+          "description": "checks-failed: the run said it was done but the orchestrator's completion checks (--done-check) failed. budget-exhausted: the runtime's run budget was used up. run-lost: the runtime no longer knew the run (a restart, a stale claim). stuck: the run was ended for repeating one call. session-expired: the access token expired during the run (email and password only); it signed in again. unknown-tool: the model named a tool that does not exist; the new run is told the exact names."
         }
       }
     },

@@ -16,6 +16,7 @@ import {
   AGENT_TOOL_TIMEOUT_MS,
 } from './workspace-toolkit.constants';
 import { assertScopedCall } from './write-scope';
+import { captureWriteGuard, enforceGuard } from './write-scope-guard';
 
 import type { AgentToolCall } from './agent-sdk.types';
 import type { CommandTool } from './command-tool.types';
@@ -56,14 +57,35 @@ function dispatchWorkspaceTool(
     return commands.execute(call.operation, args, limits, signal);
   }
   if (call.toolName === 'workspace.git') {
-    return runGitTool(call.operation, args, limits.workspace, signal);
+    return guardedGit(call.operation, args, limits, signal);
   }
   if (call.toolName === 'workspace.file')
-    return runFileTool(call.operation, args, limits.workspace);
+    return runFileTool(call.operation, args, limits.workspace, signal);
   throw new Error(`Unsupported tool ${call.toolName}`);
 }
 
 export { requirePath } from './file-tools';
+
+/** Git, with .git hooks/config checked before and after when a write scope is set. */
+function guardedGit(
+  operation: string,
+  args: Readonly<Record<string, unknown>>,
+  limits: ToolLimits,
+  signal: AbortSignal | undefined,
+): unknown {
+  const scope = limits.writeScope;
+  if (scope === undefined) return runGitTool(operation, args, limits.workspace, signal);
+  const guard = captureWriteGuard(limits.workspace);
+  const result = runGitTool(operation, args, limits.workspace, signal);
+  if (!(result instanceof Promise)) {
+    enforceGuard(guard, scope, 'workspace.git');
+    return result;
+  }
+  return result.then((value: unknown) => {
+    enforceGuard(guard, scope, 'workspace.git');
+    return value;
+  });
+}
 
 /**
  * Git with the argument list fixed per operation: status, diff and log here,

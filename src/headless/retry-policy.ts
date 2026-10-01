@@ -2,6 +2,7 @@ import {
   CAUSE_DEPTH,
   NETWORK_FAILURE_CODE,
   RETRY_DEFAULTS,
+  BUSY_BODY_PATTERN,
   TRANSIENT_NETWORK_CODES,
   TRANSIENT_NETWORK_MESSAGE,
   TRANSIENT_STATUSES,
@@ -30,7 +31,8 @@ export function classifyFailure(error: unknown): RetryVerdict {
 function classifyHttp(error: RuntimeHttpError): RetryVerdict {
   const transient =
     TRANSIENT_STATUSES.includes(error.status) ||
-    (error.status === 500 && UNAVAILABLE_BODY_PATTERN.test(error.detail));
+    (error.status === 500 && UNAVAILABLE_BODY_PATTERN.test(error.detail)) ||
+    (error.status === 400 && BUSY_BODY_PATTERN.test(error.detail));
   if (!transient) return { retry: false };
   return {
     retry: true,

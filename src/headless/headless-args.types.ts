@@ -59,10 +59,17 @@ export interface HeadlessInvocation {
   readonly research?: ResearchMode | undefined;
 }
 
+/** `--list-models`: print the account's models and exit. */
+export interface HeadlessListModels {
+  readonly backendUrl?: string | undefined;
+  readonly json: boolean;
+}
+
 /** A parse either yields a run, asks for help, or names the mistake. */
 export type HeadlessParse =
   | { readonly kind: 'run'; readonly invocation: HeadlessInvocation }
   | { readonly kind: 'login'; readonly login: HeadlessLogin }
+  | { readonly kind: 'list-models'; readonly request: HeadlessListModels }
   | { readonly kind: 'help' }
   | { readonly kind: 'usage'; readonly message: string };
 
