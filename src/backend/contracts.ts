@@ -251,7 +251,7 @@ export const parallelResponseSchema = z
     messageId: z.string(),
     threadId: z.string(),
     prompt: z.string(),
-    responses: z.array(parallelModelResponseSchema).min(2).max(5),
+    responses: z.array(parallelModelResponseSchema).max(5),
     totalLatencyMs: z.number().nonnegative(),
     completedCount: z.number().int().nonnegative(),
     failedCount: z.number().int().nonnegative(),

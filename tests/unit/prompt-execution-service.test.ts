@@ -48,6 +48,8 @@ function harness(options?: { fileIds?: string[]; threadId?: string; viewAvailabl
   const activateThread = vi.fn();
   const recordThread = vi.fn();
   const compare = vi.fn(async () => parallelResponse());
+  const openStream = vi.fn(async () => new Response('data: {"type":"DONE"}\n\n'));
+  const listMessages = vi.fn(async () => []);
   const send = vi.fn(
     async (
       _request: unknown,
@@ -78,7 +80,7 @@ function harness(options?: { fileIds?: string[]; threadId?: string; viewAvailabl
         rollback,
       })),
     },
-    backend: () => ({ compare }),
+    backend: () => ({ compare, listMessages, openStream }),
     captureAdmission: vi.fn(() => ({
       boundaryEpoch: 1,
       session: Promise.resolve(requestSession),
@@ -131,6 +133,8 @@ function harness(options?: { fileIds?: string[]; threadId?: string; viewAvailabl
     activateThread,
     compare,
     dependencies,
+    listMessages,
+    openStream,
     postEvent,
     postResult,
     releaseRequest,

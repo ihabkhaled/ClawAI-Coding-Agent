@@ -2,9 +2,17 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.89.0
+
+- Compare and Compare + Judge work again. The ClawAI server now answers a comparison straight away and runs the models in the background; the extension used to reject that answer. It now waits on the live stream, shows progress while the models and the judge work, and then shows one card per model with the judge's verdict.
+- Autonomous Scoped is described correctly everywhere: it runs routine edits and commands inside the workspace without asking, still asks before commits, pushes, deletes and MCP calls, and a write outside the workspace is refused in every approval level, never offered for approval.
+- The command-line agent no longer reports a run as finished when it stopped because it used up its whole tool allowance (for example at `--effort LOW`). It reports it as out of budget (exit 5) and `--auto-continue` carries on.
+- Turning off every tool (for example `--disallowed-tools 'workspace.*'`) is now a usage error (exit 2) with a clear message, instead of a raw server error.
+- Still on the ClawAI server: a run with memory turned off can still read a saved memory now and then (one of three live checks). Details are in `docs/parity/PARTIAL_REMAINDERS.md`.
+
 ## 1.88.0
 
-- Approval choices now do what their names say. Strict asks for every action every time and never reuses an earlier yes. Plan can still read your workspace for context while refusing every edit and command. Autonomous Scoped works inside your workspace and still asks before commands and before writing outside it.
+- Approval choices now do what their names say. Strict asks for every action every time and never reuses an earlier yes. Plan can still read your workspace for context while refusing every edit and command. Autonomous Scoped works inside your workspace and still asks before commits, pushes, deletes and MCP calls (corrected in 1.89.0: it never asked before commands, and a write outside the workspace is refused, not asked about).
 - The chat box now remembers Run, Context and Web research after a reload, like Effort, Speed and Approval.
 - In the command-line agent, `--disallowed-tools workspace.file` (a tool name on its own) now blocks every action of that tool instead of silently doing nothing, and `--allowed-tools` works the same way.
 - In Plan mode, a model that asks to write a file now gets a refusal it can answer with, instead of the whole run ending in an error.

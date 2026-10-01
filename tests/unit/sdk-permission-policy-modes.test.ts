@@ -1,5 +1,10 @@
+import { mkdtempSync } from 'node:fs';
+import { tmpdir } from 'node:os';
+import path from 'node:path';
+
 import { describe, expect, it, vi } from 'vitest';
 
+import { containedPath } from '../../src/core/workspace-containment';
 import { permissionsForMode } from '../../src/sdk/permission-modes';
 
 import type { AgentApprovalRequest } from '../../src/sdk/workspace-toolkit.types';
@@ -49,6 +54,15 @@ describe('autonomous-scoped', () => {
     expect(await outcomeOf('autonomous-scoped', commit)).toBe('asked');
     expect(await outcomeOf('autonomous-scoped', push)).toBe('asked');
     expect(await outcomeOf('autonomous-scoped', mcp)).toBe('asked');
+  });
+
+  it('never asks about a path: a write outside the workspace is refused by containment, not offered for approval', async () => {
+    const workspace = mkdtempSync(path.join(tmpdir(), 'scoped-'));
+    const outside = call('write', 'workspace.file', 'create');
+
+    expect(await outcomeOf('autonomous-scoped', outside)).toBe('allowed');
+    expect(() => containedPath(workspace, '../outside.txt')).toThrow(/escapes the workspace/u);
+    expect(containedPath(workspace, 'src/ok.txt')).toContain('ok.txt');
   });
 
   it('denies what needs asking when nobody can be asked', async () => {

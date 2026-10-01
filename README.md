@@ -9,13 +9,15 @@ project, proposes changes, and waits for your OK before it touches a file.
 It connects to your ClawAI account, so you can use many AI models from one
 place: hosted models, or models running on your own machine.
 
-Version 1.88.0 delivers a more capable agent that can plan, edit files, run
+Version 1.89.0 delivers a more capable agent that can plan, edit files, run
 commands, use git, and drive a browser, all with your approval, and it keeps
 working with the classic chat-and-review flow if a newer feature is not
 available on your ClawAI server. The approval choices now mean what they say
 (Strict asks every time, Plan can still read your workspace), the chat box
 remembers Run, Context and Web research, and in Plan mode the agent answers
-that it cannot write instead of stopping with an error. Scheduled tasks can now follow a calendar
+that it cannot write instead of stopping with an error. Compare and
+Compare + Judge work again against the current server, and a run that used up
+its whole tool allowance is reported as out of budget instead of finished. Scheduled tasks can now follow a calendar
 (for example weekdays at 9:00), and commands sent to a runner machine run with
 your sandbox setting and without your editor's private environment. The
 command-line agent can now be set up like the chat box (effort, what it is
@@ -81,8 +83,9 @@ Pick the **Approval** level under **More settings** in the chat box:
 - **Ask for Approval:** the default. You approve each change and command.
 - **Auto Edit:** routine file edits go through. Commands and riskier actions
   still ask.
-- **Autonomous Scoped:** low-risk work inside the workspace goes through.
-  Publishing, deleting and similar still ask.
+- **Autonomous Scoped:** routine edits and commands inside the workspace go
+  through. Committing, pushing, deleting and MCP calls still ask. Writing
+  outside the workspace is refused in every level, never offered for approval.
 - **Strict:** asks like Ask for Approval, and refuses deleting, production and
   admin-level actions.
 

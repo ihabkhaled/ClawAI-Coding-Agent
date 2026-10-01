@@ -311,3 +311,20 @@ describe('--research', () => {
     expect(JSON.stringify(submitted)).toContain('private address');
   });
 });
+
+describe('tool filters that leave nothing', () => {
+  it('exits 2 before any request when every tool is disallowed', async () => {
+    const run = await drive(['--disallowed-tools', 'workspace.*']);
+
+    expect(run.code).toBe(2);
+    expect(run.requests).toHaveLength(0);
+    expect(run.stderr).toContain('No tool is left');
+  });
+
+  it('still runs when the filters leave at least one tool', async () => {
+    const run = await drive(['--disallowed-tools', 'workspace.command']);
+
+    expect(run.code).toBe(0);
+    expect(run.requests).toHaveLength(1);
+  });
+});

@@ -148,6 +148,12 @@ command in every mode; the live agent path, which this mirrors, runs R2 commands
 asks for R3 and R4 work (commit, push, delete, MCP call). Reads are never asked about in any mode. There is no
 final-diff review step in a headless run, so none is asked for.
 
+`autonomous-scoped` never asks about a command and never asks about a path. A write outside the workspace
+is refused by workspace containment (`Path escapes the workspace`, `src/core/workspace-containment.ts`) in every mode, before
+any approval is consulted, so it reaches the model as a failed result rather than a question. (Before 1.89.0 the 1.88.0
+changelog said Autonomous Scoped "still asks before commands and before writing outside it"; that was wrong for the
+command-line agent and for the editor's runtime tools, which `PERMISSION_MATRIX.md` shows as `A` for `workspace.command.run`.)
+
 Approval is the SDK's `permissions.approve` callback. The CLI asks on the terminal
 (`Allow workspace.file.create {...}? [y/N]`, arguments redacted and cut to 200
 characters) only when stdin is a TTY. **With no terminal, anything that needs
@@ -177,6 +183,8 @@ case-insensitive) over tool identifiers:
 | MCP tool call                       | `mcp__<server>__<tool>`                                                                                                                                                     |
 | MCP tool listing                    | `runtime.mcp.tools`, `mcp__<server>`                                                                                                                                        |
 | MCP server listing                  | `runtime.mcp.servers`                                                                                                                                                       |
+
+If the two lists together remove every tool (for example `--disallowed-tools 'workspace.*'`), the run is exit 2 with `No tool is left for the agent` before any request, instead of a raw server error.
 
 A bare tool name (`workspace.file`, `workspace.command`) matches every operation of that tool, in `--disallowed-tools` and `--allowed-tools` alike, so `--disallowed-tools workspace.file` refuses reads and writes. `workspace.file.*` means the same.
 
@@ -347,6 +355,13 @@ clawai -p "..." --mcp-config ci/mcp.json --mcp-token-file /run/secrets/mcp-token
 Runtime events carry no cost, so the guards are on what the runner can see. Either stops the run
 cleanly with **exit 5**, `outcome: "exhausted"`, and a `budget.exhausted` event (stream-json) before
 `run.finished`; `result.error` says which.
+
+A run that finishes having used **exactly its whole tool-call allowance** (the `--effort` table, or the budget profile's
+limit) is not reported as `completed`. The runtime refuses call `limit + 1`, so a model that has spent them all usually
+answers "done" and the server records an ordinary completion; a run cut short by its budget would then look like one that
+finished. It ends as `exhausted` (exit 5) with `budgetExhausted: true`, a `budget.exhausted` event
+(`budget: tool-calls`, `limit`) and `--auto-continue` treats it like any server-budget ending. A run that finishes under
+its allowance stays `completed`.
 
 - `--max-tool-calls <n>` (SDK `run(prompt, { maxToolCalls })`): the model may request `n` calls. The
   `n+1`th is refused, never executed, and ends the run. `toolCalls` never exceeds `n`.
@@ -599,7 +614,7 @@ Each editor composer control has a flag and an SDK field. A bad value is exit 2 
 
 | Control (editor)  | Flag and SDK field                                                                              | What it does in a headless run                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                      |
 | ----------------- | ----------------------------------------------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| Run               | (none: a headless run is always the Agent)                                                      | Chat, Compare and Compare + Judge are editor chat surfaces and are not driven here.                                                                                                                                                                                                                                                                                                                                                                                                                                                                 |
+| Run               | (none: a headless run is always the Agent)                                                      | Chat, Compare and Compare + Judge are editor chat surfaces and are not driven here. In the editor, Compare accepts the server's `responses: []` acceptance and reads each lane and the judge from the thread stream.                                                                                                                                                                                                                                                                                                                                |
 | Effort            | `--effort`, `effort`                                                                            | Sends the editor's budget for that level as the run budget (model turns, tool calls, tool rounds, repair, wall clock, output and result bytes). `--max-turns` still narrows it. Replaces `--budget`; giving both is exit 2.                                                                                                                                                                                                                                                                                                                         |
 | Agent (Auto/Plan) | `--permission-mode plan`                                                                        | Plan is the read-only mode. Auto is the default.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                    |
 | Speed             | `--speed`, `speed`                                                                              | Sets how many workspace lookups (containment check and stat) run at once while context is read: 1, 4 or 8. It never changes which files are chosen, and does nothing for `none`, `file` or `selection`.                                                                                                                                                                                                                                                                                                                                             |

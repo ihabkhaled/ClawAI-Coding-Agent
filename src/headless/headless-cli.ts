@@ -70,7 +70,7 @@ export async function runHeadlessCli(
   };
   const threadId = await threadToResume(invocation, sessions, scope);
   if (threadId === null) return usageError(io, 'There is no previous thread to --continue.');
-  const agent = createAgent(
+  const agent = agentOrUsage(
     agentConfigFor({
       invocation,
       inputs,
@@ -81,6 +81,7 @@ export async function runHeadlessCli(
       transport: context.transport,
     }),
   );
+  if (typeof agent === 'string') return usageError(io, agent);
   const result = await agent.run(invocation.prompt, {
     title: 'Headless run',
     maxTurns: invocation.maxTurns,
@@ -99,6 +100,18 @@ export async function runHeadlessCli(
   }
   writeResult(invocation.outputFormat, result, io);
   return result.exitCode;
+}
+
+/** The agent, or the usage message when its inputs are unusable (a RangeError from `createAgent`). */
+function agentOrUsage(
+  config: Parameters<typeof createAgent>[0],
+): ReturnType<typeof createAgent> | string {
+  try {
+    return createAgent(config);
+  } catch (error) {
+    if (error instanceof RangeError) return error.message;
+    throw error;
+  }
 }
 
 function usageError(io: HeadlessIo, message: string): number {
