@@ -7,6 +7,7 @@ import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
 import { toolCallOf, toolResultFor } from './agent-tool-result';
 import { profileDeadlineMs, resolveRunBudget } from './budget-profiles';
 import { openThread } from './thread-memory';
+import { describeTools } from './tool-alias';
 
 import type {
   AgentRunOptions,
@@ -105,5 +106,16 @@ async function deniedReason(
 ): Promise<string | undefined> {
   if (toolkit.authorize === undefined) return undefined;
   const allowed = await toolkit.authorize(toolCallOf(event));
-  return allowed ? undefined : 'The tool call was not permitted for this run.';
+  if (allowed) return undefined;
+  const call = toolCallOf(event);
+  return isOffered(call.toolName, toolkit)
+    ? 'The tool call was not permitted for this run.'
+    : `Unknown tool "${call.toolName}". Use exactly one of these tool names and operations:
+${describeTools(toolkit.definitions)}`;
+}
+
+function isOffered(toolName: string, toolkit: AgentToolkit): boolean {
+  return toolkit.definitions.some(
+    (definition) => (definition as { name?: unknown }).name === toolName,
+  );
 }

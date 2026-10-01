@@ -21,6 +21,8 @@ export interface WriteScopeOptions {
   /** Decides case sensitivity; defaults to this machine's platform. */
   readonly platform?: NodeJS.Platform | undefined;
   readonly onViolation?: WriteScopeListener | undefined;
+  /** Build a scope even with no globs, so only the always-denied paths (`.git`) are guarded. */
+  readonly alwaysGuard?: boolean | undefined;
 }
 
 /** A compiled scope. Build it with `createWriteScope`. */
@@ -30,6 +32,11 @@ export interface WriteScope {
   readonly denyGlobs: readonly string[];
   readonly allow: readonly RegExp[];
   readonly deny: readonly RegExp[];
+  /** Directories a deny glob covers as a whole: its literal leading segments. */
+  readonly protectedDirs: readonly string[];
+  /** Strip NTFS stream suffixes and trailing dots/spaces before matching. */
+  readonly windowsNames: boolean;
+  readonly insensitive: boolean;
   readonly onViolation?: WriteScopeListener | undefined;
 }
 
@@ -47,4 +54,28 @@ export interface RevertReport {
   readonly failed: readonly string[];
   /** Paths past the revert bound, left as they are. */
   readonly skipped: number;
+}
+
+/** One guarded .git file as it was: its bytes when small enough to restore, else undefined. */
+export interface GuardedFile {
+  readonly content: Buffer | undefined;
+  readonly signature: string;
+}
+
+/** One entry of the workspace parent folder. */
+export interface ParentEntry {
+  readonly signature: string;
+}
+
+/** What a command or git write changed outside the tools reach, after the guard undid what it could. */
+export interface GuardReport {
+  /** Display paths: .git/hooks/pre-commit, ../outside.txt. */
+  readonly paths: readonly string[];
+  readonly reverted: readonly string[];
+  readonly failed: readonly string[];
+}
+
+/** A before-snapshot of .git and the workspace parent; verify compares, reverts and reports. */
+export interface WriteScopeGuard {
+  readonly verify: () => GuardReport;
 }

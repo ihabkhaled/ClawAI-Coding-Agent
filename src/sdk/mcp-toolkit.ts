@@ -10,6 +10,8 @@ import {
 import { connectMcpServer } from '../infrastructure/mcp/mcp-connection-factory';
 import { McpServerRegistry } from '../services/mcp-server-registry';
 
+import { isApproved } from './permission-modes';
+
 import type { AgentToolCall, AgentToolkit } from './agent-sdk.types';
 import type { AgentMcpOptions } from './mcp-toolkit.types';
 import type { AgentPermissions } from './workspace-toolkit.types';
@@ -64,7 +66,7 @@ export function mcpToolkit(
     authorize: async (call) => {
       if (!granted || call.toolName !== MCP_TOOL_NAME) return false;
       if (permissions.approve === undefined) return true;
-      return permissions.approve({ ...call, category: 'mcp' });
+      return isApproved(await permissions.approve({ ...call, category: 'mcp' }));
     },
     execute: (call, signal) => executeMcp(registry, call, signal),
     dispose: () => {

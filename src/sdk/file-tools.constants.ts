@@ -49,6 +49,15 @@ export const FILE_SEARCH_REGEX_LINE_CHARS = 4_000;
 /** The longest regular expression or glob accepted. */
 export const FILE_PATTERN_MAX_CHARS = 300;
 
+/** Most wildcards (`*`, `?`, `{`) a glob may hold; each one multiplies the matching work. */
+export const FILE_GLOB_MAX_WILDCARDS = 8;
+
+/** Most quantifiers (`*`, `+`, `?`, `{n,m}`) a search regex may hold. */
+export const FILE_REGEX_MAX_QUANTIFIERS = 8;
+
+/** Longest stretch of synchronous matching before a search yields to the event loop. */
+export const FILE_SLICE_MS = 15;
+
 /** How long a walk (search or glob) may run before it returns what it has. */
 export const FILE_WALK_BUDGET_MS = 8_000;
 

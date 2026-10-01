@@ -175,12 +175,12 @@ describe('workspace.file read', () => {
 });
 
 describe('workspace.file containment', () => {
-  it('refuses traversal on every operation', () => {
+  it('refuses traversal on every operation', async () => {
     const root = workspace();
     const run = tool(root);
 
     for (const operation of ['read', 'list', 'glob', 'search', 'stat', 'update', 'delete']) {
-      expect(() =>
+      await expect(async () =>
         run(operation, {
           path: '../outside',
           pattern: '*',
@@ -188,13 +188,13 @@ describe('workspace.file containment', () => {
           oldText: 'a',
           newText: 'b',
         }),
-      ).toThrow(/escapes the workspace/u);
+      ).rejects.toThrow(/escapes the workspace/u);
     }
     expect(() => run('rename', { path: 'a', to: '../b' })).toThrow();
     expect(() => run('create', { path: '../x', content: 'a' })).toThrow(/escapes the workspace/u);
   });
 
-  it('refuses a symbolic link and never follows one out of the workspace', () => {
+  it('refuses a symbolic link and never follows one out of the workspace', async () => {
     const root = workspace();
     const outside = workspace();
     put(outside, 'secret.txt', 'top secret');
@@ -209,8 +209,12 @@ describe('workspace.file containment', () => {
 
     expect(() => run('read', { path: 'secret-link.txt' })).toThrow(/symbolic link/u);
     expect(() => run('read', { path: 'link/secret.txt' })).toThrow(/escapes the workspace/u);
-    expect(JSON.stringify(run('search', { query: 'secret' }))).not.toContain('top secret');
-    expect((run('glob', { pattern: '**/*.txt' }).paths as string[]).sort()).toEqual(['real.txt']);
+    expect(JSON.stringify(await Promise.resolve(run('search', { query: 'secret' })))).not.toContain(
+      'top secret',
+    );
+    expect(
+      ((await Promise.resolve(run('glob', { pattern: '**/*.txt' }))).paths as string[]).sort(),
+    ).toEqual(['real.txt']);
   });
 });
 

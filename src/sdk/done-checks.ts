@@ -8,6 +8,7 @@ import { runForeground } from './command-tool-foreground';
 import { headAndTail } from './command-tool-output';
 import {
   DONE_CHECK_DEFAULT_TIMEOUT_MS,
+  DONE_CHECK_EVENT_TAIL_CHARS,
   DONE_CHECK_MAX_ARGUMENTS,
   DONE_CHECK_MAX_COUNT,
   DONE_CHECK_MAX_LABEL_CHARS,
@@ -16,6 +17,7 @@ import {
   DONE_CHECK_OUTPUT_CHARS,
   DONE_CHECKS_PROMPT_HEAD,
   DONE_CHECKS_PROMPT_TAIL,
+  DONE_CHECKS_STUCK_HEAD,
 } from './done-checks.constants';
 
 import type { CommandResult, CommandRuntime } from './command-tool.types';
@@ -162,12 +164,31 @@ export function checkSummaries(report: DoneChecksReport): readonly DoneCheckSumm
   return report.checks.map(({ label, ok, exitCode }) => ({ label, ok, exitCode }));
 }
 
-/** The continuation prompt for a failed report: each failing check and the ends of its output. */
-export function doneChecksPrompt(report: DoneChecksReport): string {
-  const failing = report.checks
+/** The last characters of a failing check's output, redacted, for the `run.checks` event; none for a pass. */
+export function checkTail(outcome: DoneCheckOutcome): string | undefined {
+  return outcome.ok ? undefined : redactText(outcome.output.slice(-DONE_CHECK_EVENT_TAIL_CHARS));
+}
+
+function failingLines(report: DoneChecksReport): string {
+  return report.checks
     .filter((outcome) => !outcome.ok)
-    .map((outcome) => `${outcome.label}: exit ${String(outcome.exitCode)}; ${outcome.output}`);
-  return `${DONE_CHECKS_PROMPT_HEAD} Failing checks:\n${failing.join('\n')}\n${DONE_CHECKS_PROMPT_TAIL}`;
+    .map((outcome) => `${outcome.label}: exit ${String(outcome.exitCode)}; ${outcome.output}`)
+    .join('\n');
+}
+
+/** Identifies a failure: the same labels failing with the same output give the same string. */
+export function failureSignature(report: DoneChecksReport): string {
+  return failingLines(report);
+}
+
+/**
+ * The continuation prompt for a failed report: each failing check and the ends
+ * of its output. When `repeated` (the same failure twice running) it says the
+ * approach is not working and asks for a different one.
+ */
+export function doneChecksPrompt(report: DoneChecksReport, repeated = false): string {
+  const head = repeated ? DONE_CHECKS_STUCK_HEAD : DONE_CHECKS_PROMPT_HEAD;
+  return `${head} Failing checks:\n${failingLines(report)}\n${DONE_CHECKS_PROMPT_TAIL}`;
 }
 
 /** The labels of the checks that failed. */

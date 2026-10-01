@@ -2,6 +2,8 @@ import {
   GIT_HARDENED_ENVIRONMENT,
   GIT_NEUTRALISING_CONFIG,
   GIT_READ_SAFETY_FLAGS,
+  GIT_REFUSED_LONG_FLAGS,
+  GIT_REFUSED_SHORT_FLAG,
   GIT_STRIPPED_ENVIRONMENT,
   GIT_WRITE_NEUTRALISING_CONFIG,
   PROGRAM_CONFIG_KEYS,
@@ -103,4 +105,24 @@ export function programSpawningConfigKeys(configText: string): string[] {
 /** git-lfs installs its own filter into repo config; that is not repo-chosen code. */
 function isBenignLfsFilter(key: string, value: string): boolean {
   return key.startsWith('filter.lfs.') && /^"?git-lfs\s/u.test(value.trim());
+}
+
+/**
+ * Why a command-tool git argument list is refused, or undefined. The `-c` and
+ * hooks neutralisation above stops a repository choosing a program; this stops
+ * the caller doing it with a flag, writing a file with `--output`, pointing git
+ * at another repository, or rewriting remote history with a force push. Nothing
+ * after `--` is a flag. The git/git-write tools build their own arguments and
+ * never reach this.
+ */
+export function gitCommandFlagProblem(args: readonly string[]): string | undefined {
+  const end = args.indexOf('--');
+  const flags = end === -1 ? args : args.slice(0, end);
+  for (const arg of flags) {
+    const name = arg.split('=')[0] ?? arg;
+    if (GIT_REFUSED_LONG_FLAGS.includes(name)) return `git option "${name}" is not allowed`;
+    if (GIT_REFUSED_SHORT_FLAG.test(arg)) return `git option "${arg.slice(0, 2)}" is not allowed`;
+    if (/^\+[^+]/u.test(arg)) return 'a "+" refspec forces a push';
+  }
+  return undefined;
 }

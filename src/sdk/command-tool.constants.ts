@@ -92,3 +92,10 @@ export const COMMAND_NO_SHELL_HINT =
 
 /** An argument that is nothing but shell syntax: `|`, `||`, `&&`, `&`, `;`, `<`, `>`, `>>`, `2>&1`, `2>`, `&>`. */
 export const COMMAND_SHELL_TOKEN_PATTERN = /^(?:\|\|?|&&?|;|<|>>?|[0-9]?>&[0-9]|[0-9]>>?|&>>?)$/u;
+
+/**
+ * cmd.exe syntax: NUL, line breaks, `%VAR%`, the double quote that ends cross-spawn's
+ * quoting so the rest runs as a new command, and the operators `& | < > ^ ( ) !`.
+ * A trailing backslash (checked separately) would escape the closing quote.
+ */
+export const UNSAFE_SHIM_ARGUMENT = /[\0\r\n%"&|<>^()!]/u;
