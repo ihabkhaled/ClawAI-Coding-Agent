@@ -1,3 +1,5 @@
+import { gitCommandFlagProblem } from '../core/git-hardening';
+
 import {
   WRITE_SCOPE_GIT_BRANCH_FLAGS,
   WRITE_SCOPE_GIT_COMMAND_SUBCOMMANDS,
@@ -16,6 +18,8 @@ function programName(executable: string): string {
 }
 
 function gitProblem(args: readonly string[]): string | undefined {
+  const flagProblem = gitCommandFlagProblem(args);
+  if (flagProblem !== undefined) return flagProblem;
   const [subcommand, ...rest] = args;
   if (subcommand === undefined) return undefined;
   if (['--version', '--help', '-h'].includes(subcommand)) return undefined;

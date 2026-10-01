@@ -156,18 +156,25 @@ export type AgentEvent =
       /** 1 for the first continuation. */
       readonly attempt: number;
       readonly reason:
-        'budget-exhausted' | 'run-lost' | 'stuck' | 'checks-failed' | 'session-expired';
+        | 'budget-exhausted'
+        | 'run-lost'
+        | 'stuck'
+        | 'checks-failed'
+        | 'session-expired'
+        | 'unknown-tool';
     }
   | {
       readonly type: 'run.checks';
       /** True when every completion check exited 0. */
       readonly passed: boolean;
-      /** Output is never in the event. `exitCode` is -1 for a check that did not exit. */
+      /** `exitCode` is -1 for a check that did not exit. A failing check carries `tail`. */
       readonly checks: readonly {
         readonly label: string;
         readonly ok: boolean;
         readonly exitCode: number;
         readonly durationMs: number;
+        /** The last 600 characters of a failing check's output, redacted. */
+        readonly tail?: string;
       }[];
     }
   | {
@@ -226,6 +233,8 @@ export interface AgentResult {
   readonly budgetExhausted?: true;
   /** True when the runtime no longer knew the last run (a restart, an expired claim). */
   readonly runLost?: true;
+  /** True when the runtime ended the run because the model named a tool that was not offered. */
+  readonly unknownTool?: true;
   /** True when the access token expired mid-run; with an email and password a continuation signs in again. */
   readonly sessionExpired?: true;
   /**

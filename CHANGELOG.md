@@ -2,6 +2,19 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.92.0
+
+Security hardening and a better command line. Commands the agent runs are still not sandboxed: a command can read or write anywhere you can. These changes make the built-in tools and the checks around commands much harder to get around.
+
+- A folder you limit the agent to (write scope) now also covers `.git`, Windows alternate data streams (`file.txt::$DATA`) and renames of whole folders, so a limited agent can no longer plant a git hook or edit a protected file through an alias.
+- After a command or a git action, the agent now checks for new files in `.git` (hooks and config) and directly beside your workspace, and removes them. It cannot see a write into a deeper folder or to another drive.
+- Windows `npm` and `npx` argument quoting is fixed: arguments that could be read as extra commands (`"`, `&`, `|`, `<`, `>`, `^`) are refused.
+- Git options that run other programs or write to files outside the workspace are refused.
+- Searching with a regular expression or a glob can no longer freeze the agent; patterns that could run forever are refused.
+- Approvals are strict: only a real "yes" approves. Anything else counts as "no".
+- Numbers given to file tools must be whole numbers.
+- Command line: `--list-models` shows the models you can use; busy servers are retried; the reason a run failed is shown; common tool name variants are understood; and a failing check shows the end of its output.
+
 ## 1.91.0
 
 - Browser sign-in now works when the ClawAI extension runs on a Remote SSH host or another VS Code remote extension host: the local callback is exposed through VS Code's managed forwarding instead of sending the browser to the wrong machine's localhost. The same protection applies to MCP OAuth.

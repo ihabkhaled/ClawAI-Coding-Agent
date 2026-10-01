@@ -44,7 +44,16 @@ export function permissionsForMode(
     approve: async (request) => {
       if (isPolicyDrivenMode(mode) && policyOutcome(mode, request) === 'deny') return false;
       if (!needsApproval(mode, request)) return true;
-      return ask === undefined ? false : ask(request);
+      return ask === undefined ? false : isApproved(await ask(request));
     },
   };
+}
+
+/**
+ * Whether an approval callback's answer is a grant. Only exactly `true`
+ * approves: the callback is caller code, and a truthy string, number or object
+ * from a loosely typed one must read as a refusal.
+ */
+export function isApproved(answer: unknown): boolean {
+  return answer === true;
 }

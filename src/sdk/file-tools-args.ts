@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { assertGlobCost } from './file-tools-pattern';
 import { FILE_PATTERN_MAX_CHARS } from './file-tools.constants';
 
 import type { FileToolArguments } from './file-tools.types';
@@ -50,8 +51,9 @@ export function optionalInteger(
 ): number | undefined {
   const value = args[name];
   if (value === undefined) return undefined;
-  if (typeof value === 'number' && Number.isInteger(value) && value >= min && value <= max) {
-    return value;
+  const number = typeof value === 'string' && /^-?\d{1,15}$/u.test(value) ? Number(value) : value;
+  if (typeof number === 'number' && Number.isInteger(number) && number >= min && number <= max) {
+    return number;
   }
   throw new Error(
     `workspace.file ${operation}: "${name}" must be an integer from ${String(min)} to ${String(max)}.`,
@@ -91,6 +93,7 @@ export function compileGlob(operation: string, argument: string, pattern: string
     );
   }
   const normalized = pattern.replaceAll('\\', '/');
+  assertGlobCost(operation, argument, normalized);
   const body = globBody(normalized);
   const prefix = normalized.includes('/') ? '' : '(?:.*/)?';
   return new RegExp(`^${prefix}${body}$`, 'u');

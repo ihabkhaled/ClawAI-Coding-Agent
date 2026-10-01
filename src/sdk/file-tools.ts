@@ -30,6 +30,7 @@ export function runFileTool(
   operation: string,
   args: FileToolArguments,
   workspace: string,
+  signal?: AbortSignal,
 ): unknown {
   const root = realpathSync(workspace);
   switch (operation) {
@@ -38,9 +39,9 @@ export function runFileTool(
     case 'list':
       return listFiles(args, workspace, root);
     case 'glob':
-      return globFiles(args, workspace, root);
+      return globFiles(args, workspace, root, signal);
     case 'search':
-      return searchFiles(args, workspace, root);
+      return searchFiles(args, workspace, root, signal);
     case 'stat':
       return statFileTool(args, workspace);
     case 'create':

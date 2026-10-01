@@ -1,15 +1,21 @@
 import { pathInScope } from './write-scope';
 import { commandRefusal } from './write-scope-command';
 import { dirtyEntries, revertEntries } from './write-scope-git';
+import { captureWriteGuard, enforceGuard } from './write-scope-guard';
 import { WRITE_SCOPE_MAX_REPORTED, WRITE_SCOPE_NOTE_CHARS } from './write-scope.constants';
 
 import type { CommandTool } from './command-tool.types';
-import type { DirtyEntry, RevertReport, WriteScope } from './write-scope.types';
+import type { DirtyEntry, RevertReport, WriteScope, WriteScopeGuard } from './write-scope.types';
 import type { ToolLimits } from '../headless/headless-main.types';
 
 type ToolResult = Record<string, unknown>;
 
 const COMMAND_TOOL = 'workspace.command';
+
+interface Baseline {
+  readonly baseline: readonly DirtyEntry[] | undefined;
+  readonly guard: WriteScopeGuard;
+}
 
 function isRecord(value: unknown): value is ToolResult {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
@@ -84,7 +90,7 @@ function audited(
  * Ignored files never count, and a path that was already dirty is not judged.
  */
 export function scopeCommandTool(inner: CommandTool, scope: WriteScope): CommandTool {
-  const baselines = new Map<string, readonly DirtyEntry[] | undefined>();
+  const baselines = new Map<string, Baseline>();
   const run = (
     args: Readonly<Record<string, unknown>>,
     limits: ToolLimits,
@@ -94,10 +100,14 @@ export function scopeCommandTool(inner: CommandTool, scope: WriteScope): Command
     const refusal = commandRefusal(executable, stringList(args.arguments));
     if (refusal !== undefined) throw new Error(refusal);
     const baseline = dirtyEntries(limits.workspace);
+    const guard = captureWriteGuard(limits.workspace);
     return Promise.resolve(inner.execute('run', args, limits, signal)).then((result) => {
-      if (args.background !== true) return audited(result, scope, limits.workspace, baseline);
+      if (args.background !== true) {
+        enforceGuard(guard, scope, COMMAND_TOOL);
+        return audited(result, scope, limits.workspace, baseline);
+      }
       if (isRecord(result) && typeof result.processId === 'string') {
-        baselines.set(result.processId, baseline);
+        baselines.set(result.processId, { baseline, guard });
       }
       return result;
     });
@@ -112,9 +122,11 @@ export function scopeCommandTool(inner: CommandTool, scope: WriteScope): Command
       const id = typeof args.processId === 'string' ? args.processId : '';
       const settled = isRecord(report) && report.running === false;
       if (!settled || !baselines.has(id)) return report;
-      const baseline = baselines.get(id);
+      const held = baselines.get(id);
       baselines.delete(id);
-      return audited(report, scope, limits.workspace, baseline);
+      if (held === undefined) return report;
+      enforceGuard(held.guard, scope, COMMAND_TOOL);
+      return audited(report, scope, limits.workspace, held.baseline);
     });
   return {
     dispose: inner.dispose,
