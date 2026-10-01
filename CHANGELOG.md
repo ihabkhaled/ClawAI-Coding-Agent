@@ -2,6 +2,13 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.91.0
+
+- Browser sign-in now works when the ClawAI extension runs on a Remote SSH host or another VS Code remote extension host: the local callback is exposed through VS Code's managed forwarding instead of sending the browser to the wrong machine's localhost. The same protection applies to MCP OAuth.
+- Every change that reaches `main` is a release again. The commit hook automatically advances the delivery minor version, keeps the lockfile and README aligned, and CI refuses a main-bound change whose version did not advance.
+- CI is split into parallel version, quality, unit, extension-host, browser, and dependency-audit gates. The VSIX and supply-chain files are built only after all of those gates pass.
+- A successful `main` CI run now triggers the Release workflow, which downloads that exact final CI artifact, creates the matching GitHub Release, and publishes the same VSIX to the VS Code Marketplace. Marketplace publication is required rather than silently skipped.
+
 ## 1.90.0
 
 - Compare and Compare + Judge now show their work as it happens. Each model gets its own card the moment it starts, the card shows whether the model is connecting, thinking, writing or finishing, and the answer fills in as it is written. While the judge works you see that it is ranking the answers; when the verdict is ready it appears with the winner, each model's rank and score, the judge's reason for each, and its overall rationale. The cards you were watching stay in place when the run ends.

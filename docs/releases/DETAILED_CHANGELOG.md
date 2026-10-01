@@ -2,6 +2,16 @@
 
 This is the full engineering log for ClawAI Coding Agent: every release with its internal notes, decisions and verification detail. The short, user-facing release notes are in [CHANGELOG.md](../../CHANGELOG.md).
 
+## 1.91.0
+
+Release automation and remote authorization delivery.
+
+- ClawAI browser authorization and MCP OAuth resolve loopback callbacks through `vscode.env.asExternalUri`, so Remote SSH, Dev Containers, WSL, tunnels, and similar remote extension hosts can forward the user's browser back to the listener without hard-coded hosts or ports.
+- Release policy is now one delivery minor per main-bound change. A repository-managed pre-commit hook runs `scripts/ensure-release-version.mjs --stage`; it advances the second SemVer component from the current `origin/main`, updates `package.json`, both lockfile version fields, the README version sentence, and adds a changelog section when one is absent. `verify-version-bump.mjs` is the independent gate.
+- CI is split so expensive lanes run in parallel: version, quality, unit/coverage, extension-host, Playwright webview, and runtime dependency audit. The packaging job depends on every lane, then creates the VSIX and supply-chain evidence and uploads only the current version's release files.
+- Release no longer repeats the full five-minute quality lane or requires committed generated binaries. It is triggered by a successful push CI on `main`, downloads the exact final CI artifact, verifies its hashes and provenance against the triggering commit, creates `v1.91.0`, and publishes that exact VSIX to the Visual Studio Marketplace. `VSCE_PAT` is required; missing Marketplace credentials fail the release instead of producing a false green. Open VSX remains optional.
+- The shipping rules, publishing docs, package audit, and agent routers now describe and enforce this pipeline.
+
 ## 1.90.0
 
 Live Compare cards and the judge verdict in the chat webview. The 1.89.0 note "live per-lane cards would need a webview change and are not done" is now done.
