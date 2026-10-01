@@ -1,6 +1,7 @@
 import spawn from 'cross-spawn';
 
 import { executableCandidates } from '../core/executable-candidates';
+import { gitCommandFlagProblem, isGitExecutable } from '../core/git-hardening';
 import { inheritedEnvironment } from '../core/inherited-environment';
 import { PROCESS_TERMINATION_GRACE_MS } from '../core/process-termination.constants';
 import { prepareGitSpawn } from '../infrastructure/hardened-git';
@@ -10,6 +11,7 @@ import {
   COMMAND_EXTRA_ENVIRONMENT_KEYS,
   COMMAND_FIXED_ENVIRONMENT,
   COMMAND_GROUP_KILL_MARGIN_MS,
+  UNSAFE_SHIM_ARGUMENT,
 } from './command-tool.constants';
 
 import type { CommandRequest, CommandRuntime } from './command-tool.types';
@@ -67,7 +69,7 @@ export function resolveCommandExecutable(
 
 /** Arguments a `.cmd` shim would hand to the Windows command interpreter as syntax. */
 export function isUnsafeShimArgument(argument: string): boolean {
-  return /[\0\r\n%]/u.test(argument);
+  return UNSAFE_SHIM_ARGUMENT.test(argument) || argument.endsWith('\\');
 }
 
 /**
@@ -133,10 +135,14 @@ export function launchCommand(request: CommandRequest, runtime: CommandRuntime):
   if (resolved === undefined) {
     throw new Error(`Executable ${request.executable} was not found on PATH.`);
   }
+  const gitProblem = isGitExecutable(request.executable)
+    ? gitCommandFlagProblem(request.arguments)
+    : undefined;
+  if (gitProblem !== undefined) throw new Error(`workspace.command refused: ${gitProblem}.`);
   const shim = runtime.platform === 'win32' && /\.(?:cmd|bat)$/iu.test(resolved);
   if (shim && request.arguments.some(isUnsafeShimArgument)) {
     throw new Error(
-      `${request.executable} is a Windows script shim; arguments may not contain %, newlines or NUL.`,
+      `${request.executable} is a Windows script shim; arguments may not contain % " & | < > ^ ( ) !, a trailing backslash, newlines or NUL.`,
     );
   }
   return startCommand(resolved, request.arguments, {

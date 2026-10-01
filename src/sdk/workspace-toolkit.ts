@@ -5,6 +5,7 @@ import { allowedExecutables } from '../headless/headless-command-policy';
 import { createCommandTool } from './command-tool';
 import { createNotesStore } from './notes-store';
 import { createNotesTool } from './notes-tool';
+import { isApproved } from './permission-modes';
 import { executeWorkspaceTool } from './workspace-tool-executor';
 import {
   AGENT_TOOL_OPERATIONS,
@@ -38,10 +39,16 @@ export function workspaceToolkit(
     { scope: permissions.writeScope, deny: permissions.writeDeny },
     { onViolation: memory.onWriteScopeViolation },
   );
+  // `.git` stays denied for file and git writes even when no scope is configured.
+  const guard =
+    writeScope === undefined &&
+    (permissions.allow.includes('write') || permissions.allow.includes('git-write'))
+      ? createWriteScope({}, { alwaysGuard: true, onViolation: memory.onWriteScopeViolation })
+      : undefined;
   const limits = {
     workspace: path.resolve(workspaceRoot),
     allowedExecutables: allowedExecutables(permissions.allowedExecutables ?? []),
-    writeScope,
+    writeScope: writeScope ?? guard,
   };
   const commands =
     writeScope === undefined
@@ -65,7 +72,7 @@ export function workspaceToolkit(
       const category = toolCategory(call);
       if (category === undefined || !permissions.allow.includes(category)) return false;
       if (permissions.approve === undefined) return true;
-      return permissions.approve({ ...call, category });
+      return isApproved(await permissions.approve({ ...call, category }));
     },
   };
 }

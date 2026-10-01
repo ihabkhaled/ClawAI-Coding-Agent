@@ -6,11 +6,17 @@ import { agentConfigFor } from './headless-agent-config';
 import { authFromEnvironment, parseHeadlessArgs } from './headless-args';
 import { HEADLESS_USAGE } from './headless-args.constants';
 import { resolveHeadlessInputs } from './headless-inputs';
+import { runListModels } from './headless-list-models';
 import { writeEvent, writeResult } from './headless-output';
 import { fileSessionStore } from './headless-session-store';
 import { runMcpLogin } from './mcp/mcp-login-command';
 
-import type { HeadlessEnvironment, HeadlessInvocation, HeadlessIo } from './headless-args.types';
+import type {
+  HeadlessEnvironment,
+  HeadlessInvocation,
+  HeadlessIo,
+  HeadlessParse,
+} from './headless-args.types';
 import type { HeadlessSessionStore } from './headless-session-store.types';
 import type { McpLoginContext } from './mcp/mcp-login.types';
 import type { RuntimeTransportPort } from '../sdk/agent-sdk.types';
@@ -47,14 +53,7 @@ export async function runHeadlessCli(
     return 0;
   }
   if (parsed.kind === 'usage') return usageError(io, parsed.message);
-  if (parsed.kind === 'login') {
-    return runMcpLogin(parsed.login, environment, io, {
-      cwd: context.cwd,
-      signal: context.signal,
-      openUrl: context.openUrl,
-      ...context.login,
-    });
-  }
+  if (parsed.kind !== 'run') return sideCommand(parsed, environment, io, context);
   const auth = authFromEnvironment(environment);
   if (auth === undefined) {
     io.stderr('No credential: set CLAW_TOKEN, or CLAW_EMAIL and CLAW_PASSWORD.\n');
@@ -100,6 +99,24 @@ export async function runHeadlessCli(
   }
   writeResult(invocation.outputFormat, result, io);
   return result.exitCode;
+}
+
+/** `--mcp-login` and `--list-models`: commands that start no run. */
+async function sideCommand(
+  parsed: Extract<HeadlessParse, { kind: 'login' | 'list-models' }>,
+  environment: HeadlessEnvironment,
+  io: HeadlessIo,
+  context: HeadlessContext,
+): Promise<number> {
+  if (parsed.kind === 'list-models') {
+    return runListModels(parsed.request, authFromEnvironment(environment), io, environment);
+  }
+  return runMcpLogin(parsed.login, environment, io, {
+    cwd: context.cwd,
+    signal: context.signal,
+    openUrl: context.openUrl,
+    ...context.login,
+  });
 }
 
 /** The agent, or the usage message when its inputs are unusable (a RangeError from `createAgent`). */

@@ -170,37 +170,78 @@ assert.equal(
 assert.doesNotMatch(clawIcon, /<(?:image|text)\b/iu, 'Activity icon must be a pure vector mark');
 assert.equal(existsSync(ciWorkflowPath), true, 'CI workflow is missing');
 const ciWorkflow = readFileSync(ciWorkflowPath, 'utf8');
-assert.match(ciWorkflow, /npm run l10n:build/u, 'CI must regenerate localization');
+assert.match(ciWorkflow, /npm run check:quality/u, 'CI must run the split quality lane');
+assert.match(ciWorkflow, /npm run check:unit/u, 'CI must run the split unit and coverage lane');
+assert.match(
+  manifest.scripts['check:quality'],
+  /format:check[\s\S]+l10n:verify[\s\S]+lint[\s\S]+typecheck[\s\S]+scan:paths[\s\S]+inventory:verify[\s\S]+package:audit/u,
+  'quality checks must preserve formatting, localization, lint, type, path, inventory and package gates',
+);
+assert.match(
+  manifest.scripts['check:unit'],
+  /coverage:scope[\s\S]+npm test/u,
+  'unit checks must include critical coverage scope and tests',
+);
+assert.match(ciWorkflow, /name:\s*Version/u, 'CI must expose a separate version gate');
 assert.match(
   ciWorkflow,
-  /git diff --exit-code -- package\.nls\.json package\.nls\.\*\.json l10n/u,
-  'CI must reject stale generated localization',
+  /scripts\/verify-version-bump\.mjs/u,
+  'CI must enforce a new delivery minor',
 );
-assert.match(ciWorkflow, /npm run check/u, 'CI must run the complete source check lane');
-assert.match(
-  manifest.scripts.check,
-  /npm run scan:paths[\s\S]+npm run coverage:scope[\s\S]+npm test/u,
-  'source checks must include path scan, critical coverage scope, and tests',
-);
-assert.match(ciWorkflow, /npm run test:playwright/u, 'CI must run Playwright');
+assert.match(ciWorkflow, /name:\s*Extension host/u, 'CI must expose extension-host separately');
+assert.match(ciWorkflow, /npm run test:playwright/u, 'CI must run Playwright in its own lane');
 assert.match(
   ciWorkflow,
   /npm audit --omit=dev --audit-level=high/u,
   'CI must audit production dependencies',
 );
-assert.match(ciWorkflow, /npm run supply-chain/u, 'CI must generate supply-chain evidence');
+assert.match(ciWorkflow, /name:\s*Package VSIX/u, 'CI must package only in the final job');
 assert.match(
   ciWorkflow,
-  /path:\s*['"]?builds\/\*\.vsix['"]?/u,
-  'CI must upload packaged VSIX artifacts from builds/',
+  /needs:[\s\S]+version[\s\S]+quality[\s\S]+unit[\s\S]+extension-host[\s\S]+webview[\s\S]+audit/u,
+  'final packaging must wait for every split gate',
 );
-assert.equal(existsSync(releaseWorkflowPath), true, 'main-branch release workflow is missing');
+assert.match(
+  ciWorkflow,
+  /npm run supply-chain/u,
+  'final package job must generate supply-chain evidence',
+);
+assert.match(
+  ciWorkflow,
+  /name:\s*clawai-coding-agent-release/u,
+  'CI must upload one release artifact after all gates',
+);
+assert.equal(existsSync(releaseWorkflowPath), true, 'release workflow is missing');
 const releaseWorkflow = readFileSync(releaseWorkflowPath, 'utf8');
-assert.match(releaseWorkflow, /contents:\s*write/u, 'release workflow needs contents write only');
 assert.match(
   releaseWorkflow,
-  /push:\s*\n\s+branches:\s*\n\s+- main/u,
-  'every main push must enter the release workflow',
+  /actions:\s*read/u,
+  'release workflow needs artifact read permission',
+);
+assert.match(
+  releaseWorkflow,
+  /contents:\s*write/u,
+  'release workflow needs contents write permission',
+);
+assert.match(
+  releaseWorkflow,
+  /workflow_run:[\s\S]+workflows:[\s\S]+- CI[\s\S]+completed/u,
+  'release must start only after CI completes',
+);
+assert.match(
+  releaseWorkflow,
+  /workflow_run\.conclusion == 'success'[\s\S]+workflow_run\.head_branch == 'main'/u,
+  'release must publish only a successful main push',
+);
+assert.match(
+  releaseWorkflow,
+  /actions\/download-artifact@v4[\s\S]+clawai-coding-agent-release/u,
+  'release must consume the exact final CI artifact',
+);
+assert.match(
+  releaseWorkflow,
+  /already exists\. Every main push must carry a fresh delivery minor/u,
+  'release must reject a reused version tag',
 );
 assert.match(
   releaseWorkflow,
@@ -212,30 +253,30 @@ assert.match(
   /--notes-file\s+"\$\{RUNNER_TEMP\}\/release-notes\.md"/u,
   'release workflow must publish full versioned release notes',
 );
-assert.doesNotMatch(
+assert.match(
   releaseWorkflow,
-  /--generate-notes/u,
-  'release workflow must not replace curated release notes with generated notes',
+  /@vscode\/vsce publish/u,
+  'every verified release must publish the final VSIX to the VS Code Marketplace',
 );
 assert.match(
   releaseWorkflow,
-  /builds\/clawai-coding-agent-\$\{\{ steps\.version\.outputs\.version \}\}\.vsix/u,
-  'release workflow must attach the versioned VSIX',
+  /VSCE_PAT is required/u,
+  'Marketplace credentials must be required instead of silently skipping publication',
 );
 assert.match(
   releaseWorkflow,
-  /git ls-files --error-unmatch/u,
-  'release workflow must require the versioned VSIX to be tracked in git',
+  /clawai-coding-agent-\$\{VERSION\}\.vsix/u,
+  'release workflow must attach and publish the versioned VSIX',
 );
 assert.match(
   releaseWorkflow,
-  /diff -qr/u,
-  'release workflow must compare the committed VSIX contents with a fresh package',
+  /source\?\.digest\?\.gitCommit !== sourceSha/u,
+  'release workflow must bind downloaded provenance to the successful CI commit',
 );
 assert.match(
   releaseWorkflow,
-  /npm run supply-chain/u,
-  'release workflow must regenerate supply-chain evidence',
+  /The attached VSIX is the exact final artifact produced after every CI gate passed/u,
+  'release notes must state the final-artifact ordering',
 );
 assert.match(supplyChainSource, /CycloneDX/u, 'release must generate a CycloneDX SBOM');
 assert.match(supplyChainSource, /SPDX-2\.3/u, 'release must generate an SPDX SBOM');
@@ -253,11 +294,6 @@ assert.match(
   supplyChainSource,
   /https:\/\/in-toto\.io\/Statement\/v1/u,
   'release must generate in-toto provenance',
-);
-assert.match(
-  releaseWorkflow,
-  /sourceDependency[\s\S]+GITHUB_SHA/u,
-  'release workflow must bind fresh provenance to GITHUB_SHA',
 );
 assert.equal(
   manifest.scripts.package,
@@ -344,6 +380,7 @@ for (const path of [
   '.superpowers/**',
   'test-results/**',
   '.husky/**',
+  '.githooks/**',
   '.vscode-test/**',
 ]) {
   assert.equal(ignore.includes(path), true, `${path} must be excluded`);

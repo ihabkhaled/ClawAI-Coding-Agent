@@ -10,6 +10,8 @@ import {
   requireText,
   workspaceRelative,
 } from './file-tools-args';
+import { assertSafeRegex } from './file-tools-pattern';
+import { createSlicer } from './file-tools-slice';
 import {
   FILE_BINARY_SNIFF_BYTES,
   FILE_GLOB_MAX_RESULTS,
@@ -128,17 +130,20 @@ function relativeToBase(scope: SearchScope, file: WalkedFile): string {
 }
 
 /** Files whose path matches `pattern`, at most 500, in name order. */
-export function globFiles(
+export async function globFiles(
   args: FileToolArguments,
   workspace: string,
   root: string,
-): Record<string, unknown> {
+  signal?: AbortSignal,
+): Promise<Record<string, unknown>> {
   const pattern = requireText('glob', args, 'pattern');
   const matcher = compileGlob('glob', 'pattern', pattern);
   const scope = searchScope('glob', args, workspace, root);
   const paths: string[] = [];
+  const tick = createSlicer(signal);
   let truncated = false;
   for (const file of scope.files) {
+    await tick();
     if (!matcher.test(relativeToBase(scope, file))) continue;
     if (paths.length >= FILE_GLOB_MAX_RESULTS) {
       truncated = true;
@@ -162,6 +167,7 @@ function lineMatcher(args: FileToolArguments): RegExp {
     throw new Error('workspace.file search requires exactly one of "query" (literal) or "regex".');
   }
   const source = regex ?? query ?? '';
+  if (regex !== undefined && regex !== '') assertSafeRegex('search', regex);
   if (source.length > FILE_PATTERN_MAX_CHARS) {
     throw new Error(
       `workspace.file search: the pattern is longer than ${String(FILE_PATTERN_MAX_CHARS)} characters.`,
@@ -197,11 +203,12 @@ function matchesIn(file: WalkedFile, matcher: RegExp, room: number): FileSearchM
 }
 
 /** Literal or regular-expression search over text files, bounded in matches and time. */
-export function searchFiles(
+export async function searchFiles(
   args: FileToolArguments,
   workspace: string,
   root: string,
-): Record<string, unknown> {
+  signal?: AbortSignal,
+): Promise<Record<string, unknown>> {
   const matcher = lineMatcher(args);
   const includeText = optionalText('search', args, 'include');
   const include =
@@ -212,8 +219,10 @@ export function searchFiles(
   const matches: FileSearchMatch[] = [];
   let scanned = 0;
   let skipped = 0;
+  const tick = createSlicer(signal);
   let truncated = false;
   for (const file of scope.files) {
+    await tick();
     if (include !== undefined && !include.test(relativeToBase(scope, file))) continue;
     if (file.size > FILE_SEARCH_MAX_FILE_BYTES || isBinaryFile(file.absolute)) {
       skipped += 1;

@@ -36,7 +36,9 @@ function configure(repository: string): void {
 
 /** A real repository on branch `main` with one commit. */
 export function makeRepository(): string {
-  const repository = temporaryDirectory('claw-git-tools-');
+  const container = temporaryDirectory('claw-git-tools-');
+  const repository = path.join(container, 'repo');
+  mkdirSync(repository);
   git(repository, 'init', '--quiet', '-b', 'main');
   configure(repository);
   writeFileSync(path.join(repository, 'seed.txt'), 'seed\n');
