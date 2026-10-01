@@ -68,6 +68,7 @@ describe('runCompare against a server that accepts the run and streams the lanes
       request: { ...request, threadId: 'thread-existing' },
       signal: new AbortController().signal,
       onAccepted: accepted,
+      onLive: vi.fn(),
       onProgress: (event) => progress.push(event),
     });
 
@@ -93,6 +94,7 @@ describe('runCompare against a server that accepts the run and streams the lanes
       request,
       signal: new AbortController().signal,
       onAccepted: vi.fn(),
+      onLive: vi.fn(),
       onProgress: vi.fn(),
     });
 
@@ -112,6 +114,7 @@ describe('runCompare against a server that accepts the run and streams the lanes
         request,
         signal: new AbortController().signal,
         onAccepted: vi.fn(),
+        onLive: vi.fn(),
         onProgress: vi.fn(),
       }),
     ).rejects.toThrow('closed before the request completed');
@@ -125,6 +128,7 @@ describe('runCompare against a server that accepts the run and streams the lanes
       request: { ...request, threadId: 'thread-existing' },
       signal: new AbortController().signal,
       onAccepted: vi.fn(),
+      onLive: vi.fn(),
       onProgress: vi.fn(),
     });
 

@@ -22,6 +22,13 @@
   screenshot baselines. The disconnected lane verifies that only the focused
   backend connection gateway is available, including its default URL,
   authorization progress, inline errors, and connected-state transition.
+  `compare-live.e2e.ts` drives live Compare cards and the judge verdict with the
+  host's own messages at 320, 400 and 768 pixels, left-to-right and
+  right-to-left, dark and light, with contrast and overflow checks.
+- Compare is replayed from a real captured run
+  (`tests/fixtures/compare/real-compare-run.json`) through the real collector
+  in `compare-live-stream.test.ts`; refresh the fixture from a live run when the
+  server's stream changes.
 
 Runtime security-critical pure modules require at least 95% statements,
 branches, functions, and lines. Release verification also inspects the VSIX to

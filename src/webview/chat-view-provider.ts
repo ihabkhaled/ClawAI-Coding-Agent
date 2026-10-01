@@ -11,6 +11,7 @@ import { rememberClosedSession, takeClosedSession } from '../core/closed-session
 import { resolvePlacementColumn } from '../core/panel-placement';
 import { redactReasoningEvent } from '../core/reasoning-visibility';
 
+import { toCompareLiveMessage } from './chat-compare-message';
 import { publicHistoryMessage } from './chat-history-message';
 import {
   inboundMessageSchema,
@@ -24,6 +25,7 @@ import { toPublicChatState } from './chat-public-state';
 import { ChatSessionRegistry } from './chat-session-registry';
 import { markSessionRead, syncSessions } from './chat-session-sync';
 import { runPromptAdmissionFlow } from './prompt-admission-flow';
+import { requestScope } from './request-scope';
 import { runSetupAction } from './setup-action';
 
 import type { PlacementMemory } from './chat-placement.types';
@@ -31,6 +33,7 @@ import type { ChatViewActions } from './chat-view-actions';
 import type { ChatMessage } from '../backend/contracts';
 import type { BrowserScreenshotAttachment } from '../core/browser-reference.types';
 import type { ClosedSession } from '../core/closed-session-stack.types';
+import type { CompareLiveChange } from '../core/compare-lane-accumulator.types';
 import type { ExtensionState } from '../core/extension-state';
 
 const SIDEBAR_SESSION_ID = 'sidebar';
@@ -166,35 +169,29 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
    */
   async postEvent(event: Record<string, unknown>, requestId?: string): Promise<void> {
     await this.postForRequest(
-      {
-        type: 'streamEvent',
-        event: redactReasoningEvent(event),
-        ...(requestId === undefined ? {} : { requestId }),
-      },
+      { type: 'streamEvent', event: redactReasoningEvent(event), ...requestScope(requestId) },
       requestId,
     );
+  }
+
+  /**
+   * One live Compare update: a lane card filling in, or the judge's verdict.
+   * It is built from the collector's own fold and checked before it is posted,
+   * and it carries no reasoning text, so nothing here needs redacting.
+   */
+  async postCompareLive(change: CompareLiveChange, requestId: string): Promise<void> {
+    const message = toCompareLiveMessage(change, requestId);
+    if (message !== null) {
+      await this.postForRequest(message, requestId);
+    }
   }
 
   async postResult(result: unknown, requestId?: string): Promise<void> {
-    await this.postForRequest(
-      {
-        type: 'result',
-        result,
-        ...(requestId === undefined ? {} : { requestId }),
-      },
-      requestId,
-    );
+    await this.postForRequest({ type: 'result', result, ...requestScope(requestId) }, requestId);
   }
 
   async postError(message: string, requestId?: string): Promise<void> {
-    await this.postForRequest(
-      {
-        type: 'error',
-        message,
-        ...(requestId === undefined ? {} : { requestId }),
-      },
-      requestId,
-    );
+    await this.postForRequest({ type: 'error', message, ...requestScope(requestId) }, requestId);
   }
 
   async postNotice(message: string): Promise<void> {
