@@ -80,6 +80,7 @@ function harness(overrides: Partial<McpOAuthDependencies> = {}) {
       opened.push(url);
       return Promise.resolve(true);
     },
+    resolveCallbackUri: (url) => Promise.resolve(url),
     fetch,
     now: () => NOW,
     ...overrides,
@@ -153,17 +154,21 @@ describe('MCP OAuth pure helpers', () => {
 });
 
 describe('McpOAuthService', () => {
-  it('has no token before authorization, then runs the loopback PKCE flow and stores tokens', async () => {
-    const { service, store, callback, opened, fetch } = harness();
+  it('has no token before authorization, then runs the remote-safe loopback PKCE flow and stores tokens', async () => {
+    const externalCallbackUri = 'http://127.0.0.1:61234/auth/callback';
+    const { service, store, callback, opened, fetch } = harness({
+      resolveCallbackUri: () => Promise.resolve(externalCallbackUri),
+    });
     const provider = service.tokenProvider(server);
     expect(await provider.current()).toBeUndefined();
     expect(await provider.renew()).toBe('granted');
     const authorize = new URL(opened[0] ?? '');
     expect(authorize.origin + authorize.pathname).toBe('https://auth.example.test/authorize');
-    expect(authorize.searchParams.get('redirect_uri')).toBe(callback.callbackUri);
+    expect(authorize.searchParams.get('redirect_uri')).toBe(externalCallbackUri);
     const exchange = fetch.mock.calls.find(([url]) => url === 'https://auth.example.test/token');
     const body = new URLSearchParams(String(exchange?.[1].body));
     expect(body.get('code')).toBe('the-code');
+    expect(body.get('redirect_uri')).toBe(externalCallbackUri);
     expect(body.get('code_verifier')?.length).toBeGreaterThan(40);
     expect(callback.confirmAuthorization).toHaveBeenCalled();
     expect(callback.dispose).toHaveBeenCalled();

@@ -1,11 +1,13 @@
 import { vi } from 'vitest';
 
 const vscodeMocks = vi.hoisted(() => ({
+  asExternalUri: vi.fn(),
   openExternal: vi.fn(),
 }));
 
 vi.mock('vscode', () => ({
   env: {
+    asExternalUri: vscodeMocks.asExternalUri,
     openExternal: vscodeMocks.openExternal,
   },
   l10n: {
@@ -34,6 +36,7 @@ const tokens = {
 describe('BrowserAuthorizationService', () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    vscodeMocks.asExternalUri.mockImplementation(async (uri: { toString(): string }) => uri);
   });
 
   it('uses a one-shot loopback callback and exchanges the PKCE code', async () => {
@@ -92,6 +95,74 @@ describe('BrowserAuthorizationService', () => {
       'https://app.example.com/authorize/vscode?requestId=request-1',
     );
     expect(callback.rejectAuthorization).not.toHaveBeenCalled();
+    expect(callback.dispose).toHaveBeenCalledOnce();
+  });
+
+  it('registers the VS Code-resolved callback URI for remote extension hosts', async () => {
+    let completeCallback: ((code: string) => void) | undefined;
+    const callback = {
+      callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      confirmAuthorization: vi.fn(),
+      dispose: vi.fn(),
+      rejectAuthorization: vi.fn(),
+      waitForCallback: vi.fn(
+        () =>
+          new Promise<string>((resolve) => {
+            completeCallback = resolve;
+          }),
+      ),
+    };
+    const externalCallbackUri = 'http://127.0.0.1:61234/auth/callback';
+    vscodeMocks.asExternalUri.mockResolvedValueOnce({
+      toString: () => externalCallbackUri,
+    });
+    vscodeMocks.openExternal.mockResolvedValue(true);
+    const backend = {
+      exchangeVscodeAuthorization: vi.fn(async () => tokens),
+      getProfileWithAccessToken: vi.fn(async () => ({ id: 'user-1' })),
+      initializeVscodeAuthorization: vi.fn(async () => ({
+        authorizationPath: '/authorize/vscode?requestId=request-remote',
+      })),
+    };
+    const service = new BrowserAuthorizationService(backend as never, {
+      open: vi.fn(async () => callback),
+    });
+    const signIn = service.signIn();
+
+    await vi.waitFor(() => {
+      expect(backend.initializeVscodeAuthorization).toHaveBeenCalledWith(
+        expect.objectContaining({ callbackUri: externalCallbackUri }),
+        expect.any(AbortSignal),
+      );
+    });
+    completeCallback?.('authorization-code');
+
+    await expect(signIn).resolves.toMatchObject({ user: { id: 'user-1' }, tokens });
+    expect(vscodeMocks.asExternalUri).toHaveBeenCalledWith(
+      expect.objectContaining({ toString: expect.any(Function) }),
+    );
+    expect(callback.confirmAuthorization).toHaveBeenCalledOnce();
+  });
+
+  it('closes the callback when VS Code cannot expose it to the local browser', async () => {
+    const callback = {
+      callbackUri: 'http://127.0.0.1:49152/auth/callback',
+      confirmAuthorization: vi.fn(),
+      dispose: vi.fn(),
+      rejectAuthorization: vi.fn(),
+      waitForCallback: vi.fn(() => new Promise<string>(() => undefined)),
+    };
+    vscodeMocks.asExternalUri.mockRejectedValueOnce(new Error('port forwarding unavailable'));
+    const backend = {
+      initializeVscodeAuthorization: vi.fn(),
+    };
+    const service = new BrowserAuthorizationService(backend as never, {
+      open: vi.fn(async () => callback),
+    });
+
+    await expect(service.signIn()).rejects.toThrow('port forwarding unavailable');
+    expect(backend.initializeVscodeAuthorization).not.toHaveBeenCalled();
+    expect(callback.rejectAuthorization).toHaveBeenCalledOnce();
     expect(callback.dispose).toHaveBeenCalledOnce();
   });
 
