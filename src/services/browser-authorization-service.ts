@@ -148,9 +148,13 @@ export class BrowserAuthorizationService implements vscode.Disposable {
     attempt.callback = callback;
     try {
       this.throwIfTerminated(attempt);
+      const externalCallbackUri = await vscode.env.asExternalUri(
+        vscode.Uri.parse(callback.callbackUri, true),
+      );
+      this.throwIfTerminated(attempt);
       const initialized = await backend.initializeVscodeAuthorization(
         {
-          callbackUri: callback.callbackUri,
+          callbackUri: externalCallbackUri.toString(true),
           codeChallenge: request.codeChallenge,
           state: request.state,
         },

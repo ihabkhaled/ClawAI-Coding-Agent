@@ -23,12 +23,16 @@ API calls, token exchange, models, chat, and agent runs use the Backend origin.
 The browser authorization page uses the Frontend origin, so split deployments
 do not incorrectly open a backend-hosted web route. Connect creates a PKCE
 verifier and a one-shot HTTP callback bound to
-`127.0.0.1` on a random unprivileged port. The backend authorization request
-contains that exact callback, a cryptographic state value, and the PKCE
-challenge. After the user approves the request in ClawAI, the browser redirects
-the short-lived authorization code to the loopback callback. The extension
-validates the state, exchanges the code with the verifier, and immediately
-closes the listener.
+`127.0.0.1` on a random unprivileged port. Before registering that callback,
+the extension passes it through VS Code's `env.asExternalUri`. Local VS Code
+returns the same route; Remote SSH, Dev Containers, WSL, tunnels, and desktop
+Codespaces can map it through VS Code's managed port-forwarding path so the
+browser reaches the extension host instead of its own unrelated localhost. The
+backend authorization request contains the resolved callback, a cryptographic
+state value, and the PKCE challenge. After the user approves the request in
+ClawAI, the browser redirects the short-lived authorization code through that
+route to the loopback listener. The extension validates the state, exchanges
+the code with the verifier, and immediately closes the listener.
 
 The callback rejects non-loopback hosts, wrong paths, query-bearing callback
 registrations, mismatched state, duplicate callbacks, and timeouts. The success
