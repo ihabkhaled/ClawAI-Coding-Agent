@@ -2,6 +2,22 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.96.0
+
+The agent can now do much more of a real engineering job on its own. Every new tool below is **off by default** and needs an explicit flag, so a run that does not ask for them sees exactly the tools it saw before. They work in the command line (`clawai`) and the host-free SDK; the editor panel is unchanged except where noted.
+
+- **Browser** (`--allow-tools browser`): the agent can open a page in a hidden browser, read it, click, type, take a screenshot and read console and network errors, to check the app it just built. Private and local addresses stay blocked unless you name them with `--browser-allow-host`.
+- **HTTP requests** (`--http-allow-host`, `--allow-tools http,http-write`): the agent can call your project's own API to test it. It can only reach hosts you list, and a request that changes data (`POST`, `PUT`, `PATCH`, `DELETE`) is asked about first in every permission mode.
+- **Task plan** (`--task-plan`, `--plan-file`, `--require-plan`): the agent keeps a step plan, and a step with a check can only be marked done when its check passes, so it cannot declare success early.
+- **Background processes** (`process.watch`, part of the `command` grant): start a dev server or a watch-mode test, wait for a line of output, read what it printed since, and stop it. Everything is stopped when the run ends.
+- **Gate runner** (`code.gates`, part of the `command` grant): find and run the project's lint, typecheck, test and build, and get a short structured result instead of a page of logs. `--done-check-gates lint,typecheck,test` makes those gates the done check.
+- **Shell** (`--allow-tools shell` and `--allow-shell`, both needed): a real shell for pipes and `&&`. Every script is shown to you for approval first, and a safety screen refuses the dangerous ones.
+- **Repository knowledge** (`--load-knowledge`): the agent reads your project's instruction files (such as `CLAUDE.md`, `AGENTS.md`, rules and skills) on a new task and can search them.
+- **Pictures** (`--image`, `--vision`): the agent can look at a screenshot or an image in your workspace.
+- **Helper agents** (`--allow-tools agents`, `--max-agents`): the agent can start sub-agents on parts of a big job. A helper can never hold more permissions than the agent that started it.
+- **Runner and panel**: a routine can hand the runner secrets that only commands see and never the model, the runner reports its version and platform, and attaching to a runner session continues where it left off. A message sent while a run waits for your approval now says so, with a button to the approval, and the secondary side-bar sections start collapsed so the chat keeps the space.
+- Safety: choosing a permission mode never switches a new tool on by itself, and plan mode removes all of them.
+
 ## 1.95.0
 
 - Creating a folder with the agent now works. Every folder request used to fail with "VS Code rejected the file transaction", even when the folder was created.

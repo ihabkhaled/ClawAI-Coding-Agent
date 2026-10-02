@@ -8,13 +8,30 @@ import { runnerWorkspaceFit } from '../core/runner-workspace-fit';
 import { newestFirst, outcomeOf, pollWithBackoff } from '../core/session-handoff';
 import { ATTACH_BACKOFF_POLICY } from '../core/session-handoff.constants';
 
+import { complianceLabel } from './runner-compliance-label';
 import { offerFollowUp, stopSession } from './session-followup';
+import { workspaceRepositoryRef } from './workspace-repository-ref';
 
 import type { RemoteSessionDependencies } from './remote-session-commands.types';
-import type { CloudTask, RunnerSession } from '../backend/remote-session-contracts';
+import type {
+  CloudTask,
+  RunnerPolicyView,
+  RunnerRepo,
+  RunnerSession,
+} from '../backend/remote-session-contracts';
 import type { BackoffPolicy } from '../core/session-handoff.types';
 
 const OUTPUT_TAIL = 2_000;
+
+/** The policy verdict per connected runner; empty on an older backend or any failure. */
+async function runnerVerdicts(
+  dependencies: RemoteSessionDependencies,
+): Promise<Map<string, RunnerPolicyView>> {
+  const rows = await remoteSessionClient
+    .runnerPolicy(dependencies.request())
+    .catch((): RunnerPolicyView[] => []);
+  return new Map(rows.map((row) => [row.id, row]));
+}
 
 /** Runners this user has, or undefined (with a message) on an older backend. */
 export async function pickRunnerSession(
@@ -29,8 +46,17 @@ export async function pickRunnerSession(
     );
     return undefined;
   }
+  const verdicts = await runnerVerdicts(dependencies);
   const picked = await vscode.window.showQuickPick(
-    runners.map((runner) => ({ label: runner.hostname, description: runner.status, runner })),
+    runners.map((runner) => {
+      const verdict = complianceLabel(verdicts.get(runner.id));
+      return {
+        label: runner.hostname,
+        description: runner.status,
+        ...(verdict === undefined ? {} : { detail: verdict }),
+        runner,
+      };
+    }),
     { placeHolder: vscode.l10n.t('Pick a runner session') },
   );
   return picked?.runner;
@@ -112,12 +138,15 @@ export async function followSession(
   return latest;
 }
 
-/** F095: warns when the runner's checkouts are not the folders open here. */
+/**
+ * F095: warns when the runner's checkouts are not the folders open here, and
+ * returns the repositories the runner reported (empty when unknown).
+ */
 async function warnOnWorkspaceMismatch(
   dependencies: RemoteSessionDependencies,
   runner: RunnerSession,
   output: vscode.OutputChannel,
-): Promise<void> {
+): Promise<readonly RunnerRepo[]> {
   const repos = await remoteSessionClient
     .runnerRepos(dependencies.request(), runner.id)
     .catch((): undefined => undefined);
@@ -125,13 +154,33 @@ async function warnOnWorkspaceMismatch(
     runnerRepos: repos ?? [],
     workspaceNames: (vscode.workspace.workspaceFolders ?? []).map((folder) => folder.name),
   });
-  if (fit !== 'mismatch') return;
-  output.appendLine(
-    vscode.l10n.t(
-      'None of the repositories {0} reports is open in this window, so continuing in chat cannot reach its files.',
-      runner.hostname,
-    ),
-  );
+  if (fit === 'mismatch') {
+    output.appendLine(
+      vscode.l10n.t(
+        'None of the repositories {0} reports is open in this window, so continuing in chat cannot reach its files.',
+        runner.hostname,
+      ),
+    );
+  }
+  return repos ?? [];
+}
+
+/**
+ * F095: asks the backend whether the runner is still up. An older backend
+ * answers 404 and is ignored; so is any other failure, because this only
+ * adds a sentence to the output and must never block the attach.
+ */
+async function noteRunnerOffline(
+  dependencies: RemoteSessionDependencies,
+  runner: RunnerSession,
+  output: vscode.OutputChannel,
+): Promise<void> {
+  const resume = await remoteSessionClient
+    .runnerResume(dependencies.request(), runner.id)
+    .catch((): undefined => undefined);
+  if (resume?.online === false) {
+    output.appendLine(vscode.l10n.t('Runner {0} is not connected now.', runner.hostname));
+  }
 }
 
 /**
@@ -146,7 +195,8 @@ export async function attachRemoteSession(dependencies: RemoteSessionDependencie
   if (runner === undefined || task === undefined) return;
   const output = vscode.window.createOutputChannel('ClawAI Runner Session');
   output.show(true);
-  await warnOnWorkspaceMismatch(dependencies, runner, output);
+  await noteRunnerOffline(dependencies, runner, output);
+  const repos = await warnOnWorkspaceMismatch(dependencies, runner, output);
   if (outcomeOf(task) !== 'running') logTask(output, task);
   const latest =
     outcomeOf(task) === 'running'
@@ -159,7 +209,12 @@ export async function attachRemoteSession(dependencies: RemoteSessionDependencie
           (_progress, token) => followSession(dependencies, task, output, token),
         )
       : task;
-  await offerFollowUp(dependencies, latest, runner.hostname);
+  await offerFollowUp(
+    dependencies,
+    latest,
+    runner.hostname,
+    workspaceRepositoryRef(repos.map((repo) => repo.name)),
+  );
 }
 
 /** Cancels a pending or executing command on a runner the user picks. */

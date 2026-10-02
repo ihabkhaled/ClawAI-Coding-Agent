@@ -16,6 +16,7 @@ import { env } from 'node:process';
 
 import { expect, test } from '@playwright/test';
 
+import { approvalQueueScenario } from './live-approval-queue';
 import {
   installExtension,
   launchVscode,
@@ -39,7 +40,9 @@ import type { Frame } from 'playwright';
  * CLAW_LIVE_PASSWORD (required), CLAW_LIVE_EMAIL, CLAW_LIVE_BACKEND_URL,
  * CLAW_LIVE_MODELS (comma list of model names as the picker shows them),
  * CLAW_LIVE_PROMPT (use {dir} for the per-model folder), CLAW_LIVE_APPROVAL,
- * CLAW_LIVE_EFFORT, CLAW_LIVE_WAIT_MS, CLAW_LIVE_OUT.
+ * CLAW_LIVE_EFFORT, CLAW_LIVE_WAIT_MS, CLAW_LIVE_OUT, CLAW_LIVE_VSIX (a package other than this
+ * checkout's), CLAW_LIVE_SCENARIO=approval-queue (send a second message while the first waits
+ * for approval; run with CLAW_LIVE_APPROVAL=ASK and a prompt that writes a file).
  */
 const BACKEND = env.CLAW_LIVE_BACKEND_URL ?? 'https://claw.local';
 const EMAIL = env.CLAW_LIVE_EMAIL ?? 'admin@claw.local';
@@ -55,7 +58,9 @@ const OUT = env.CLAW_LIVE_OUT ?? mkdtempSync(path.join(tmpdir(), 'claw-live-'));
 const NEWLINE = String.fromCharCode(10);
 
 const manifest = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
-const VSIX = path.join('builds', `clawai-coding-agent-${manifest.version}.vsix`);
+const VSIX =
+  env.CLAW_LIVE_VSIX ?? path.join('builds', `clawai-coding-agent-${manifest.version}.vsix`);
+const SCENARIO = env.CLAW_LIVE_SCENARIO ?? '';
 
 interface InitCapture {
   readonly callbackUri: string;
@@ -353,6 +358,12 @@ async function waitForStableStack(): Promise<void> {
   expect(calm, 'the stack never settled: a service keeps restarting').toBeGreaterThanOrEqual(4);
 }
 
+async function sendAndWait(chat: Frame, prompt: string): Promise<string> {
+  await chat.locator('#prompt').fill(prompt, { timeout: 15_000 });
+  await chat.locator('#prompt').press('Control+Enter', { timeout: 15_000 });
+  return waitForRunEnd(chat);
+}
+
 test.beforeAll(async () => {
   expect(PASSWORD, 'set CLAW_LIVE_PASSWORD').not.toBe('');
   await waitForStableStack();
@@ -402,9 +413,21 @@ test('signs in and runs the same task with each model, recording what happened',
     }
     await configure(chat);
     await shot(`${slug}-configured`);
-    await chat.locator('#prompt').fill(PROMPT.replaceAll('{dir}', slug), { timeout: 15_000 });
-    await chat.locator('#prompt').press('Control+Enter', { timeout: 15_000 });
-    const text = await waitForRunEnd(chat);
+    const prompt = PROMPT.replaceAll('{dir}', slug);
+    const text =
+      SCENARIO === 'approval-queue'
+        ? await approvalQueueScenario({
+            chat,
+            window: session.window,
+            out: OUT,
+            slug,
+            firstPrompt: prompt,
+            secondPrompt: 'While that waits: in one sentence, what is a stack?',
+            shot,
+            approve: approveAnywhere,
+            waitForEnd: waitForRunEnd,
+          })
+        : await sendAndWait(chat, prompt);
     await shot(`${slug}-after-run`);
     appendFileSync(path.join(OUT, `${slug}-panel.txt`), text);
     appendFileSync(path.join(OUT, `${slug}-extension.log`), extensionLogs());

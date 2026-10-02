@@ -144,6 +144,7 @@ function sourceFiles(directory: string): string[] {
  */
 const SPAWNERS_THAT_MAY_RUN_GIT = new Set([
   'infrastructure/bounded-command-runner.ts',
+  'sdk/agent-team-worktree.ts',
   'sdk/command-tool-spawn.ts',
   'sdk/git-tools-run.ts',
   'sdk/write-scope-git.ts',
@@ -156,6 +157,10 @@ const SPAWNERS_NEVER_GIT = new Set([
   'infrastructure/process-terminator.ts',
   'headless/mcp/mcp-open-url.ts',
   'infrastructure/vscode-sandbox-probe.ts',
+  // taskkill on Windows; the process tree it ends is the watched process's, never a git command of ours.
+  'sdk/process-watch-kill.ts',
+  // Runs the operator-approved script in a real shell; git inside it gets hardenedGitEnvironment, not a git spawn of ours.
+  'sdk/shell-tool-run.ts',
   'services/process-supervisor-service.ts',
 ]);
 

@@ -1,9 +1,22 @@
 import type { AgentToolCall } from './agent-sdk.types';
 import type { NoteAddedInfo, NotesStore } from './notes-tool.types';
+import type { ShellOptions } from './shell-tool.types';
+import type { PlanStore, PlanSummary } from './task-plan-tool.types';
 import type { WriteScopeListener } from './write-scope.types';
 
-/** The kinds of work a run can be granted, one flag each; `git-write` is commit, push and the other git operations that change something; `mcp` is the configured MCP servers. */
-export type AgentToolCategory = 'read' | 'write' | 'command' | 'git' | 'git-write' | 'mcp';
+/** The kinds of work a run can be granted, one flag each; `git-write` is commit, push and the other git operations that change something; `mcp` is the configured MCP servers; `http` is GET and HEAD to the allowed hosts, `http-write` is POST, PUT, PATCH and DELETE; `browser` is the headless browser page tool; `shell` is `workspace.shell`, which also needs its own switch; `agents` is `agent.team`, whose children can never hold more than the parent. */
+export type AgentToolCategory =
+  | 'read'
+  | 'write'
+  | 'command'
+  | 'git'
+  | 'git-write'
+  | 'mcp'
+  | 'http'
+  | 'http-write'
+  | 'browser'
+  | 'shell'
+  | 'agents';
 
 /** One tool call awaiting the caller's decision, with the category it falls in. */
 export interface AgentApprovalRequest extends AgentToolCall {
@@ -35,6 +48,14 @@ export interface AgentPermissions {
    * where an operation missing from the offered catalog would fail the run.
    */
   readonly offerRefused?: boolean | undefined;
+  /** Hosts `http.request` may reach (`host`, `host:port`, `*.example.com`); none means the tool is not offered. */
+  readonly httpAllowHosts?: readonly string[] | undefined;
+  /**
+   * The second switch for `workspace.shell` (the first is `shell` in `allow`). Present
+   * means the operator opted in; absent means the shell does not exist for this run.
+   * Every script is put to `approve`, and with no `approve` it is denied.
+   */
+  readonly shell?: ShellOptions | undefined;
   readonly approve?: ((request: AgentApprovalRequest) => boolean | Promise<boolean>) | undefined;
 }
 
@@ -42,6 +63,12 @@ export interface AgentPermissions {
 export interface WorkspaceMemory {
   readonly store?: NotesStore | undefined;
   readonly onNoteAdded?: ((info: NoteAddedInfo) => void) | undefined;
+  /** The task plan a toolkit works on; without a store the plan lasts only as long as the toolkit. */
+  readonly plan?: PlanStore | undefined;
+  /** Told after every change to the task plan, with the new step counts. */
+  readonly onPlanChanged?: ((summary: PlanSummary) => void) | undefined;
   /** Told when the write scope refuses a change or undoes one. */
   readonly onWriteScopeViolation?: WriteScopeListener | undefined;
+  /** ADR-143: exported to `workspace.command` children only, and scrubbed from their output. */
+  readonly secretEnvironment?: Readonly<Record<string, string>> | undefined;
 }

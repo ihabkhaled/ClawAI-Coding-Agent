@@ -11,6 +11,8 @@ export interface HeadlessRunRequest {
   readonly clientRequestId: string;
   readonly idempotencyKey: string;
   readonly prompt: string;
+  /** Uploaded images attached to the prompt (`--image`); the backend delivers them to the model. */
+  readonly fileIds?: readonly string[];
   readonly manifestHash: string;
   readonly toolCatalogHash: string;
   readonly toolDefinitions: readonly unknown[];

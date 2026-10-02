@@ -4,6 +4,7 @@ import { AGENT_ALL_TOOL_CATEGORIES } from '../sdk/permission-modes.constants';
 
 import { checkedExtras } from './headless-args-extras';
 import { checkedBudgets, loginFrom } from './headless-args-mcp';
+import { checkedShell } from './headless-args-shell';
 import {
   HEADLESS_BARE_FLAGS,
   HEADLESS_OUTPUT_FORMATS,
@@ -84,19 +85,32 @@ function invocationFrom(
   if (typeof extras === 'string') return { kind: 'usage', message: extras };
   const budgets = checkedBudgets(values, cwd);
   if (typeof budgets === 'string') return { kind: 'usage', message: budgets };
+  const shell = checkedShell(values, flags, checked.allowTools, extras.permissionMode);
+  if (typeof shell === 'string') return { kind: 'usage', message: shell };
   return {
     kind: 'run',
     invocation: {
       ...checked,
       ...extras,
+      ...shell,
       ...budgets,
       workspace: path.resolve(cwd, last('workspace') ?? '.'),
-      model: last('model') ?? environment.CLAW_MODEL ?? environment.CLAW_LIVE_MODEL,
-      provider: last('provider') ?? environment.CLAW_PROVIDER ?? environment.CLAW_LIVE_PROVIDER,
-      backendUrl:
-        last('backendUrl') ?? environment.CLAW_BACKEND_URL ?? environment.CLAW_LIVE_BACKEND_URL,
+      ...connectionFrom(last, environment),
       allowCommands: values.get('allowCommand') ?? [],
     },
+  };
+}
+
+/** The model, provider and backend: the flag, else the environment (older `CLAW_LIVE_*` names last). */
+function connectionFrom(
+  last: (field: string) => string | undefined,
+  environment: HeadlessEnvironment,
+): Pick<HeadlessInvocation, 'model' | 'provider' | 'backendUrl'> {
+  return {
+    model: last('model') ?? environment.CLAW_MODEL ?? environment.CLAW_LIVE_MODEL,
+    provider: last('provider') ?? environment.CLAW_PROVIDER ?? environment.CLAW_LIVE_PROVIDER,
+    backendUrl:
+      last('backendUrl') ?? environment.CLAW_BACKEND_URL ?? environment.CLAW_LIVE_BACKEND_URL,
   };
 }
 
@@ -145,10 +159,20 @@ export function parseToolList(
  * What `--allow-tools` means when absent. Naming MCP servers is the request to
  * use them, and a permission mode is the request to be asked rather than
  * refused, so each widens the default; without either it stays read and git.
+ * A host list is the request for its tool: `--browser-allow-host` adds
+ * `browser`, `--http-allow-host` adds `http` (and `http-write`, but only under
+ * a permission mode, where every write is put to an approver). `shell` and
+ * `agents` are never a default: they need `--allow-tools` by name.
  */
 function defaultTools(last: (field: string) => string | undefined): readonly AgentToolCategory[] {
-  if (last('permissionMode') !== undefined) return AGENT_ALL_TOOL_CATEGORIES;
-  return last('mcpConfig') === undefined ? ['read', 'git'] : ['read', 'git', 'mcp'];
+  const moded = last('permissionMode') !== undefined;
+  const base: readonly AgentToolCategory[] = moded ? AGENT_ALL_TOOL_CATEGORIES : ['read', 'git'];
+  const mcp: readonly AgentToolCategory[] = moded || last('mcpConfig') === undefined ? [] : ['mcp'];
+  const browser: readonly AgentToolCategory[] =
+    last('browserAllowHost') === undefined ? [] : ['browser'];
+  const http: readonly AgentToolCategory[] =
+    last('httpAllowHost') === undefined ? [] : moded ? ['http', 'http-write'] : ['http'];
+  return [...base, ...mcp, ...http, ...browser];
 }
 
 export function parseMaxTurns(raw: string | undefined): number | undefined | string {

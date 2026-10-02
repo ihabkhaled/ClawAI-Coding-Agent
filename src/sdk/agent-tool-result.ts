@@ -113,7 +113,10 @@ async function attempt_(
     return {
       failure: {
         code: 'TOOL_FAILED',
-        message: (error instanceof Error ? error.message : 'Tool failed').slice(0, 400),
+        // Trimmed after the cut: the backend trims a failure message before it checks the
+        // receipt, so one that ends in whitespace (a cut in a space, a trailing newline)
+        // was refused with a 422 that ended the whole run.
+        message: (error instanceof Error ? error.message : 'Tool failed').slice(0, 400).trim(),
         retryable: false,
         redactionApplied: false,
       },

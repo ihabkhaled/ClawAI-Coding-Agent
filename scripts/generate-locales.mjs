@@ -18,6 +18,7 @@ import { pullRequestTranslations } from './pull-request-translations.mjs';
 import { remoteChannelTranslations } from './remote-channel-translations.mjs';
 import { remoteControlTranslations } from './remote-control-translations.mjs';
 import { runnerHandoffTranslations } from './runner-handoff-translations.mjs';
+import { runnerQueueTranslations } from './runner-queue-translations.mjs';
 import { runnerWorkspaceFitTranslations } from './runner-workspace-fit-translations.mjs';
 import { runnerRoutineTranslations } from './runner-routine-translations.mjs';
 import { cronScheduleTranslations } from './cron-schedule-translations.mjs';
@@ -4875,6 +4876,7 @@ function translate(locale, message) {
     remoteSessionTranslations[locale][message] ??
     runnerHandoffTranslations[locale][message] ??
     runnerWorkspaceFitTranslations[locale][message] ??
+    runnerQueueTranslations[locale][message] ??
     usageBreakdownTranslations[locale][message] ??
     integrationTranslations[locale][message] ??
     pairingRetentionTranslations[locale][message] ??

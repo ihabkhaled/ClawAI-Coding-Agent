@@ -32,6 +32,10 @@ export const REPEAT_CACHE_MAX = 50;
 export const READ_OPERATIONS: Readonly<Record<string, readonly string[]>> = {
   'workspace.file': ['read', 'list', 'glob', 'search', 'stat'],
   'workspace.notes': ['read'],
+  'task.plan': ['list', 'next'],
+  // Output changes between calls, so a repeat is only a repeat when the cursor repeats too.
+  'process.watch': ['status', 'list', 'output'],
+  'knowledge.context': ['index', 'read', 'search', 'task'],
   'workspace.git': ['status', 'diff', 'log', 'show', 'remote', 'branch'],
 };
 
@@ -49,7 +53,14 @@ export const NOTES_TOOL_NAME = 'workspace.notes';
 export const GIT_CHANGING_OPERATIONS: readonly string[] = GIT_WRITE_OPERATIONS;
 
 /** Argument names that say what a call is about, in the order they are tried. */
-export const TARGET_ARGUMENTS: readonly string[] = ['path', 'pattern', 'query', 'regex', 'command'];
+export const TARGET_ARGUMENTS: readonly string[] = [
+  'path',
+  'pattern',
+  'query',
+  'regex',
+  'command',
+  'name',
+];
 
 const STOP_TAIL =
   'Do not repeat it. Write what you learned to workspace.notes if useful, then take the NEXT step: create or update a file, run a command, or finish.';

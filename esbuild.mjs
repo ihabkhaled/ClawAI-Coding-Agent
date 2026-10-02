@@ -60,6 +60,8 @@ const headlessOptions = {
     js: `#!/usr/bin/env node
 ${requireShim}`,
   },
+  // playwright-core is loaded on the first browser.page call, from node_modules, never bundled.
+  external: ['playwright-core'],
   format: 'esm',
   logLevel: 'info',
   minify: false,
@@ -76,6 +78,7 @@ const sdkOptions = {
   bundle: true,
   entryPoints: ['src/sdk/index.ts'],
   banner: { js: requireShim },
+  external: ['playwright-core'],
   format: 'esm',
   logLevel: 'info',
   minify: false,

@@ -43,6 +43,45 @@ export const cloudTaskSchema = z
   })
   .loose();
 
+/**
+ * One runner as `GET agent/runners` reports it (F100): only connected runners.
+ * `compliance` is the last runner-policy verdict, null when none was evaluated;
+ * `reason` is a comma-separated list of codes. Self-reported, so it flags a
+ * stale runner and proves nothing about identity.
+ */
+export const runnerPolicyViewSchema = z
+  .object({
+    id: z.string().min(1),
+    compliance: z
+      .object({ status: z.string(), reason: z.string().nullable().optional() })
+      .loose()
+      .nullable()
+      .optional(),
+  })
+  .loose();
+
+/** The route answers a bare array; a wrapped page is accepted too. */
+export const runnerPolicyListSchema = z.union([
+  z.array(runnerPolicyViewSchema),
+  agentPageSchema(runnerPolicyViewSchema).transform((page) => page.data),
+]);
+
+export type RunnerPolicyView = z.infer<typeof runnerPolicyViewSchema>;
+
+/**
+ * `GET agent/runners/:id/resume` (F095): the runner's own row, whether it is
+ * connected with a fresh heartbeat, and the backend protocol. No credential.
+ * An older backend answers 404.
+ */
+export const runnerResumeSchema = z
+  .object({
+    runner: runnerPolicyViewSchema.extend({ name: z.string().optional() }).loose(),
+    online: z.boolean(),
+  })
+  .loose();
+
+export type RunnerResume = z.infer<typeof runnerResumeSchema>;
+
 export const cloudTaskPageSchema = agentPageSchema(cloudTaskSchema);
 export const runnerSessionPageSchema = agentPageSchema(runnerSessionSchema);
 export const runnerRepoPageSchema = agentPageSchema(runnerRepoSchema);

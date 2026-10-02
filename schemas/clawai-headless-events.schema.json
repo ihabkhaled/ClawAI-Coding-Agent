@@ -17,7 +17,11 @@
     { "$ref": "#/definitions/noteAdded" },
     { "$ref": "#/definitions/runStuck" },
     { "$ref": "#/definitions/runChecks" },
+    { "$ref": "#/definitions/runPlan" },
     { "$ref": "#/definitions/writeScopeViolation" },
+    { "$ref": "#/definitions/agentSpawned" },
+    { "$ref": "#/definitions/agentMessage" },
+    { "$ref": "#/definitions/agentFinished" },
     { "$ref": "#/definitions/runFinished" }
   ],
   "definitions": {
@@ -87,8 +91,8 @@
           "description": "Why the run could not proceed. Never a secret."
         },
         "errorCode": {
-          "const": "DONE_CHECKS_FAILED",
-          "description": "The run completed but the orchestrator's completion checks still fail and no continuation is left. outcome is failed (exit 1) and error starts with DONE_CHECKS_FAILED."
+          "enum": ["DONE_CHECKS_FAILED", "PLAN_INCOMPLETE"],
+          "description": "DONE_CHECKS_FAILED: the run completed but the orchestrator's completion checks still fail and no continuation is left. PLAN_INCOMPLETE: it completed with plan steps not done (or no plan under --require-plan). Either way outcome is failed (exit 1) and error starts with the code."
         },
         "checks": {
           "type": "array",
@@ -107,6 +111,20 @@
             }
           }
         }
+      }
+    },
+    "runPlan": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "total", "todo", "doing", "done", "blocked"],
+      "description": "The task plan (the task.plan tool) changed: the model set or moved steps, or the orchestrator's --plan-file was loaded. Counts of steps by status, so an orchestrator sees progress. A step with a check only reaches done when the check passes; with the plan unfinished the run is not complete (run.continued reason plan-incomplete).",
+      "properties": {
+        "type": { "const": "run.plan" },
+        "total": { "type": "integer", "minimum": 0 },
+        "todo": { "type": "integer", "minimum": 0 },
+        "doing": { "type": "integer", "minimum": 0 },
+        "done": { "type": "integer", "minimum": 0 },
+        "blocked": { "type": "integer", "minimum": 0 }
       }
     },
     "runChecks": {
@@ -247,10 +265,11 @@
             "run-lost",
             "stuck",
             "checks-failed",
+            "plan-incomplete",
             "session-expired",
             "unknown-tool"
           ],
-          "description": "checks-failed: the run said it was done but the orchestrator's completion checks (--done-check) failed. budget-exhausted: the runtime's run budget was used up. run-lost: the runtime no longer knew the run (a restart, a stale claim). stuck: the run was ended for repeating one call. session-expired: the access token expired during the run (email and password only); it signed in again. unknown-tool: the model named a tool that does not exist; the new run is told the exact names."
+          "description": "checks-failed: the run said it was done but the orchestrator's completion checks (--done-check) failed. plan-incomplete: the run said it was done but its task plan has steps that are not done, or --require-plan found no plan. budget-exhausted: the runtime's run budget was used up. run-lost: the runtime no longer knew the run (a restart, a stale claim). stuck: the run was ended for repeating one call. session-expired: the access token expired during the run (email and password only); it signed in again. unknown-tool: the model named a tool that does not exist; the new run is told the exact names."
         }
       }
     },
@@ -307,6 +326,65 @@
           "type": "string",
           "description": "A network error code such as ECONNRESET, when there was no status."
         }
+      }
+    },
+    "agentSpawned": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": [
+        "type",
+        "name",
+        "parent",
+        "depth",
+        "task",
+        "tools",
+        "isolation",
+        "maxToolCalls",
+        "maxDurationSec"
+      ],
+      "description": "The agent.team tool started a sub-agent. parent is lead or another child; depth is 1 for a child of the lead. task is the start of the brief, redacted.",
+      "properties": {
+        "type": { "const": "agent.spawned" },
+        "name": { "type": "string", "minLength": 1 },
+        "parent": { "type": "string", "minLength": 1 },
+        "depth": { "type": "integer", "minimum": 1 },
+        "task": { "type": "string" },
+        "tools": { "type": "array", "items": { "type": "string" } },
+        "writeScope": { "type": "array", "items": { "type": "string" } },
+        "isolation": { "enum": ["none", "worktree"] },
+        "maxToolCalls": { "type": "integer", "minimum": 1 },
+        "maxDurationSec": { "type": "integer", "minimum": 0 },
+        "model": { "type": "string", "minLength": 1 }
+      }
+    },
+    "agentMessage": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "from", "to", "chars"],
+      "description": "A message between two agents of the team. from is stamped by the in-process bus and cannot be chosen by the sender. The text is never in the event.",
+      "properties": {
+        "type": { "const": "agent.message" },
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 },
+        "chars": { "type": "integer", "minimum": 0 }
+      }
+    },
+    "agentFinished": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "name", "parent", "state", "toolCalls", "durationMs", "files"],
+      "description": "A sub-agent is over. state is completed, failed (a crash, a budget, a refusal; see outcome and error) or cancelled. files counts the files it changed with its own write calls.",
+      "properties": {
+        "type": { "const": "agent.finished" },
+        "name": { "type": "string", "minLength": 1 },
+        "parent": { "type": "string", "minLength": 1 },
+        "state": { "enum": ["completed", "failed", "cancelled"] },
+        "outcome": { "$ref": "#/definitions/outcome" },
+        "toolCalls": { "type": "integer", "minimum": 0 },
+        "durationMs": { "type": "integer", "minimum": 0 },
+        "files": { "type": "integer", "minimum": 0 },
+        "threadId": { "type": "string", "minLength": 1 },
+        "error": { "type": "string" }
       }
     },
     "runFinished": {

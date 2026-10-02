@@ -42,8 +42,11 @@ export class RunTelemetryRecorder {
   observe(event: RuntimeEvent): ObservabilitySpan | undefined {
     this.inputTokens += count(event.payload.inputTokens);
     this.outputTokens += count(event.payload.outputTokens);
-    if (typeof event.payload.costMicros === 'number') {
-      this.costMicros = (this.costMicros ?? 0) + count(event.payload.costMicros);
+    // Only a cost the backend actually sent: a negative or non-finite number is
+    // not a cost, and turning it into 0 would read as "free" (F108).
+    const sent = event.payload.costMicros;
+    if (typeof sent === 'number' && Number.isFinite(sent) && sent >= 0) {
+      this.costMicros = (this.costMicros ?? 0) + Math.floor(sent);
     }
     const invocationId = text(event.payload.invocationId);
     if (invocationId === undefined) return undefined;

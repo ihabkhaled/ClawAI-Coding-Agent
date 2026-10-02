@@ -4,6 +4,7 @@ import type { ResearchMode } from '../core/research-mode';
 import type { SpeedMode } from '../core/speed-mode';
 import type { AgentContextConfig } from '../sdk/agent-context.types';
 import type { AgentBudgetProfile } from '../sdk/agent-sdk.types';
+import type { GateName } from '../sdk/code-gates.types';
 import type { DoneCheck } from '../sdk/done-checks.types';
 import type { AgentPermissionMode } from '../sdk/permission-modes.types';
 import type { AgentToolCategory } from '../sdk/workspace-toolkit.types';
@@ -19,6 +20,10 @@ export interface HeadlessInvocation {
   readonly backendUrl?: string | undefined;
   readonly allowTools: readonly AgentToolCategory[];
   readonly allowCommands: readonly string[];
+  /** `--allow-shell`: the second switch for workspace.shell; `shell` is then in `allowTools`. */
+  readonly allowShell?: true | undefined;
+  /** `--shell-deny`: extra refusal patterns for shell scripts. */
+  readonly shellDeny?: readonly string[] | undefined;
   readonly outputFormat: HeadlessOutputFormat;
   readonly maxTurns?: number | undefined;
   /** Stops the run as `exhausted` (exit 5) once exceeded. */
@@ -45,10 +50,20 @@ export interface HeadlessInvocation {
   /** Globs every file and git change must match; see `docs/HEADLESS.md`, Write scope. */
   readonly writeScope?: readonly string[] | undefined;
   readonly writeDeny?: readonly string[] | undefined;
+  /** Hosts `http.request` may reach, from `--http-allow-host`. */
+  readonly httpAllowHosts?: readonly string[] | undefined;
   /** Completion checks from `--done-check`; the file form is read by the runner. */
   readonly doneChecks?: readonly DoneCheck[] | undefined;
   /** `--done-check-file`, resolved against the working directory; read by the runner. */
   readonly doneCheckFile?: string | undefined;
+  /** `--plan-file`, resolved against the working directory; read by the runner. */
+  readonly planFile?: string | undefined;
+  /** `--require-plan`: a run may not complete without a plan, or with an open step. */
+  readonly requirePlan?: true | undefined;
+  /** `--task-plan`: offer the `task.plan` tool without requiring a plan. */
+  readonly taskPlan?: true | undefined;
+  /** `--done-check-gates`: gates to expand into done checks, from the project's own commands. */
+  readonly doneCheckGates?: readonly GateName[] | undefined;
   /** `--effort`: the run budget from the editor's Effort table. Replaces `--budget`. */
   readonly effort?: EffortMode | undefined;
   /** `--speed`: parallel workspace lookups while context is collected. */
@@ -57,6 +72,18 @@ export interface HeadlessInvocation {
   readonly context?: AgentContextConfig | undefined;
   /** `--research`: which web tools the agent is offered. */
   readonly research?: ResearchMode | undefined;
+  /** `--browser-allow-host`: private or local hosts the browser tool may open. */
+  readonly browserAllowHosts?: readonly string[] | undefined;
+  /** `--load-knowledge`: summarize the root instruction files into the prompt and offer `knowledge.context`. */
+  readonly loadKnowledge?: true | undefined;
+  /** `--image`: absolute paths attached to the first prompt. */
+  readonly images?: readonly string[] | undefined;
+  /** `--vision-model`: the model that answers `vision.describe`. */
+  readonly visionModel?: string | undefined;
+  /** `--vision`, `--image` or `--vision-model`: `vision.describe` is offered. */
+  readonly vision?: true | undefined;
+  /** `--max-agents`: sub-agents working at once, 1 to 8. */
+  readonly maxAgents?: number | undefined;
 }
 
 /** `--list-models`: print the account's models and exit. */

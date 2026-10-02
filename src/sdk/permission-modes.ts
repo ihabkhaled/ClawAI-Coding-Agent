@@ -1,4 +1,5 @@
-import { isPolicyDrivenMode, policyOutcome } from './permission-mode-policy';
+import { BROWSER_ACTING_OPERATIONS } from './browser-tool.constants';
+import { isCommandObservation, isPolicyDrivenMode, policyOutcome } from './permission-mode-policy';
 import { AGENT_PLAN_TOOL_CATEGORIES } from './permission-modes.constants';
 
 import type { AgentPermissionMode } from './permission-modes.types';
@@ -12,11 +13,19 @@ import type { AgentApprovalRequest, AgentPermissions } from './workspace-toolkit
  * and never reaches the callback.
  */
 export function needsApproval(mode: AgentPermissionMode, request: AgentApprovalRequest): boolean {
+  // Starting a child is asked about in `ask` and `strict`; the child's own calls are asked on their merits.
+  if (request.category === 'agents') return agentsNeedApproval(mode, request);
   if (isPolicyDrivenMode(mode)) return policyOutcome(mode, request) === 'ask';
-  if (request.category === 'read' || request.category === 'git') return false;
+  if (['read', 'git', 'http'].includes(request.category)) return false;
   if (request.category === 'mcp') return request.operation === 'call';
-  if (request.category === 'command' || request.category === 'git-write') return true;
+  if (isCommandObservation(request)) return false;
+  if (request.category === 'browser') return BROWSER_ACTING_OPERATIONS.includes(request.operation);
+  if (['command', 'git-write', 'http-write', 'shell'].includes(request.category)) return true;
   return mode === 'ask';
+}
+
+function agentsNeedApproval(mode: AgentPermissionMode, request: AgentApprovalRequest): boolean {
+  return request.operation === 'spawn' && (mode === 'ask' || mode === 'strict');
 }
 
 /**
@@ -42,7 +51,9 @@ export function permissionsForMode(
   return {
     ...base,
     approve: async (request) => {
-      if (isPolicyDrivenMode(mode) && policyOutcome(mode, request) === 'deny') return false;
+      if (request.category !== 'agents' && isPolicyDrivenMode(mode)) {
+        if (policyOutcome(mode, request) === 'deny') return false;
+      }
       if (!needsApproval(mode, request)) return true;
       return ask === undefined ? false : isApproved(await ask(request));
     },

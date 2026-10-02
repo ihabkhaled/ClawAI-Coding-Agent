@@ -15,6 +15,7 @@ import type {
   HeadlessRunRequest,
 } from './headless-transport.types';
 import type { RetryContext } from './retry-policy.types';
+import type { VisionImage } from '../sdk/vision-tool.types';
 
 export function sha256(text: string): string {
   return `sha256:${createHash('sha256').update(text).digest('hex')}`;
@@ -146,6 +147,41 @@ export class HeadlessTransport {
   async connectorModels(token: string): Promise<readonly HeadlessConnectorModel[]> {
     const body = await this.json<unknown>('/connectors/available-models', { method: 'GET', token });
     return connectorModelsFrom(body);
+  }
+
+  /** Uploads one image through the ordinary file API and returns its id (`POST /files/upload`). */
+  async uploadImage(token: string, image: VisionImage): Promise<string> {
+    const file = await this.json<{ id?: string }>('/files/upload', {
+      body: {
+        content: image.bytes.toString('base64'),
+        filename: image.filename,
+        mimeType: image.mimeType,
+        sizeBytes: image.bytes.length,
+      },
+      token,
+    });
+    if (file.id === undefined) throw new Error('The image upload returned no file id');
+    return file.id;
+  }
+
+  /** The file ids stored on the run's prompt message (`metadata.fileIds`), or undefined when it cannot be found. */
+  async attachedFileIds(
+    token: string,
+    run: { threadId: string; runId: string },
+  ): Promise<readonly string[] | undefined> {
+    const listing = await this.json<{ data?: readonly Record<string, unknown>[] }>(
+      `/chat-messages/thread/${encodeURIComponent(run.threadId)}`,
+      { method: 'GET', token },
+    );
+    const prompt = (listing.data ?? []).find(
+      (message) =>
+        message.role === 'USER' &&
+        (message.metadata as { runtimeV2?: { runId?: string } } | undefined)?.runtimeV2?.runId ===
+          run.runId,
+    );
+    if (prompt === undefined) return undefined;
+    const ids = (prompt.metadata as { fileIds?: unknown }).fileIds;
+    return Array.isArray(ids) ? ids.filter((id): id is string => typeof id === 'string') : [];
   }
 
   startRun(

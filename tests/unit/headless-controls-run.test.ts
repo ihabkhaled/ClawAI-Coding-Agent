@@ -314,7 +314,7 @@ describe('--research', () => {
 
 describe('tool filters that leave nothing', () => {
   it('exits 2 before any request when every tool is disallowed', async () => {
-    const run = await drive(['--disallowed-tools', 'workspace.*']);
+    const run = await drive(['--disallowed-tools', 'workspace.*,task.*']);
 
     expect(run.code).toBe(2);
     expect(run.requests).toHaveLength(0);

@@ -7,6 +7,7 @@ import { HANDOFF_THREAD_CHOICES } from './session-handoff.constants';
 
 import type { RemoteSessionDependencies } from './remote-session-commands.types';
 import type { CloudTask } from '../backend/remote-session-contracts';
+import type { RepositoryRef } from '../core/repository-ref.types';
 
 interface ThreadChoice extends vscode.QuickPickItem {
   readonly threadId: string | undefined;
@@ -44,6 +45,7 @@ export async function handOffToThread(
   dependencies: RemoteSessionDependencies,
   task: CloudTask,
   runnerName: string,
+  repositoryRef?: RepositoryRef,
 ): Promise<boolean> {
   const choice = await chooseThread(dependencies);
   if (choice === undefined) return false;
@@ -55,6 +57,7 @@ export async function handOffToThread(
         await backend.createThread({
           title: vscode.l10n.t('Runner session {0}', task.id),
           routingMode: 'AUTO',
+          ...(repositoryRef === undefined ? {} : { repositoryRef }),
         })
       ).id;
     await backend.sendMessage({

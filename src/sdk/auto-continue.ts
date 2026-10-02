@@ -10,6 +10,7 @@ import {
 } from './done-checks';
 import { DONE_CHECKS_FAILED_CODE, DONE_CHECKS_REASON } from './done-checks.constants';
 import { stuckPrompt } from './repetition-guard-result';
+import { assertRunLimits } from './run-budget';
 import {
   AUTO_CONTINUE_MAX,
   CONTINUATION_PROMPT,
@@ -19,6 +20,7 @@ import {
   SESSION_EXPIRED_PROMPT,
   SESSION_EXPIRED_REASON,
 } from './server-budget.constants';
+import { PLAN_INCOMPLETE_CODE, PLAN_INCOMPLETE_REASON } from './task-plan-tool.constants';
 import { describeTools } from './tool-alias';
 import {
   UNKNOWN_TOOL_PROMPT_HEAD,
@@ -28,6 +30,7 @@ import {
 
 import type { AgentEvent, AgentResult, AgentRunCallOptions } from './create-agent.types';
 import type { DoneCheckRunner, DoneChecksReport } from './done-checks.types';
+import type { PlanGate, PlanGateReport } from './task-plan-tool.types';
 
 interface ContinuationInput {
   readonly prompt: string;
@@ -41,6 +44,8 @@ interface ContinuationInput {
   readonly toolList?: (() => string) | undefined;
   /** The orchestrator's completion checks, run when a run ends `completed`. */
   readonly checkDone?: DoneCheckRunner | undefined;
+  /** The task plan's completion gate: a run that ends `completed` with the plan unfinished is continued. */
+  readonly planGate?: PlanGate | undefined;
 }
 
 /** What `finalResult` needs to know about how the loop ended. */
@@ -50,6 +55,8 @@ interface EndState {
   /** The last checks that ran, and the ones of the final run when they failed. */
   readonly checks: DoneChecksReport | undefined;
   readonly failing: DoneChecksReport | undefined;
+  /** The plan gate's report for the final run, when it still blocked completion. */
+  readonly plan: PlanGateReport | undefined;
   readonly aborted: boolean;
 }
 
@@ -90,6 +97,8 @@ export function assertAutoContinue(value: number | undefined): void {
 export async function runWithContinuations(input: ContinuationInput): Promise<AgentResult> {
   const { options } = input;
   assertAutoContinue(options.autoContinue);
+  // The loop narrows the guards for each run, which would hide a bad value the single run refused.
+  assertRunLimits(options);
   const allowed = options.autoContinue ?? 0;
   if (runsOnce(allowed, input)) return input.runOne(input.prompt, options);
   const emit = (event: AgentEvent): void => options.onEvent?.(event);
@@ -108,17 +117,22 @@ export async function runWithContinuations(input: ContinuationInput): Promise<Ag
     add(totals, last);
     const report = await checkedDone(last, input.checkDone, emit, options.signal);
     checks = report ?? checks;
-    const failing = failedReport(report);
     const room = guardsLeft(options, totals, Date.now() - started);
-    const aborted = options.signal?.aborted === true;
-    const unfinished = isContinuable(last) || failing !== undefined;
-    const open = input.hasThread() && !aborted && !room.spent && attempt < allowed;
-    if (!(unfinished && open)) {
-      const end: EndState = { attempt, spent: room.spent, checks, failing, aborted };
+    const { failing, blocked, aborted, goOn } = verdictOf(last, report, input, {
+      room,
+      attempt,
+      allowed,
+    });
+    if (!goOn) {
+      if (allowed === 0 && input.checkDone === undefined && blocked === undefined) {
+        emit({ type: 'run.finished', result: last });
+        return last;
+      }
+      const end: EndState = { attempt, spent: room.spent, checks, failing, plan: blocked, aborted };
       return finalResult(last, totals, end, emit);
     }
     attempt += 1;
-    const context = continuationContext(failing, previousFailure, input.toolList);
+    const context = continuationContext(failing, previousFailure, input.toolList, blocked);
     previousFailure = context.signature;
     const next = continuation(last, context, input.withNotes);
     prompt = next.prompt;
@@ -126,9 +140,35 @@ export async function runWithContinuations(input: ContinuationInput): Promise<Ag
   }
 }
 
+/** Whether the run that just ended is unfinished, and whether another run may start. */
+function verdictOf(
+  last: AgentResult,
+  report: DoneChecksReport | undefined,
+  input: ContinuationInput,
+  state: { room: GuardsLeft; attempt: number; allowed: number },
+): {
+  failing: DoneChecksReport | undefined;
+  blocked: PlanGateReport | undefined;
+  aborted: boolean;
+  goOn: boolean;
+} {
+  const failing = failedReport(report);
+  const blocked = failing === undefined ? planBlock(last, input.planGate) : undefined;
+  const aborted = input.options.signal?.aborted === true;
+  const unfinished = isContinuable(last) || failing !== undefined || blocked !== undefined;
+  const open = input.hasThread() && !aborted && !state.room.spent && state.attempt < state.allowed;
+  return { failing, blocked, aborted, goOn: unfinished && open };
+}
+
 /** Nothing to continue and nothing to check: the run is the one the caller asked for. */
 function runsOnce(allowed: number, input: ContinuationInput): boolean {
-  return allowed === 0 && input.checkDone === undefined;
+  return allowed === 0 && input.checkDone === undefined && input.planGate === undefined;
+}
+
+/** What the plan gate says about a run that ended `completed` with nothing else to continue. */
+function planBlock(last: AgentResult, gate: PlanGate | undefined): PlanGateReport | undefined {
+  if (gate === undefined || last.outcome !== 'completed' || isContinuable(last)) return undefined;
+  return gate();
 }
 
 function failedReport(report: DoneChecksReport | undefined): DoneChecksReport | undefined {
@@ -159,14 +199,16 @@ function continuationContext(
   failing: DoneChecksReport | undefined,
   previous: string | undefined,
   toolList: (() => string) | undefined,
+  plan: PlanGateReport | undefined,
 ): {
   failing: DoneChecksReport | undefined;
   repeated: boolean;
   signature: string | undefined;
   toolList: (() => string) | undefined;
+  plan: PlanGateReport | undefined;
 } {
   const signature = failing === undefined ? undefined : failureSignature(failing);
-  return { failing, repeated: signature === previous, signature, toolList };
+  return { failing, repeated: signature === previous, signature, toolList, plan };
 }
 
 type ContinuationReason = Extract<AgentEvent, { type: 'run.continued' }>['reason'];
@@ -177,14 +219,17 @@ function continuation(
     failing: DoneChecksReport | undefined;
     repeated: boolean;
     toolList: (() => string) | undefined;
+    plan: PlanGateReport | undefined;
   },
   withNotes: ((prompt: string) => string) | undefined,
 ): { prompt: string; reason: ContinuationReason } {
-  const { failing } = context;
+  const { failing, plan } = context;
   const next =
-    failing === undefined
-      ? basicContinuation(result, context.toolList?.())
-      : { prompt: doneChecksPrompt(failing, context.repeated), reason: DONE_CHECKS_REASON };
+    failing !== undefined
+      ? { prompt: doneChecksPrompt(failing, context.repeated), reason: DONE_CHECKS_REASON }
+      : plan !== undefined
+        ? { prompt: plan.prompt, reason: PLAN_INCOMPLETE_REASON }
+        : basicContinuation(result, context.toolList?.());
   return withNotes === undefined ? next : { ...next, prompt: withNotes(next.prompt) };
 }
 
@@ -251,6 +296,22 @@ async function checkedDone(
   return report;
 }
 
+function planFields(state: EndState): Partial<AgentResult> {
+  const { plan } = state;
+  if (plan === undefined) return {};
+  if (state.aborted) return { outcome: 'cancelled', exitCode: headlessExitCode('cancelled') };
+  const what =
+    plan.total === 0
+      ? 'this run requires a plan and none was made'
+      : `${String(plan.open)} of ${String(plan.total)} plan step(s) are not done`;
+  return {
+    outcome: 'failed',
+    exitCode: headlessExitCode('failed'),
+    errorCode: PLAN_INCOMPLETE_CODE,
+    error: `${PLAN_INCOMPLETE_CODE}: the run reported the task done, but ${what} after ${String(state.attempt + 1)} run(s).`,
+  };
+}
+
 function checksFields(state: EndState): Partial<AgentResult> {
   const { checks, failing } = state;
   if (checks === undefined) return {};
@@ -287,6 +348,7 @@ function finalResult(
         }
       : {}),
     ...checksFields(state),
+    ...planFields(state),
   };
   emit({ type: 'run.finished', result });
   return result;

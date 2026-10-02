@@ -1,4 +1,5 @@
 import type { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
+import type { VisionImage } from './vision-tool.types';
 import type { HeadlessOutcome } from '../core/headless-outcome.types';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
 import type { HeadlessRunRequest } from '../headless/headless-transport.types';
@@ -46,6 +47,16 @@ export interface RuntimeTransportPort {
    * transport without it leaves the thread on the account default.
    */
   readonly setThreadMemory?: (token: string, threadId: string, useMemory: boolean) => Promise<void>;
+  /** Optional: uploads one image and returns its file id; needed only for `images`. */
+  readonly uploadImage?: (token: string, image: VisionImage) => Promise<string>;
+  /**
+   * Optional: the file ids the backend actually stored on the run's prompt message, or
+   * undefined when it cannot tell. Lets the SDK say so when attachments were dropped.
+   */
+  readonly attachedFileIds?: (
+    token: string,
+    run: { threadId: string; runId: string },
+  ) => Promise<readonly string[] | undefined>;
   readonly startRun: (
     token: string,
     request: HeadlessRunRequest,
@@ -93,6 +104,10 @@ export interface AgentRunOptions {
   readonly useMemory?: boolean | undefined;
   /** Told when the backend refused the memory setting (HTTP status only); the run goes on. */
   readonly onMemoryUnchanged?: ((info: { status: number }) => void) | undefined;
+  /** Images attached to this run's prompt, already read and checked; see `loadPromptImages`. */
+  readonly images?: readonly VisionImage[] | undefined;
+  /** Told when the backend kept fewer of the attached images than were sent. */
+  readonly onImagesNotDelivered?: ((info: { sent: number; delivered: number }) => void) | undefined;
   /** Defaults to the local gateway when omitted. */
   readonly backendUrl?: string | undefined;
   readonly provider?: string | undefined;

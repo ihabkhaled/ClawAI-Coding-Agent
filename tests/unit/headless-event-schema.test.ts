@@ -160,6 +160,22 @@ const SAMPLES: Record<string, Json> = {
   'run.continued (run-lost)': { type: 'run.continued', attempt: 1, reason: 'run-lost' },
   'run.continued (stuck)': { type: 'run.continued', attempt: 2, reason: 'stuck' },
   'run.continued (checks-failed)': { type: 'run.continued', attempt: 1, reason: 'checks-failed' },
+  'run.continued (plan-incomplete)': {
+    type: 'run.continued',
+    attempt: 1,
+    reason: 'plan-incomplete',
+  },
+  'run.plan': { type: 'run.plan', total: 4, todo: 1, doing: 1, done: 2, blocked: 0 },
+  'run.finished (plan incomplete)': {
+    type: 'run.finished',
+    result: {
+      ...result,
+      outcome: 'failed',
+      exitCode: 1,
+      errorCode: 'PLAN_INCOMPLETE',
+      error: 'PLAN_INCOMPLETE: 1 of 4 plan step(s) are not done after 3 run(s).',
+    },
+  },
   'run.checks (passed)': {
     type: 'run.checks',
     passed: true,
@@ -197,6 +213,30 @@ const SAMPLES: Record<string, Json> = {
   },
   'run.retrying (status)': { type: 'run.retrying', attempt: 1, waitMs: 1000, status: 503 },
   'run.retrying (code)': { type: 'run.retrying', attempt: 2, waitMs: 2100, code: 'ECONNRESET' },
+  'agent.spawned': {
+    type: 'agent.spawned',
+    name: 'mod-a',
+    parent: 'lead',
+    depth: 1,
+    task: 'Build module a',
+    tools: ['read', 'write'],
+    writeScope: ['a/**'],
+    isolation: 'none',
+    maxToolCalls: 80,
+    maxDurationSec: 600,
+  },
+  'agent.message': { type: 'agent.message', from: 'mod-a', to: 'lead', chars: 42 },
+  'agent.finished': {
+    type: 'agent.finished',
+    name: 'mod-a',
+    parent: 'lead',
+    state: 'failed',
+    outcome: 'exhausted',
+    toolCalls: 80,
+    durationMs: 61000,
+    files: 3,
+    error: 'Stopped: the run asked for more than 80 tool call(s).',
+  },
   'write-scope.violation (refused)': {
     type: 'write-scope.violation',
     tool: 'workspace.file',
@@ -241,6 +281,11 @@ describe('clawai-headless-events.schema.json', () => {
       { type: 'write-scope.violation', tool: 'workspace.file', paths: [1] },
     ],
     ['a run.checks without the passed flag', { type: 'run.checks', checks: [] }],
+    ['a run.plan without a count', { type: 'run.plan', total: 1, todo: 1, doing: 0, done: 0 }],
+    [
+      'a run.plan with a negative count',
+      { type: 'run.plan', total: 1, todo: -1, doing: 0, done: 0, blocked: 0 },
+    ],
     [
       'a run.checks entry carrying its output',
       {
