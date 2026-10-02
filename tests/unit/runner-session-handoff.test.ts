@@ -1,7 +1,8 @@
 import { beforeEach, describe, expect, it, vi } from 'vitest';
 
 const workspace = vi.hoisted(() => ({
-  workspaceFolders: [{ name: 'claw-app' }] as { name: string }[] | undefined,
+  workspaceFolders: [{ name: 'claw-app', uri: { fsPath: '/nonexistent/claw-app' } }] as
+    { name: string; uri: { fsPath: string } }[] | undefined,
 }));
 
 const window = vi.hoisted(() => ({

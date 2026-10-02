@@ -30,6 +30,11 @@ export interface CommandRuntime {
   readonly platform: NodeJS.Platform;
   readonly environment: Readonly<Record<string, string | undefined>>;
   readonly exists: (file: string) => boolean;
+  /**
+   * ADR-143: a routine's secrets, added to the child's environment and to nothing
+   * else (not the prompt, not an event). Absent for every ordinary agent.
+   */
+  readonly secrets?: Readonly<Record<string, string>> | undefined;
 }
 
 /** One stream's captured text: head and tail kept, the middle counted. */

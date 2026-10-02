@@ -1,10 +1,14 @@
 import type { AgentContextConfig } from './agent-context.types';
 import type { AgentBudgetProfile, AgentMemoryMode, RuntimeTransportPort } from './agent-sdk.types';
+import type { TeamLink } from './agent-team-tool.types';
+import type { AgentBrowserOptions } from './browser-tool.types';
 import type { DoneCheck, DoneCheckSummary } from './done-checks.types';
 import type { AgentMcpOptions } from './mcp-toolkit.types';
 import type { AgentPermissionMode } from './permission-modes.types';
 import type { StuckInfo } from './repetition-guard.types';
 import type { RunBudgetKind } from './run-budget.types';
+import type { PlanStepInput } from './task-plan-tool.types';
+import type { AgentVisionOptions } from './vision-tool.types';
 import type { AgentPermissions } from './workspace-toolkit.types';
 import type { EffortMode } from '../core/effort-mode';
 import type { HeadlessExitCode, HeadlessOutcome } from '../core/headless-outcome.types';
@@ -50,6 +54,13 @@ export interface AgentConfig {
    * `thread.memory-unchanged` event and the run continues.
    */
   readonly useMemory?: boolean | undefined;
+  /**
+   * Images attached to the FIRST prompt: file paths (relative ones from `workspaceRoot`), png, jpeg
+   * or webp, up to 8 MB each, at most 4. Read and checked when the agent is created.
+   */
+  readonly images?: readonly string[] | undefined;
+  /** Offers `vision.describe` so any model can look at a screenshot; see `AgentVisionOptions`. */
+  readonly vision?: AgentVisionOptions | undefined;
   /** Substituted in tests, and by a caller speaking to a different backend. */
   readonly transport?: RuntimeTransportPort | undefined;
   /** Tunes how runtime calls are retried when the runtime is briefly away; see `RETRY_DEFAULTS`. */
@@ -62,6 +73,19 @@ export interface AgentConfig {
    * caller wrote them. See `DoneCheck`.
    */
   readonly doneChecks?: readonly DoneCheck[] | undefined;
+  /**
+   * Steps the orchestrator imposes on the run (--plan-file): loaded into the task plan before the
+   * model starts and locked, so the model can mark them done (a step with a check only when the check
+   * passes) but cannot drop or weaken them. Applies to a new conversation, or to a resumed one with no plan.
+   */
+  readonly planSteps?: readonly PlanStepInput[] | undefined;
+  /** Refuse to complete without a plan: a run that ends with none is continued, then fails PLAN_INCOMPLETE. */
+  readonly requirePlan?: boolean | undefined;
+  /**
+   * Offers `task.plan`, the step plan a model keeps for itself. Off unless asked for, so the
+   * default tool list does not grow; it is also offered when `planSteps` or `requirePlan` is set.
+   */
+  readonly taskPlan?: boolean | undefined;
   /**
    * How hard the run may work: the editor's Effort control, LOW to ULTRA. It picks
    * the run budget (model turns, tool calls, rounds, repair, wall clock, output and
@@ -82,8 +106,27 @@ export interface AgentConfig {
    * research field, so it is not sent to the server. Absent means none.
    */
   readonly research?: ResearchMode | undefined;
+  /** Limits and allowed hosts for `browser.page`; the tool needs the `browser` grant. */
+  readonly browser?: AgentBrowserOptions | undefined;
+  /**
+   * Reads the repository like an engineer: a compact summary of the root instruction
+   * files goes in front of a NEW thread's first task, and `knowledge.context` is offered
+   * (index, read, search, task) wherever `read` is granted. The files are untrusted
+   * advice: nothing in them can add a tool, an approval or write access.
+   */
+  readonly loadKnowledge?: boolean | undefined;
+  /**
+   * A routine's secrets (ADR-143): environment variables of the `workspace.command`
+   * child processes only. They are never sent to the model, never put in the
+   * prompt, and any occurrence in a command's output is replaced by [REDACTED].
+   */
+  readonly secretEnvironment?: Readonly<Record<string, string>> | undefined;
   /** Replaces the research service calls, for tests and for hosts with their own. */
   readonly webResearch?: WebResearchPort | undefined;
+  /** With the `agents` grant: how many sub-agents work at once, 1 to 8 (default 4). */
+  readonly maxAgents?: number | undefined;
+  /** Set by a parent that starts this agent as a child; not for callers. */
+  readonly teamLink?: TeamLink | undefined;
 }
 
 export interface AgentRunCallOptions {
@@ -125,6 +168,13 @@ export type AgentEvent =
       /** The HTTP status the backend answered the memory setting with. */
       readonly status: number;
     }
+  | {
+      readonly type: 'images.not-delivered';
+      /** Images uploaded and named in the run request. */
+      readonly sent: number;
+      /** Images the backend kept on the prompt message. */
+      readonly delivered: number;
+    }
   | { readonly type: 'text'; readonly text: string }
   | {
       readonly type: 'tool.call';
@@ -160,6 +210,7 @@ export type AgentEvent =
         | 'run-lost'
         | 'stuck'
         | 'checks-failed'
+        | 'plan-incomplete'
         | 'session-expired'
         | 'unknown-tool';
     }
@@ -176,6 +227,15 @@ export type AgentEvent =
         /** The last 600 characters of a failing check's output, redacted. */
         readonly tail?: string;
       }[];
+    }
+  | {
+      readonly type: 'run.plan';
+      /** Step counts of the task plan, after every change the model (or the orchestrator's preload) made to it. */
+      readonly total: number;
+      readonly todo: number;
+      readonly doing: number;
+      readonly done: number;
+      readonly blocked: number;
     }
   | {
       readonly type: 'run.stuck';
@@ -216,6 +276,44 @@ export type AgentEvent =
       readonly excluded: number;
       readonly truncated: boolean;
     }
+  | {
+      readonly type: 'agent.spawned';
+      readonly name: string;
+      /** The agent that started it: `lead` or another child. */
+      readonly parent: string;
+      /** 1 for a child of the lead. */
+      readonly depth: number;
+      /** The start of the brief, redacted. */
+      readonly task: string;
+      readonly tools: readonly string[];
+      readonly writeScope?: readonly string[];
+      readonly isolation: 'none' | 'worktree';
+      readonly maxToolCalls: number;
+      readonly maxDurationSec: number;
+      readonly model?: string;
+    }
+  | {
+      readonly type: 'agent.message';
+      /** Stamped by the bus: the sender cannot choose it. */
+      readonly from: string;
+      readonly to: string;
+      /** The text's length; the text is never in an event. */
+      readonly chars: number;
+    }
+  | {
+      readonly type: 'agent.finished';
+      readonly name: string;
+      readonly parent: string;
+      readonly state: 'completed' | 'failed' | 'cancelled';
+      readonly outcome?: HeadlessOutcome;
+      readonly toolCalls: number;
+      readonly durationMs: number;
+      /** Files the child changed, by its own write calls. */
+      readonly files: number;
+      /** The child's conversation, for finding its run afterwards. */
+      readonly threadId?: string;
+      readonly error?: string;
+    }
   | { readonly type: 'run.finished'; readonly result: AgentResult };
 
 export interface AgentResult {
@@ -248,7 +346,7 @@ export interface AgentResult {
   /** Why the run could not proceed, when it threw rather than ended. Never a secret. */
   readonly error?: string;
   /** `DONE_CHECKS_FAILED`: the run completed but the orchestrator's checks still fail. The outcome is `failed`. */
-  readonly errorCode?: 'DONE_CHECKS_FAILED';
+  readonly errorCode?: 'DONE_CHECKS_FAILED' | 'PLAN_INCOMPLETE';
   /** The last completion checks that ran; absent when none were configured or the run never completed. */
   readonly checks?: readonly DoneCheckSummary[];
 }

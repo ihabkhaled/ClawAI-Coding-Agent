@@ -26,8 +26,10 @@ export function agentConfigFor(input: {
     permissions: {
       allow: invocation.allowTools,
       allowedExecutables: invocation.allowCommands,
+      ...(invocation.allowShell === true ? { shell: { deny: invocation.shellDeny } } : {}),
       writeScope: invocation.writeScope,
       writeDeny: invocation.writeDeny,
+      httpAllowHosts: invocation.httpAllowHosts,
       ...(invocation.permissionMode === undefined ? {} : { approve: approvalFrom(input.io) }),
     },
     permissionMode: invocation.permissionMode,
@@ -37,10 +39,21 @@ export function agentConfigFor(input: {
     speed: invocation.speed,
     context: invocation.context,
     research: invocation.research,
+    browser:
+      invocation.browserAllowHosts === undefined
+        ? undefined
+        : { allowHosts: invocation.browserAllowHosts },
+    loadKnowledge: invocation.loadKnowledge,
+    ...(invocation.images === undefined ? {} : { images: invocation.images }),
+    ...(invocation.vision === true ? { vision: { model: invocation.visionModel } } : {}),
+    maxAgents: invocation.maxAgents,
     threadId: input.threadId,
     useMemory: invocation.useMemory,
     systemPrompt: inputs.systemPrompt,
     doneChecks: inputs.doneChecks,
+    planSteps: inputs.planSteps,
+    requirePlan: invocation.requirePlan,
+    taskPlan: invocation.taskPlan,
     mcp:
       inputs.mcp === undefined
         ? undefined

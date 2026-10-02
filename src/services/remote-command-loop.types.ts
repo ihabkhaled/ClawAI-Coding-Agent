@@ -1,4 +1,5 @@
 import type { RemoteCommand, RemoteCommandResult } from '../backend/agent-remote-client';
+import type { JobSecretEnvironment } from '../core/job-secrets.types';
 import type { RemoteCommandRisk } from '../core/remote-command-policy.types';
 
 export type RemoteLoopState = 'idle' | 'running' | 'stopped' | 'failed';
@@ -21,6 +22,8 @@ export interface RemotePromptJob {
   readonly prompt: string;
   readonly model: string | undefined;
   readonly repoRef: string | undefined;
+  /** ADR-143: exported to the agent's command tool only; empty when none were granted. */
+  readonly secrets?: JobSecretEnvironment | undefined;
 }
 
 export interface RemoteExecution {

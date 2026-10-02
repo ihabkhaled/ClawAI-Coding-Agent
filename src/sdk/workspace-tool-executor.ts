@@ -10,6 +10,7 @@ import { createCommandTool } from './command-tool';
 import { runFileTool } from './file-tools';
 import { executeGitTool, isGitToolOperation } from './git-tools';
 import { guardToolResult } from './tool-result-guard';
+import { runExtraTool } from './workspace-tool-extras';
 import {
   AGENT_GIT_LOG_MAX,
   AGENT_TOOL_OUTPUT_CEILING,
@@ -21,6 +22,7 @@ import { captureWriteGuard, enforceGuard } from './write-scope-guard';
 import type { AgentToolCall } from './agent-sdk.types';
 import type { CommandTool } from './command-tool.types';
 import type { NotesTool } from './notes-tool.types';
+import type { WorkspaceToolExtras } from './workspace-tool-extras.types';
 import type { ToolLimits } from '../headless/headless-main.types';
 
 /**
@@ -36,8 +38,9 @@ export function executeWorkspaceTool(
   signal?: AbortSignal,
   commands: CommandTool = createCommandTool(),
   notes?: NotesTool,
+  extras: WorkspaceToolExtras = {},
 ): unknown {
-  const result = dispatchWorkspaceTool(call, limits, signal, commands, notes);
+  const result = dispatchWorkspaceTool(call, limits, signal, commands, notes, extras);
   return result instanceof Promise ? result.then(guardToolResult) : guardToolResult(result);
 }
 
@@ -47,12 +50,15 @@ function dispatchWorkspaceTool(
   signal: AbortSignal | undefined,
   commands: CommandTool,
   notes: NotesTool | undefined,
+  extras: WorkspaceToolExtras,
 ): unknown {
   const args = call.arguments;
   if (limits.writeScope !== undefined) assertScopedCall(call, limits.workspace, limits.writeScope);
   if (call.toolName === 'workspace.notes' && notes !== undefined) {
     return notes.execute(call.operation, args);
   }
+  const extra = runExtraTool(call, limits, signal, extras);
+  if (extra !== undefined) return extra.value;
   if (call.toolName === 'workspace.command') {
     return commands.execute(call.operation, args, limits, signal);
   }

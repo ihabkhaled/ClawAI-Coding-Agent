@@ -22,19 +22,23 @@ import type { ChildProcess } from 'node:child_process';
  * npm, git and node need on each platform, and the fixed non-interactive
  * settings. Anything else in the parent, secrets included, is left behind.
  *
+ * A routine's secrets (ADR-143) are added last but before the fixed settings, so a
+ * secret can never switch off the non-interactive flags.
+ *
  * Windows names are case-insensitive, so `Path` and `PATH` collapse to the
  * first one seen rather than reaching the child as two competing values.
  */
 export function commandEnvironment(
   source: Readonly<Record<string, string | undefined>>,
   platform: NodeJS.Platform,
+  secrets: Readonly<Record<string, string>> = {},
 ): Record<string, string> {
   const extra: Record<string, string> = {};
   for (const key of COMMAND_EXTRA_ENVIRONMENT_KEYS) {
     const value = source[key];
     if (value !== undefined) extra[key] = value;
   }
-  const merged = { ...inheritedEnvironment(source), ...extra };
+  const merged = { ...inheritedEnvironment(source), ...extra, ...secrets };
   const environment = platform === 'win32' ? withoutCaseDuplicates(merged) : merged;
   return { ...environment, ...COMMAND_FIXED_ENVIRONMENT };
 }
@@ -130,7 +134,7 @@ function signalGroup(pid: number, signal: NodeJS.Signals): void {
  * names the problem, rather than surfacing as a bare spawn error.
  */
 export function launchCommand(request: CommandRequest, runtime: CommandRuntime): ChildProcess {
-  const environment = commandEnvironment(runtime.environment, runtime.platform);
+  const environment = commandEnvironment(runtime.environment, runtime.platform, runtime.secrets);
   const resolved = resolveCommandExecutable(request.executable, runtime, environment);
   if (resolved === undefined) {
     throw new Error(`Executable ${request.executable} was not found on PATH.`);

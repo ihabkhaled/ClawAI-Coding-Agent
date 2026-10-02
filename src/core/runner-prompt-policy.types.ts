@@ -8,7 +8,18 @@ export type RunnerApprovalPolicy = 'ASK' | 'AUTO_APPROVE_READ_ONLY';
 export type RunnerToolDecision = 'auto' | 'ask';
 
 /** The SDK's tool categories (`AgentToolCategory`), restated so core depends on nothing. */
-export type RunnerToolCategory = 'read' | 'write' | 'command' | 'git' | 'git-write' | 'mcp';
+export type RunnerToolCategory =
+  | 'read'
+  | 'write'
+  | 'command'
+  | 'git'
+  | 'git-write'
+  | 'mcp'
+  | 'http'
+  | 'http-write'
+  | 'browser'
+  | 'shell'
+  | 'agents';
 
 export interface RunnerToolRequest {
   readonly category: RunnerToolCategory;

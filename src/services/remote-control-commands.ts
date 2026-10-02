@@ -70,14 +70,15 @@ export function registerRemoteControlCommands(
     }
     stop();
     let registration: AgentRegistration;
+    const host = hostIdentity(deps.version);
     try {
-      registration = await register(hostIdentity(deps.version));
+      registration = await register(host);
     } catch (error: unknown) {
       await vscode.window.showErrorMessage(agentOperationErrorMessage(error));
       return undefined;
     }
     const current = new RemoteCommandLoop({
-      source: commandSource(deps.backend, registration, runnerPolicy !== undefined),
+      source: commandSource(deps.backend, registration, runnerPolicy !== undefined, host),
       approve: approveLocally,
       ...(runnerPolicy === undefined ? {} : { runPrompt: promptRunner(deps, runnerPolicy) }),
       execute: sandboxedRunnerExecutor(new VscodeCommandSandbox(), workspaceRoot),
@@ -160,12 +161,17 @@ function commandSource(
   backend: () => BackendClient,
   registration: AgentRegistration,
   runner: boolean,
+  host: AgentHostIdentity,
 ): RemoteCommandSource {
   const credential = registration.sessionKey;
   if (runner) {
     return {
       fetch: (signal) => agentRemoteClient.claim(backend().agentKeyRequest, credential, signal),
-      heartbeat: () => agentRemoteClient.runnerHeartbeat(backend().agentKeyRequest, credential),
+      heartbeat: () =>
+        agentRemoteClient.runnerHeartbeat(backend().agentKeyRequest, credential, {
+          agentVersion: host.agentVersion,
+          platform: host.platform,
+        }),
       complete: (commandId, result) =>
         agentRemoteClient.runnerComplete(backend().agentKeyRequest, credential, commandId, result),
     };

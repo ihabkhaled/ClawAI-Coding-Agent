@@ -75,6 +75,7 @@ describe('RemoteCommandLoop prompt jobs (F099)', () => {
         prompt: 'Summarise open TODOs',
         model: 'GEMINI/gemini-2.5-flash',
         repoRef: undefined,
+        secrets: {},
       },
       expect.any(AbortSignal),
     );

@@ -41,6 +41,7 @@ export function runnerPromptExecutor(
     const agent = (ports.createAgent ?? createAgent)({
       auth: { token },
       workspaceRoot: folder.fsPath,
+      secretEnvironment: job.secrets,
       backendUrl: ports.backendUrl,
       provider,
       model,

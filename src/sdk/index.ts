@@ -21,8 +21,13 @@ export { AGENT_RESEARCH_FLAG_VALUES, WEB_RESEARCH_MODE_OPERATIONS } from './web-
 export { promptWithContext } from './agent-context';
 export { webToolkit } from './web-toolkit';
 export { httpWebResearch } from './web-research-http';
+export { visionToolkit } from './vision-tool';
+export { httpVision } from './vision-port-http';
+export { loadPromptImages } from './prompt-images';
 export { permissionsForMode } from './permission-modes';
 export { mcpToolkit } from './mcp-toolkit';
+export { browserToolkit } from './browser-toolkit';
+export type { AgentBrowserOptions } from './browser-tool.types';
 export { combineToolkits, restrictToolkit } from './toolkit-compose';
 export { toolIdentifiers, toolPermitted } from './tool-filter';
 export {
@@ -41,6 +46,7 @@ export { HEADLESS_EXIT_CODES } from '../core/headless-outcome.constants';
 export { containedPath } from '../core/workspace-containment';
 export { inheritedEnvironment } from '../core/inherited-environment';
 
+export type { AgentVisionOptions, VisionPort } from './vision-tool.types';
 export type {
   AgentBudgetField,
   AgentBudgetProfile,
@@ -65,6 +71,7 @@ export type {
   DoneChecksReport,
 } from './done-checks.types';
 export type { RunBudgetKind, RunBudgetTrip } from './run-budget.types';
+export type { PlanStepCheck, PlanStepInput, PlanSummary } from './task-plan-tool.types';
 export type { AgentMcpOptions } from './mcp-toolkit.types';
 export type {
   AgentContextConfig,

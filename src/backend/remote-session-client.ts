@@ -5,9 +5,13 @@ import {
   cloudTaskPageSchema,
   cloudTaskSchema,
   runnerRepoPageSchema,
+  runnerPolicyListSchema,
+  runnerResumeSchema,
   runnerSessionPageSchema,
   threadActiveRunSchema,
   type CloudTask,
+  type RunnerPolicyView,
+  type RunnerResume,
   type RunnerRepo,
   type RunnerSession,
   type ThreadActiveRun,
@@ -61,6 +65,19 @@ export const remoteSessionClient = {
       runnerSessionPageSchema,
     );
     return page.data;
+  },
+
+  /**
+   * Connected runners with their policy verdict (F100). An older backend that
+   * has no verdict returns rows without one; callers treat a failure as "no verdict".
+   */
+  async runnerPolicy(request: RemoteRequester): Promise<RunnerPolicyView[]> {
+    return request('/agent/runners', runnerPolicyListSchema);
+  },
+
+  /** F095: whether a runner is still up before a session on it is continued. */
+  async runnerResume(request: RemoteRequester, runnerId: string): Promise<RunnerResume> {
+    return request(`/agent/runners/${encodeURIComponent(runnerId)}/resume`, runnerResumeSchema);
   },
 
   async runnerRepos(request: RemoteRequester, sessionId: string): Promise<RunnerRepo[]> {

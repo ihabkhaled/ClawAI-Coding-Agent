@@ -20,6 +20,7 @@ import {
   escalatedNote,
   repeatNote,
 } from './repetition-guard.constants';
+import { SHELL_TOOL_NAME } from './shell-tool.constants';
 
 import type { AgentToolCall, AgentToolkit } from './agent-sdk.types';
 import type {
@@ -66,6 +67,7 @@ export function repetitionKind(call: AgentToolCall): RepetitionCallKind {
 function alwaysChanges(call: AgentToolCall): boolean {
   return (
     call.toolName === COMMAND_TOOL_NAME ||
+    call.toolName === SHELL_TOOL_NAME ||
     (call.toolName === GIT_TOOL_NAME && GIT_CHANGING_OPERATIONS.includes(call.operation))
   );
 }

@@ -23,6 +23,16 @@ export const remoteCommandSchema = z
     kind: z.enum(['SHELL', 'PROMPT']).optional(),
     model: z.string().max(128).nullable().optional(),
     repoRef: z.string().max(200).nullable().optional(),
+    /**
+     * ADR-143: a routine's secrets, present only on a claimed PROMPT job. An older
+     * server omits it. Never logged, never put in the prompt.
+     */
+    secrets: z
+      .array(z.object({ name: z.string().max(64), value: z.string().max(32_768) }))
+      .max(100)
+      .nullable()
+      .optional()
+      .catch(undefined),
   })
   .loose();
 
@@ -52,6 +62,9 @@ export interface AgentRegistration {
   readonly sessionId: string;
   readonly sessionKey: string;
 }
+
+/** F100: what a runner says about itself at heartbeat; self-reported, never a credential. */
+export type RunnerHeartbeatReport = Pick<AgentHostIdentity, 'agentVersion' | 'platform'>;
 
 export interface RemoteCommandResult {
   readonly exitCode: number;
@@ -118,9 +131,16 @@ export const agentRemoteClient = {
   },
 
   /** F100: keeps a runner eligible for jobs; a stale runner gets none. */
-  async runnerHeartbeat(request: AgentKeyRequester, runnerToken: string): Promise<void> {
+  async runnerHeartbeat(
+    request: AgentKeyRequester,
+    runnerToken: string,
+    report?: RunnerHeartbeatReport,
+  ): Promise<void> {
     await request('/agent/runners/heartbeat', acknowledgementSchema, runnerToken, {
       method: 'POST',
+      ...(report === undefined
+        ? {}
+        : { body: { agentVersion: report.agentVersion, platform: report.platform } }),
     });
   },
 

@@ -34,6 +34,7 @@ describe('offeredDefinitions', () => {
     expect(offered.map((definition) => definition.name)).toEqual([
       'workspace.file',
       'workspace.notes',
+      'task.plan',
     ]);
     expect(offered[0]?.operations).toEqual(['read', 'list', 'glob', 'search', 'stat']);
   });
@@ -48,6 +49,8 @@ describe('offeredDefinitions', () => {
       'workspace.command',
       'workspace.git',
       'workspace.notes',
+      'task.plan',
+      'code.gates',
     ]);
   });
 

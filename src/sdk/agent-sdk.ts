@@ -6,6 +6,7 @@ import { HeadlessTransport, sha256 } from '../headless/headless-transport';
 import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
 import { toolCallOf, toolResultFor } from './agent-tool-result';
 import { profileDeadlineMs, resolveRunBudget } from './budget-profiles';
+import { reportUndeliveredImages, uploadPromptImages } from './prompt-images';
 import { openThread } from './thread-memory';
 import { describeTools } from './tool-alias';
 
@@ -44,12 +45,14 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
   const { threadId, memory } = await openThread(transport, token, options);
   const epochs = { account: 1, workspace: 1, target: 1, policy: 1 };
 
+  const attached = await uploadPromptImages(transport, token, options.images);
   const started = await transport.startRun(token, {
     schemaVersion: '2.0',
     threadId,
     clientRequestId: `request.${randomUUID()}`,
     idempotencyKey: `idem.${randomUUID()}`,
     prompt: options.prompt,
+    ...attached,
     // The catalog and manifest hash a plain serialization, matching the
     // extension. Only the tool-result receipt uses the canonical form, and
     // swapping the two is a server error with no detail attached.
@@ -63,6 +66,13 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
   });
 
   const run = { ...started, threadId };
+  await reportUndeliveredImages(
+    transport,
+    token,
+    run,
+    attached.fileIds,
+    options.onImagesNotDelivered,
+  );
   options.onStarted?.({ runId: run.runId, threadId, ...(memory === undefined ? {} : { memory }) });
   const report = await runHeadlessSession({
     events: () => transport.events(token, run, options.signal),

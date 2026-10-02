@@ -1,10 +1,16 @@
 import path from 'node:path';
 
 import { threadIdProblem, toolPatternsProblem } from '../sdk/agent-inputs';
+import { maxAgentsProblem } from '../sdk/agent-team-args';
+import { parseAllowHosts } from '../sdk/browser-tool-url';
+import { parseGateNames } from '../sdk/code-gates-done-checks';
+import { parseHostRules } from '../sdk/http-host-rules';
 import { AGENT_PERMISSION_MODES } from '../sdk/permission-modes.constants';
 import { writeScopeProblem } from '../sdk/write-scope';
 
 import { checkedControls } from './headless-args-controls';
+import { planFlags } from './headless-args-plan';
+import { visionFlags } from './headless-args-vision';
 import { parseDoneCheckFlags } from './headless-done-checks';
 
 import type { HeadlessInvocation } from './headless-args.types';
@@ -26,12 +32,23 @@ type Extras = Partial<
     | 'useMemory'
     | 'writeScope'
     | 'writeDeny'
+    | 'httpAllowHosts'
     | 'doneChecks'
     | 'doneCheckFile'
+    | 'planFile'
+    | 'requirePlan'
+    | 'taskPlan'
+    | 'doneCheckGates'
     | 'effort'
     | 'speed'
     | 'context'
     | 'research'
+    | 'browserAllowHosts'
+    | 'loadKnowledge'
+    | 'images'
+    | 'visionModel'
+    | 'vision'
+    | 'maxAgents'
   >
 >;
 
@@ -94,12 +111,42 @@ function scopeFlags(values: Values): Extras | string {
   };
 }
 
+function httpFlags(values: Values): Extras | string {
+  const hosts = splitPatterns(values.get('httpAllowHost'));
+  const rules = parseHostRules(hosts);
+  if (typeof rules === 'string') return `--http-allow-host: ${rules}`;
+  return hosts.length === 0 ? {} : { httpAllowHosts: hosts };
+}
+
+function browserFlags(values: Values): Extras | string {
+  try {
+    const hosts = parseAllowHosts(values.get('browserAllowHost') ?? []);
+    return hosts.length === 0 ? {} : { browserAllowHosts: hosts };
+  } catch (error) {
+    return error instanceof Error ? error.message : '--browser-allow-host is not valid.';
+  }
+}
+
+function agentFlags(values: Values): Extras | string {
+  const raw = lastOf(values, 'maxAgents');
+  if (raw === undefined) return {};
+  const value = Number(raw);
+  const problem = maxAgentsProblem(Number.isNaN(value) ? undefined : value);
+  if (Number.isNaN(value) || problem !== undefined)
+    return '--max-agents must be a whole number from 1 to 8.';
+  return { maxAgents: value };
+}
+
 function doneFlags(values: Values, cwd: string): Extras | string {
   const raw = values.get('doneCheck') ?? [];
   const checks = parseDoneCheckFlags(raw);
   if (typeof checks === 'string') return checks;
   const file = lastOf(values, 'doneCheckFile');
+  const gateValues = values.get('doneCheckGates');
+  const gates = gateValues === undefined ? [] : parseGateNames(gateValues);
+  if (typeof gates === 'string') return gates;
   return {
+    ...(gates.length === 0 ? {} : { doneCheckGates: gates }),
     ...(checks.length === 0 ? {} : { doneChecks: checks }),
     ...(file === undefined ? {} : { doneCheckFile: path.resolve(cwd, file) }),
   };
@@ -131,17 +178,31 @@ export function checkedExtras(values: Values, flags: Flags, cwd: string): Extras
   if (typeof policy === 'string') return policy;
   const scope = scopeFlags(values);
   if (typeof scope === 'string') return scope;
+  const http = httpFlags(values);
+  if (typeof http === 'string') return http;
   const done = doneFlags(values, cwd);
   if (typeof done === 'string') return done;
   const controls = checkedControls(values);
   if (typeof controls === 'string') return controls;
+  const browser = browserFlags(values);
+  if (typeof browser === 'string') return browser;
+  const vision = visionFlags(values, flags, cwd);
+  if (typeof vision === 'string') return vision;
+  const agents = agentFlags(values);
+  if (typeof agents === 'string') return agents;
   return {
+    ...vision,
+    ...agents,
     ...session,
     ...memory,
     ...policy,
     ...scope,
+    ...http,
     ...done,
+    ...planFlags(values, flags, cwd),
     ...controls,
+    ...browser,
+    ...(flags.has('--load-knowledge') ? { loadKnowledge: true as const } : {}),
     ...fileFlags(values, cwd),
   };
 }

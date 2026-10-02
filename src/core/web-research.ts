@@ -31,7 +31,7 @@ export const webFetchSchema = z
  * answer to a different question at a different time. This check is the cheap
  * half of the defence — it stops the direct, obvious attempt.
  */
-function isPrivateAddress(hostname: string): boolean {
+export function isPrivateAddress(hostname: string): boolean {
   if (LOOPBACK_HOSTS.has(hostname)) return true;
   const octets = /^(\d{1,3})\.(\d{1,3})\.(\d{1,3})\.\d{1,3}$/u.exec(hostname);
   if (octets === null) return hostname.endsWith('.localhost') || hostname.endsWith('.internal');

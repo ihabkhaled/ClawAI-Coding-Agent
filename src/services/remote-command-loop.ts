@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { jobSecretEnvironment, redactJobSecrets } from '../core/job-secrets';
 import { classifyRemoteCommand, parseRemoteCommand } from '../core/remote-command-policy';
 
 import {
@@ -14,6 +15,7 @@ import type {
   RemoteLoopState,
 } from './remote-command-loop.types';
 import type { RemoteCommand, RemoteCommandResult } from '../backend/agent-remote-client';
+import type { JobSecretEnvironment } from '../core/job-secrets.types';
 
 /**
  * F096 remote control and F100 runner: take commands queued for this machine,
@@ -93,21 +95,27 @@ export class RemoteCommandLoop {
   }
 
   private async handle(command: RemoteCommand, signal: AbortSignal): Promise<void> {
+    const secrets = jobSecretEnvironment(command.secrets ?? undefined);
     let result: RemoteCommandResult;
     try {
-      result = await this.decide(command, signal);
+      result = await this.decide(command, signal, secrets);
     } catch (error: unknown) {
       result = { exitCode: 1, stdout: '', stderr: bounded(message(error)) };
     }
+    result = scrubbed(result, secrets);
     await this.ports.source.complete(command.id, result);
     this.ports.report(
       `Remote command ${command.id} finished with exit code ${String(result.exitCode)}.`,
     );
   }
 
-  private async decide(command: RemoteCommand, signal: AbortSignal): Promise<RemoteCommandResult> {
+  private async decide(
+    command: RemoteCommand,
+    signal: AbortSignal,
+    secrets: JobSecretEnvironment,
+  ): Promise<RemoteCommandResult> {
     if (command.kind === 'PROMPT') {
-      return this.runPrompt(command, signal);
+      return this.runPrompt(command, signal, secrets);
     }
     const parsed = parseRemoteCommand(command.command);
     if (parsed.kind === 'refused') {
@@ -143,6 +151,7 @@ export class RemoteCommandLoop {
   private async runPrompt(
     command: RemoteCommand,
     signal: AbortSignal,
+    secrets: JobSecretEnvironment,
   ): Promise<RemoteCommandResult> {
     if (this.ports.runPrompt === undefined) {
       return refused('This machine does not run prompt jobs.');
@@ -153,6 +162,7 @@ export class RemoteCommandLoop {
         prompt: command.command,
         model: command.model ?? undefined,
         repoRef: command.repoRef ?? undefined,
+        secrets,
       },
       signal,
     );
@@ -182,6 +192,15 @@ export class RemoteCommandLoop {
 /** Read through a call: an await may abort the signal, which narrowing cannot see. */
 function isAborted(signal: AbortSignal): boolean {
   return signal.aborted;
+}
+
+/** Whatever the run printed, a secret value of its routine never leaves this machine. */
+function scrubbed(result: RemoteCommandResult, secrets: JobSecretEnvironment): RemoteCommandResult {
+  return {
+    ...result,
+    stdout: redactJobSecrets(result.stdout, secrets),
+    stderr: redactJobSecrets(result.stderr, secrets),
+  };
 }
 
 function refused(reason: string): RemoteCommandResult {

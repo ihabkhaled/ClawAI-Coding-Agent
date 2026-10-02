@@ -55,11 +55,12 @@ function violationNote(report: RevertReport): string {
  * what fell outside the scope, and says so in the result. A workspace outside a
  * repository cannot be checked, and the result says that too.
  */
-function audited(
+export function audited(
   result: unknown,
   scope: WriteScope,
   workspace: string,
   before: readonly DirtyEntry[] | undefined,
+  tool: string = COMMAND_TOOL,
 ): unknown {
   if (!isRecord(result)) return result;
   const after = before === undefined ? undefined : dirtyEntries(workspace);
@@ -70,7 +71,7 @@ function audited(
   if (offenders.length === 0) return result;
   const report = revertEntries(workspace, offenders);
   const paths = offenders.map((entry) => entry.path).slice(0, WRITE_SCOPE_MAX_REPORTED);
-  scope.onViolation?.({ tool: COMMAND_TOOL, paths });
+  scope.onViolation?.({ tool, paths });
   return {
     ...result,
     writeScopeViolation: paths,

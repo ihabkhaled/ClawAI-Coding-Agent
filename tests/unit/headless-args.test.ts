@@ -237,4 +237,29 @@ describe('parseHeadlessArgs session, prompt, MCP and permission flags', () => {
     ]);
     expect(parseToolList('read,mcp')).toEqual(['read', 'mcp']);
   });
+
+  it('offers the plan tool only for --task-plan', () => {
+    expect(run(['-p', 'x']).taskPlan).toBeUndefined();
+    expect(run(['-p', 'x', '--task-plan']).taskPlan).toBe(true);
+  });
+
+  it('never widens the default to a new category without its own flag', () => {
+    const six = ['read', 'write', 'command', 'git', 'git-write', 'mcp'];
+
+    expect(run(['-p', 'x', '--permission-mode', 'ask']).allowTools).toEqual(six);
+    expect(run(['-p', 'x', '--permission-mode', 'strict', '--max-agents', '2']).allowTools).toEqual(
+      six,
+    );
+    expect(run(['-p', 'x', '--http-allow-host', 'localhost']).allowTools).toEqual([
+      'read',
+      'git',
+      'http',
+    ]);
+    expect(
+      run(['-p', 'x', '--permission-mode', 'ask', '--http-allow-host', 'localhost']).allowTools,
+    ).toEqual([...six, 'http', 'http-write']);
+    expect(
+      run(['-p', 'x', '--allow-tools', 'read,http-write', '--http-allow-host', 'a']).allowTools,
+    ).toEqual(['read', 'http-write']);
+  });
 });

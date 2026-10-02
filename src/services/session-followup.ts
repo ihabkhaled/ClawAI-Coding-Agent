@@ -8,6 +8,7 @@ import { handOffToThread } from './session-handoff';
 
 import type { RemoteSessionDependencies } from './remote-session-commands.types';
 import type { CloudTask } from '../backend/remote-session-contracts';
+import type { RepositoryRef } from '../core/repository-ref.types';
 
 /** Stops a command that has not finished. A backend without the route is told so. */
 export async function stopSession(
@@ -40,6 +41,7 @@ export async function offerFollowUp(
   dependencies: RemoteSessionDependencies,
   task: CloudTask,
   runnerName: string,
+  repositoryRef?: RepositoryRef,
 ): Promise<void> {
   const openInChat = vscode.l10n.t('Open in Chat');
   const stop = vscode.l10n.t('Stop Session');
@@ -51,6 +53,6 @@ export async function offerFollowUp(
     message,
     ...(running ? [openInChat, stop] : [openInChat]),
   );
-  if (choice === openInChat) await handOffToThread(dependencies, task, runnerName);
+  if (choice === openInChat) await handOffToThread(dependencies, task, runnerName, repositoryRef);
   else if (choice === stop) await stopSession(dependencies, task.id);
 }

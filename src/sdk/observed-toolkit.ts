@@ -1,5 +1,16 @@
+import { redactValue } from '../core/redaction';
+
 import type { AgentToolCall, AgentToolkit } from './agent-sdk.types';
 import type { AgentEvent } from './create-agent.types';
+
+/** The call as an event carries it: an HTTP call's headers and body can hold credentials. */
+function eventCall(call: AgentToolCall): AgentToolCall {
+  if (call.toolName !== 'http.request') return call;
+  const redacted = redactValue(call.arguments);
+  return typeof redacted === 'object' && redacted !== null
+    ? { ...call, arguments: redacted as Readonly<Record<string, unknown>> }
+    : call;
+}
 
 /** Wraps a toolkit so every decision and every result becomes an event. */
 export function observedToolkit(
@@ -17,7 +28,11 @@ export function observedToolkit(
       const allowed = inner.authorize === undefined ? true : await inner.authorize(call);
       if (allowed) tally.calls += 1;
       else tally.denied += 1;
-      emit(allowed ? { type: 'tool.call', ...call } : { type: 'tool.denied', ...label(call) });
+      emit(
+        allowed
+          ? { type: 'tool.call', ...eventCall(call) }
+          : { type: 'tool.denied', ...label(call) },
+      );
       return allowed;
     },
     execute: async (call, signal) => {

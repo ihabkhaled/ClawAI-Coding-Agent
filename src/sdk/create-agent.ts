@@ -13,23 +13,32 @@ import { agentEventFrom } from './agent-events';
 import { assertAgentInputs, promptWithInstructions, withoutInstructions } from './agent-inputs';
 import { runAgent } from './agent-sdk';
 import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
+import { createTeam } from './agent-team';
+import { maxAgentsProblem } from './agent-team-args';
+import { teamBinding } from './agent-team-binding';
 import { agentToolkit } from './agent-toolkit';
 import { runWithContinuations } from './auto-continue';
 import { resolveRunBudget, resultByteLimit } from './budget-profiles';
 import { doneCheckRunner, doneChecksProblem } from './done-checks';
+import { promptWithKnowledge } from './knowledge-preamble';
 import { createNotesStore } from './notes-store';
 import { promptWithNotes } from './notes-tool';
 import { observedToolkit } from './observed-toolkit';
+import { loadPromptImages } from './prompt-images';
 import { createRepetitionGuard } from './repetition-guard';
 import { guardedOutcome, stuckEvent, stuckFields } from './repetition-guard-result';
 import { assertRunLimits, createRunGuard, describeBudgetTrip } from './run-budget';
 import { isRunLostError } from './run-lost';
 import { failureFields, runtimeFailureReason } from './runtime-failure';
 import { isServerBudgetError, isServerBudgetEvent, withResultBudgetNotes } from './server-budget';
+import { openPlan } from './task-plan-agent';
+import { planGateReport, promptWithPlan } from './task-plan-prompt';
+import { summarize } from './task-plan-steps';
 import { describeTools } from './tool-alias';
 import { spentToolAllowance } from './tool-allowance';
 
 import type { AgentBudgetField, AgentRunResult } from './agent-sdk.types';
+import type { AgentTeam } from './agent-team-tool.types';
 import type {
   Agent,
   AgentConfig,
@@ -40,7 +49,16 @@ import type {
 import type { NotesStore } from './notes-tool.types';
 import type { StuckInfo } from './repetition-guard.types';
 import type { RunBudgetTrip } from './run-budget.types';
+import type { PlanStore } from './task-plan-tool.types';
+import type { VisionImage } from './vision-tool.types';
 import type { HeadlessOutcome } from '../core/headless-outcome.types';
+
+/** What one agent remembers between runs: its thread, its tool list, and images not yet sent. */
+interface AgentSession {
+  threadId: string | undefined;
+  tools: string;
+  images: readonly VisionImage[];
+}
 
 /**
  * A host-free agent bound to one workspace and one identity.
@@ -61,10 +79,14 @@ export function createAgent(config: AgentConfig): Agent {
   if (checkProblem !== undefined) throw new RangeError(checkProblem);
   const contextIssue = config.context === undefined ? undefined : contextProblem(config.context);
   if (contextIssue !== undefined) throw new RangeError(contextIssue);
+  const teamIssue = maxAgentsProblem(config.maxAgents);
+  if (teamIssue !== undefined) throw new RangeError(teamIssue);
   const checkDone = doneCheckRunner(config.doneChecks, path.resolve(config.workspaceRoot));
-  const session: { threadId: string | undefined; tools: string } = {
+  const session: AgentSession = {
     threadId: config.threadId,
     tools: '',
+    images:
+      config.images === undefined ? [] : loadPromptImages(config.images, config.workspaceRoot),
   };
   const notes = createNotesStore({
     workspace: path.resolve(config.workspaceRoot),
@@ -74,6 +96,9 @@ export function createAgent(config: AgentConfig): Agent {
   // A new conversation starts with a blank notebook: notes kept from an earlier
   // task in this workspace once steered a fresh run into the wrong feature.
   if (config.threadId === undefined) notes.clear();
+  const opened = openPlan(config, () => session.threadId);
+  const { plan } = opened;
+  let preloaded = opened.preloaded;
   // A resumed conversation starts with what its last run wrote down.
   let resumed = config.threadId !== undefined;
   return {
@@ -83,17 +108,32 @@ export function createAgent(config: AgentConfig): Agent {
     run: async (prompt, options = {}) => {
       const built = await contextualized(config, prompt, options);
       if (typeof built !== 'string') return built;
-      const first = resumed ? promptWithNotes(built, notes) : built;
+      const known =
+        config.loadKnowledge === true && session.threadId === undefined
+          ? promptWithKnowledge(config.workspaceRoot, built)
+          : built;
+      const noted = resumed ? promptWithNotes(known, notes) : known;
+      const first = resumed || preloaded ? promptWithPlan(noted, plan) : noted;
+      if (preloaded) options.onEvent?.({ type: 'run.plan', ...summarize(plan.list()) });
       resumed = false;
-      return runWithContinuations({
-        prompt: first,
-        options,
-        hasThread: () => session.threadId !== undefined,
-        withNotes: (text) => promptWithNotes(text, notes),
-        toolList: () => session.tools,
-        checkDone,
-        runOne: (text, callOptions) => runOnce({ config, session, notes }, text, callOptions),
-      });
+      preloaded = false;
+      // The team lives for this run: its children are cancelled when the run is over.
+      const team = createTeam(config, createAgent);
+      try {
+        return await runWithContinuations({
+          prompt: first,
+          options,
+          hasThread: () => session.threadId !== undefined,
+          withNotes: (text) => promptWithPlan(promptWithNotes(text, notes), plan),
+          planGate: () => planGateReport(plan, config.requirePlan === true),
+          toolList: () => session.tools,
+          checkDone,
+          runOne: (text, callOptions) =>
+            runOnce({ config, session, notes, plan, team }, text, callOptions),
+        });
+      } finally {
+        await team?.close();
+      }
     },
   };
 }
@@ -118,13 +158,15 @@ function assertSomeToolRemains(config: AgentConfig): void {
 async function runOnce(
   agent: {
     config: AgentConfig;
-    session: { threadId: string | undefined; tools: string };
+    session: AgentSession;
     notes: NotesStore;
+    plan: PlanStore;
+    team: AgentTeam | undefined;
   },
   prompt: string,
   options: AgentRunCallOptions,
 ): Promise<AgentResult> {
-  const { config, session, notes } = agent;
+  const { config, session, notes, plan, team } = agent;
   assertRunLimits(options);
   const emit = (event: AgentEvent): void => options.onEvent?.(event);
   const guard = createRunGuard(options, options.signal);
@@ -153,6 +195,10 @@ async function runOnce(
     config,
     {
       store: notes,
+      plan,
+      onPlanChanged: (summary) => {
+        emit({ type: 'run.plan', ...summary });
+      },
       onNoteAdded: (info) => {
         emit({ type: 'note.added', ...info });
       },
@@ -161,6 +207,18 @@ async function runOnce(
       },
     },
     () => credential.token,
+    team,
+  );
+  team?.attach(
+    teamBinding({
+      signal: guard.signal,
+      emit,
+      callsSoFar: () => tally.calls,
+      guardCalls: options.maxToolCalls,
+      serverCalls: toolCallLimit(config, options),
+      maxDurationMs: options.maxDurationMs,
+      token: () => credential.token,
+    }),
   );
   session.tools = describeTools(inner.definitions);
   const noted = withResultBudgetNotes(
@@ -196,7 +254,11 @@ async function runOnce(
       title: options.title,
       budgetProfile: options.budgetProfile,
       threadId: session.threadId,
+      images: session.images,
       useMemory: config.useMemory,
+      onImagesNotDelivered: (info) => {
+        emit({ type: 'images.not-delivered', ...info });
+      },
       onMemoryUnchanged: (info) => {
         emit({ type: 'thread.memory-unchanged', ...info });
       },
@@ -207,6 +269,8 @@ async function runOnce(
       onStarted: (run) => {
         tally.runId = run.runId;
         session.threadId = run.threadId;
+        // The images belong to the first prompt only; later runs on the thread carry them in context.
+        session.images = [];
         emit({ type: 'run.started', ...run });
       },
       onEvent: (raw) => {

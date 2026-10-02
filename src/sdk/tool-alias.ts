@@ -1,3 +1,4 @@
+import { PLAN_TOOL_NAME } from './task-plan-tool.constants';
 import { TOOL_ALIAS_PREFIXES, TOOL_ALIAS_SEPARATOR } from './tool-alias.constants';
 import { AGENT_TOOL_OPERATIONS } from './workspace-toolkit.constants';
 
@@ -14,6 +15,8 @@ import type { AgentToolCall } from './agent-sdk.types';
  */
 export function resolveToolAlias(call: AgentToolCall): AgentToolCall {
   if (AGENT_TOOL_OPERATIONS[call.toolName] !== undefined) return call;
+  const plan = planAlias(call);
+  if (plan !== undefined) return plan;
   const named = nameParts(call.toolName);
   const operations = named === undefined ? undefined : AGENT_TOOL_OPERATIONS[named.toolName];
   if (named === undefined || operations === undefined) return call;
@@ -22,6 +25,19 @@ export function resolveToolAlias(call: AgentToolCall): AgentToolCall {
   if (operations[operation] === undefined) return call;
   if (embedded.length > 0 && call.operation.length > 0 && call.operation !== embedded) return call;
   return { ...call, toolName, operation };
+}
+
+/** `task_plan`, `task.plan.update` and the like: the plan tool, which is not under `workspace.`. */
+function planAlias(call: AgentToolCall): AgentToolCall | undefined {
+  const named = /^task[._-]plan(?:[._-]([a-z]+))?$/u.exec(call.toolName.toLowerCase());
+  if (named === null) return undefined;
+  const embedded = named[1] ?? '';
+  const operation = embedded.length === 0 ? call.operation : embedded;
+  if (AGENT_TOOL_OPERATIONS[PLAN_TOOL_NAME]?.[operation] === undefined) return undefined;
+  if (embedded.length > 0 && call.operation.length > 0 && call.operation !== embedded) {
+    return undefined;
+  }
+  return { ...call, toolName: PLAN_TOOL_NAME, operation };
 }
 
 /** The tool and the operation a near-miss name spells: `workspace.file.read` is file and read. */

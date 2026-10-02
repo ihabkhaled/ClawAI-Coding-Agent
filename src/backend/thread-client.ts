@@ -11,6 +11,7 @@ import { THREAD_ORIGIN } from './thread-client.constants';
 
 import type { RoutingMode } from '../core/configuration';
 import type { ThreadRewindResult } from '../core/conversation-rewind.types';
+import type { RepositoryRef } from '../core/repository-ref.types';
 import type { z } from 'zod';
 
 type PatchRequester = <T>(
@@ -63,6 +64,8 @@ export interface ThreadCreateInput {
   routingMode: RoutingMode;
   preferredProvider?: string;
   preferredModel?: string;
+  /** F095: the repository this thread belongs to; credential-free, absent without a git remote. */
+  repositoryRef?: RepositoryRef;
 }
 
 export async function createThread(

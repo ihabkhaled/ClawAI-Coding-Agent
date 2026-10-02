@@ -1456,13 +1456,58 @@ function publishRunActivity(requestId, run) {
   }
 }
 
-function renderRunDeck(queue, agentRuns = {}) {
+// A run that waits for the person's approval blocks everything queued behind it.
+// Without saying so, a second message sat on "Reading workspace" with no hint why.
+function approvalBlocksQueue(active, approvalRequest) {
+  return approvalRequest !== undefined && active.length > 0;
+}
+
+function goToApproval() {
+  if (elements.approvalPanel.hidden) {
+    return;
+  }
+  elements.approvalPanel.scrollIntoView({ block: 'center' });
+  elements.approvalApprove.focus();
+}
+
+function goToApprovalButton() {
+  const button = textElement('button', 'queue-approval-link quiet-button', labels.goToApproval);
+  button.type = 'button';
+  button.addEventListener('click', goToApproval);
+  return button;
+}
+
+// Replaces the send-time placeholder of a queued request with the real reason, and
+// puts the placeholder back once the request is no longer waiting.
+function describeQueuedCards(active, pending, approvalRequest) {
+  const blocked = approvalBlocksQueue(active, approvalRequest);
+  const waitingIds = new Set(pending.map((request) => request.id));
+  for (const request of [...pending, ...active]) {
+    const body = responseBodies.get(request.id);
+    if (!body || body.dataset.streamPlaceholder !== 'true') {
+      continue;
+    }
+    const note = !waitingIds.has(request.id) ? '' : blocked ? 'approval' : 'queued';
+    if ((body.dataset.queueNote ?? '') === note) {
+      continue;
+    }
+    body.dataset.queueNote = note;
+    if (note === 'approval') {
+      body.replaceChildren(textElement('span', '', labels.waitingApproval), goToApprovalButton());
+    } else {
+      body.textContent = note === 'queued' ? labels.queued : labels.agentReading;
+    }
+  }
+}
+
+function renderRunDeck(queue, agentRuns = {}, approvalRequest = currentState.approvalRequest) {
   const active = Array.isArray(queue?.active)
     ? queue.active
     : queue?.active === undefined
       ? []
       : [queue.active];
   const pending = queue?.pending ?? [];
+  describeQueuedCards(active, pending, approvalRequest);
   elements.runDeck.hidden = active.length === 0 && pending.length === 0;
   elements.runDeckCount.textContent = translatedTemplate(labels.runningCount, active.length);
   elements.activeRunList.replaceChildren();
@@ -1521,6 +1566,7 @@ function renderRunDeck(queue, agentRuns = {}) {
     const blockedByConversation = active.some(
       (running) => running.concurrencyKey === request.concurrencyKey,
     );
+    const blockedByApproval = approvalBlocksQueue(active, approvalRequest);
     const copy = document.createElement('span');
     copy.className = 'waiting-run-copy';
     copy.append(
@@ -1529,9 +1575,16 @@ function renderRunDeck(queue, agentRuns = {}) {
       textElement(
         'small',
         'waiting-reason',
-        blockedByConversation ? labels.waitingConversation : labels.waitingCapacity,
+        blockedByApproval
+          ? labels.waitingApproval
+          : blockedByConversation
+            ? labels.waitingConversation
+            : labels.waitingCapacity,
       ),
     );
+    if (blockedByApproval) {
+      copy.append(goToApprovalButton());
+    }
     const attachments = requestInputs.get(request.id)?.attachments ?? [];
     if (attachments.length > 0) {
       const bytes = attachments.reduce((total, attachment) => total + attachment.sizeBytes, 0);
@@ -2289,7 +2342,7 @@ function renderState(state) {
   );
   renderSetupNotice(state);
   renderWorkspace(state.workspaceReadiness, state.workspaceScope);
-  renderRunDeck(state.generationQueue, state.agentRuns);
+  renderRunDeck(state.generationQueue, state.agentRuns, state.approvalRequest);
   renderRuntimeTimeline(state.runtime);
   renderApproval(state.approvalRequest);
   renderQuestion(state.questionRequest);

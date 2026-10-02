@@ -8,6 +8,7 @@ const CONTINUE_WHY: Readonly<
   Record<Extract<AgentEvent, { type: 'run.continued' }>['reason'], string>
 > = {
   'checks-failed': 'the completion checks failed',
+  'plan-incomplete': 'the task plan still has open steps',
   'run-lost': 'the runtime lost the run',
   'session-expired': 'the sign-in expired and was renewed',
   'unknown-tool': 'the model named a tool that does not exist',
@@ -88,9 +89,23 @@ function recoveryLine(event: AgentEvent): string | undefined {
       : `[checks] failed: ${failed.join(', ')}
 `;
   }
+  if (event.type === 'run.plan') {
+    return `[plan] ${String(event.done)}/${String(event.total)} done, ${String(event.doing)} in progress, ${String(event.blocked)} blocked
+`;
+  }
   if (event.type === 'run.stuck') {
     return `[stuck] ${event.tool}.${event.operation} repeated ${String(event.times)} times with nothing changing; ending the run\n`;
   }
+  return noticeLine(event);
+}
+
+/** The stderr line for the events that are notices about the run's environment. */
+function noticeLine(event: AgentEvent): string | undefined {
+  if (event.type === 'images.not-delivered') {
+    return `[images] the backend kept ${String(event.delivered)} of ${String(event.sent)} attached image(s), so the model may not see them; vision.describe can still read workspace images
+`;
+  }
+  if (event.type.startsWith('agent.')) return agentLine(event);
   if (event.type === 'thread.memory-unchanged') {
     return `[memory] the backend refused the setting (HTTP ${String(event.status)}); account memories stay on\n`;
   }
@@ -99,6 +114,24 @@ function recoveryLine(event: AgentEvent): string | undefined {
       event.status === undefined ? (event.code ?? 'network error') : `HTTP ${String(event.status)}`;
     const seconds = String(Math.round(event.waitMs / 1_000));
     return `[retry] ${cause}: attempt ${String(event.attempt)}, waiting ${seconds}s\n`;
+  }
+  return undefined;
+}
+
+/** The stderr line for the sub-agent events; every other event is not one. */
+function agentLine(event: AgentEvent): string | undefined {
+  if (event.type === 'agent.spawned') {
+    return `[agent] ${event.name} started by ${event.parent} (${event.tools.join(',')}; ${String(event.maxToolCalls)} calls, ${String(event.maxDurationSec)}s)
+`;
+  }
+  if (event.type === 'agent.message') {
+    return `[agent] ${event.from} -> ${event.to}: ${String(event.chars)} chars
+`;
+  }
+  if (event.type === 'agent.finished') {
+    const why = event.error === undefined ? '' : `: ${event.error}`;
+    return `[agent] ${event.name} ${event.state}, ${String(event.toolCalls)} call(s), ${String(Math.round(event.durationMs / 1_000))}s${why}
+`;
   }
   return undefined;
 }

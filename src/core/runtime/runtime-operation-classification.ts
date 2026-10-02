@@ -203,6 +203,13 @@ const workspaceTools: Readonly<Record<string, ToolTable>> = {
     group(READ, BROWSER_OBSERVATION),
   ),
   'workspace.command': group(RUN, ['run']),
+  // Only starting a process changes anything; the rest watch or stop one the run started.
+  'process.watch': merge(
+    group(RUN, ['start']),
+    group(READ, ['status', 'output', 'wait', 'list', 'stop']),
+  ),
+  // Only `run` executes a project command; `detect` and `report` read files and earlier results.
+  'code.gates': merge(group(RUN, ['run']), group(READ, ['detect', 'report'])),
   // `remove` matched the `move` write pattern and was R1 workspace-write.
   'workspace.container': merge(group(DESTROY, ['remove']), group(RUN, CONTAINER_OPERATIONS)),
   // Applying a migration changes a database the agent does not own.

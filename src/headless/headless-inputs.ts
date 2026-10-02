@@ -4,6 +4,7 @@ import path from 'node:path';
 import { parseMcpConfig } from '../core/mcp/mcp-config';
 import { MAX_MCP_CONFIG_BYTES } from '../core/mcp/mcp.constants';
 import { systemPromptProblem } from '../sdk/agent-inputs';
+import { gateDoneChecks } from '../sdk/code-gates-done-checks';
 import { doneChecksProblem } from '../sdk/done-checks';
 
 import { parseDoneCheckFile } from './headless-done-checks';
@@ -11,11 +12,13 @@ import {
   HEADLESS_MAX_PROMPT_FILE_BYTES,
   HEADLESS_MCP_POLICY_KEY,
 } from './headless-inputs.constants';
+import { parsePlanFile } from './headless-plan-file';
 
 import type { HeadlessInvocation } from './headless-args.types';
 import type { HeadlessInputs } from './headless-inputs.types';
 import type { DoneCheck } from '../sdk/done-checks.types';
 import type { AgentMcpOptions } from '../sdk/mcp-toolkit.types';
+import type { PlanStepInput } from '../sdk/task-plan-tool.types';
 
 async function readBounded(file: string, limit: number): Promise<string> {
   if ((await stat(file)).size > limit)
@@ -69,9 +72,18 @@ export async function mcpOf(file: string): Promise<AgentMcpOptions> {
   return { config, ...(policy === undefined ? {} : { policy }) };
 }
 
+/** `--done-check-gates` as real checks; a gate the project cannot run is a usage error. */
+function gateChecksOf(invocation: HeadlessInvocation): readonly DoneCheck[] {
+  if (invocation.doneCheckGates === undefined) return [];
+  const checks = gateDoneChecks(invocation.doneCheckGates, invocation.workspace);
+  if (typeof checks === 'string') throw new Error(checks);
+  return checks;
+}
+
 /** The checks of `--done-check-file` followed by those of `--done-check`; a bad file throws. */
 async function doneChecksOf(invocation: HeadlessInvocation): Promise<readonly DoneCheck[]> {
-  const fromFlags = invocation.doneChecks ?? [];
+  const gates = gateChecksOf(invocation);
+  const fromFlags = [...(invocation.doneChecks ?? []), ...gates];
   if (invocation.doneCheckFile === undefined) return fromFlags;
   const parsed = parseDoneCheckFile(
     await readBounded(invocation.doneCheckFile, HEADLESS_MAX_PROMPT_FILE_BYTES),
@@ -81,6 +93,18 @@ async function doneChecksOf(invocation: HeadlessInvocation): Promise<readonly Do
   const problem = doneChecksProblem(all);
   if (problem !== undefined) throw new Error(problem);
   return all;
+}
+
+/** The steps of `--plan-file`; a bad file throws. */
+async function planStepsOf(
+  invocation: HeadlessInvocation,
+): Promise<readonly PlanStepInput[] | undefined> {
+  if (invocation.planFile === undefined) return undefined;
+  const parsed = parsePlanFile(
+    await readBounded(invocation.planFile, HEADLESS_MAX_PROMPT_FILE_BYTES),
+  );
+  if (typeof parsed === 'string') throw new Error(parsed);
+  return parsed;
 }
 
 /**
@@ -95,9 +119,11 @@ export async function resolveHeadlessInputs(
     const systemPrompt = await systemPromptOf(invocation, cwd);
     const mcp = invocation.mcpConfig === undefined ? undefined : await mcpOf(invocation.mcpConfig);
     const doneChecks = await doneChecksOf(invocation);
+    const planSteps = await planStepsOf(invocation);
     return {
       ok: true,
       ...(doneChecks.length === 0 ? {} : { doneChecks }),
+      ...(planSteps === undefined ? {} : { planSteps }),
       ...(systemPrompt === undefined ? {} : { systemPrompt }),
       ...(mcp === undefined ? {} : { mcp }),
     };
