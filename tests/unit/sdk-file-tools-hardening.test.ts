@@ -58,12 +58,16 @@ describe('workspace.file regex and glob hardening', () => {
       mkdirSync(path.join(root, `d${String(i)}`));
       writeFileSync(path.join(root, `d${String(i)}`, 'f.txt'), 'needle\n'.repeat(50));
     }
+    // Aborted before the first file: a timer that aborts "soon" is a race, and a
+    // fast machine finishes the whole scan before it fires.
     const controller = new AbortController();
-    const pending = run(root, 'search', { query: 'nomatch' }, controller.signal);
-    setTimeout(() => {
-      controller.abort();
-    }, 1);
-    await expect(pending).rejects.toThrow();
+    controller.abort();
+    await expect(run(root, 'search', { query: 'nomatch' }, controller.signal)).rejects.toThrow();
+    // The same search without an abort still completes and scans every file.
+    const finished = (await run(root, 'search', { query: 'nomatch' })) as {
+      filesScanned?: number;
+    };
+    expect(finished.filesScanned).toBe(300);
   });
 
   it('coerces clean integer strings and still refuses messy ones', async () => {
