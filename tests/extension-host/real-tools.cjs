@@ -112,6 +112,58 @@ async function runRealTools(api) {
   );
   report('REAL create: file on disk with exact content');
 
+  // A path that does not exist yet is the FIRST thing a model asks about when it
+  // is told to create something in a new folder. It must answer, quickly, in its
+  // own shape: a run that never gets this result sits on "Reading workspace" with
+  // zero tokens until someone cancels it.
+  const withDeadline = (promise, label) =>
+    Promise.race([
+      promise,
+      new Promise((_resolve, reject) => {
+        globalThis.setTimeout(() => {
+          reject(new Error(`${label} did not answer within 15 s`));
+        }, 15_000);
+      }),
+    ]);
+  const missingStat = await withDeadline(
+    api.executeTool(
+      invocation('workspace.files', 'stat', { rootKey: ROOT_KEY, path: 'no-such-dir' }),
+    ),
+    'stat of a missing folder',
+  );
+  assert.match(
+    JSON.stringify(missingStat),
+    /missing|not found|exist/iu,
+    'stat says a missing path is missing',
+  );
+  report('REAL stat of a missing folder: answers');
+  const missingList = await withDeadline(
+    api
+      .executeTool(
+        invocation('workspace.files', 'list', { rootKey: ROOT_KEY, path: 'no-such-dir' }),
+      )
+      .catch((error) => ({ failed: String(error) })),
+    'list of a missing folder',
+  );
+  assert.match(
+    JSON.stringify(missingList),
+    /"exists":false/u,
+    'list of a missing folder says it does not exist instead of crashing with a raw path error',
+  );
+  assert.doesNotMatch(JSON.stringify(missingList), /scandir|ENOENT/u, 'no raw filesystem error');
+  const flatMkdir = await withDeadline(
+    api.executeTool(
+      invocation('workspace.files', 'mkdir', { rootKey: ROOT_KEY, path: 'flat-made/inner' }),
+    ),
+    'mkdir with flat arguments',
+  );
+  assert.match(JSON.stringify(flatMkdir), /applied|touched/u, 'a flat mkdir is applied');
+  assert.ok(
+    existsSync(path.join(workspace, 'flat-made', 'inner')),
+    'the folder from a flat mkdir exists on disk',
+  );
+  report('REAL list of a missing folder: answers');
+
   // read: the tool returns what is actually on disk, and its hash.
   const read = await api.executeTool(
     invocation('workspace.files', 'read', { rootKey: ROOT_KEY, path: 'src/greeting.ts' }),

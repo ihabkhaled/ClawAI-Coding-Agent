@@ -1,6 +1,6 @@
 import { describe, expect, it } from 'vitest';
 
-import { backendErrorReason } from '../../src/core/backend-error-body';
+import { backendErrorReason, gatewayErrorReason } from '../../src/core/backend-error-body';
 
 describe('backendErrorReason', () => {
   it('extracts the reason and code from a platform error envelope', () => {
@@ -31,5 +31,27 @@ describe('backendErrorReason', () => {
     expect(backendErrorReason('{"message":"   "}')).toBeUndefined();
     expect(backendErrorReason('[]')).toBeUndefined();
     expect(backendErrorReason('')).toBeUndefined();
+  });
+});
+
+describe('gatewayErrorReason', () => {
+  it('replaces a gateway HTML page with a readable sentence', () => {
+    const reason = gatewayErrorReason(
+      502,
+      '<html><head><title>502 Bad Gateway</title></head></html>',
+    );
+
+    expect(reason).toContain('temporarily unavailable (502)');
+    expect(reason).not.toContain('<html>');
+  });
+
+  it('covers an empty gateway body and other gateway statuses', () => {
+    expect(gatewayErrorReason(503, '')).toContain('(503)');
+    expect(gatewayErrorReason(504, '   ')).toContain('(504)');
+  });
+
+  it('leaves other statuses and non-HTML bodies alone', () => {
+    expect(gatewayErrorReason(500, '<html></html>')).toBeUndefined();
+    expect(gatewayErrorReason(502, 'upstream said no')).toBeUndefined();
   });
 });

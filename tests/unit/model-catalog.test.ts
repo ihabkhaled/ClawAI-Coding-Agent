@@ -195,3 +195,47 @@ describe('Ollama cloud models', () => {
     expect(entry?.supportsTools).toBe(true);
   });
 });
+
+describe('capabilities reported by only one catalog', () => {
+  const router = {
+    id: 'r1',
+    provider: 'OLLAMA',
+    modelKey: 'kimi-k3',
+    displayName: 'Kimi K3',
+    isLocal: false,
+    isExecutionCapable: true,
+    lifecycle: 'ACTIVE',
+    supportsTools: false,
+    supportsStreaming: false,
+  };
+  const connector = {
+    id: 'c1',
+    connectorId: 'cc',
+    provider: 'OLLAMA',
+    modelKey: 'kimi-k3',
+    displayName: 'Kimi K3',
+    lifecycle: 'ACTIVE',
+    supportsStreaming: true,
+    supportsTools: true,
+    supportsVision: false,
+    supportsAudio: false,
+    supportsStructuredOutput: false,
+    maxContextTokens: null,
+  };
+
+  it('turns a capability on when the connector catalog says so and the router says false', () => {
+    const [entry] = buildModelCatalog([router], [connector]);
+
+    expect(entry).toMatchObject({
+      source: 'routing',
+      supportsTools: true,
+      supportsStreaming: true,
+    });
+  });
+
+  it('leaves a capability off when neither catalog reports it', () => {
+    const [entry] = buildModelCatalog([router], [{ ...connector, supportsTools: false }]);
+
+    expect(entry?.supportsTools).toBe(false);
+  });
+});

@@ -47,6 +47,21 @@ async function saveToDisk(uris: readonly vscode.Uri[]): Promise<void> {
   }
 }
 
+/**
+ * Applies a workspace edit, unless the transaction had nothing to put in one.
+ *
+ * A transaction of only `mkdir` operations creates its folders directly and
+ * leaves the edit empty, and VS Code answers an empty edit with `false`. That
+ * read as a rejection, so every mkdir failed even though the folder existed.
+ * The test is on the operation kinds rather than `edit.size`, which counts text
+ * edits only and is zero for a file create.
+ */
+async function applyEditIfNeeded(edit: vscode.WorkspaceEdit, needed: boolean): Promise<void> {
+  if (needed && !(await vscode.workspace.applyEdit(edit))) {
+    throw new Error('VS Code rejected the file transaction');
+  }
+}
+
 export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
   private readonly createdDirectories = new Map<string, vscode.Uri[]>();
   /** Documents each transaction edited in place, so a rollback can save them too. */
@@ -219,8 +234,10 @@ export class VscodeFileTransactionAdapter implements FileTransactionAdapter {
     }
     this.createdDirectories.set(transaction.transactionId, directories);
     signal?.throwIfAborted();
-    if (!(await vscode.workspace.applyEdit(edit)))
-      throw new Error('VS Code rejected the file transaction');
+    await applyEditIfNeeded(
+      edit,
+      prepared.some((item) => item.operation.kind !== 'mkdir'),
+    );
     this.committed.add(transaction.transactionId);
     this.editedDocuments.set(transaction.transactionId, replaced);
     // Marked committed first, so a save that fails below is rolled back like

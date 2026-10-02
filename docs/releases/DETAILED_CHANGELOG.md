@@ -2,6 +2,17 @@
 
 This is the full engineering log for ClawAI Coding Agent: every release with its internal notes, decisions and verification detail. The short, user-facing release notes are in [CHANGELOG.md](../../CHANGELOG.md).
 
+## 1.94.0
+
+Found by driving the installed extension in a real editor against a live backend (a new `tests/vscode-e2e/live-session.e2e.ts` lane: signs in through a logging proxy, picks a model by name, sends a build task, approves like a person, ends the run on the status bar, and records the panel, tool results and files). Four models ran the same task; two built and tested a project through the extension.
+
+- `workspace.files mkdir` always failed: a transaction of only `mkdir` leaves the `WorkspaceEdit` empty and `applyEdit` answers `false` for an empty edit. `applyEditIfNeeded` skips the edit when every operation is a `mkdir` (decided by operation kind, because `WorkspaceEdit.size` counts text edits only and is 0 for a file create). Pinned by the real-host test `tests/extension-host/real-tools.cjs`.
+- `transactionCandidate` accepts a write call's own fields at the top level (for example `{rootKey, path}` for `mkdir`), wraps them in the single-operation envelope and validates with the same strict schema; a call with neither shape gets a message showing both. `withTransactionDefaults` fills `beforeHash: null` for a `create`, lengthens a short `transactionId` and describes a missing summary; `update`, `patch`, `delete`, `rename` and `copy` still must name the hash they read.
+- `list` on a missing folder returns `{ exists: false, entries: [] }` with a note instead of a raw `ENOENT scandir` that carried the machine path (`isMissingPathError`).
+- The router catalog reports `supportsTools=false` for every model while the connector catalog reports true, so a working model drew "cannot call tools". `buildModelCatalog` now turns a capability on when either catalog says so (`routerEntry`).
+- `failedLoudly` drops the Ollama and llama.cpp warnings when the proxy answers 404/502/503/504 (the runtime is not installed); other failures still warn.
+- `gatewayErrorReason` replaces an HTML 502/503/504 page with one sentence.
+
 ## 1.92.0
 
 Write scope: `.git` and the workspace parent are now checked around every `workspace.command` and `workspace.git` call when a write scope is configured. Before and after, `.git/hooks/**`, `.git/config`, `.git/info/exclude` and `.git/info/attributes` are snapshotted (byte-compared); a change is rewritten back (a new hook removed), the call fails and a `write-scope.violation` is emitted. The workspace parent folder is listed (names, size, mtime, non-recursive, 5000 entries); an entry that did not exist before is deleted, an existing one that changed is only reported. This is detection plus revert, not a sandbox: a command can still write anywhere the user can, and the guard sees only what it snapshots (`src/sdk/write-scope-guard.ts`).

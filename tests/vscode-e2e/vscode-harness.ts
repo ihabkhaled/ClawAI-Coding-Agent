@@ -136,8 +136,17 @@ export function seedWorkspace(): string {
 export async function launchVscode(options: {
   readonly extensionsDirectory: string;
   readonly workspace: string;
+  /** User settings written before the editor starts, e.g. a backend address. */
+  readonly settings?: Readonly<Record<string, unknown>>;
 }): Promise<VscodeSession> {
   const userData = mkdtempSync(path.join(tmpdir(), 'claw-e2e-user-'));
+  if (options.settings !== undefined) {
+    mkdirSync(path.join(userData, 'User'), { recursive: true });
+    writeFileSync(
+      path.join(userData, 'User', 'settings.json'),
+      JSON.stringify(options.settings, null, 2),
+    );
+  }
   const port = await freePort();
 
   // Playwright's Electron launcher cannot bootstrap VS Code: it expects to own
