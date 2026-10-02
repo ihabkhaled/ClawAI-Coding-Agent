@@ -2,7 +2,7 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
-## 1.94.0
+## 1.95.0
 
 - Creating a folder with the agent now works. Every folder request used to fail with "VS Code rejected the file transaction", even when the folder was created.
 - The agent is more forgiving about how a model words a file request: folders can be requested with plain arguments, a new file no longer needs an empty "previous version" field, and a short change label is accepted. Safety checks that protect your existing files are unchanged.

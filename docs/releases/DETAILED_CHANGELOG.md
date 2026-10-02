@@ -2,7 +2,7 @@
 
 This is the full engineering log for ClawAI Coding Agent: every release with its internal notes, decisions and verification detail. The short, user-facing release notes are in [CHANGELOG.md](../../CHANGELOG.md).
 
-## 1.94.0
+## 1.95.0
 
 Found by driving the installed extension in a real editor against a live backend (a new `tests/vscode-e2e/live-session.e2e.ts` lane: signs in through a logging proxy, picks a model by name, sends a build task, approves like a person, ends the run on the status bar, and records the panel, tool results and files). Four models ran the same task; two built and tested a project through the extension.
 
