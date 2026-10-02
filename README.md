@@ -9,7 +9,7 @@ project, proposes changes, and waits for your OK before it touches a file.
 It connects to your ClawAI account, so you can use many AI models from one
 place: hosted models, or models running on your own machine.
 
-Version 1.97.0 delivers a more capable agent that can plan, edit files, run
+Version 1.98.0 delivers a more capable agent that can plan, edit files, run
 commands, use git, and drive a browser, all with your approval, and it keeps
 working with the classic chat-and-review flow if a newer feature is not
 available on your ClawAI server. The approval choices now mean what they say
@@ -144,6 +144,37 @@ choice for that trusted workspace.
   a ClawAI credential in environment variables.
 - Some of these need a ClawAI backend that supports them, or a second machine.
   See [Remote and automation](docs/guide/remote-and-automation.md).
+
+### Let the agent test and ship for you
+
+The command-line agent (`clawai -p "your task"`, also available as a code library) can do more than edit files. It can run
+your tests, start your app, click through it in a real browser, call your API, split a big job between helpers, then commit and
+push. These are command-line options, not editor settings, and **every one of them is off until you turn it on**.
+
+By default the agent can only read your project and look at git. Turn on what the job needs, and nothing more:
+
+- **Run programs and tests:** `--allow-tools read,write,command`
+- **Commit and push:** add `git-write`
+- **Check your website in a real browser:** `--browser-allow-host localhost:3000`
+- **Check your API:** `--http-allow-host localhost:3000` (add `http-write` to let it send changes)
+- **Keep a server running while it works:** comes with `command`
+- **Look at a screenshot:** `--vision`
+- **Follow a plan it cannot skip:** `--plan-file plan.json --require-plan`
+- **Let helpers work in parallel:** `--allow-tools agents` (only for big jobs with separate parts)
+- **Run shell scripts:** `--allow-tools shell --allow-shell --permission-mode ask` (off unless you give all three)
+
+Safety, in plain words:
+
+- The shell is off. Nothing can run a free-form script unless you switch it on and approve each script.
+- The browser and the API tool can only reach websites you name. Local and private addresses are blocked unless you list them.
+- Your approval level decides what is asked. With no terminal to ask on (for example in CI), anything that needs approval is
+  refused, never assumed.
+- You can fence where it may write (`--write-scope`), and define what "done" means with checks that run real commands
+  (`--done-check`) instead of trusting the agent's word.
+- Passwords, tokens and keys are hidden from the agent and from its logs.
+
+Every tool, with its limits and what is asked in each approval level, is in [docs/TOOLS.md](docs/TOOLS.md). Common questions are
+in [docs/FAQ-AGENT-TOOLS.md](docs/FAQ-AGENT-TOOLS.md); all options are in [docs/HEADLESS.md](docs/HEADLESS.md).
 
 ### Privacy and zero-retention
 

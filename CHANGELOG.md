@@ -2,6 +2,12 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.98.0
+
+- Long agent runs no longer stop after about 15 minutes: the agent renews its sign-in during the run and picks its event stream up where it left off. Callers with their own token can pass a refresh token too.
+- A complete, generated list of every tool the agent can use (`docs/TOOLS.md`), a short FAQ, and step-by-step guides for letting the agent plan, test a page or an API, run long commands and work in parallel. The README has a new "Let the agent test and ship for you" section; everything risky stays off until you turn it on.
+- A smaller, faster install: the web-request tool now loads only when it is used, stray files can no longer end up in the package, and the public types for the new options are complete.
+
 ## 1.97.0
 
 - Added the plan for making the agent able to deliver a whole feature on its own (browser testing, API testing, background processes, task plans, sub-agents and more), with what shipped in 1.96.0 and what is still open.

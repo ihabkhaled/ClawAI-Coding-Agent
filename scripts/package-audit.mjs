@@ -412,6 +412,49 @@ assert.deepEqual(
   'no dot-directory may be packaged into the VSIX',
 );
 
+/**
+ * The Marketplace listing carries only what the editor runs or the listing shows.
+ *
+ * A repository-root file not named here (a tool config, a lab script, a stray
+ * archive) fails the audit instead of shipping silently; so does any test,
+ * fixture, screenshot, worktree or source-map path anywhere in the package.
+ */
+const ROOT_FILES = new Set([
+  'CHANGELOG.md',
+  'LICENSE',
+  'README.md',
+  'browsers.json',
+  'package.json',
+]);
+const stray = packagedFiles.filter((file) => {
+  const normalized = file.replaceAll('\\', '/');
+  if (!normalized.includes('/')) {
+    return !ROOT_FILES.has(normalized) && !/^package\.nls(\.[a-z]{2})?\.json$/u.test(normalized);
+  }
+  return /(^|\/)(tests?|fixtures?|screenshots?|\.worktrees|worktrees)\/|\.(test|spec)\.|\.map$|\.vsix$/iu.test(
+    normalized,
+  );
+});
+assert.deepEqual(stray, [], 'files that must not be packaged into the VSIX');
+const shippedBundles = [
+  'dist/extension.js',
+  'dist/headless.mjs',
+  'dist/sdk.mjs',
+  'dist/playwright-runtime.js',
+];
+// The bundles exist only after a build. `check:quality` runs this audit on a fresh
+// checkout before any build, so the presence of the bundles is enforced when a
+// build output is there to inspect (the package job builds first) and skipped
+// when it is not, instead of failing every quality run.
+const built = existsSync(join(root, 'dist', 'extension.js'));
+for (const bundle of built ? shippedBundles : []) {
+  assert.equal(
+    packagedFiles.includes(bundle),
+    true,
+    `${bundle} must be packaged (playwright-core stays a separate lazily loaded file)`,
+  );
+}
+
 stdout.write(
   `package:audit OK — ${String(commands.length)} commands, ${String(locales.length + 1)} locales, strict CSP, no secret settings\n`,
 );

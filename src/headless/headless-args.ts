@@ -202,7 +202,12 @@ function isOutputFormat(value: string): value is HeadlessOutputFormat {
  */
 export function authFromEnvironment(environment: HeadlessEnvironment): AgentAuth | undefined {
   const token = environment.CLAW_TOKEN;
-  if (token !== undefined && token.length > 0) return { token };
+  const refreshToken = environment.CLAW_REFRESH_TOKEN;
+  if (token !== undefined && token.length > 0) {
+    return refreshToken === undefined || refreshToken.length === 0
+      ? { token }
+      : { token, refreshToken };
+  }
   const email = environment.CLAW_EMAIL ?? environment.CLAW_LIVE_EMAIL;
   const password = environment.CLAW_PASSWORD ?? environment.CLAW_LIVE_PASSWORD;
   if (email === undefined || password === undefined) return undefined;

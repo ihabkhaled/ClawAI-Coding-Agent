@@ -92,3 +92,23 @@ export type {
 } from './workspace-toolkit.types';
 export type { HeadlessExitCode, HeadlessOutcome } from '../core/headless-outcome.types';
 export type { HeadlessStreamEvent } from '../headless/headless-session.types';
+export type { HeadlessRunRequest } from '../headless/headless-transport.types';
+export type {
+  McpHttpServerConfig,
+  McpOAuthConfig,
+  McpServerConfig,
+  McpServerOrigin,
+  McpStdioServerConfig,
+} from '../core/mcp/mcp.types';
+export type { McpTokenProvider } from '../infrastructure/mcp/mcp-transport.types';
+export type { RetryTuning } from '../headless/retry-policy.types';
+export type { ShellOptions } from './shell-tool.types';
+export type { StuckInfo } from './repetition-guard.types';
+export type { AgentMemoryMode } from './agent-sdk.types';
+export type {
+  VisionAskInput,
+  VisionCatalogModel,
+  VisionImage,
+  VisionMimeType,
+} from './vision-tool.types';
+export type { WebFetchInput, WebSearchInput } from '../core/web-research.types';

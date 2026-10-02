@@ -5,6 +5,7 @@ import { RuntimeHttpError } from './runtime-http-error';
 
 import type { HeadlessStreamEvent } from './headless-session.types';
 import type { RetryContext } from './retry-policy.types';
+import type { StreamAuth } from './token-session.types';
 
 interface StreamRequest {
   readonly baseUrl: string;
@@ -12,6 +13,8 @@ interface StreamRequest {
   readonly run: { runId: string; generation: string; threadId: string };
   readonly signal?: AbortSignal | undefined;
   readonly retry: RetryContext;
+  /** When present the token is asked for on every connect and the stream is rotated before it expires. */
+  readonly auth?: StreamAuth | undefined;
 }
 
 interface ParsedFrame {
@@ -40,27 +43,131 @@ export async function* readRuntimeEvents(
   request: StreamRequest,
 ): AsyncGenerator<HeadlessStreamEvent> {
   const retrier = new Retrier(request.retry);
-  let lastSequence = -1;
+  const cursor: Cursor = { last: -1, events: 0, ended: false, renewed: false };
   for (;;) {
-    let delivered = false;
+    const before = cursor.events;
     let failure: unknown = new StreamClosedError();
+    const connection = new Connection(request);
     try {
-      for await (const frame of connectedFrames(request, Math.max(lastSequence, 0))) {
-        if (frame.sequence !== undefined && frame.sequence <= lastSequence) continue;
-        if (frame.failureCode === STREAM_UNAVAILABLE_CODE) {
-          throw new RuntimeHttpError('Event stream', 503, frame.failureCode);
-        }
-        delivered = true;
-        retrier.reset();
-        lastSequence = frame.sequence ?? lastSequence;
-        yield frame.event;
-        if (HEADLESS_TERMINAL_EVENTS.includes(frame.event.type)) return;
-      }
-      if (!delivered) return;
+      yield* framesOf(request, connection, cursor, retrier);
+      if (cursor.ended || (cursor.events === before && !connection.rotated)) return;
     } catch (error) {
       failure = error;
+      if (await shouldRenew(request, error, connection, cursor)) continue;
+    } finally {
+      connection.close();
     }
+    // The connection was cut on purpose to move to a fresh token: reconnect at once.
+    if (connection.rotated && request.signal?.aborted !== true) continue;
     await retrier.backoff(failure);
+  }
+}
+
+/** Where the stream is up to; shared across reconnects so none replays an event. */
+interface Cursor {
+  last: number;
+  /** How many events were handed over, across every connection. */
+  events: number;
+  ended: boolean;
+  /** A 401 was already answered by renewing; a second one in a row is final. */
+  renewed: boolean;
+}
+
+async function* framesOf(
+  request: StreamRequest,
+  connection: Connection,
+  cursor: Cursor,
+  retrier: Retrier,
+): AsyncGenerator<HeadlessStreamEvent> {
+  const token = await connection.open();
+  for await (const frame of connectedFrames(
+    request,
+    token,
+    connection.signal,
+    Math.max(cursor.last, 0),
+  )) {
+    if (frame.sequence !== undefined && frame.sequence <= cursor.last) continue;
+    if (frame.failureCode === STREAM_UNAVAILABLE_CODE) {
+      throw new RuntimeHttpError('Event stream', 503, frame.failureCode);
+    }
+    cursor.events += 1;
+    cursor.renewed = false;
+    retrier.reset();
+    cursor.last = frame.sequence ?? cursor.last;
+    yield frame.event;
+    if (HEADLESS_TERMINAL_EVENTS.includes(frame.event.type)) {
+      cursor.ended = true;
+      return;
+    }
+  }
+}
+
+/** A 401 with a refresh token to hand: renew once and reconnect from the same cursor. */
+async function shouldRenew(
+  request: StreamRequest,
+  error: unknown,
+  connection: Connection,
+  cursor: Cursor,
+): Promise<boolean> {
+  if (request.auth === undefined || cursor.renewed || connection.rotated) return false;
+  if (request.signal?.aborted === true) return false;
+  if (!(error instanceof RuntimeHttpError) || error.status !== 401) return false;
+  await request.auth.renewAfterRejection(connection.token);
+  cursor.renewed = true;
+  return true;
+}
+
+/**
+ * One connection's token and its rotation timer.
+ *
+ * A token past about 80% of its life is rotated and the connection closed
+ * deliberately, because the backend ends the stream when the token it was
+ * opened with expires. The caller reconnects with the next token and the same
+ * cursor, so rotation costs nothing in events.
+ */
+class Connection {
+  rotated = false;
+  token: string;
+  readonly signal: AbortSignal;
+  private readonly controller = new AbortController();
+  private timer: ReturnType<typeof setTimeout> | undefined;
+
+  constructor(private readonly request: StreamRequest) {
+    this.token = request.token;
+    this.signal =
+      request.signal === undefined
+        ? this.controller.signal
+        : AbortSignal.any([request.signal, this.controller.signal]);
+  }
+
+  async open(): Promise<string> {
+    const { auth } = this.request;
+    if (auth === undefined) return this.token;
+    this.token = await auth.token();
+    const delay = auth.msUntilRotation();
+    if (delay !== undefined) {
+      this.timer = setTimeout(() => {
+        void this.rotate(auth);
+      }, delay);
+      this.timer.unref();
+    }
+    return this.token;
+  }
+
+  close(): void {
+    if (this.timer !== undefined) clearTimeout(this.timer);
+  }
+
+  private async rotate(auth: StreamAuth): Promise<void> {
+    try {
+      // Rotates only if nobody else already has; either way this connection's token is stale.
+      await auth.renewAfterRejection(this.token);
+    } catch {
+      // The old token still works until it expires; a refused refresh surfaces on the next request.
+      return;
+    }
+    this.rotated = true;
+    this.controller.abort();
   }
 }
 
@@ -75,6 +182,8 @@ class StreamClosedError extends Error {
 
 async function* connectedFrames(
   request: StreamRequest,
+  token: string,
+  signal: AbortSignal,
   after: number,
 ): AsyncGenerator<ParsedFrame> {
   const query = new URLSearchParams({
@@ -86,8 +195,8 @@ async function* connectedFrames(
   const response = await fetch(
     `${request.baseUrl}/chat-messages/stream/${encodeURIComponent(request.run.threadId)}?${query.toString()}`,
     {
-      headers: { Authorization: `Bearer ${request.token}`, Accept: 'text/event-stream' },
-      ...(request.signal === undefined ? {} : { signal: request.signal }),
+      headers: { Authorization: `Bearer ${token}`, Accept: 'text/event-stream' },
+      signal,
     },
   );
   if (!response.ok || response.body === null) {
