@@ -2,6 +2,10 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.97.0
+
+- Added the plan for making the agent able to deliver a whole feature on its own (browser testing, API testing, background processes, task plans, sub-agents and more), with what shipped in 1.96.0 and what is still open.
+
 ## 1.96.0
 
 The agent can now do much more of a real engineering job on its own. Every new tool below is **off by default** and needs an explicit flag, so a run that does not ask for them sees exactly the tools it saw before. They work in the command line (`clawai`) and the host-free SDK; the editor panel is unchanged except where noted.

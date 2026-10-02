@@ -2,6 +2,10 @@
 
 This is the full engineering log for ClawAI Coding Agent: every release with its internal notes, decisions and verification detail. The short, user-facing release notes are in [CHANGELOG.md](../../CHANGELOG.md).
 
+## 1.97.0
+
+Docs only: `docs/plans/agent-completeness-plan-2026-10.md` records the wave plan, the 1.96.0 outcome per workstream and the open items (F093, image delivery backend fix, access-token refresh, live smoke, wave 2).
+
 ## 1.96.0
 
 Ten agent capabilities, merged and gated as one release. Each new tool is off by default; a run that asks for none of them offers the same 5,274 characters of tool definitions as 1.95.0 (workspace.file, workspace.git and workspace.notes). With every category on, the definitions are 21,394 characters; the `command` grant now also offers `code.gates` and `process.watch` (+2,549 characters).
