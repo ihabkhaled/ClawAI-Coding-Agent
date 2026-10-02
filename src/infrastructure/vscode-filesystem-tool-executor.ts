@@ -4,6 +4,12 @@ import { z } from 'zod';
 import { deliveredArtifactsFromReceipt } from '../core/delivered-artifact';
 import { fileTransactionSchema } from '../core/file-transaction';
 import { normalizeTransactionEncoding } from '../core/file-transaction-encoding';
+import {
+  isMissingPathError,
+  missingTransactionMessage,
+  transactionCandidate,
+  withTransactionDefaults,
+} from '../core/file-transaction-flat';
 import { fitPdfPages } from '../core/pdf-page-budget';
 import {
   MAX_RUNTIME_JSON_ENTRIES,
@@ -345,9 +351,11 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     // ("operations[3].beforeHash: expected string, received undefined") and
     // would then try to invent a hash for a file that did not exist yet,
     // burning its whole turn budget without ever learning the real rule.
-    assertSingleOperationCount(invocation.arguments.transaction);
+    const candidate = transactionCandidate(invocation.operation, invocation.arguments);
+    if (candidate === undefined) throw new Error(missingTransactionMessage(invocation.operation));
+    assertSingleOperationCount(candidate);
     const transaction = fileTransactionSchema.parse(
-      normalizeTransactionEncoding(invocation.arguments.transaction),
+      normalizeTransactionEncoding(withTransactionDefaults(candidate, invocation.operation)),
     );
     assertSingleMatchingOperation(transaction, invocation.operation);
     const preview = await this.transactions.preview(transaction, signal);
@@ -521,7 +529,25 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
   private async list(candidate: unknown): Promise<RuntimeToolExecutionOutput> {
     const input = listSchema.parse(candidate);
     const uri = await this.adapter.uriFor(input.rootKey, input.path);
-    const entries = await vscode.workspace.fs.readDirectory(uri);
+    let entries: [string, vscode.FileType][];
+    try {
+      entries = await vscode.workspace.fs.readDirectory(uri);
+    } catch (error: unknown) {
+      // A folder that does not exist yet is an ordinary answer for a model that
+      // is about to create it. The raw error named the machine's absolute path
+      // and read like a tool crash.
+      if (!isMissingPathError(error)) throw error;
+      return {
+        structured: {
+          exists: false,
+          path: input.path,
+          entries: [],
+          nextCursor: null,
+          total: 0,
+          note: 'That folder does not exist yet. Create it with a write operation, or write a file inside it (parent folders are created).',
+        },
+      };
+    }
     const page = entries.slice(input.cursor, input.cursor + input.limit);
     return {
       structured: {

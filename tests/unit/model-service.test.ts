@@ -1,5 +1,6 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { BackendRequestError } from '../../src/backend/backend-errors';
 import { ModelService, type ModelBackendPort } from '../../src/services/model-service';
 
 const routerModel = {
@@ -186,6 +187,32 @@ describe('ModelService', () => {
     await expect(new ModelService(backend).refresh()).resolves.toMatchObject({
       catalog: [{ key: 'OLLAMA:qwen3-coder' }],
       warnings: ['ollama', 'llamacpp'],
+    });
+  });
+
+  it('stays quiet about a local runtime the proxy says is not running', async () => {
+    const backend = backendFor(entitlement({ isAdmin: true }));
+    backend.getLocalOllamaModels = vi.fn(async () => {
+      throw new BackendRequestError('ClawAI request failed (502).', 502, true);
+    });
+    backend.getLocalFrontierModels = vi.fn(async () => {
+      throw new BackendRequestError('not found', 404, false);
+    });
+
+    await expect(new ModelService(backend).refresh()).resolves.toMatchObject({
+      catalog: [{ key: 'OLLAMA:qwen3-coder' }],
+      warnings: [],
+    });
+  });
+
+  it('still warns when a local runtime fails for another reason', async () => {
+    const backend = backendFor(entitlement({ isAdmin: true }));
+    backend.getLocalOllamaModels = vi.fn(async () => {
+      throw new BackendRequestError('boom', 500, true);
+    });
+
+    await expect(new ModelService(backend).refresh()).resolves.toMatchObject({
+      warnings: ['ollama'],
     });
   });
 

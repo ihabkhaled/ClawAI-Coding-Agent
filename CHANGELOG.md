@@ -2,6 +2,14 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.94.0
+
+- Creating a folder with the agent now works. Every folder request used to fail with "VS Code rejected the file transaction", even when the folder was created.
+- The agent is more forgiving about how a model words a file request: folders can be requested with plain arguments, a new file no longer needs an empty "previous version" field, and a short change label is accepted. Safety checks that protect your existing files are unchanged.
+- Asking the agent to look in a folder that does not exist yet now answers "it does not exist yet" instead of showing a technical error with your computer's full path.
+- Fewer false warnings: a model that can run tools is no longer marked "cannot call tools" because one list of models forgot to say so, and the Ollama and llama.cpp warnings are hidden when you have not set those up.
+- If ClawAI is restarting and the server answers with a "Bad Gateway" page, you now see one plain sentence instead of a block of web page code.
+
 ## 1.93.0
 
 - Maintenance release: the automated checks on GitHub no longer fail when the VS Code test window occasionally does not come up. The extension-host test lane now retries once before reporting a failure. Nothing changes in the extension itself.

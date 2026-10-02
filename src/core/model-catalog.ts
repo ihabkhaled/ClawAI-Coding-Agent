@@ -155,6 +155,40 @@ function appendLocalFrontierModels(
   }
 }
 
+function modelKey(model: { provider: string; modelKey: string }): ModelCatalogEntry['key'] {
+  return `${model.provider}:${model.modelKey}`;
+}
+
+/**
+ * A router catalog entry, with capabilities merged from the connector catalog.
+ *
+ * Both catalogs describe the same model, and the router's capability flags are
+ * often left at false while the connector's are true. A false from one source is
+ * not evidence against a true from the other, so a capability is on when either
+ * source says so.
+ */
+function routerEntry(
+  model: RouterModelInput,
+  key: ModelCatalogEntry['key'],
+  connector: ConnectorModelInput | undefined,
+): ModelCatalogEntry {
+  return {
+    id: model.id,
+    key,
+    provider: routerExecutionProvider(model),
+    model: model.modelKey,
+    displayName: model.displayName,
+    isLocal: model.isLocal,
+    source: 'routing',
+    supportsStreaming: model.supportsStreaming === true || connector?.supportsStreaming === true,
+    supportsTools: model.supportsTools === true || connector?.supportsTools === true,
+    supportsVision: model.supportsVision === true || connector?.supportsVision === true,
+    supportsStructuredOutput:
+      model.supportsStructuredOutput === true || connector?.supportsStructuredOutput === true,
+    contextTokens: model.maxContextTokens ?? model.contextWindowTokens ?? null,
+  };
+}
+
 export function buildModelCatalog(
   routerModels: RouterModelInput[],
   connectorModels: ConnectorModelInput[],
@@ -167,26 +201,14 @@ export function buildModelCatalog(
   appendLocalOllamaModels(entries, seen, localOllamaModels);
   appendLocalFrontierModels(entries, seen, localFrontierModels);
 
+  const connectorByKey = new Map(connectorModels.map((model) => [modelKey(model), model] as const));
   for (const model of routerModels) {
-    const key = `${model.provider}:${model.modelKey}`;
+    const key = modelKey(model);
     if (model.lifecycle !== 'ACTIVE' || !model.isExecutionCapable || seen.has(key)) {
       continue;
     }
     seen.add(key);
-    entries.push({
-      id: model.id,
-      key,
-      provider: routerExecutionProvider(model),
-      model: model.modelKey,
-      displayName: model.displayName,
-      isLocal: model.isLocal,
-      source: 'routing',
-      supportsStreaming: model.supportsStreaming === true,
-      supportsTools: model.supportsTools === true,
-      supportsVision: model.supportsVision === true,
-      supportsStructuredOutput: model.supportsStructuredOutput === true,
-      contextTokens: model.maxContextTokens ?? model.contextWindowTokens ?? null,
-    });
+    entries.push(routerEntry(model, key, connectorByKey.get(key)));
   }
 
   for (const model of connectorModels) {

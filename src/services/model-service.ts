@@ -1,3 +1,4 @@
+import { BackendRequestError } from '../backend/backend-errors';
 import { buildModelCatalog, type ModelCatalogEntry } from '../core/model-catalog';
 
 import type {
@@ -66,6 +67,23 @@ function applyOrganizationModelAccess(
   return catalog.filter((model) => allowed.has(model.key) || allowed.has(model.model));
 }
 
+/** Statuses a front proxy answers when the local runtime behind it is not running at all. */
+const NOT_RUNNING_STATUSES: ReadonlySet<number> = new Set([404, 502, 503, 504]);
+
+/**
+ * Whether a local catalog failure is worth telling the user about.
+ *
+ * Most accounts have no local runtime, and the proxy answers for it with a
+ * gateway error. A warning on every start about something that was never
+ * installed is noise that hides the ones that matter, so only a failure that is
+ * not "that runtime is not there" is reported.
+ */
+function failedLoudly(result: PromiseSettledResult<unknown>): boolean {
+  if (result.status !== 'rejected') return false;
+  const reason: unknown = result.reason;
+  return !(reason instanceof BackendRequestError && NOT_RUNNING_STATUSES.has(reason.status));
+}
+
 export class ModelService {
   constructor(private backend: ModelBackendPort) {}
 
@@ -91,8 +109,8 @@ export class ModelService {
     const localFrontierModels =
       localFrontierResult.status === 'fulfilled' ? localFrontierResult.value : [];
     const warnings = [
-      ...(localOllamaResult.status === 'rejected' ? ['ollama'] : []),
-      ...(localFrontierResult.status === 'rejected' ? ['llamacpp'] : []),
+      ...(failedLoudly(localOllamaResult) ? ['ollama'] : []),
+      ...(failedLoudly(localFrontierResult) ? ['llamacpp'] : []),
     ];
     const catalog = buildModelCatalog(
       routerModels,

@@ -29,3 +29,20 @@ export function backendErrorReason(body: string): string | undefined {
   const code = typeof record.code === 'string' ? record.code.trim() : '';
   return code.length === 0 ? message : `${message} (${code})`;
 }
+
+const GATEWAY_STATUSES: ReadonlySet<number> = new Set([502, 503, 504]);
+
+/**
+ * A short, readable reason for a gateway failure, or nothing for other errors.
+ *
+ * A 502 from the front proxy arrives as a page of HTML. Showing it verbatim put
+ * `<html><head><title>502 Bad Gateway</title>` in the sign-in panel, when the
+ * whole story is that a ClawAI service behind the proxy was starting, restarting
+ * or down and a retry in a moment will usually work.
+ */
+export function gatewayErrorReason(status: number, body: string): string | undefined {
+  if (!GATEWAY_STATUSES.has(status)) return undefined;
+  const trimmed = body.trim();
+  if (trimmed.length > 0 && !trimmed.startsWith('<')) return undefined;
+  return `ClawAI is temporarily unavailable (${String(status)}): a service behind the server is starting, restarting or stopped. Try again in a moment.`;
+}

@@ -1,4 +1,4 @@
-import { backendErrorReason } from '../core/backend-error-body';
+import { backendErrorReason, gatewayErrorReason } from '../core/backend-error-body';
 import { redactText } from '../core/redaction';
 
 import { BackendRequestError } from './backend-errors';
@@ -35,7 +35,8 @@ export async function throwBackendResponseError(lease: ResponseLease): Promise<n
   const statusMessage = `ClawAI request failed (${String(lease.response.status)}).`;
   // A platform error carries its own reason and code; showing the raw JSON
   // envelope around them made every backend failure unreadable in the panel.
-  const reason = backendErrorReason(safeBody);
+  const reason =
+    backendErrorReason(safeBody) ?? gatewayErrorReason(lease.response.status, safeBody);
   throw new BackendRequestError(
     reason ?? (safeBody.length === 0 ? statusMessage : `${statusMessage} ${safeBody}`),
     lease.response.status,
