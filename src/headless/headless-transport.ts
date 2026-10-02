@@ -237,6 +237,24 @@ export class HeadlessTransport {
     );
   }
 
+  /**
+   * Supplies full definitions for tools this run declared deferred at start. The backend
+   * accepts one only when it hashes to the commitment its stub carried, so a definition
+   * that was not declared cannot be added; the catalog hash admitted at start never changes.
+   */
+  loadTools(
+    token: string,
+    run: { runId: string; generation: string; threadId: string },
+    definitions: readonly unknown[],
+    signal?: AbortSignal,
+  ): Promise<{ catalogVersion: number; loaded: readonly { name: string; version: string }[] }> {
+    const query = new URLSearchParams({ threadId: run.threadId });
+    return this.json(
+      `/chat-messages/runtime/runs/${encodeURIComponent(run.runId)}/tools?${query.toString()}`,
+      { body: { generation: run.generation, definitions }, token, signal },
+    );
+  }
+
   /** The run's events, reconnecting from the last one seen; see `readRuntimeEvents`. */
   events(
     token: string,
@@ -255,7 +273,12 @@ export class HeadlessTransport {
 
   private async json<T>(
     path: string,
-    options: { body?: unknown; token?: string; method?: 'POST' | 'PATCH' | 'GET' },
+    options: {
+      body?: unknown;
+      token?: string;
+      method?: 'POST' | 'PATCH' | 'GET';
+      signal?: AbortSignal | undefined;
+    },
   ): Promise<T> {
     // Serialized once, outside the retry, so every attempt sends identical bytes.
     const payload = options.body === undefined ? undefined : JSON.stringify(options.body);
@@ -286,10 +309,14 @@ export class HeadlessTransport {
 
   private send<T>(
     path: string,
-    options: { method?: 'POST' | 'PATCH' | 'GET' },
+    options: { method?: 'POST' | 'PATCH' | 'GET'; signal?: AbortSignal | undefined },
     payload: string | undefined,
     token: string | undefined,
   ): Promise<T> {
+    const callSignal =
+      options.signal === undefined || this.retry.signal === undefined
+        ? (options.signal ?? this.retry.signal)
+        : AbortSignal.any([options.signal, this.retry.signal]);
     return withRetries(this.retry, async () => {
       const response = await fetch(this.baseUrl + path, {
         method: options.method ?? 'POST',
@@ -298,7 +325,7 @@ export class HeadlessTransport {
           ...(token === undefined ? {} : { Authorization: `Bearer ${token}` }),
         },
         ...(payload === undefined ? {} : { body: payload }),
-        ...(this.retry.signal === undefined ? {} : { signal: this.retry.signal }),
+        ...(callSignal === undefined ? {} : { signal: callSignal }),
       });
       const text = await response.text();
       if (!response.ok) throw RuntimeHttpError.fromResponse(path, response, text);

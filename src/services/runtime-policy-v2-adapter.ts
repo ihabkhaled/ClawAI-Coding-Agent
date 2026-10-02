@@ -95,6 +95,8 @@ const pathBearingArgumentsSchema = z
     executable: z.string().min(1).max(4_096).optional(),
     arguments: z.array(z.string().max(32_768)).max(1_000).optional(),
     url: z.string().min(1).max(4_096).optional(),
+    script: z.string().min(1).max(32_768).optional(),
+    method: z.string().min(1).max(16).optional(),
   })
   .loose();
 
@@ -113,6 +115,23 @@ function subjectDomains(parsed: z.infer<typeof pathBearingArgumentsSchema>): str
   } catch {
     return [];
   }
+}
+
+/**
+ * The command a rule matches on. A shell script is the command itself, an HTTP
+ * request is its method and URL, and for workspace.command it is the executable
+ * and its arguments.
+ */
+function subjectCommand(
+  tool: string,
+  parsed: z.infer<typeof pathBearingArgumentsSchema>,
+): string | undefined {
+  if (parsed.script !== undefined) return parsed.script.slice(0, 8_192);
+  if (tool === 'http.request' && parsed.method !== undefined && parsed.url !== undefined) {
+    return `${parsed.method.toUpperCase()} ${parsed.url}`.slice(0, 8_192);
+  }
+  if (parsed.executable === undefined) return undefined;
+  return [parsed.executable, ...(parsed.arguments ?? [])].join(' ').slice(0, 8_192);
 }
 
 function subjectPaths(parsed: z.infer<typeof pathBearingArgumentsSchema>): string[] {
@@ -141,10 +160,7 @@ function policySubject(invocation: ToolInvocation): PolicySubject {
   const parsed = pathBearingArgumentsSchema.safeParse(invocation.arguments);
   const base = { tool: invocation.toolName, operation: invocation.operation };
   if (!parsed.success) return { ...base, paths: [], domains: [] };
-  const command =
-    parsed.data.executable === undefined
-      ? undefined
-      : [parsed.data.executable, ...(parsed.data.arguments ?? [])].join(' ').slice(0, 8_192);
+  const command = subjectCommand(invocation.toolName, parsed.data);
   return {
     ...base,
     paths: subjectPaths(parsed.data),

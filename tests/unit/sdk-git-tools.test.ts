@@ -131,6 +131,9 @@ describe('commit', () => {
     expect(result.committed).toBe(false);
     expect(result.exitCode).not.toBe(0);
     expect(result.stderr).toContain('lint failed: no');
+    // The envelope calls any returned call succeeded: the result itself must say it was not.
+    expect(result.ok).toBe(false);
+    expect(String(result.failure)).toContain('Never bypass the hook');
     expect(existsSync(path.join(repo, 'hook-marker.txt'))).toBe(true);
     expect(git(repo, 'rev-parse', 'HEAD')).toBe(before);
   });

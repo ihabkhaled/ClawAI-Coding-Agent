@@ -1,5 +1,4 @@
 import { realpathSync } from 'node:fs';
-import path from 'node:path';
 
 import { containedPath } from '../core/workspace-containment';
 
@@ -12,12 +11,12 @@ import {
 } from './code-gates-detect';
 import { detectProjects } from './code-gates-detect-report';
 import { gateFolder } from './code-gates-done-checks';
+import { projectFiles, requestedFiles } from './code-gates-files';
 import { runGate, unavailableResult } from './code-gates-run';
 import { changedFiles } from './code-gates-scope';
 import {
   GATE_DEFAULT_TIMEOUT_MS,
   GATE_MAX_CHANGED_PROJECTS,
-  GATE_MAX_FILES,
   GATE_MAX_TIMEOUT_MS,
   GATE_NAMES,
   GATE_REPORT_MAX,
@@ -58,20 +57,6 @@ function requireGate(value: unknown): GateName {
     throw new Error(`code.gates run needs "gate": one of ${GATE_NAMES.join(', ')}.`);
   }
   return found;
-}
-
-/** Workspace-relative files: strings, bounded, never a flag, always inside the workspace. */
-function requestedFiles(value: unknown, root: string): readonly string[] {
-  if (value === undefined) return [];
-  if (!Array.isArray(value) || value.length > GATE_MAX_FILES) {
-    throw new Error(`"files" is an array of at most ${String(GATE_MAX_FILES)} paths.`);
-  }
-  return value.map((entry: unknown) => {
-    if (typeof entry !== 'string' || entry.length === 0 || entry.startsWith('-')) {
-      throw new Error('Every file is a path string that does not start with "-".');
-    }
-    return relativeDir(root, containedPath(root, entry));
-  });
 }
 
 function sameFolder(root: string, files: readonly string[]): string {
@@ -115,15 +100,6 @@ function targetsOf(args: ToolArguments, root: string): readonly Target[] {
   }
   if (scope !== undefined) throw new Error('"scope" is a folder path or "changed".');
   return [{ dir: files.length > 0 ? sameFolder(root, files) : rootTarget(root), files }];
-}
-
-function projectFiles(root: string, dir: string, files: readonly string[]): readonly string[] {
-  const base = path.resolve(root, dir);
-  return files.map((file) => {
-    const relative = path.relative(base, path.resolve(root, file)).split(path.sep).join('/');
-    if (relative.startsWith('..')) throw new Error(`${file} is outside the folder ${dir}.`);
-    return relative;
-  });
 }
 
 /** The gates the project at the default folder has, that nothing has run yet. */

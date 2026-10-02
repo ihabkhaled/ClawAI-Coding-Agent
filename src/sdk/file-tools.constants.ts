@@ -85,8 +85,9 @@ export const TOOL_RESULT_CUT_MARKER = '...[truncated]';
 /** The smallest per-string cap the result guard will try before giving up on fields. */
 export const TOOL_RESULT_MIN_FIELD_CHARS = 200;
 
-const LINE_NUMBER = { type: 'integer', minimum: 1, maximum: 100_000_000 } as const;
-const PATTERN_TEXT = { type: 'string', minLength: 1, maxLength: FILE_PATTERN_MAX_CHARS } as const;
+// Bounds are checked by the tool on arrival (file-tools-*.ts), so the model is not sent them.
+const LINE_NUMBER = { type: 'integer' } as const;
+const PATTERN_TEXT = { type: 'string' } as const;
 
 /** Category of each `workspace.file` operation. */
 export const FILE_TOOL_OPERATIONS = {
@@ -103,15 +104,14 @@ export const FILE_TOOL_OPERATIONS = {
 
 /** What the model is told about `workspace.file`; it is the only documentation it gets. */
 export const FILE_TOOL_DESCRIPTION = [
-  'Work with files in the workspace. All paths are relative to the workspace root.',
-  'read {path, startLine?, endLine?, maxChars?} or {path, offset?, limit?, maxChars?}: returns lines (8000 characters by default, up to 48000 with maxChars; cut at a line; follow nextLine to continue). Every result counts against the result budget of the run: prefer search, glob and small ranges, and do not re-read a file you already have. Binary files are refused.',
+  'Files in the workspace; paths are relative to its root.',
+  'read {path, startLine?, endLine?} or {path, offset?, limit?}, maxChars? (default 8000, max 48000): cut at a line, continue at nextLine. Results count against the run budget: prefer search/glob/small ranges, never re-read. Binary refused.',
   'list {path?, recursive?, depth?}: entries with type and size; skips .git, node_modules, dist, coverage, .next; max 400.',
-  'glob {pattern, path?}: file paths matching e.g. **/*.ts (a pattern with no / matches names at any depth); max 500.',
-  'search {query | regex, path?, include?, caseSensitive?}: matching lines as {path, line, text}; max 100; skips binary and files over 1 MB.',
-  'stat {path}: exists, type, size, mtime.',
-  'create {path, content}: write a whole file (overwrites, creates folders).',
-  'update {path, oldText, newText, expectedCount?, replaceAll?}: exact text replace. Fails if oldText is missing or matches more than expectedCount (default 1) times; include surrounding lines to make it unique. Line endings are preserved. Prefer update to create for existing files.',
-  'delete {path}: delete one file. rename {path, to}: move a file or folder; fails if the target exists.',
+  'glob {pattern, path?}: paths matching e.g. **/*.ts (no / = any depth); max 500.',
+  'search {query | regex, path?, include?, caseSensitive?}: {path,line,text}; max 100; skips binary and files over 1 MB.',
+  'stat {path}. create {path, content}: whole file, overwrites, makes folders.',
+  'update {path, oldText, newText, expectedCount?, replaceAll?}: exact replace; fails if oldText is missing or matches more than expectedCount (default 1) times, so add context. Keeps line endings; prefer it to create for existing files.',
+  'delete {path}. rename {path, to}: fails if the target exists.',
 ].join('\n');
 
 /** The JSON schema for every `workspace.file` argument; each is used by the operations named above. */
@@ -119,24 +119,24 @@ export const FILE_TOOL_INPUT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    path: { type: 'string', maxLength: 4096 },
-    to: { type: 'string', maxLength: 4096 },
+    path: { type: 'string' },
+    to: { type: 'string' },
     content: { type: 'string', maxLength: HEADLESS_MAX_CONTENT_BYTES },
     startLine: LINE_NUMBER,
     endLine: LINE_NUMBER,
-    offset: { type: 'integer', minimum: 0, maximum: 100_000_000 },
+    offset: LINE_NUMBER,
     limit: LINE_NUMBER,
-    maxChars: { type: 'integer', minimum: FILE_READ_MIN_CHARS, maximum: FILE_READ_MAX_CHARS },
+    maxChars: LINE_NUMBER,
     recursive: { type: 'boolean' },
-    depth: { type: 'integer', minimum: 1, maximum: FILE_LIST_MAX_DEPTH },
+    depth: LINE_NUMBER,
     pattern: PATTERN_TEXT,
     query: PATTERN_TEXT,
     regex: PATTERN_TEXT,
     include: PATTERN_TEXT,
     caseSensitive: { type: 'boolean' },
-    oldText: { type: 'string', minLength: 1, maxLength: HEADLESS_MAX_CONTENT_BYTES },
+    oldText: { type: 'string', maxLength: HEADLESS_MAX_CONTENT_BYTES },
     newText: { type: 'string', maxLength: HEADLESS_MAX_CONTENT_BYTES },
-    expectedCount: { type: 'integer', minimum: 1, maximum: 1_000_000 },
+    expectedCount: LINE_NUMBER,
     replaceAll: { type: 'boolean' },
   },
 } as const;

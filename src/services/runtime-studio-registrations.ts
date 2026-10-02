@@ -122,6 +122,8 @@ import {
   worktreeToolDefinition,
 } from '../infrastructure/worktree-tool-executor';
 
+import { optInToolRegistrations } from './runtime-studio-opt-in-tools';
+
 import type {
   RuntimeStudioAdvancedTools,
   RuntimeStudioAnalysisTools,
@@ -294,5 +296,7 @@ export function workspaceToolRegistrations(
       definition: processSupervisorToolDefinition,
       executor: new ProcessSupervisorToolExecutor(parts.processes, parts.accountId, parts.files),
     },
+    // Off until the user's own settings switch them on; see the module.
+    ...optInToolRegistrations(parts.files),
   ];
 }

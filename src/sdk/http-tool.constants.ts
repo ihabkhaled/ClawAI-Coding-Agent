@@ -132,14 +132,13 @@ export const HTTP_RULE_HELP =
 
 /** What the model is told; the allowed hosts are added by `httpToolDefinition`. */
 export const HTTP_TOOL_DESCRIPTION =
-  'Send one HTTP request to test an API. Returns {ok, status, headers, bodyText, durationMs, truncated, redirects}; ' +
-  'ok: status matches expectStatus (a code, a list, or "4xx"; default 2xx). ' +
-  'GET/HEAD read; the rest change data. json is the JSON body. ' +
+  'One HTTP request to test an API: {method, url, headers?, json? | body?, expectStatus?, save?, followRedirects?, timeoutMs?, maxBodyChars?}. ' +
+  'Returns {ok, status, headers, bodyText, durationMs, truncated, redirects}; ok = status matches expectStatus ' +
+  '(a code, a list, or "4xx"; default 2xx). GET/HEAD read; the rest change data. ' +
   'Tokens are hidden from you: on the login call pass save {"tok": "accessToken"} (a JSON path), then ' +
-  'send header Authorization "Bearer {{tok}}". ' +
-  'A 404 means a wrong path: find the real route in the code or docs first. ' +
-  `Redirects are followed (max ${String(HTTP_MAX_REDIRECTS)}) and re-checked. Body text is cut at ` +
-  `${String(HTTP_DEFAULT_BODY_CHARS)} chars (HTML ${String(HTTP_HTML_BODY_CHARS)}; maxBodyChars up to ` +
+  'send header Authorization "Bearer {{tok}}". A 404 = wrong path: find the real route first. ' +
+  `Redirects followed (max ${String(HTTP_MAX_REDIRECTS)}). Body cut at ` +
+  `${String(HTTP_DEFAULT_BODY_CHARS)} chars (HTML ${String(HTTP_HTML_BODY_CHARS)}; maxBodyChars<=` +
   `${String(HTTP_MAX_BODY_CHARS)}); secrets show as ${HTTP_REDACTED}. ` +
   HTTP_UNTRUSTED_NOTE;
 
@@ -149,19 +148,15 @@ export const HTTP_TOOL_INPUT_SCHEMA = {
   additionalProperties: false,
   properties: {
     method: { type: 'string', enum: HTTP_METHODS },
-    url: { type: 'string', maxLength: HTTP_MAX_URL_CHARS },
+    url: { type: 'string' },
     headers: { type: 'object', additionalProperties: { type: 'string' } },
-    json: { description: 'Any JSON value; the body.' },
-    body: { type: 'string', description: 'Raw text body instead of json.' },
-    timeoutMs: { type: 'integer', minimum: 100, maximum: HTTP_MAX_TIMEOUT_MS },
+    json: {},
+    body: { type: 'string' },
+    timeoutMs: { type: 'integer' },
     followRedirects: { type: 'boolean' },
-    save: {
-      type: 'object',
-      additionalProperties: { type: 'string' },
-      description: 'name: JSON path of a value to keep for {{name}} in headers.',
-    },
-    expectStatus: { description: 'A code, a list of codes, or a class like "4xx".' },
-    maxBodyChars: { type: 'integer', minimum: 200, maximum: HTTP_MAX_BODY_CHARS },
+    save: { type: 'object', additionalProperties: { type: 'string' } },
+    expectStatus: {},
+    maxBodyChars: { type: 'integer' },
   },
   required: ['method', 'url'],
 } as const;

@@ -1,11 +1,20 @@
 import { spawnSync } from 'node:child_process';
-import { lstatSync, mkdirSync, readdirSync, rmSync, unlinkSync, writeFileSync } from 'node:fs';
+import {
+  lstatSync,
+  mkdirSync,
+  readdirSync,
+  rmSync,
+  statSync,
+  unlinkSync,
+  writeFileSync,
+} from 'node:fs';
 import path from 'node:path';
 import { env } from 'node:process';
 
 import { inheritedEnvironment } from '../core/inherited-environment';
 import { prepareGitSpawn } from '../infrastructure/hardened-git';
 
+import { patchProblem } from './agent-team-patch';
 import {
   TEAM_GIT_MAX_BUFFER,
   TEAM_GIT_TIMEOUT_MS,
@@ -16,6 +25,20 @@ import type { TeamMergeReport, TeamWorktree } from './agent-team-tool.types';
 
 /** Files and folders a child may leave behind that are never part of its work. */
 const EXCLUDED = [':(exclude)**/node_modules/**', ':(exclude)node_modules'];
+
+/**
+ * How the patch is written, whatever the user's git configuration says: no rename or copy detection
+ * (a rename would delete a path the scope check never saw), fixed prefixes, no external diff or text filters.
+ */
+const PATCH_FLAGS = [
+  '--binary',
+  '--no-color',
+  '--no-renames',
+  '--no-ext-diff',
+  '--no-textconv',
+  '--src-prefix=a/',
+  '--dst-prefix=b/',
+];
 
 /** The most bytes of change one child may hand back. */
 const PATCH_MAX_BYTES = 16 * 1024 * 1024;
@@ -71,6 +94,7 @@ export function createWorktree(
   const repo = path.resolve(top.out.trim());
   const prefix = git(workspace, ['rev-parse', '--show-prefix']).out.trim().replace(/\/$/u, '');
   const directory = path.join(base.stateDirectory, TEAM_WORKTREE_DIRECTORY, base.runKey, base.name);
+  sweepStaleWorktrees(base.stateDirectory, base.runKey, repo);
   mkdirSync(path.dirname(directory), { recursive: true });
   const added = git(repo, ['worktree', 'add', '--detach', directory, 'HEAD']);
   if (!added.ok) return `Could not create the worktree: ${added.err.slice(0, 300)}`;
@@ -90,8 +114,15 @@ export function collectChanges(worktree: TeamWorktree): {
 } {
   const staged = git(worktree.directory, ['add', '-A', '--', '.', ...EXCLUDED]);
   if (!staged.ok) return { patch: '', files: [], problem: staged.err.slice(0, 300) };
-  const names = git(worktree.directory, ['diff', '--cached', '--name-only', '-z', 'HEAD']);
-  const diff = git(worktree.directory, ['diff', '--cached', '--binary', '--no-color', 'HEAD']);
+  const names = git(worktree.directory, [
+    'diff',
+    '--cached',
+    '--no-renames',
+    '--name-only',
+    '-z',
+    'HEAD',
+  ]);
+  const diff = git(worktree.directory, ['diff', '--cached', ...PATCH_FLAGS, 'HEAD']);
   if (!names.ok || !diff.ok) {
     return { patch: '', files: [], problem: (names.err || diff.err).slice(0, 300) };
   }
@@ -125,6 +156,14 @@ export function mergeChanges(
       merged: false,
       files: changes.files,
       problem: `Not merged: ${refused.slice(0, 5).join(', ')} is outside the child's write scope.`,
+    };
+  }
+  const unsafe = patchProblem(changes.patch);
+  if (unsafe !== undefined) {
+    return {
+      merged: false,
+      files: changes.files.map((file) => file.slice(inside.length)),
+      problem: `Not merged: ${unsafe}. Only plain file changes are taken back from a child.`,
     };
   }
   mkdirSync(path.dirname(patchFile), { recursive: true });
@@ -171,4 +210,34 @@ export function removeWorktree(worktree: TeamWorktree): void {
     // Left in the state directory; `git worktree prune` below forgets it once it is gone.
   }
   git(worktree.repo, ['worktree', 'prune']);
+}
+
+/** A checkout left by a run that died without cleaning up is forgotten after this long. */
+const STALE_WORKTREE_MS = 3 * 24 * 60 * 60 * 1_000;
+
+/**
+ * Removes the checkouts of earlier runs that never got to clean up (the process
+ * was killed): their folders under the state directory and their registration
+ * in the repository. Conflict patches kept for the person are not touched, and
+ * neither is the current run. Never throws.
+ */
+export function sweepStaleWorktrees(
+  stateDirectory: string,
+  currentRun: string,
+  repo: string,
+  now = Date.now(),
+): void {
+  try {
+    const root = path.join(stateDirectory, TEAM_WORKTREE_DIRECTORY);
+    for (const run of readdirSync(root, { withFileTypes: true })) {
+      if (!run.isDirectory() || run.name === currentRun) continue;
+      for (const entry of readdirSync(path.join(root, run.name), { withFileTypes: true })) {
+        const directory = path.join(root, run.name, entry.name);
+        if (!entry.isDirectory() || now - statSync(directory).mtimeMs < STALE_WORKTREE_MS) continue;
+        removeWorktree({ repo, directory, prefix: '', workspace: directory });
+      }
+    }
+  } catch {
+    // A state directory that cannot be read has nothing to sweep.
+  }
 }

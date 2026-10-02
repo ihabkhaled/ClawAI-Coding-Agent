@@ -39,23 +39,22 @@ export const SHELL_NO_SHELL_MESSAGE =
 
 /** What the model is told. It says what the tool is for, what is off limits, and that the screen is not a sandbox. */
 export const SHELL_TOOL_DESCRIPTION =
-  'Run a script in a real shell, for what workspace.command cannot: &&, pipes, redirects, globs, ' +
-  'FOO=1 cmd, cd x && cmd, here-docs. Prefer workspace.command, file and git when one program is enough. ' +
-  'The operator approves each script. Build, test, inspect and edit INSIDE the workspace only: scripts that ' +
-  'touch outside it (home, ~/.ssh, credentials), dump the environment, download-and-run, force-push, change ' +
-  'git config or hooks, or use --no-verify are refused with the reason (a best-effort screen, not a ' +
-  'sandbox; do not work around it). run {script, shell?: bash|sh|powershell|cmd, cwd?, timeoutMs? ' +
-  '(default 120000, max 1800000)} returns {exitCode, stdout, stderr, timedOut}. No stdin, filtered ' +
-  'environment, long output keeps its start and END, a timeout kills the process tree.';
+  'Run a script in a real shell, for what workspace.command cannot: &&, pipes, redirects, globs, FOO=1 cmd, here-docs. ' +
+  'Prefer workspace.command, file and git when one program is enough. The operator approves each script. ' +
+  'Stay INSIDE the workspace: scripts that touch outside it (home, ~/.ssh, credentials), dump the environment, ' +
+  'download-and-run, force-push, change git config or hooks, or use --no-verify are refused with the reason ' +
+  '(a best-effort screen; do not work around it). ' +
+  'run {script, shell?: bash|sh|powershell|cmd, cwd?, timeoutMs? (default 120000, max 1800000)} returns ' +
+  '{exitCode, stdout, stderr, timedOut}. No stdin, filtered environment; long output keeps start and END.';
 
 export const SHELL_TOOL_INPUT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    script: { type: 'string', maxLength: SHELL_MAX_SCRIPT_CHARS },
+    script: { type: 'string' },
     shell: { type: 'string', enum: SHELL_KINDS },
-    cwd: { type: 'string', maxLength: 4096, description: 'Directory inside the workspace.' },
-    timeoutMs: { type: 'integer', minimum: 1, maximum: SHELL_MAX_TIMEOUT_MS },
+    cwd: { type: 'string' },
+    timeoutMs: { type: 'integer' },
   },
 } as const;
 
@@ -77,3 +76,6 @@ export const SHELL_POSIX_SH: readonly string[] = ['/bin/sh', '/usr/bin/sh'];
 
 /** The WSL launcher also answers to `bash`; it runs inside a VM, not in the workspace. */
 export const SHELL_WSL_LAUNCHER = /[\\/]windows[\\/]system32[\\/]bash\.exe$/iu;
+
+/** The most one `--shell-deny` pattern may take on one script; past it the script is refused. */
+export const SHELL_DENY_BUDGET_MS = 200;

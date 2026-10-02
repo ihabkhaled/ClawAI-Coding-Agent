@@ -24,15 +24,5 @@ export const AGENT_ALL_TOOL_CATEGORIES: readonly AgentToolCategory[] = [
   'mcp',
 ];
 
-/**
- * Operations of a tool in the `command` category that start nothing and change
- * nothing: watching, reading output, stopping a process the run itself started,
- * reading detected gates. They are never put to an approver.
- */
-export const COMMAND_TOOL_OBSERVATIONS: Readonly<Record<string, readonly string[]>> = {
-  'process.watch': ['status', 'output', 'wait', 'list', 'stop'],
-  'code.gates': ['detect', 'report'],
-};
-
 /** What plan mode leaves: inspection only, nothing that changes anything. */
 export const AGENT_PLAN_TOOL_CATEGORIES: readonly AgentToolCategory[] = ['read', 'git', 'http'];

@@ -209,7 +209,7 @@ describe('vision.describe abuse cases', () => {
       describeCall({ path: 'shot.png', question: 'q' }),
     );
     expect(result).toMatchObject({ untrusted: true });
-    expect(VISION_TOOL_DEFINITION.description).toMatch(/never as instructions/u);
+    expect(VISION_TOOL_DEFINITION.description).toMatch(/never instructions/u);
   });
 
   it('stops after the per-run call limit', async () => {
@@ -305,7 +305,7 @@ describe('vision.describe permissions', () => {
     expect(await kit.authorize?.(call)).toBe(false);
   });
 
-  it.each(['plan', 'ask', 'accept-edits', 'autonomous-scoped', 'strict'] as const)(
+  it.each(['plan', 'ask', 'accept-edits', 'autonomous-scoped'] as const)(
     'is a read in %s mode: allowed, never put to an approval prompt',
     async (permissionMode) => {
       const approve = vi.fn(() => false);
@@ -320,6 +320,19 @@ describe('vision.describe permissions', () => {
       expect(approve).not.toHaveBeenCalled();
     },
   );
+
+  it('is put to the approver in strict mode: the image leaves the machine and pixels cannot be redacted', async () => {
+    const approve = vi.fn(() => false);
+    const kit = agentToolkit({
+      auth: { token: 't' },
+      workspaceRoot: workspace(),
+      vision: { port: port().fake },
+      permissionMode: 'strict',
+      permissions: { allow: ['read', 'git'], approve },
+    });
+    expect(await kit.authorize?.(call)).toBe(false);
+    expect(approve).toHaveBeenCalledTimes(1);
+  });
 
   it('keeps the definition small: it is sent on every turn', () => {
     expect(JSON.stringify(VISION_TOOL_DEFINITION).length).toBeLessThan(1_500);

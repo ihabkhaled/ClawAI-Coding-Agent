@@ -9,6 +9,9 @@
  * fails if one ever does.
  */
 export { createAgent } from './create-agent';
+export { orchestrate } from './orchestrate';
+export { validatePlan } from './orchestrate-validate';
+export { describePlan } from './orchestrate-format';
 export { runAgent } from './agent-sdk';
 export { toolResultFor } from './agent-tool-result';
 export { workspaceToolkit, offeredDefinitions, toolCategory } from './workspace-toolkit';
@@ -112,3 +115,11 @@ export type {
   VisionMimeType,
 } from './vision-tool.types';
 export type { WebFetchInput, WebSearchInput } from '../core/web-research.types';
+export type {
+  OrchestrateEvent,
+  OrchestrateOptions,
+  OrchestratePlan,
+  OrchestrateReport,
+} from './orchestrate.types';
+export type { OrchestrateOutcome } from './orchestrate';
+export type { BrowserResolver } from './browser-egress.types';

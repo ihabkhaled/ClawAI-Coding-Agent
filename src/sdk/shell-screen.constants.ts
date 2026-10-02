@@ -38,6 +38,7 @@ export const SHELL_PATTERN_RULES: readonly ShellPatternRule[] = [
         `\\b(?:iex|invoke-expression)\\b[^\\n]*(?:iwr|irm|invoke-webrequest|invoke-restmethod|downloadstring|webclient)`,
         `(?:${SHELLS}|source|eval|\\.)\\s+<?\\(?\\s*\\$\\(\\s*${DOWNLOADERS}\\b`,
         `(?:${SHELLS})\\s+<\\(\\s*${DOWNLOADERS}\\b`,
+        `(?:${SHELLS})\\s+(?:-[a-z]+\\s+)+\\$\\(\\s*${DOWNLOADERS}\\b`,
         `base64\\s+(?:-d|--decode|-di)\\b${SAME_COMMAND}\\|\\s*(?:${INTERPRETERS})\\b`,
       ].join('|'),
       'u',
@@ -114,6 +115,7 @@ export const SHELL_PATTERN_RULES: readonly ShellPatternRule[] = [
     pattern: new RegExp(
       [
         `${WORD_START}printenv${WORD_END}`,
+        `${WORD_START}cmd(?:\\.exe)?(?:\\s+/[a-z])+\\s+set\\s*(?:$|[;&|>)\\n])`,
         `${AT_COMMAND}(?:/usr/bin/)?env\\s*(?:-0\\s*)?(?:$|[;&|>)\\n])`,
         `${AT_COMMAND}(?:export\\s+-p|export|declare\\s+-[a-z]*[xp][a-z]*|typeset\\s+-[a-z]*x|compgen\\s+-e|set)\\s*(?:$|[;&|>)\\n])`,
         `${WORD_START}(?:gci|get-childitem|dir|ls|get-item|gi)\\s+(?:-path\\s+)?env:`,

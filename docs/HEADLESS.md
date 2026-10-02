@@ -48,6 +48,8 @@ Other environment: `CLAW_MODEL`, `CLAW_PROVIDER`, `CLAW_BACKEND_URL` (default
 | `--auto-continue <n>`                     | Start up to `n` follow-up runs on the same thread when a run ends on the server budget (0 to 20, default 3; SDK `autoContinue` defaults to 0).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
 | `--allow-tools <list>`                    | Categories granted: `read,write,command,git,git-write,mcp`, plus the opt-in `http`, `http-write` (need `--http-allow-host`), `browser` (see `--browser-allow-host`), `shell` (also needs `--allow-shell`) and `agents` (see `--max-agents`). Default `read,git`; `read,git,mcp` with `--mcp-config`; the first six with `--permission-mode`. A host flag adds its own category (`--http-allow-host` adds `http`, and `http-write` under a permission mode; `--browser-allow-host` adds `browser`); `shell` and `agents` are never a default. `command` also offers `code.gates` and `process.watch`; `task.plan` is offered with `--task-plan`, `--plan-file` or `--require-plan`; `read` also offers `knowledge.context` (with `--load-knowledge`) and `vision.describe` (with `--vision`, `--vision-model` or `--image`). |
 | `--max-agents <n>`                        | With `agents`: how many sub-agents work at once, 1 to 8 (default 4). A run starts at most 8 in all. See [Sub-agents](#sub-agents).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                          |
+| `--tools-profile <p>`                     | Offers fewer tools, so every turn is cheaper: `minimal` (read files, git read, `workspace.command`), `dev` (`minimal` plus file edits, git write, `code.gates`, `task.plan`, `process.watch`), `full` (no limit) or tool patterns such as `workspace.file.read,code.gates`; items add together (`minimal,browser.page`). It only narrows: it never offers or allows more than `--allow-tools`, the permission mode and `--allowed-tools` already do. See [Tool catalog size](#tool-catalog-size).                                                                                                                                                                                                                                                                                                                           |
+| `--defer-tools`                           | Sends `agent.team`, `browser.page`, `http.request`, `vision.describe`, `knowledge.context`, `workspace.shell`, `code.gates` and `process.watch` as one-line stubs; the model loads the full definition with `runtime.tool_search` when it needs one. Falls back to the whole catalog on a backend that rejects stubs.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `--allow-shell`                           | The second of two switches for `workspace.shell` (the first is `shell` in `--allow-tools`); the shell is OFF unless both are given. Needs `--permission-mode`. See [The shell tool](#the-shell-tool).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                       |
 | `--shell-deny <regex>`                    | Refuse any shell script matching this case-insensitive pattern, on top of the built-in screen. Repeatable. Needs `--allow-shell`.                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                           |
 | `--http-allow-host <host>`                | A host `http.request` may reach: `host`, `host:port`, `[ipv6]:port` or `*.example.com`. No port means 80 and 443 only. Repeatable. Default none: the tool is not offered. See [The HTTP tool](#the-http-tool).                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                                              |
@@ -158,6 +160,8 @@ They **add to** the runtime's own instructions; they cannot replace them. They n
 appear in events, and any error text has them replaced by `[redacted-instructions]`.
 
 ## Permission modes
+
+Every operation of every newer tool (`browser.page`, `http.request`, `task.plan`, `process.watch`, `knowledge.context`, `workspace.shell`, `code.gates`, `vision.describe`, `agent.team`) has one row in `src/sdk/tool-permission-table.constants.ts`; the SDK enforces it, [PERMISSION_MATRIX.md](PERMISSION_MATRIX.md) lists it (section "Headless agent tools") and a test fails when a tool operation has no row or when the SDK and the editor policy differ without the row saying why. `vision.describe` is asked about only in `strict` (it sends the image to a model); `workspace.shell` and `http.request` writes are asked in every mode.
 
 | Mode                | Grants                  | Asked                                                                     |
 | ------------------- | ----------------------- | ------------------------------------------------------------------------- |
@@ -282,6 +286,15 @@ clawai -p "build and test" --permission-mode accept-edits --allow-shell \
 - **The screen is NOT a sandbox.** It reads the script text, so a script that builds a command from pieces, runs a file it wrote earlier, or calls an interpreter with its own code can get past it. It exists to stop the careless and the injected, and to say why. What stands behind it is the approval, the filtered environment and the change detection below.
 - **Change detection (detection, not prevention).** With a write scope, or any `write`/`git-write`/`shell` grant (which turns on the `.git` guard), `.git/hooks`, `.git/config`, `.git/info/*` and the entries beside the workspace are snapshotted before and after each script: a change is undone and fails the call, and with `--write-scope` a path changed outside the scope is reverted and reported (`writeScopeViolation`). A script can still write elsewhere the user can; that is what the approval is for.
 - **Log.** Every script, run or refused, is appended (redacted, one JSON line) to `<state-dir>/shell.log`: time, shell, cwd, script, `exitCode`, `timedOut`, `durationMs`, or `refusedBy`. The file rotates to `shell.log.1` at 2 MB; a write failure never changes the result.
+
+#### What is and is not guaranteed (shell, process.watch, code.gates)
+
+Checked by an adversarial pass of about 160 scripted rounds through the real SDK pipeline.
+
+- **Guaranteed.** Nothing runs without the approval callback answering exactly `true` in `ask`, `strict`, `accept-edits` and `autonomous-scoped` (no callback means denied); the approver receives a copy of the call, so editing it cannot change what runs. A refused script spawns nothing and is never put to the approver. The environment is filtered (no tokens or `CLAW_*`, even through `$x`, `set`, `/proc/self/environ` or `Get-ChildItem Env:`), stdin is closed, output is capped, and a timeout or cancel kills the whole process tree. `process.watch` only starts allowlisted bare names; `code.gates detect` reads files and never runs project code; `code.gates run` obeys the allowlist, the scope (`..`, absolute paths and links are refused) and the exit code (printed "passed" lines never turn a failing exit into a pass).
+- **Best effort only.** The shell screen (a script built from pieces, `$x` indirection, `iex` through a variable, an interpreter with its own code can pass it; a screen bypass is a hole in a convenience, not in the approval) and the change detection (it notices and reverts, it does not prevent).
+- **Not guaranteed.** A script's own background jobs (`cmd &`, `nohup`) can outlive a normal exit of the script; use `process.watch` for anything long-lived. A program you allow (`node`, `npm`) can run any code the project holds, so `code.gates run` of a hostile project runs hostile code: approve it as you would `npm test`. If the host is killed with no chance to clean up (SIGKILL), a watched process is not guaranteed to die on every platform (it did on Windows in the test, POSIX was not run).
+- `untilMatch` is tested with a 100 ms limit per line; a pattern that backtracks is dropped and the wait ends on its own timeout. Gate `files` never start with `-` after normalising, and the files of a flaky re-run are read back only when they are plain relative paths.
 
 ### Working memory
 
@@ -697,7 +710,11 @@ The parent's cancel, timeout, or the end of its run cancels the whole tree. A ch
 node dist/headless.mjs -p "Build modules a, b, c in separate folders, each with tests, in parallel; then run all tests"   --allow-tools read,write,command,agents --max-agents 3 --output-format stream-json
 ```
 
-SDK: `createAgent({ permissions: { allow: [..., 'agents'] }, maxAgents: 3 })`. In a permission mode `ask` or `strict`, `spawn` itself is put to `approve`; `plan` removes the tool.
+SDK: `createAgent({ permissions: { allow: [..., 'agents'] }, maxAgents: 3 })`. In a permission mode `ask`, `accept-edits` or `strict`, `spawn` itself is put to `approve` (`autonomous-scoped` runs it, like a command); `plan` removes the tool.
+
+## Orchestrate a plan
+
+`clawai orchestrate --plan plan.json` delivers work from a plan file instead of hoping the model delegates: stages as a DAG, each agent a narrowed run (own `writeScope`, budget, done checks, optional http/browser hosts and shell), gates the orchestrator runs, `--dry-run` to print the DAG, `orchestrate.*` events with `--output-format stream-json`, and `report.json` plus `report.md` under `<state>/orchestrate/<run>/`. Exit: 0 passed, 1 failed, 2 plan refused, 3 not signed in, 5 timeout, 130 cancelled. Overlapping write scopes between agents that can run together are refused before anything starts. Full guide, plan fields and a worked example: [ORCHESTRATION.md](ORCHESTRATION.md).
 
 ## Examples for CI
 
@@ -844,17 +861,18 @@ screenshot, to test a UI and check its UX. The browser starts on the first `open
   password. A private, loopback or local-network host (`localhost`, `127.0.0.1`, `10.x`, `192.168.x`, `169.254.x`, IPv6 literals, `*.local`,
   `*.internal`, single-label names such as `intranet`) is refused **unless the operator lists it** with `--browser-allow-host <host>`
   (repeatable, comma lists accepted; `host:port` pins a port). SDK: `browser: { allowHosts: [...] }`. The check runs on the address given, on
-  every request the page makes, and on every hop of a redirect, so a public page cannot send the browser to `169.254.169.254`. Naming
-  `--browser-allow-host` without `--allow-tools` grants `browser` as well, as `--mcp-config` grants `mcp`. A host name that resolves to a private
-  address is not caught (only the name is judged), as with `--research`.
+  every request the page makes, on every hop of a redirect, and again on every connection the browser opens (a local proxy the browser is forced through: it also covers WebSockets and workers and connects to the address it checked), so a public page cannot send the browser to `169.254.169.254` or to a public-looking name that points at `127.0.0.1` (`localtest.me`, `nip.io`). Naming
+  `--browser-allow-host` without `--allow-tools` grants `browser` as well, as `--mcp-config` grants `mcp`. A name that resolves to a private
+  address needs the same entry (`--browser-allow-host friend.example`).
 - **Limits.** One page (a popup past the limit is closed; SDK `browser.maxPages`, at most 5), 30 s to navigate, 10 s to find an element, 10 minutes
   of browser use per run (SDK `browser.maxRunMs`), at most 30 screenshots. Downloads are refused and service workers are blocked. A call that
-  is cancelled closes the browser; calls run one at a time.
+  is cancelled closes the browser; calls run one at a time; one call that does not finish (a page stuck in a script loop) is stopped after 25 s (60 s for `open` and `wait`) and the browser is closed. A password field's value never appears in a snapshot.
 - **Untrusted content.** Everything a page contributes is marked untrusted in the result, secrets are redacted from it, and the tool tells the model
   never to follow instructions found in a page. Do not let the model type real credentials: the `text` argument appears in the event stream.
 - **Permission modes.** `--permission-mode` without `--allow-tools` grants `browser` with the rest. `plan` offers no browser. In `ask`, `accept-edits` and `strict`, `open`, `click`, `type` and `press` go to the approval
-  callback; looking (`snapshot`, `screenshot`, `console`, `network`, `wait`, `resize`, `close`) never does. `autonomous-scoped` lets the run work
-  inside the allowed hosts. With no terminal to ask, an acting call is denied.
+  callback; looking (`snapshot`, `screenshot`, `console`, `network`, `wait`, `resize`, `close`) never does. `autonomous-scoped` loads pages
+  (`open`) inside the allowed hosts and looks, but still asks before `click`, `type` and `press`: they can submit a form to a remote site, which
+  is a network write. With no terminal to ask, an acting call is denied.
 - **Playwright is not bundled.** `playwright-core` is loaded on the first `open` from `node_modules`. If it or a browser is missing the
   model gets a message telling it to run `npm install playwright-core` and `npx playwright-core install chromium`. Set `CLAW_BROWSER_PATH` to use an
   existing Chrome or Chromium executable instead.
@@ -904,3 +922,22 @@ node dist/headless.mjs -p "What is wrong in this screenshot?" --image ./shot.png
   `--max-tool-calls` and `--max-duration` ([Run guards](#run-guards)) guard what can be seen.
 - **Dynamic client registration and protected-resource discovery** for MCP OAuth: `oauth.clientId` is required (ADR 0002).
 - **Replacing the runtime's system prompt.** Only adding to it (above).
+
+## Tool catalog size
+
+The model is sent every tool definition on every turn (about 3.5 characters per token). `npm run tools:size` prints the cost per tool and per grant set, and `tests/unit/tool-catalog-size.test.ts` fails when a tool grows past its budget in `src/sdk/tool-catalog-budget.constants.ts`; a new tool must add its own budget.
+
+| Grants                                    | 1.97.0      | now    |
+| ----------------------------------------- | ----------- | ------ |
+| `read,git` (default)                      | 5,274 chars | 4,004  |
+| + `command`                               | 9,723       | 7,337  |
+| every category                            | 21,396      | 15,889 |
+| every category, `--tools-profile minimal` |             | 4,308  |
+| every category, `--tools-profile dev`     |             | 7,528  |
+| every category, `--defer-tools`           |             | 10,060 |
+
+```
+node dist/headless.mjs -p "Fix the failing test" --allow-tools read,write,command,git --tools-profile dev --defer-tools
+```
+
+Deferral uses the backend's deferred-tool support: each stub carries a hash of the full definition, `POST chat-messages/runtime/runs/:runId/tools` accepts a definition only when it matches that hash, and the admitted catalog hash never changes. A loaded tool is still checked by the run's permissions.

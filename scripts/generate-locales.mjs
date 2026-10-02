@@ -24,6 +24,7 @@ import { runnerRoutineTranslations } from './runner-routine-translations.mjs';
 import { cronScheduleTranslations } from './cron-schedule-translations.mjs';
 import { remoteSessionTranslations } from './remote-session-translations.mjs';
 import { compareLiveTranslations } from './compare-live-translations.mjs';
+import { optInToolTranslations } from './opt-in-tool-translations.mjs';
 import { usageBreakdownTranslations } from './usage-breakdown-translations.mjs';
 
 const root = cwd();
@@ -4880,6 +4881,7 @@ function translate(locale, message) {
     usageBreakdownTranslations[locale][message] ??
     integrationTranslations[locale][message] ??
     pairingRetentionTranslations[locale][message] ??
+    optInToolTranslations[locale][message] ??
     nlsGapTranslations[locale][message] ??
     firstRunTranslations[locale][message] ??
     message

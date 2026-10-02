@@ -37,6 +37,7 @@ import { planGateReport, promptWithPlan } from './task-plan-prompt';
 import { summarize } from './task-plan-steps';
 import { describeTools } from './tool-alias';
 import { spentToolAllowance } from './tool-allowance';
+import { toolsProfileProblem } from './tools-profile';
 
 import type { AgentBudgetField, AgentRunResult } from './agent-sdk.types';
 import type { AgentTeam } from './agent-team-tool.types';
@@ -75,6 +76,9 @@ interface AgentSession {
  */
 export function createAgent(config: AgentConfig): Agent {
   assertAgentInputs(config);
+  const profileIssue =
+    config.toolsProfile === undefined ? undefined : toolsProfileProblem(config.toolsProfile);
+  if (profileIssue !== undefined) throw new RangeError(profileIssue);
   assertSomeToolRemains(config);
   const checkProblem = doneChecksProblem(config.doneChecks ?? []);
   if (checkProblem !== undefined) throw new RangeError(checkProblem);
@@ -145,13 +149,17 @@ export function createAgent(config: AgentConfig): Agent {
  * is refused here, before anything is sent.
  */
 function assertSomeToolRemains(config: AgentConfig): void {
-  if ((config.allowedTools ?? []).length + (config.disallowedTools ?? []).length === 0) return;
+  const filtered =
+    (config.allowedTools ?? []).length +
+    (config.disallowedTools ?? []).length +
+    (config.toolsProfile === undefined ? 0 : 1);
+  if (filtered === 0) return;
   const probe = agentToolkit(config);
   const none = probe.definitions.length === 0;
   probe.dispose?.();
   if (none) {
     throw new RangeError(
-      'No tool is left for the agent: --allowed-tools and --disallowed-tools together remove every tool. Allow at least one tool.',
+      'No tool is left for the agent: --allowed-tools, --disallowed-tools and --tools-profile together remove every tool. Allow at least one tool.',
     );
   }
 }
@@ -170,7 +178,7 @@ async function runOnce(
   const { config, session, notes, plan, team } = agent;
   assertRunLimits(options);
   const emit = (event: AgentEvent): void => options.onEvent?.(event);
-  const guard = createRunGuard(options, options.signal);
+  const guard = createRunGuard(options, options.signal, () => team?.callsHeld() ?? 0);
   const tally = {
     denied: 0,
     calls: 0,
@@ -266,6 +274,7 @@ async function runOnce(
         emit({ type: 'thread.memory-unchanged', ...info });
       },
       deadlineMs: config.deadlineMs ?? effortDeadlineMs(config),
+      deferTools: config.deferTools,
       transport,
       signal: runSignal,
       ...budgetFor(config, options),

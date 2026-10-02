@@ -34,9 +34,14 @@ export interface RunGuard {
  * this side can see: tool calls requested, and wall-clock time. Tripping aborts
  * the run's signal, so an in-flight tool call is cancelled and the stream is
  * closed; the caller reads the trip and reports `exhausted`, not `cancelled`.
- * The call past the limit is refused, never executed.
+ * The call past the limit is refused, never executed. `held` is what sub-agents have
+ * taken from the same allowance: a child spends the parent's calls, not extra ones.
  */
-export function createRunGuard(limits: RunBudgetLimits, external?: AbortSignal): RunGuard {
+export function createRunGuard(
+  limits: RunBudgetLimits,
+  external?: AbortSignal,
+  held: () => number = () => 0,
+): RunGuard {
   if (limits.maxToolCalls === undefined && limits.maxDurationMs === undefined) {
     return {
       signal: external,
@@ -71,7 +76,7 @@ export function createRunGuard(limits: RunBudgetLimits, external?: AbortSignal):
       ...toolkit,
       authorize: async (call) => {
         requested += 1;
-        if (limits.maxToolCalls !== undefined && requested > limits.maxToolCalls) {
+        if (limits.maxToolCalls !== undefined && requested + held() > limits.maxToolCalls) {
           trigger({ budget: 'tool-calls', limit: limits.maxToolCalls });
           return false;
         }

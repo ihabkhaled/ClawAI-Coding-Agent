@@ -2,6 +2,15 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.99.0
+
+- Safer by design: everything that can reach a website, run a script or start another agent is now asked about in every approval mode. The browser can no longer be tricked into reaching private addresses through WebSockets or look-alike names, a stuck page can no longer freeze the agent, and password fields are hidden from page snapshots.
+- Sub-agents and long commands are safer too: a sub-agent cannot spend its parent's budget twice or reach outside its folders, and a script screen, process watcher and code checker were hardened after about 300 attack rounds.
+- A plan-file runner: `clawai orchestrate --plan plan.json` runs several agents in stages, each limited to its own folders and checks, and writes a report.
+- Cheaper to run: the tools' descriptions are about a quarter smaller, `--tools-profile` picks a small set of tools, and `--defer-tools` loads a tool's full description only when the agent asks for it.
+- In VS Code you can now allow the agent to call websites you list and, if you choose, to run scripts you approve one by one (settings `clawAI.tools.httpAllowHosts` and `clawAI.tools.shellEnabled`, both off by default).
+- A commit that a hook refuses is now reported clearly as not done, and colour codes no longer clutter git output.
+
 ## 1.98.0
 
 - Long agent runs no longer stop after about 15 minutes: the agent renews its sign-in during the run and picks its event stream up where it left off. Callers with their own token can pass a refresh token too.

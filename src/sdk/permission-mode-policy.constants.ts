@@ -1,5 +1,3 @@
-import type { OperationClassification } from '../core/runtime/runtime-operation-classification';
-
 /**
  * Stand-ins for the fields of a policy request that say WHERE a call happens.
  *
@@ -33,18 +31,4 @@ export const HEADLESS_POLICY_OPERATION_NAMES: Readonly<Record<string, string>> =
   add: 'stage',
   switch: 'create-branch',
   restore: 'revert',
-};
-
-/** A GET or HEAD to an allowed host: it asks for something and changes nothing. */
-export const HTTP_READ_CLASSIFICATION: OperationClassification = {
-  effect: 'read',
-  risk: 'R2',
-  reversible: true,
-};
-
-/** A POST, PUT, PATCH or DELETE: it changes data on another machine and cannot be undone from here. */
-export const HTTP_WRITE_CLASSIFICATION: OperationClassification = {
-  effect: 'network-write',
-  risk: 'R3',
-  reversible: false,
 };

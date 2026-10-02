@@ -47,6 +47,8 @@ export function agentConfigFor(input: {
     ...(invocation.images === undefined ? {} : { images: invocation.images }),
     ...(invocation.vision === true ? { vision: { model: invocation.visionModel } } : {}),
     maxAgents: invocation.maxAgents,
+    toolsProfile: invocation.toolsProfile,
+    deferTools: invocation.deferTools,
     threadId: input.threadId,
     useMemory: invocation.useMemory,
     systemPrompt: inputs.systemPrompt,

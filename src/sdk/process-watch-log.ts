@@ -10,7 +10,7 @@ import {
 } from './process-watch-tool.constants';
 
 import type { WatchLogFile } from './process-watch-log-file';
-import type { LogMatch, LogSlice } from './process-watch-tool.types';
+import type { LinePattern, LogMatch, LogSlice } from './process-watch-tool.types';
 
 interface Chunk {
   readonly start: number;
@@ -106,7 +106,7 @@ export class WatchLog {
    * written is tested too, and retested once it grows, so a prompt is found.
    */
   public search(
-    pattern: RegExp,
+    pattern: LinePattern,
     from: number,
   ): { readonly match: LogMatch | undefined; readonly resume: number } {
     const start = Math.min(Math.max(from, this.base), this.total);

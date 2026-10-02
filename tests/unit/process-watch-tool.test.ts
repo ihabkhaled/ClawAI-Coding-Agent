@@ -27,7 +27,10 @@ const SLOW = 40_000;
 /** The log file the tool made for `name` under `logRoot` (the model is never shown this path). */
 function logFileOf(logRoot: string, name: string): string {
   const folder = readdirSync(logRoot).find((entry) => entry.startsWith('claw-watch-')) ?? '';
-  return path.join(logRoot, folder, `${name}.0.log`);
+  const found = readdirSync(path.join(logRoot, folder)).find((file) =>
+    file.endsWith(`-${name}.0.log`),
+  );
+  return path.join(logRoot, folder, found ?? `${name}.0.log`);
 }
 
 describe('process.watch lifecycle', () => {
@@ -217,7 +220,8 @@ describe('process.watch lifecycle', () => {
 
       const stopped = await watchCall(tool, root, 'stop', { name: 'stubborn' });
 
-      expect(stopped).toMatchObject({ running: false, stopped: true });
+      // The code a kill leaves behind (1 on Windows) is not the process's own answer.
+      expect(stopped).toMatchObject({ running: false, stopped: true, exitCode: null });
       expect(await eventually(() => !isAlive(pid))).toBe(true);
       tool.dispose();
     },

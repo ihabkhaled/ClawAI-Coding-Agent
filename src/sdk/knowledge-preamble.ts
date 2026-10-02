@@ -1,7 +1,7 @@
-import { readFileSync } from 'node:fs';
-import path from 'node:path';
+import { closeSync, openSync, readSync } from 'node:fs';
 
 import { redactText } from '../core/redaction';
+import { containedPath } from '../core/workspace-containment';
 
 import { parseHeadings } from './knowledge-chunks';
 import { withoutHidden } from './knowledge-sanitize';
@@ -13,6 +13,7 @@ import {
   KNOWLEDGE_PREAMBLE_INSTRUCTION,
   KNOWLEDGE_PREAMBLE_MAX_CHARS,
   KNOWLEDGE_PREAMBLE_OPEN,
+  KNOWLEDGE_PREAMBLE_READ_BYTES,
   KNOWLEDGE_PREAMBLE_RULE_HEADING,
   KNOWLEDGE_ROOT_FILES,
 } from './knowledge-tool.constants';
@@ -22,13 +23,24 @@ const BULLET = /^\s*(?:[-*]|\d+\.)\s+(.*\S)\s*$/u;
 const BLOCK_TAG = /<\/?\s*repo-knowledge[^>\n]*>?/giu;
 const MARKUP = /[`*_]|\[([^\]]*)\]\([^)]*\)/gu;
 
+/** The text with every spelling of the quoting tag removed, however the pieces are nested. */
+function withoutTags(text: string): string {
+  let current = text;
+  for (let round = 0; round < 8; round += 1) {
+    const next = current.replace(BLOCK_TAG, '');
+    if (next === current) return next;
+    current = next;
+  }
+  return current.replace(/<|>/gu, '');
+}
+
 /** One line of file text made safe to quote: no hidden characters, no way to close the block, no markup. */
 function plain(line: string, limit: number): string {
-  const cleaned = withoutHidden(line)
-    .replace(BLOCK_TAG, '')
-    .replace(MARKUP, (_all, label: string | undefined) => label ?? '')
-    .replace(/\s+/gu, ' ')
-    .trim();
+  const marked = withoutHidden(line).replace(
+    MARKUP,
+    (_all, label: string | undefined) => label ?? '',
+  );
+  const cleaned = withoutTags(marked).replace(/\s+/gu, ' ').trim();
   return cleaned.length > limit ? `${cleaned.slice(0, limit - 1)}…` : cleaned;
 }
 
@@ -64,7 +76,14 @@ function summarize(file: string, text: string): readonly string[] {
 
 function readRoot(workspace: string, name: string): string | undefined {
   try {
-    return readFileSync(path.join(workspace, name), 'utf8');
+    const real = containedPath(workspace, name);
+    const handle = openSync(real, 'r');
+    try {
+      const buffer = Buffer.alloc(KNOWLEDGE_PREAMBLE_READ_BYTES);
+      return buffer.toString('utf8', 0, readSync(handle, buffer, 0, buffer.length, 0));
+    } finally {
+      closeSync(handle);
+    }
   } catch {
     return undefined;
   }
@@ -100,7 +119,7 @@ export function knowledgePreamble(workspace: string): string {
   for (const name of KNOWLEDGE_ROOT_FILES) {
     if (parts.length >= KNOWLEDGE_PREAMBLE_FILES_MAX) break;
     const text = readRoot(workspace, name);
-    if (text !== undefined) parts.push(...summarize(name, redactText(text)));
+    if (text !== undefined) parts.push(...summarize(name, redactText(withoutHidden(text))));
   }
   if (parts.length === 0) return '';
   const fixed =

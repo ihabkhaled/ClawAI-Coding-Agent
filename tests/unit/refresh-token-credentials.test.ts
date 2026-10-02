@@ -28,7 +28,9 @@ describe('CLAW_REFRESH_TOKEN', () => {
       });
       const live = liveTokenOf(transport, { token: pair.accessToken });
       expect(live()).toBe(pair.accessToken);
-      await new Promise((resolve) => setTimeout(resolve, 1_300));
+      // The fake token's expiry is rounded UP to a whole second, so it can live up to 2 s: wait
+      // past the longest it can live, or a fast machine finds it not yet due for renewal.
+      await new Promise((resolve) => setTimeout(resolve, 2_300));
       await transport.createThread(pair.accessToken, 't');
       expect(live()).not.toBe(pair.accessToken);
       expect(server.log.refreshes).toBe(1);

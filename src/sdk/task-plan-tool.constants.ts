@@ -62,11 +62,10 @@ export const PLAN_TOOL_OPERATIONS: Readonly<Record<string, AgentToolCategory>> =
 
 /** What the model is told. */
 export const PLAN_TOOL_DESCRIPTION =
-  'Task plan for a big job: the run is not complete until every step is done. ' +
+  'Plan for a big job: not complete until every step is done. ' +
   `set {steps:[{id,title,check?:{executable,args[],timeoutMs?}}]} (max ${String(PLAN_MAX_STEPS)}; done steps are kept); ` +
-  'update {id,status:todo|doing|done|blocked,note?}; list; next. A step with a check can only be marked done ' +
-  'when the check passes: update runs it, and a failure is returned with the output and the step stays open. ' +
-  'Checks need the command grant.';
+  'update {id,status:todo|doing|done|blocked,note?}; list; next. A step with a check is done only when its check ' +
+  'passes: update runs it (needs the command grant); a failure is returned and the step stays open.';
 
 /** One schema for the four operations. */
 export const PLAN_TOOL_INPUT_SCHEMA = {

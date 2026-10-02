@@ -8,11 +8,11 @@ import { childConfig, childPrompt, launchChild } from './agent-team-child';
 import { globInsideAny, scopesOverlap } from './agent-team-glob';
 import { carveBudget, narrowGrant } from './agent-team-narrow';
 import { isOver } from './agent-team-report';
-import { TEAM_MAX_TOTAL } from './agent-team-tool.constants';
+import { TEAM_MAX_TOTAL, TEAM_PARENT_RESERVE_CALLS } from './agent-team-tool.constants';
 import { createWorktree, removeWorktree } from './agent-team-worktree';
 import { createWriteScope, pathInScope } from './write-scope';
 
-import type { ChildGrant, BudgetRoom } from './agent-team-narrow';
+import type { ChildGrant, BudgetRoom, ParentGrant } from './agent-team-narrow';
 import type {
   ChildLaunch,
   SpawnRequest,
@@ -52,18 +52,24 @@ function overlapProblem(
   return undefined;
 }
 
+/** Tool calls this agent's children hold: set aside while they work, what they spent once they are over. */
+export function callsHeld(context: TeamContext): number {
+  let held = 0;
+  for (const child of context.mine.values()) {
+    held += isOver(child) ? child.toolCalls : child.reserved;
+  }
+  return held;
+}
+
 /** What this agent can still hand out: its own allowance less what it used and what its children hold. */
-export function budgetRoom(context: TeamContext): BudgetRoom {
+export function budgetRoom(context: TeamContext, keep = 0): BudgetRoom {
   const binding = context.binding;
   if (binding === undefined) return { toolCalls: undefined, durationMs: undefined };
-  let held = 0;
-  for (const child of context.mine.values())
-    held += isOver(child) ? child.toolCalls : child.reserved;
   return {
     toolCalls:
       binding.maxToolCalls === undefined
         ? undefined
-        : binding.maxToolCalls - binding.callsSoFar() - held,
+        : binding.maxToolCalls - binding.callsSoFar() - callsHeld(context) - keep,
     durationMs: binding.deadlineAt === undefined ? undefined : binding.deadlineAt - Date.now(),
   };
 }
@@ -147,6 +153,19 @@ interface Plan {
   readonly durationMs: number;
 }
 
+/** What this agent holds, which a child can only narrow. */
+function parentGrant(context: TeamContext): ParentGrant {
+  const { config } = context;
+  return {
+    allow: context.grants,
+    writeScope: config.permissions?.writeScope,
+    writeDeny: config.permissions?.writeDeny,
+    httpAllowHosts: config.permissions?.httpAllowHosts,
+    browserAllowHosts: config.browser?.allowHosts,
+    shell: config.permissions?.shell !== undefined,
+  };
+}
+
 /**
  * Every refusal, before anything exists: the arguments are checked, then the
  * name and the run's total, then the grant (which can only narrow), the file
@@ -156,23 +175,16 @@ function plan(context: TeamContext, args: Args): Plan {
   const parsed = parseSpawn(args);
   if ('problem' in parsed) throw new Error(parsed.problem);
   const { request } = parsed;
-  const { hub, config } = context;
+  const { hub } = context;
   if (context.binding === undefined) throw new Error('The team is not attached to a run.');
   if (hub.spawned >= TEAM_MAX_TOTAL || hub.children.has(request.name)) {
     refuseName(context, request.name);
   }
-  const grant = narrowGrant(
-    {
-      allow: context.grants,
-      writeScope: config.permissions?.writeScope,
-      writeDeny: config.permissions?.writeDeny,
-    },
-    request,
-  );
+  const grant = narrowGrant(parentGrant(context), request);
   if (typeof grant === 'string') throw new Error(grant);
   const clash = overlapProblem(context, request, grant);
   if (clash !== undefined) throw new Error(clash);
-  const budget = carveBudget(budgetRoom(context), request);
+  const budget = carveBudget(budgetRoom(context, TEAM_PARENT_RESERVE_CALLS), request);
   if (typeof budget === 'string') throw new Error(budget);
   return { request, grant, toolCalls: budget.toolCalls, durationMs: budget.durationMs ?? 0 };
 }

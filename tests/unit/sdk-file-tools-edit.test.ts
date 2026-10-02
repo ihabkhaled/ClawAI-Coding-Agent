@@ -218,7 +218,7 @@ describe('workspace.file definition', () => {
     expect(offered[0]?.operations).toEqual(['read', 'list', 'glob', 'search', 'stat']);
   });
 
-  it('declares a strict schema with bounds on every argument', () => {
+  it('declares a strict schema and the tool itself enforces the bounds the schema no longer sends', async () => {
     const [file] = offeredDefinitions(['read', 'write']) as {
       inputSchema: { additionalProperties: boolean; properties: Record<string, { type: string }> };
     }[];
@@ -226,11 +226,7 @@ describe('workspace.file definition', () => {
 
     expect(file?.inputSchema.additionalProperties).toBe(false);
     for (const name of ['startLine', 'endLine', 'offset', 'limit', 'depth', 'expectedCount']) {
-      expect(properties[name]).toMatchObject({
-        type: 'integer',
-        minimum: expect.any(Number),
-        maximum: expect.any(Number),
-      });
+      expect(properties[name]).toMatchObject({ type: 'integer' });
     }
     for (const name of [
       'pattern',
@@ -242,7 +238,24 @@ describe('workspace.file definition', () => {
       'to',
       'path',
     ]) {
-      expect(properties[name]).toMatchObject({ type: 'string', maxLength: expect.any(Number) });
+      expect(properties[name]).toMatchObject({ type: 'string' });
+    }
+    // Only the writable content keeps a size bound on the wire.
+    for (const name of ['content', 'oldText', 'newText']) {
+      expect(properties[name]).toMatchObject({ maxLength: expect.any(Number) });
+    }
+    const root = workspace();
+    put(root, 'a.txt', 'one two three');
+    const run = tool(root);
+    for (const args of [
+      ['read', { path: 'a.txt', startLine: 0 }],
+      ['read', { path: 'a.txt', startLine: -3, endLine: 2 }],
+      ['read', { path: 'a.txt', maxChars: 99_999_999 }],
+      ['glob', { pattern: 'x'.repeat(5_000) }],
+      ['update', { path: 'a.txt', oldText: '', newText: 'x' }],
+      ['update', { path: 'a.txt', oldText: 'one', newText: '1', expectedCount: -1 }],
+    ] as const) {
+      await expect(Promise.resolve().then(() => run(args[0], args[1]))).rejects.toThrow();
     }
     expect(properties.recursive?.type).toBe('boolean');
     expect(properties.replaceAll?.type).toBe('boolean');

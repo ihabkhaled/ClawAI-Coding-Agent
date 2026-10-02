@@ -3,14 +3,18 @@ import { tmpdir } from 'node:os';
 import path from 'node:path';
 import { env } from 'node:process';
 
+import { withDeadline } from './browser-call-deadline';
 import { clickOn, pressKey, typeInto, waitFor } from './browser-page-actions';
 import { consoleOf, networkOf, resizeTo, screenshotOf, snapshotOf } from './browser-page-view';
 import { closeSession, entryText, entryUrl, loadPlaywright, openSession } from './browser-session';
 import { assertBrowsableUrl } from './browser-tool-url';
 import {
+  BROWSER_CALL_MAX_MS,
   BROWSER_DEFAULT_MAX_PAGES,
   BROWSER_DEFAULT_MAX_RUN_MS,
+  BROWSER_EGRESS_HEADER,
   BROWSER_MAX_PAGES,
+  BROWSER_QUICK_CALL_MAX_MS,
   BROWSER_MAX_RUN_MS,
   BROWSER_NAVIGATION_TIMEOUT_MS,
   BROWSER_SCRATCH_FOLDER,
@@ -19,7 +23,7 @@ import {
 
 import type { BrowserLimits, BrowserSession, PlaywrightLoader } from './browser-session.types';
 import type { AgentBrowserOptions, BrowserTool } from './browser-tool.types';
-import type { Page } from 'playwright-core';
+import type { Page, Response } from 'playwright-core';
 
 type Args = Readonly<Record<string, unknown>>;
 
@@ -51,6 +55,8 @@ export function browserLimits(options: AgentBrowserOptions): BrowserLimits {
     allowHosts: options.allowHosts ?? [],
     maxPages: clamp(options.maxPages, BROWSER_DEFAULT_MAX_PAGES, BROWSER_MAX_PAGES),
     maxRunMs: clamp(options.maxRunMs, BROWSER_DEFAULT_MAX_RUN_MS, BROWSER_MAX_RUN_MS),
+    maxCallMs: clamp(options.maxCallMs, BROWSER_CALL_MAX_MS, BROWSER_CALL_MAX_MS),
+    resolver: options.resolver,
     scratchDirectory:
       options.scratchDirectory ??
       path.join(tmpdir(), BROWSER_SCRATCH_FOLDER, randomUUID().slice(0, 8)),
@@ -86,8 +92,16 @@ export function createBrowserTool(
       void shutdown();
     };
     signal?.addEventListener('abort', onAbort, { once: true });
+    const ceiling = ['open', 'wait'].includes(operation)
+      ? limits.maxCallMs
+      : Math.min(limits.maxCallMs, BROWSER_QUICK_CALL_MAX_MS);
     try {
-      return await dispatch(operation, args, context);
+      return await withDeadline(
+        dispatch(operation, args, context),
+        ceiling,
+        shutdown,
+        `browser.page ${operation} did not finish within ${String(ceiling / 1000)} s: the page stopped responding (a script loop, for example), so the browser was closed. Call open again to start a fresh one.`,
+      );
     } finally {
       signal?.removeEventListener('abort', onAbort);
     }
@@ -161,8 +175,9 @@ async function open(args: Args, context: Context): Promise<unknown> {
   if (page === undefined) throw new Error('The browser has no page to use.');
   session.refused.length = 0;
   let status: number | undefined;
+  let response: Response | null = null;
   try {
-    const response = await page.goto(url.href, {
+    response = await page.goto(url.href, {
       waitUntil: 'load',
       timeout: BROWSER_NAVIGATION_TIMEOUT_MS,
     });
@@ -172,6 +187,11 @@ async function open(args: Args, context: Context): Promise<unknown> {
     // would be "interrupted" by it, so let it land first.
     await page.waitForURL(/^chrome-error:/u, { timeout: 1_500 }).catch(() => undefined);
     throw navigationFailure(error, session);
+  }
+  if (response?.headers()[BROWSER_EGRESS_HEADER] !== undefined) {
+    throw new Error(
+      `Navigation was blocked: ${session.refused.at(-1) ?? 'the address check refused it'}`,
+    );
   }
   await page.waitForLoadState('networkidle', { timeout: 3_000 }).catch(() => undefined);
   return {

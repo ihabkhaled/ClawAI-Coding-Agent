@@ -6,6 +6,8 @@ import { HeadlessTransport, sha256 } from '../headless/headless-transport';
 import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
 import { toolCallOf, toolResultFor } from './agent-tool-result';
 import { profileDeadlineMs, resolveRunBudget } from './budget-profiles';
+import { deferralFor, startRunWithDeferral } from './deferred-run';
+import { deferredToolkit } from './deferred-toolkit';
 import { reportUndeliveredImages, uploadPromptImages } from './prompt-images';
 import { openThread } from './thread-memory';
 import { describeTools } from './tool-alias';
@@ -16,6 +18,7 @@ import type {
   AgentToolkit,
   RuntimeTransportPort,
 } from './agent-sdk.types';
+import type { DeferredLoaderRef } from './deferred-toolkit';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
 
 /**
@@ -46,26 +49,45 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
   const epochs = { account: 1, workspace: 1, target: 1, policy: 1 };
 
   const attached = await uploadPromptImages(transport, token, options.images);
-  const started = await transport.startRun(token, {
-    schemaVersion: '2.0',
-    threadId,
-    clientRequestId: `request.${randomUUID()}`,
-    idempotencyKey: `idem.${randomUUID()}`,
-    prompt: options.prompt,
-    ...attached,
-    // The catalog and manifest hash a plain serialization, matching the
-    // extension. Only the tool-result receipt uses the canonical form, and
-    // swapping the two is a server error with no detail attached.
-    manifestHash: sha256(JSON.stringify({ targets: ['target:workspace'] })),
-    toolCatalogHash: sha256(JSON.stringify(options.toolkit.definitions)),
-    toolDefinitions: options.toolkit.definitions,
-    provider: options.provider ?? AGENT_SDK_DEFAULTS.provider,
-    model: options.model ?? AGENT_SDK_DEFAULTS.model,
-    epochs,
-    budget: resolveRunBudget(options.budgetProfile, deadlineMs, options.budget),
-  });
+  const requestId = `request.${randomUUID()}`;
+  const idempotencyKey = `idem.${randomUUID()}`;
+  const startWith = (
+    definitions: readonly unknown[],
+  ): Promise<{ runId: string; generation: string }> =>
+    transport.startRun(token, {
+      schemaVersion: '2.0',
+      threadId,
+      clientRequestId: requestId,
+      idempotencyKey,
+      prompt: options.prompt,
+      ...attached,
+      // The catalog and manifest hash a plain serialization, matching the
+      // extension. Only the tool-result receipt uses the canonical form, and
+      // swapping the two is a server error with no detail attached.
+      manifestHash: sha256(JSON.stringify({ targets: ['target:workspace'] })),
+      toolCatalogHash: sha256(JSON.stringify(definitions)),
+      toolDefinitions: definitions,
+      provider: options.provider ?? AGENT_SDK_DEFAULTS.provider,
+      model: options.model ?? AGENT_SDK_DEFAULTS.model,
+      epochs,
+      budget: resolveRunBudget(options.budgetProfile, deadlineMs, options.budget),
+    });
+  const catalog = deferralFor(options.toolkit.definitions, options.deferTools, transport);
+  const { started, deferred } = await startRunWithDeferral(
+    startWith,
+    catalog,
+    options.toolkit.definitions,
+  );
+  const loader: DeferredLoaderRef = { current: undefined };
+  const toolkit =
+    deferred && catalog !== undefined
+      ? deferredToolkit(options.toolkit, catalog, loader)
+      : options.toolkit;
 
   const run = { ...started, threadId };
+  loader.current = (definitions, signal) =>
+    transport.loadTools?.(token, run, definitions, signal) ??
+    Promise.reject(new Error('This transport cannot load deferred tools.'));
   await reportUndeliveredImages(
     transport,
     token,
@@ -77,12 +99,12 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
   const report = await runHeadlessSession({
     events: () => transport.events(token, run, options.signal),
     answerTool: async (event) => {
-      const denial = await deniedReason(event, options.toolkit);
+      const denial = await deniedReason(event, toolkit);
       await transport.submitResult(
         token,
         run,
         epochs,
-        await toolResultFor(event, options.toolkit, denial, options.signal),
+        await toolResultFor(event, toolkit, denial, options.signal),
       );
     },
     now: options.now ?? ((): number => Date.now()),

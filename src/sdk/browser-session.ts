@@ -1,5 +1,6 @@
 import { redactText } from '../core/redaction';
 
+import { startEgressProxy } from './browser-egress-proxy';
 import { guardRedirects } from './browser-redirect-guard';
 import { addressProblem } from './browser-tool-url';
 import {
@@ -122,13 +123,24 @@ export async function openSession(
 ): Promise<BrowserSession> {
   const playwright = await loader();
   const executablePath = limits.executablePath;
+  const refused: string[] = [];
+  const proxy = await startEgressProxy({
+    allowHosts: limits.allowHosts,
+    resolve: limits.resolver,
+    onRefused: (reason) => {
+      remember(refused, entryText(reason), BROWSER_REFUSED_MAX);
+    },
+  });
   const browser = await playwright.chromium
     .launch({
       headless: true,
       ...(executablePath === undefined ? {} : { executablePath }),
       args: ['--disable-dev-shm-usage', '--no-first-run'],
+      // Loopback is exempt from a proxy unless said otherwise; here nothing is.
+      proxy: { server: proxy.server, bypass: '<-loopback>' },
     })
-    .catch((error: unknown) => {
+    .catch(async (error: unknown) => {
+      await proxy.close();
       throw new Error(launchMessage(error));
     });
   const context = await browser.newContext({
@@ -140,11 +152,12 @@ export async function openSession(
   context.setDefaultTimeout(BROWSER_ACTION_TIMEOUT_MS);
   const session: BrowserSession = {
     browser,
+    proxy,
     context,
     pages: [],
     console: [],
     network: [],
-    refused: [],
+    refused,
     blockedPopups: 0,
     screenshots: 0,
   };
@@ -175,4 +188,5 @@ function launchMessage(error: unknown): string {
 /** Closes the browser; never throws, because it runs on cancel and on dispose. */
 export async function closeSession(session: BrowserSession): Promise<void> {
   await session.browser.close().catch(() => undefined);
+  await session.proxy.close().catch(() => undefined);
 }

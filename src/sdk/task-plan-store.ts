@@ -1,5 +1,5 @@
 import { createHash } from 'node:crypto';
-import { mkdirSync, readFileSync, renameSync, writeFileSync } from 'node:fs';
+import { mkdirSync, readFileSync, renameSync, statSync, writeFileSync } from 'node:fs';
 import path from 'node:path';
 
 import { isInside } from './notes-store';
@@ -25,6 +25,8 @@ export function planFileFor(
 /** Whatever the file holds; a missing or corrupt file is no plan at all. */
 function readSteps(file: string): readonly PlanStep[] {
   try {
+    // A file this big was not written by the store: it is not read, let alone parsed.
+    if (statSync(file).size > PLAN_MAX_BYTES * 2) return [];
     const parsed: unknown = JSON.parse(readFileSync(file, 'utf8'));
     if (typeof parsed !== 'object' || parsed === null) return [];
     const { steps } = parsed as Record<string, unknown>;

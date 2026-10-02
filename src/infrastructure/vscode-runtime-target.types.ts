@@ -1,3 +1,4 @@
+import type { OptInToolValues } from '../core/opt-in-tool-settings';
 import type {
   CPU_ARCHITECTURES,
   EXECUTION_HOST_KINDS,
@@ -27,6 +28,8 @@ export interface RuntimeHostProbe {
   readonly vscodeVersion: string;
   readonly workspaceFolders: readonly RuntimeWorkspaceFolderProbe[];
   readonly workspaceTrusted: boolean;
+  /** The opt-in tool settings; absent means every opt-in tool is off. */
+  readonly optInTools?: OptInToolValues;
   readonly prerequisites: {
     readonly browser: boolean;
     readonly container: boolean;

@@ -21,6 +21,7 @@ import { endConversationToolDefinition } from './end-conversation-tool-executor'
 import { evidenceToolDefinition } from './evidence-tool-executor';
 import { flagshipToolDefinition } from './flagship-tool-executor';
 import { gitToolDefinition } from './git-tool-executor';
+import { httpRequestToolDefinition } from './http-request-tool-executor';
 import { integrationToolDefinition } from './integration-tool-executor';
 import { intelligenceToolDefinition } from './intelligence-tool-executor';
 import { notifyUserToolDefinition } from './notify-user-tool-executor';
@@ -28,6 +29,7 @@ import { planningToolDefinition } from './planning-tool-executor';
 import { processSupervisorToolDefinition } from './process-supervisor-tool-executor';
 import { qualityToolDefinition } from './quality-tool-executor';
 import { runJournalToolDefinition } from './run-journal-tool-executor';
+import { shellScriptToolDefinition } from './shell-script-tool-executor';
 import { structuredCommandToolDefinition } from './structured-command-tool-executor';
 import { subAgentToolDefinition } from './sub-agent-tool-executor';
 import { toolSearchToolDefinition } from './tool-search-tool-executor';
@@ -342,5 +344,12 @@ function localToolDefinitions(probe: RuntimeHostProbe) {
     definitions.push(subAgentToolDefinition, agentMailboxToolDefinition, flagshipToolDefinition);
   }
   if (probe.prerequisites.elevation) definitions.push(elevationToolDefinition);
+  // Opt-in tools exist for the model only when the user switched them on. Setting off means
+  // not advertised, so the model is never told a tool it cannot use.
+  if ((probe.optInTools?.httpAllowHosts.length ?? 0) > 0)
+    definitions.push(httpRequestToolDefinition);
+  if (probe.optInTools?.shellEnabled === true && probe.prerequisites.process) {
+    definitions.push(shellScriptToolDefinition);
+  }
   return definitions;
 }

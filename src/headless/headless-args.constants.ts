@@ -59,6 +59,7 @@ export const HEADLESS_BARE_FLAGS: readonly string[] = [
   '--list-models',
   '--allow-shell',
   '--vision',
+  '--defer-tools',
 ];
 
 /** Flags that take a value, each mapped to the field it fills. */
@@ -104,6 +105,7 @@ export const HEADLESS_VALUE_FLAGS: Readonly<Record<string, string>> = {
   '--image': 'image',
   '--vision-model': 'visionModel',
   '--max-agents': 'maxAgents',
+  '--tools-profile': 'toolsProfile',
 };
 
 export const HEADLESS_USAGE = [
@@ -157,6 +159,10 @@ export const HEADLESS_USAGE = [
   '  --vision                     Offer vision.describe (look at a workspace image) without attaching one.',
   '  --vision-model <id>          provider/model that answers vision.describe (default: a catalog vision model).',
   '  --max-agents <n>             With --allow-tools agents: sub-agents working at once (1-8, default 4).',
+  '  --tools-profile <p>          Offer fewer tools: minimal (read files, git read, command), dev (+ edit, git write, gates,',
+  '                               plan, process.watch), full (no limit) or tool patterns, e.g. workspace.file.read,code.gates.',
+  '                               Only narrows: it never grants more than --allow-tools or the permission mode.',
+  '  --defer-tools                Send rarely used tools as short stubs; the model loads one with runtime.tool_search.',
   '  --resume <threadId>          Continue an existing thread.',
   '  --continue                   Continue the most recent CLI thread for this workspace.',
   '  --append-system-prompt <t>   Operator instructions, text or @file (added to the runtime instructions).',

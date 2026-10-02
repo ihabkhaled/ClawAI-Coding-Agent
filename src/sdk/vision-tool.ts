@@ -1,5 +1,8 @@
+import { createHash } from 'node:crypto';
+
 import { redactText } from '../core/redaction';
 
+import { isApproved } from './permission-modes';
 import { VisionModelError } from './vision-errors';
 import { readWorkspaceImage } from './vision-image-files';
 import {
@@ -10,6 +13,7 @@ import {
 } from './vision-models';
 import {
   VISION_MAX_ANSWER_CHARS,
+  VISION_MAX_CACHED_ANSWERS,
   VISION_MAX_CALLS_PER_RUN,
   VISION_MAX_QUESTION_CHARS,
   VISION_TOOL_DESCRIPTION,
@@ -54,19 +58,35 @@ interface VisionToolkitOptions {
 export function visionToolkit(options: VisionToolkitOptions): AgentToolkit {
   const state = { catalog: undefined as readonly VisionCatalogModel[] | undefined, calls: 0 };
   const failed = new Set<string>();
+  const answered = new Map<string, Record<string, unknown>>();
   const catalogOf = async (
     signal: AbortSignal | undefined,
   ): Promise<readonly VisionCatalogModel[]> =>
     (state.catalog ??= await options.port.models(signal));
   return {
     definitions: [VISION_TOOL_DEFINITION],
-    authorize: (call) =>
-      call.toolName === VISION_TOOL_NAME &&
-      call.operation === VISION_TOOL_OPERATION &&
-      options.permissions.allow.includes('read'),
+    // Put to the approver like every other category: the permission table decides whether that is
+    // a question (strict: the image leaves the machine) or an immediate yes.
+    authorize: async (call) => {
+      const { permissions } = options;
+      if (call.toolName !== VISION_TOOL_NAME || call.operation !== VISION_TOOL_OPERATION) {
+        return false;
+      }
+      if (!permissions.allow.includes('read')) return false;
+      if (permissions.approve === undefined) return true;
+      return isApproved(await permissions.approve({ ...call, category: 'read' }));
+    },
     execute: async (call, signal) => {
       const { path, question } = describeArguments(call);
       const image = readWorkspaceImage(options.workspace, path);
+      // The same picture asked the same thing is answered from memory: a loop on one question costs one call.
+      const key = createHash('sha256')
+        .update(image.bytes)
+        .update('|')
+        .update(question)
+        .digest('hex');
+      const known = answered.get(key);
+      if (known !== undefined) return { ...known, path, cached: true };
       if (state.calls >= VISION_MAX_CALLS_PER_RUN) {
         throw new Error(
           `Vision call limit reached (${String(VISION_MAX_CALLS_PER_RUN)} per run). Stop looking at screenshots and decide from what you have.`,
@@ -79,7 +99,7 @@ export function visionToolkit(options: VisionToolkitOptions): AgentToolkit {
       for (const model of candidates) {
         try {
           const answer = await options.port.ask({ image, question, model }, signal);
-          return {
+          const result = {
             answer: redactText(answer).slice(0, VISION_MAX_ANSWER_CHARS),
             model: modelId(model),
             path,
@@ -87,6 +107,8 @@ export function visionToolkit(options: VisionToolkitOptions): AgentToolkit {
             ...(image.stripped ? { metadataRemoved: true } : {}),
             untrusted: true,
           };
+          if (answered.size < VISION_MAX_CACHED_ANSWERS) answered.set(key, result);
+          return result;
         } catch (error) {
           if (!(error instanceof VisionModelError)) throw error;
           failed.add(modelId(model));

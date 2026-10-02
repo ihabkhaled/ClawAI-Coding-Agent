@@ -1,6 +1,7 @@
 import { redactText } from '../core/redaction';
 
 import { DONE_CHECK_MAX_ARGUMENTS, DONE_CHECK_MAX_TIMEOUT_MS } from './done-checks.constants';
+import { withoutHidden } from './knowledge-sanitize';
 import {
   PLAN_ID_PATTERN,
   PLAN_MAX_ID_CHARS,
@@ -32,6 +33,15 @@ function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === 'object' && value !== null && !Array.isArray(value);
 }
 
+/**
+ * Text shown to the model on one line: no line break, hidden or bidirectional character. A title or a
+ * note that could start a new line could forge a step ("s9 [done, verified]") or an instruction in the
+ * plan that is put in front of the model, and in front of a resumed conversation, as its own.
+ */
+function oneLine(text: string): string {
+  return withoutHidden(text).replace(/\s+/gu, ' ').trim();
+}
+
 /** Text the model wrote: never stored when it holds a secret, because redacting a command would break it. */
 function clean(text: string, what: string): string {
   const trimmed = text.trim();
@@ -47,7 +57,7 @@ function text(value: unknown, what: string, max: number): string {
   }
   if (value.trim().length > max)
     throw new Error(`${what} holds at most ${String(max)} characters.`);
-  return clean(value, what);
+  return oneLine(clean(value, what));
 }
 
 function checkTimeout(value: unknown, at: string): number | undefined {
@@ -141,7 +151,7 @@ export function parseNote(value: unknown): string | undefined {
   if (note.length > PLAN_MAX_NOTE_CHARS) {
     throw new Error(`A note holds at most ${String(PLAN_MAX_NOTE_CHARS)} characters.`);
   }
-  return redactText(note);
+  return redactText(oneLine(note));
 }
 
 /**

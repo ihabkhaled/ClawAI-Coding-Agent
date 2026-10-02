@@ -417,9 +417,10 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
     new AttentionView('clawAI.attention', attentionTree, state),
     findingsTree,
     vscode.workspace.onDidChangeConfiguration((event) => {
-      if (event.affectsConfiguration('clawAI')) {
-        void coordinator.configurationChanged();
-      }
+      if (!event.affectsConfiguration('clawAI')) return;
+      void coordinator.configurationChanged();
+      // Opt-in tools are advertised only while their setting is on.
+      if (event.affectsConfiguration('clawAI.tools')) state.setCapabilityManifest(buildManifest());
     }),
     // Trust and the folder set are the two facts the capability manifest is
     // built from, so both have to rebuild it. Without this the manifest keeps

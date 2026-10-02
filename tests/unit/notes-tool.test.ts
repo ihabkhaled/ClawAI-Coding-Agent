@@ -174,10 +174,8 @@ describe('the notes tool in the toolkit', () => {
       (entry) => (entry as { name: string }).name === 'workspace.notes',
     ) as { description: string };
 
-    expect(definition.description).toContain(
-      'Your earlier tool results are condensed after a while',
-    );
-    expect(definition.description).toContain('call read to recall instead of re-reading files');
+    expect(definition.description).toContain('earlier tool results get condensed');
+    expect(definition.description).toContain('read to recall instead of re-reading files');
   });
 
   it('is not offered when the read grant is withheld', () => {

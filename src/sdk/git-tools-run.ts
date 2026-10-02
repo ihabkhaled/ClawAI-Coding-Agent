@@ -167,23 +167,37 @@ export function runGit(
   });
 }
 
+/**
+ * Removes colour and cursor escape sequences from tool output.
+ *
+ * A test runner or a hook prints them when it thinks it is on a terminal, and
+ * they cost the model tokens and hide the words the line is made of.
+ */
+export function stripTerminalCodes(text: string): string {
+  return text.replaceAll(new RegExp(String.raw`\u001B\[[0-9;?]*[ -/]*[@-~]`, 'gu'), '');
+}
+
 /** A run as the bounded JSON a tool returns, with `extra` fields beside it. */
 export function outcome(
   result: GitRunResult,
   extra: Readonly<Record<string, unknown>> = {},
 ): Record<string, unknown> {
+  const stdout = stripTerminalCodes(result.stdout);
+  const stderr = stripTerminalCodes(result.stderr);
   const value: Record<string, unknown> = {
+    // The envelope says a call that returned is `succeeded`; this says whether git did.
+    ok: result.exitCode === 0 && !result.timedOut && !result.aborted,
     exitCode: result.exitCode,
-    stdout: result.stdout,
-    stderr: result.stderr,
+    stdout,
+    stderr,
     timedOut: result.timedOut,
     aborted: result.aborted,
     ...extra,
   };
   for (const limit of [GIT_OUTPUT_HEAD_CHARS + GIT_OUTPUT_TAIL_CHARS, 8000, 4000, 1000]) {
     if (JSON.stringify(value).length <= GIT_RESULT_CEILING) break;
-    value.stdout = result.stdout.slice(-limit);
-    value.stderr = result.stderr.slice(-limit);
+    value.stdout = stdout.slice(-limit);
+    value.stderr = stderr.slice(-limit);
   }
   return value;
 }

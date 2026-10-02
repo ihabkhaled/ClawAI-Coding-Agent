@@ -1,5 +1,6 @@
 import type { AgentToolkit } from './agent-sdk.types';
 import type { Agent, AgentConfig, AgentEvent } from './create-agent.types';
+import type { DoneCheck } from './done-checks.types';
 import type { AgentToolCategory } from './workspace-toolkit.types';
 import type { HeadlessOutcome } from '../core/headless-outcome.types';
 
@@ -23,6 +24,14 @@ export interface SpawnRequest {
   readonly maxDurationSec: number | undefined;
   readonly workspaceSubdir: string | undefined;
   readonly isolation: 'none' | 'worktree';
+  /** Hosts `http.request` may reach, each inside the parent's own list; none means the child has no http. */
+  readonly httpAllowHosts?: readonly string[] | undefined;
+  /** Private hosts `browser.page` may open, each listed by the parent; public hosts need no entry. */
+  readonly browserAllowHosts?: readonly string[] | undefined;
+  /** Gives the child `workspace.shell`: only when the parent holds it, and every script still goes to the parent's approver. */
+  readonly shell?: boolean | undefined;
+  /** Completion checks the child must pass; written by the starter, never by the child. */
+  readonly doneChecks?: readonly DoneCheck[] | undefined;
 }
 
 /** A message in flight; `from` is stamped by the bus owner, never taken from the sender's text. */
@@ -147,6 +156,8 @@ export interface AgentTeam {
     approve: TeamApprover | undefined,
   ): AgentToolkit | undefined;
   attach(binding: TeamBinding): void;
+  /** Tool calls set aside for children still working plus those finished children spent: not this agent's to spend. */
+  callsHeld(): number;
   /** Cancels what is still running below this agent and removes its worktrees. Never throws. */
   close(): Promise<void>;
 }

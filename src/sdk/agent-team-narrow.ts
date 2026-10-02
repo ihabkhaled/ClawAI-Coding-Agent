@@ -1,4 +1,5 @@
 import { firstOutside, rebaseGlobs, underFolder } from './agent-team-glob';
+import { browserHostsProblem, httpHostsProblem } from './agent-team-hosts';
 import {
   TEAM_CHILD_DEFAULT_DURATION_MS,
   TEAM_CHILD_DEFAULT_TOOL_CALLS,
@@ -16,6 +17,12 @@ export interface ParentGrant {
   /** The parent's own write scope, workspace-relative; undefined is "anywhere". */
   readonly writeScope: readonly string[] | undefined;
   readonly writeDeny: readonly string[] | undefined;
+  /** Hosts the parent's http tool may reach. */
+  readonly httpAllowHosts?: readonly string[] | undefined;
+  /** Private hosts the parent's browser may open. */
+  readonly browserAllowHosts?: readonly string[] | undefined;
+  /** Whether the parent has the second shell switch on. */
+  readonly shell?: boolean | undefined;
 }
 
 /** What a child is given, always inside what its parent holds. */
@@ -30,21 +37,56 @@ export interface ChildGrant {
   readonly parentGlobs: readonly string[];
   /** Whether the child can change anything: write, git-write or a command. */
   readonly writes: boolean;
+  /** The hosts the child's http tool may reach, and the private hosts its browser may open. */
+  readonly httpAllowHosts: readonly string[];
+  readonly browserAllowHosts: readonly string[];
+  /** Whether the child is given the shell. */
+  readonly shell: boolean;
 }
 
 const WRITING: readonly AgentToolCategory[] = ['write', 'git-write', 'command', 'shell'];
+
+/** What a child is never given unless the spawn names it: the network and the shell are opt-in per child. */
+const OPT_IN: readonly AgentToolCategory[] = ['agents', 'shell', 'http', 'http-write', 'browser'];
+
+/** The categories the spawn asks for: its list, or the parent's quiet ones, plus the shell when switched on. */
+function wantedCategories(
+  parent: ParentGrant,
+  request: SpawnRequest,
+): readonly AgentToolCategory[] {
+  const base = request.tools ?? parent.allow.filter((category) => !OPT_IN.includes(category));
+  return request.shell === true && !base.includes('shell') ? [...base, 'shell'] : base;
+}
+
+/** The reason a network or shell request exceeds what the parent holds, or undefined. */
+function networkProblem(parent: ParentGrant, request: SpawnRequest): string | undefined {
+  if (request.shell === true && (!parent.allow.includes('shell') || parent.shell !== true)) {
+    return 'You do not hold the shell (it needs shell in the grants and the second shell switch), so a child cannot be given it.';
+  }
+  return (
+    httpHostsProblem(request.httpAllowHosts ?? [], parent.httpAllowHosts) ??
+    browserHostsProblem(request.browserAllowHosts ?? [], parent.browserAllowHosts)
+  );
+}
 
 /**
  * The grant a child gets, or the sentence saying why it cannot have what was
  * asked. Categories are the ones asked for that the parent also holds. A write
  * scope must lie inside the parent's; asked for none, the child keeps the
  * parent's own, or the folder it was given. Whatever the parent denies the
- * child is denied.
+ * child is denied. Http hosts and browser hosts must lie inside the parent's
+ * lists, and a child has http only when it is given at least one host.
  */
 export function narrowGrant(parent: ParentGrant, request: SpawnRequest): ChildGrant | string {
-  const wanted = request.tools ?? parent.allow.filter((category) => category !== 'agents');
-  const granted = wanted.filter((category) => parent.allow.includes(category));
-  const notGranted = wanted.filter((category) => !parent.allow.includes(category));
+  const refused = networkProblem(parent, request);
+  if (refused !== undefined) return refused;
+  const wanted = wantedCategories(parent, request);
+  const hosts = request.httpAllowHosts ?? [];
+  const holds = (category: AgentToolCategory): boolean =>
+    parent.allow.includes(category) &&
+    (!['http', 'http-write'].includes(category) || hosts.length > 0);
+  const granted = wanted.filter(holds);
+  const notGranted = wanted.filter((category) => !holds(category));
   if (granted.length === 0) {
     return `You do not hold ${wanted.join(', ')}, so a child cannot be given it. You hold: ${parent.allow.join(', ')}.`;
   }
@@ -59,6 +101,9 @@ export function narrowGrant(parent: ParentGrant, request: SpawnRequest): ChildGr
     writeDeny: parent.writeDeny === undefined ? undefined : rebaseGlobs(parent.writeDeny, folder),
     parentGlobs: writes ? scope.parent : [],
     writes,
+    httpAllowHosts: granted.some((category) => category.startsWith('http')) ? hosts : [],
+    browserAllowHosts: granted.includes('browser') ? (request.browserAllowHosts ?? []) : [],
+    shell: granted.includes('shell'),
   };
 }
 
