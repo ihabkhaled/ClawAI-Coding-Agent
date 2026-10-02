@@ -1,5 +1,3 @@
-import http from 'node:http';
-import https from 'node:https';
 import zlib from 'node:zlib';
 
 import { canonicalIp } from './http-address';
@@ -7,9 +5,22 @@ import { HttpTransportError } from './http-tool-failure';
 import { HTTP_RESPONSE_MAX_BYTES } from './http-tool.constants';
 
 import type { HttpHopRequest, HttpHopResponse, HttpHopSender } from './http-tool.types';
+import type http from 'node:http';
 import type { IncomingMessage, RequestOptions } from 'node:http';
+import type https from 'node:https';
 import type { LookupFunction } from 'node:net';
 import type { Readable } from 'node:stream';
+
+/**
+ * node:http and node:https load on the first request, not when the SDK is
+ * imported: an ES-module import of node:http makes Node load its bundled fetch
+ * client (undici), about 15 ms that every host and headless run would pay for a
+ * tool most runs never call.
+ */
+async function loadTransport(protocol: string): Promise<typeof http | typeof https> {
+  if (protocol === 'https:') return (await import('node:https')).default;
+  return (await import('node:http')).default;
+}
 
 function pinnedLookup(address: string, family: 4 | 6): LookupFunction {
   return (_hostname, options, callback) => {
@@ -57,15 +68,15 @@ function requestOptions(request: HttpHopRequest): RequestOptions {
  * NODE_EXTRA_CA_CERTS and `--use-system-ca` when the process has them). The
  * body is read only up to the cap; past it the connection is closed.
  */
-export const sendHop: HttpHopSender = (request) =>
-  new Promise<HttpHopResponse>((resolve, reject) => {
+export const sendHop: HttpHopSender = async (request) => {
+  const transport = await loadTransport(request.target.url.protocol);
+  return new Promise<HttpHopResponse>((resolve, reject) => {
     let settled = false;
     const finish = (action: () => void): void => {
       if (settled) return;
       settled = true;
       action();
     };
-    const transport = request.target.url.protocol === 'https:' ? https : http;
     const outgoing = transport.request(requestOptions(request), (response) => {
       const peer = response.socket.remoteAddress;
       if (peer !== undefined && canonicalIp(peer) !== canonicalIp(request.target.address.address)) {
@@ -118,3 +129,4 @@ export const sendHop: HttpHopSender = (request) =>
     });
     outgoing.end(request.body);
   });
+};

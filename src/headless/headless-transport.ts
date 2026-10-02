@@ -7,6 +7,7 @@ import { HEADLESS_CALLBACK_URI, HEADLESS_CLIENT_NAME } from './headless-session.
 import { withRetries } from './retry-policy';
 import { readRuntimeEvents } from './runtime-event-stream';
 import { RuntimeHttpError } from './runtime-http-error';
+import { TokenSession } from './token-session';
 
 import type { HeadlessStreamEvent } from './headless-session.types';
 import type {
@@ -15,6 +16,7 @@ import type {
   HeadlessRunRequest,
 } from './headless-transport.types';
 import type { RetryContext } from './retry-policy.types';
+import type { SessionTokens } from './token-session.types';
 import type { VisionImage } from '../sdk/vision-tool.types';
 
 export function sha256(text: string): string {
@@ -51,6 +53,9 @@ export function canonicalJson(value: unknown): string {
 }
 
 export class HeadlessTransport {
+  /** Holds the run's tokens once there is something to renew; every call asks it for the live one. */
+  private session: TokenSession | undefined;
+
   /**
    * `retry` makes every call survive a runtime that is briefly away — a deploy,
    * a restart, a store blip — by waiting and asking again; see `withRetries`.
@@ -95,11 +100,28 @@ export class HeadlessTransport {
     });
     const code = new URL(approval.redirectUri).searchParams.get('code');
     if (code === null) throw new Error('Authorization approval returned no code');
-    const exchanged = await this.json<{ tokens: { accessToken: string } }>(
+    const exchanged = await this.json<{ tokens: SessionTokens }>(
       '/auth/vscode/authorize/exchange',
       { body: { code, codeVerifier: verifier } },
     );
+    this.adoptSession(exchanged.tokens);
     return exchanged.tokens.accessToken;
+  }
+
+  /**
+   * Keeps these tokens fresh for the rest of the run.
+   *
+   * Without a refresh token there is nothing to renew with, and a token is used
+   * as given. With one, the access token is rotated shortly before it expires,
+   * and the token a caller passes to any method below is only a placeholder.
+   */
+  adoptSession(tokens: SessionTokens): void {
+    this.session = new TokenSession({ baseUrl: this.baseUrl, tokens, retry: this.retry });
+  }
+
+  /** The access token as it is now, or undefined before any session was adopted. */
+  currentToken(): string | undefined {
+    return this.session?.current();
   }
 
   async createThread(token: string, title: string): Promise<string> {
@@ -226,6 +248,7 @@ export class HeadlessTransport {
       token,
       run,
       signal,
+      auth: this.session?.canRefresh() === true ? this.session.streamAuth() : undefined,
       retry: { ...this.retry, signal: signal ?? this.retry.signal },
     });
   }
@@ -236,12 +259,43 @@ export class HeadlessTransport {
   ): Promise<T> {
     // Serialized once, outside the retry, so every attempt sends identical bytes.
     const payload = options.body === undefined ? undefined : JSON.stringify(options.body);
+    let token = await this.bearer(options.token);
+    try {
+      return await this.send<T>(path, options, payload, token);
+    } catch (error) {
+      const session = this.session;
+      if (
+        session === undefined ||
+        token === undefined ||
+        !(error instanceof RuntimeHttpError) ||
+        error.status !== 401
+      ) {
+        throw error;
+      }
+      // The access token died between the check and the call: renew once and send the same bytes.
+      token = await session.renewAfterRejection(token);
+      return this.send<T>(path, options, payload, token);
+    }
+  }
+
+  /** The live token when a session is held, else the caller's own. */
+  private async bearer(given: string | undefined): Promise<string | undefined> {
+    if (given === undefined || this.session === undefined) return given;
+    return this.session.fresh();
+  }
+
+  private send<T>(
+    path: string,
+    options: { method?: 'POST' | 'PATCH' | 'GET' },
+    payload: string | undefined,
+    token: string | undefined,
+  ): Promise<T> {
     return withRetries(this.retry, async () => {
       const response = await fetch(this.baseUrl + path, {
         method: options.method ?? 'POST',
         headers: {
           ...(payload === undefined ? {} : { 'Content-Type': 'application/json' }),
-          ...(options.token === undefined ? {} : { Authorization: `Bearer ${options.token}` }),
+          ...(token === undefined ? {} : { Authorization: `Bearer ${token}` }),
         },
         ...(payload === undefined ? {} : { body: payload }),
         ...(this.retry.signal === undefined ? {} : { signal: this.retry.signal }),

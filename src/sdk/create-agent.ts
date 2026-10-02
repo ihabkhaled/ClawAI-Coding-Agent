@@ -31,6 +31,7 @@ import { assertRunLimits, createRunGuard, describeBudgetTrip } from './run-budge
 import { isRunLostError } from './run-lost';
 import { failureFields, runtimeFailureReason } from './runtime-failure';
 import { isServerBudgetError, isServerBudgetEvent, withResultBudgetNotes } from './server-budget';
+import { adoptRefreshableSession, liveTokenOf } from './session-credentials';
 import { openPlan } from './task-plan-agent';
 import { planGateReport, promptWithPlan } from './task-plan-prompt';
 import { summarize } from './task-plan-steps';
@@ -191,6 +192,8 @@ async function runOnce(
       },
     });
   const credential = { token: 'token' in config.auth ? config.auth.token : undefined };
+  adoptRefreshableSession(transport, config.auth);
+  const liveToken = liveTokenOf(transport, credential);
   const inner = agentToolkit(
     config,
     {
@@ -206,7 +209,7 @@ async function runOnce(
         emit({ type: 'write-scope.violation', ...violation });
       },
     },
-    () => credential.token,
+    liveToken,
     team,
   );
   team?.attach(
@@ -217,7 +220,7 @@ async function runOnce(
       guardCalls: options.maxToolCalls,
       serverCalls: toolCallLimit(config, options),
       maxDurationMs: options.maxDurationMs,
-      token: () => credential.token,
+      token: liveToken,
     }),
   );
   session.tools = describeTools(inner.definitions);

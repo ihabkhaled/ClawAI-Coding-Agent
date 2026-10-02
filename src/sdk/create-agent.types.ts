@@ -19,7 +19,12 @@ import type { RetryTuning } from '../headless/retry-policy.types';
 
 /** A token already issued, or credentials to exchange for one. */
 export type AgentAuth =
-  { readonly token: string } | { readonly email: string; readonly password: string };
+  | {
+      readonly token: string;
+      /** Lets a run outlive the access token (about 15 minutes): it is renewed before it expires. */
+      readonly refreshToken?: string | undefined;
+    }
+  | { readonly email: string; readonly password: string };
 
 export interface AgentConfig {
   readonly auth: AgentAuth;

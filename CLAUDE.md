@@ -8,6 +8,7 @@ application. Must build and release alone: never import the parent monorepo.
 Router: `AGENTS.md` (gates, blockers) - `docs/RULES.md` (enforced rules) -
 `skills/` (runbooks) - `docs/ARCHITECTURE.md`, `API_CONTRACTS.md`, `TESTING.md`,
 `SECURITY.md`, `PUBLISHING.md`, `adr/`, `parity/` (audit + surface inventory).
+The agent's tools: `docs/TOOLS.md` (generated: `npm run docs:tools`), `docs/HEADLESS.md`, `docs/FAQ-AGENT-TOOLS.md`.
 
 ## Layers (imports point down only; `import/no-cycle` is on)
 
@@ -49,12 +50,15 @@ Before every push use `npm run preflight` or `npm run ship`.
 - Windows CRLF phantom diffs: `.gitattributes` is `eol=lf`; do not "fix" by mass rewrite.
 - Git credential manager can hang on push: use the `gh` credential helper (`gh auth setup-git`).
 - Fresh worktree: `skills/setup-a-fresh-worktree/SKILL.md` (`npm ci --ignore-scripts`).
+- Changing a tool's definition, category or the permission code makes `tests/unit/tools-doc.test.ts` fail until `npm run docs:tools` is run and the result committed.
 
 ## Skills
 
 `setup-a-fresh-worktree`, `version-every-change`, `verify-coding-agent-readiness`,
 `add-a-runtime-tool`, `add-a-command-or-view`, `add-a-translated-string`,
-`land-a-release`, `add-a-backend-client-with-fallback`, `run-live-rounds`.
+`land-a-release`, `ship-to-main-safely`, `add-a-backend-client-with-fallback`, `run-live-rounds`,
+`deliver-a-flagship-with-the-agent`, `test-a-ui-with-the-browser-tool`, `test-an-api-with-http-request`,
+`run-long-commands-with-process-watch`, `orchestrate-parallel-agents`, `write-a-plan-file`.
 Every main-bound change is a release and advances the delivery minor version.
 The repository pre-commit hook prepares the bump automatically and CI verifies
 it. Release artifacts are generated after all CI gates pass, then the triggered

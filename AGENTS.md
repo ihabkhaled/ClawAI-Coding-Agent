@@ -16,6 +16,12 @@ and the obvious repair breaks `npm run build`.
 Runbooks: `skills/add-a-runtime-tool`, `add-a-command-or-view`, `add-a-translated-string`,
 `add-a-backend-client-with-fallback`, `run-live-rounds`, `land-a-release`.
 
+Using the agent's own tools (headless CLI and SDK) is documented once, here: `docs/TOOLS.md` (every tool, generated from the
+code: run `npm run docs:tools` after changing a tool definition, its category or the permission code), `docs/HEADLESS.md`
+(flags, exit codes, events, run behaviour), `docs/FAQ-AGENT-TOOLS.md`. Agent runbooks: `skills/deliver-a-flagship-with-the-agent`,
+`test-a-ui-with-the-browser-tool`, `test-an-api-with-http-request`, `run-long-commands-with-process-watch`,
+`orchestrate-parallel-agents`, `write-a-plan-file`.
+
 Read `skills/version-every-change/SKILL.md` for every main-bound change.
 Every push to `main` is a delivery release. The repository pre-commit hook
 automatically advances one minor version and aligns package metadata; CI

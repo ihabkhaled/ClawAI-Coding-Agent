@@ -34,3 +34,4 @@ tests/**
 tsconfig.json
 tsconfig.*.json
 vitest.config.ts
+vitest.live.config.ts
