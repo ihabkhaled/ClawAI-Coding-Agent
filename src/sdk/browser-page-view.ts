@@ -51,6 +51,11 @@ export function compactTree(tree: string): string {
     .join('\n');
 }
 
+/** The text with every value a password field holds taken out. */
+function hideSecrets(text: string, secrets: readonly string[]): string {
+  return secrets.reduce((out, secret) => out.split(secret).join('[hidden]'), text);
+}
+
 async function factsOf(page: Page): Promise<BrowserPageFacts | undefined> {
   const raw: unknown = await page.evaluate(PAGE_FACTS_SCRIPT).catch(() => '');
   if (typeof raw !== 'string') return undefined;
@@ -82,10 +87,11 @@ export async function snapshotOf(page: Page, args: Args): Promise<unknown> {
   const aria = await scope
     .ariaSnapshot({ mode: 'ai', timeout: BROWSER_ACTION_TIMEOUT_MS })
     .catch(() => '');
-  const textShare = Math.floor(budget * BROWSER_SNAPSHOT_TEXT_SHARE);
-  const text = cut(redactText(visible.replace(/\n{3,}/gu, '\n\n').trim()), textShare);
-  const tree = cut(redactText(compactTree(aria)), budget - Math.min(text.text.length, textShare));
   const facts = await factsOf(page);
+  const hide = (value: string): string => hideSecrets(redactText(value), facts?.secrets ?? []);
+  const textShare = Math.floor(budget * BROWSER_SNAPSHOT_TEXT_SHARE);
+  const text = cut(hide(visible.replace(/\n{3,}/gu, '\n\n').trim()), textShare);
+  const tree = cut(hide(compactTree(aria)), budget - Math.min(text.text.length, textShare));
   return {
     url: entryUrl(page.url()),
     title: entryText(await page.title().catch(() => '')),

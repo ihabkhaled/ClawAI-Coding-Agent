@@ -56,3 +56,27 @@ describe('allowedExecutables', () => {
     expect(allowedExecutables([''])).toEqual([...HEADLESS_DEFAULT_EXECUTABLES]);
   });
 });
+
+describe('isAllowedExecutable: only launcher extensions are ignored', () => {
+  const allowed = ['node', 'npm'];
+
+  it('accepts the spellings Windows needs', () => {
+    for (const name of ['node', 'NODE.EXE', 'npm.cmd', 'Npm.CMD']) {
+      expect(isAllowedExecutable(name, allowed), name).toBe(true);
+    }
+  });
+
+  it('refuses any other dot, which is part of the name', () => {
+    for (const name of [
+      'node.js',
+      'node.bat',
+      'node.com',
+      'node.ps1',
+      'node.exe;calc',
+      'node.exe.js',
+      'nodeXexe',
+    ]) {
+      expect(isAllowedExecutable(name, allowed), name).toBe(false);
+    }
+  });
+});

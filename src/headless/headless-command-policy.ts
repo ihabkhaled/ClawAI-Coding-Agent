@@ -1,6 +1,11 @@
-import path from 'node:path';
-
 import { HEADLESS_DEFAULT_EXECUTABLES } from './headless-command-policy.constants';
+
+const LAUNCHER_EXTENSION = /\.(?:exe|cmd)$/u;
+
+/** The lower-case name without a Windows launcher extension. */
+function bareName(executable: string): string {
+  return executable.toLowerCase().replace(LAUNCHER_EXTENSION, '');
+}
 
 /**
  * Whether a headless run may spawn this command.
@@ -10,15 +15,16 @@ import { HEADLESS_DEFAULT_EXECUTABLES } from './headless-command-policy.constant
  * `sh` would make the allowlist decorative, and resolving it first would only
  * move the question to which directory won.
  *
- * Matching is case-insensitive and ignores a Windows executable extension, so
- * `NODE.EXE` is the same decision as `node`. Treating them differently would
+ * Matching is case-insensitive and ignores a Windows launcher extension (`.exe`, `.cmd`), so
+ * `NODE.EXE` is the same decision as `node` and `npm.cmd` as `npm`. Any other dot is part of the
+ * name: `node.js`, `node.bat` and `node.exe;calc` are not `node`. Treating them differently would
  * mean the same invocation is permitted on one platform and refused on another.
  */
 export function isAllowedExecutable(executable: string, allowed: readonly string[]): boolean {
   if (executable.length === 0) return false;
   if (executable.includes('/') || executable.includes('\\')) return false;
-  const name = path.parse(executable.toLowerCase()).name;
-  return allowed.some((candidate) => path.parse(candidate.toLowerCase()).name === name);
+  const name = bareName(executable);
+  return allowed.some((candidate) => bareName(candidate) === name);
 }
 
 /**

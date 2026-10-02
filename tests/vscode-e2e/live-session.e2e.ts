@@ -17,6 +17,7 @@ import { env } from 'node:process';
 import { expect, test } from '@playwright/test';
 
 import { approvalQueueScenario } from './live-approval-queue';
+import { scenarioChecks, toolScenario } from './live-tool-scenarios';
 import {
   installExtension,
   launchVscode,
@@ -43,15 +44,22 @@ import type { Frame } from 'playwright';
  * CLAW_LIVE_EFFORT, CLAW_LIVE_WAIT_MS, CLAW_LIVE_OUT, CLAW_LIVE_VSIX (a package other than this
  * checkout's), CLAW_LIVE_SCENARIO=approval-queue (send a second message while the first waits
  * for approval; run with CLAW_LIVE_APPROVAL=ASK and a prompt that writes a file).
+ * CLAW_LIVE_SCENARIO=server-browser | plan-gates | approval-cards runs one of the opt-in tool
+ * scenarios in live-tool-scenarios.ts: it writes its own user settings, prompt and approval mode, saves
+ * every approval card it saw (approval-cards.txt and a screenshot each), screenshots each tool card in
+ * the panel, and records PASS/FAIL checks in scenario-checks.txt. The test fails when a check fails.
  */
 const BACKEND = env.CLAW_LIVE_BACKEND_URL ?? 'https://claw.local';
 const EMAIL = env.CLAW_LIVE_EMAIL ?? 'admin@claw.local';
 const PASSWORD = env.CLAW_LIVE_PASSWORD ?? '';
 const MODELS = (env.CLAW_LIVE_MODELS ?? '').split(',').filter((name) => name.trim() !== '');
+const SCENARIO = env.CLAW_LIVE_SCENARIO ?? '';
+const TOOL = toolScenario(SCENARIO);
 const PROMPT =
   env.CLAW_LIVE_PROMPT ??
+  TOOL?.prompt ??
   'In the folder {dir}, create src/stack.ts with a generic Stack<T> class (push, pop, peek, size) and src/stack.test.ts with at least 6 vitest tests, then run the tests and tell me the final count.';
-const APPROVAL = env.CLAW_LIVE_APPROVAL ?? 'AUTO_EDIT';
+const APPROVAL = env.CLAW_LIVE_APPROVAL ?? TOOL?.approval ?? 'AUTO_EDIT';
 const EFFORT = env.CLAW_LIVE_EFFORT ?? 'HIGH';
 const WAIT_MS = Number(env.CLAW_LIVE_WAIT_MS ?? 480_000);
 const OUT = env.CLAW_LIVE_OUT ?? mkdtempSync(path.join(tmpdir(), 'claw-live-'));
@@ -60,7 +68,6 @@ const NEWLINE = String.fromCharCode(10);
 const manifest = JSON.parse(readFileSync('package.json', 'utf8')) as { version: string };
 const VSIX =
   env.CLAW_LIVE_VSIX ?? path.join('builds', `clawai-coding-agent-${manifest.version}.vsix`);
-const SCENARIO = env.CLAW_LIVE_SCENARIO ?? '';
 
 interface InitCapture {
   readonly callbackUri: string;
@@ -287,6 +294,36 @@ async function configure(chat: Frame): Promise<void> {
   await chat.locator('#effortMode').selectOption(EFFORT, { timeout: 15_000 });
 }
 
+/** The text of every approval card shown so far, in order: the evidence that a card reads well. */
+const cardTexts: string[] = [];
+
+/** Saves what the card says and how it looks before it is approved. */
+async function recordCard(card: Frame): Promise<void> {
+  const text = await card
+    .locator('#approvalPanel')
+    .innerText()
+    .catch(() => '');
+  cardTexts.push(text);
+  const number = String(cardTexts.length);
+  appendFileSync(
+    path.join(OUT, 'approval-cards.txt'),
+    `--- card ${number}${NEWLINE}${text}${NEWLINE}`,
+  );
+  await shot(`approval-card-${number}`);
+}
+
+/** One screenshot per tool card the panel shows, so each can be read the way the user saw it. */
+async function shootToolCards(chat: Frame, slug: string): Promise<void> {
+  const items = chat.locator('.activity-item');
+  const count = Math.min(await items.count().catch(() => 0), 40);
+  for (let index = 0; index < count; index += 1) {
+    await items
+      .nth(index)
+      .screenshot({ path: path.join(OUT, `${slug}-tool-card-${String(index + 1)}.png`) })
+      .catch(() => undefined);
+  }
+}
+
 /** Clicks a pending Approve in whichever chat view shows it, like a person would. */
 async function approveAnywhere(): Promise<boolean> {
   for (const frame of session.window.frames()) {
@@ -294,6 +331,7 @@ async function approveAnywhere(): Promise<boolean> {
     for (const child of frame.childFrames()) {
       const button = child.locator('#approvalApprove');
       if (await button.isVisible({ timeout: 300 }).catch(() => false)) {
+        await recordCard(child);
         await button.click({ timeout: 5_000 }).catch(() => undefined);
         return true;
       }
@@ -377,6 +415,7 @@ test.beforeAll(async () => {
     settings: {
       'clawAI.backendEnvironment': 'CUSTOM',
       'clawAI.backendCustomUrl': `http://127.0.0.1:${String(proxyPort)}`,
+      ...TOOL?.settings,
     },
   });
   await session.window.locator('.activitybar [aria-label*="ClawAI" i]').first().click();
@@ -399,6 +438,7 @@ test('signs in and runs the same task with each model, recording what happened',
   await shot('02-connected');
   const names = MODELS.length === 0 ? ['Automatic routing'] : MODELS;
   const summary: string[] = [];
+  let failedChecks = 0;
   for (const [index, name] of names.entries()) {
     const slug = `m${String(index + 1)}`;
     if (index > 0) {
@@ -429,12 +469,27 @@ test('signs in and runs the same task with each model, recording what happened',
           })
         : await sendAndWait(chat, prompt);
     await shot(`${slug}-after-run`);
+    await shootToolCards(chat, slug);
     appendFileSync(path.join(OUT, `${slug}-panel.txt`), text);
     appendFileSync(path.join(OUT, `${slug}-extension.log`), extensionLogs());
     const files = listing(session.workspace).filter((file) => file.startsWith(`${slug}/`));
     summary.push(`${name}: ${String(files.length)} files: ${files.join(', ')}`);
+    if (TOOL !== undefined) {
+      const checks = scenarioChecks(
+        TOOL,
+        text,
+        cardTexts.join(NEWLINE),
+        path.join(session.workspace, slug),
+      );
+      appendFileSync(
+        path.join(OUT, 'scenario-checks.txt'),
+        `${name}${NEWLINE}${checks.lines.join(NEWLINE)}${NEWLINE}`,
+      );
+      failedChecks += checks.failed ? 1 : 0;
+    }
   }
   appendFileSync(path.join(OUT, 'summary.txt'), summary.join(NEWLINE));
   appendFileSync(path.join(OUT, 'diagnostics.txt'), session.diagnostics());
   expect(existsSync(path.join(OUT, 'summary.txt'))).toBe(true);
+  expect(failedChecks, 'a scenario check failed: see scenario-checks.txt').toBe(0);
 });

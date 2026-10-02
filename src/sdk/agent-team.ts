@@ -7,7 +7,7 @@ import { agentName, nameProblem, parseNames, parseTimeout } from './agent-team-a
 import { createTeamBus } from './agent-team-bus';
 import { cancelQueued } from './agent-team-child';
 import { childView, isOver } from './agent-team-report';
-import { budgetRoom, spawnChild } from './agent-team-spawn';
+import { budgetRoom, callsHeld, spawnChild } from './agent-team-spawn';
 import {
   AGENT_TEAM_TOOL_DESCRIPTION,
   AGENT_TEAM_TOOL_INPUT_SCHEMA,
@@ -27,6 +27,7 @@ import type {
   AgentTeam,
   TeamApprover,
   TeamChild,
+  TeamBinding,
   TeamContext,
   TeamHub,
   TeamMessage,
@@ -274,18 +275,9 @@ function toolkitFor(
   };
 }
 
-/**
- * One agent's team: the tool it is offered and the children it started.
- *
- * The lead founds a hub that everyone in the run shares (bus, counters, slots);
- * a child, built with a `teamLink`, joins it. Undefined when the agent has no
- * reason to have a team: no `agents` grant and no parent.
- */
-export function createTeam(config: AgentConfig, factory: AgentFactory): AgentTeam | undefined {
+function newContext(config: AgentConfig, factory: AgentFactory): TeamContext {
   const link = config.teamLink;
-  const asked = config.permissions?.allow.includes('agents') === true;
-  if (link === undefined && !asked) return undefined;
-  const context: TeamContext = {
+  return {
     config,
     factory,
     hub: link?.hub ?? newHub(config),
@@ -296,6 +288,9 @@ export function createTeam(config: AgentConfig, factory: AgentFactory): AgentTea
     grants: config.permissions?.allow ?? [],
     binding: undefined,
   };
+}
+
+function teamOver(context: TeamContext): AgentTeam {
   let detach: (() => void) | undefined;
   const cancelAll = (): void => {
     for (const child of context.mine.values()) cancelOne(context, child);
@@ -305,6 +300,7 @@ export function createTeam(config: AgentConfig, factory: AgentFactory): AgentTea
       context.grants = grants;
       return toolkitFor(context, approve);
     },
+    callsHeld: () => callsHeld(context),
     attach: (binding) => {
       detach?.();
       context.binding = binding;
@@ -323,6 +319,50 @@ export function createTeam(config: AgentConfig, factory: AgentFactory): AgentTea
         Promise.all([...context.mine.values()].map((child) => child.done)),
         delay(CLOSE_WAIT_MS),
       ]);
+    },
+  };
+}
+
+/**
+ * One agent's team: the tool it is offered and the children it started.
+ *
+ * The lead founds a hub that everyone in the run shares (bus, counters, slots);
+ * a child, built with a `teamLink`, joins it. Undefined when the agent has no
+ * reason to have a team: no `agents` grant and no parent.
+ */
+export function createTeam(config: AgentConfig, factory: AgentFactory): AgentTeam | undefined {
+  const asked = config.permissions?.allow.includes('agents') === true;
+  if (config.teamLink === undefined && !asked) return undefined;
+  return teamOver(newContext(config, factory));
+}
+
+/** A team led by code rather than by a model: it starts children directly, with the same narrowing. */
+export interface TeamLead {
+  /** Starts a child (the arguments of an `agent.team spawn`, plus the starter-only options) or throws why not. */
+  readonly spawn: (args: Readonly<Record<string, unknown>>) => TeamChild;
+  readonly team: AgentTeam;
+}
+
+/**
+ * A team whose lead is the caller. Its `config` is what every child is narrowed from (grants, write
+ * scope, hosts, shell, approver); `binding` is what cancels it and hears its events. The deterministic
+ * orchestrator uses one team per agent attempt so names and the run's child limit never collide.
+ */
+export function createTeamLead(
+  config: AgentConfig,
+  factory: AgentFactory,
+  binding: TeamBinding,
+): TeamLead {
+  const context = newContext(config, factory);
+  const team = teamOver(context);
+  team.attach(binding);
+  return {
+    team,
+    spawn: (args) => {
+      const started = spawnChild(context, args);
+      const child = context.mine.get(String(started.name));
+      if (child === undefined) throw new Error('The child was not started.');
+      return child;
     },
   };
 }

@@ -71,6 +71,7 @@ const PRIVATE_V4: readonly (readonly [number, number, number])[] = [
   [172, 16, 31],
   [192, 168, 168],
   [100, 64, 127],
+  [198, 18, 19],
 ];
 
 function classifyV4(text: string): HttpAddressClass {
@@ -82,12 +83,28 @@ function classifyV4(text: string): HttpAddressClass {
     : 'public';
 }
 
+/** The IPv4 address an IPv6 form carries inside it (compatible, NAT64, 6to4), or undefined. */
+function embeddedV4(groups: readonly number[]): string | undefined {
+  const [g0 = 0, g1 = 0, g2 = 0] = groups;
+  const low = (index: number): number => groups[index] ?? 0;
+  if (groups.slice(0, 6).every((g) => g === 0)) return dotted(low(6), low(7));
+  if (g0 === 0x64 && g1 === 0xff9b && groups.slice(2, 6).every((g) => g === 0)) {
+    return dotted(low(6), low(7));
+  }
+  return g0 === 0x2002 ? dotted(g1, g2) : undefined;
+}
+
 function classifyV6(canonical: string): HttpAddressClass {
-  const first = Number.parseInt(canonical.split(':')[0] ?? '0', 16);
+  const groups = canonical.split(':').map((part) => Number.parseInt(part, 16));
+  const first = groups[0] ?? 0;
   if (canonical === '0:0:0:0:0:0:0:0') return 'blocked';
   if (canonical === '0:0:0:0:0:0:0:1') return 'loopback';
+  const inside = embeddedV4(groups);
+  if (inside !== undefined) return classifyV4(inside);
   if (first >= 0xff00 || (first >= 0xfe80 && first <= 0xfebf)) return 'blocked';
-  if (first >= 0xfc00 && first <= 0xfdff) return 'private';
+  if ((first >= 0xfc00 && first <= 0xfdff) || (first >= 0xfec0 && first <= 0xfeff)) {
+    return 'private';
+  }
   return 'public';
 }
 

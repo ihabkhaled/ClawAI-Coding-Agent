@@ -1,0 +1,45 @@
+{
+  "name": "tiny-lib",
+  "goal": "A tiny CommonJS library with two independent modules, each with node:test tests, plus an index that re-exports both.",
+  "workspace": ".",
+  "maxParallel": 2,
+  "onFailure": "stop",
+  "timeoutSec": 600,
+  "stages": [
+    {
+      "id": "modules",
+      "agents": [
+        {
+          "name": "slug",
+          "task": "Create slug/index.js exporting function slugify(text): lower-case, trim, replace runs of non-alphanumerics with a single '-', no leading/trailing '-'. Create slug/slug.test.js using node:test and node:assert covering at least 4 cases. Run `node --test slug` and make it pass. Report in 2 lines.",
+          "tools": ["read", "write", "command"],
+          "writeScope": ["slug/**"],
+          "budget": { "maxToolCalls": 15, "maxDurationSec": 240 },
+          "doneChecks": [{ "label": "slug-tests", "command": "node --test slug" }]
+        },
+        {
+          "name": "count",
+          "task": "Create count/index.js exporting function wordCount(text): number of whitespace-separated words (0 for empty/blank). Create count/count.test.js using node:test and node:assert covering at least 4 cases. Run `node --test count` and make it pass. Report in 2 lines.",
+          "tools": ["read", "write", "command"],
+          "writeScope": ["count/**"],
+          "budget": { "maxToolCalls": 15, "maxDurationSec": 240 },
+          "doneChecks": [{ "label": "count-tests", "command": "node --test count" }]
+        }
+      ]
+    },
+    {
+      "id": "integration",
+      "dependsOn": ["modules"],
+      "agents": [
+        {
+          "name": "index",
+          "task": "Create index.js at the workspace root that re-exports slugify from ./slug and wordCount from ./count (CommonJS). Create index.test.js with node:test checking both are functions and one real call each. Run `node --test` and make everything pass. Report in 2 lines.",
+          "tools": ["read", "write", "command"],
+          "writeScope": ["index.js", "index.test.js"],
+          "budget": { "maxToolCalls": 12, "maxDurationSec": 180 }
+        }
+      ],
+      "gate": { "doneChecks": [{ "label": "all-tests", "command": "node --test" }] }
+    }
+  ]
+}

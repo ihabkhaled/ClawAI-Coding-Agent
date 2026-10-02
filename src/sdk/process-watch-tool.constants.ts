@@ -63,40 +63,25 @@ export const PROCESS_WATCH_IDLE_WAITS_NOTE = 4;
 
 /** What the model is told; short, because every definition is paid for on every turn. */
 export const PROCESS_WATCH_DESCRIPTION =
-  'Long-lived programs (push hook, dev server, watch tests) watched across calls; no shell, ' +
-  'workspace.command allowlist. start {name, executable, arguments, cwd} returns at once (max 4 alive). ' +
-  'wait {name, untilExit | untilMatch: regex, timeoutMs<=600000} returns on exit, a matching line or timeout. ' +
-  'output {name, sinceCursor}: pass back nextCursor for new output; none = latest, 0 = from the start. ' +
-  'status {name?}, list, stop {name} (kills the tree). All die when the run ends.';
+  'Long-lived programs (push hook, dev server, watch tests) watched across calls; no shell, command allowlist. ' +
+  'start {name, executable, arguments, cwd?} returns at once (max 4 alive). ' +
+  'wait {name, untilExit | untilMatch: regex, timeoutMs<=600000}: returns on exit, a matching line or timeout. ' +
+  'output {name, sinceCursor?, maxChars?}: pass back nextCursor for new output; none = latest, 0 = from the start. ' +
+  'status {name?}, list, stop {name} (kills the tree). All die at run end.';
 
 export const PROCESS_WATCH_INPUT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    name: { type: 'string', maxLength: 40 },
-    executable: { type: 'string', maxLength: 200 },
-    arguments: {
-      type: 'array',
-      items: { type: 'string', maxLength: COMMAND_MAX_ARGUMENT_CHARS },
-      maxItems: COMMAND_MAX_ARGUMENTS,
-    },
-    cwd: { type: 'string', maxLength: 4096 },
-    sinceCursor: { type: 'integer', minimum: 0 },
-    maxChars: {
-      type: 'integer',
-      minimum: PROCESS_WATCH_MIN_OUTPUT_CHARS,
-      maximum: PROCESS_WATCH_MAX_OUTPUT_CHARS,
-    },
+    name: { type: 'string' },
+    executable: { type: 'string' },
+    arguments: { type: 'array', items: { type: 'string' } },
+    cwd: { type: 'string' },
+    sinceCursor: { type: 'integer' },
+    maxChars: { type: 'integer' },
     untilExit: { type: 'boolean' },
-    untilMatch: {
-      type: 'string',
-      maxLength: PROCESS_WATCH_MAX_PATTERN_CHARS,
-    },
-    timeoutMs: {
-      type: 'integer',
-      minimum: 1,
-      maximum: PROCESS_WATCH_MAX_WAIT_MS,
-    },
+    untilMatch: { type: 'string' },
+    timeoutMs: { type: 'integer' },
   },
 } as const;
 
@@ -105,3 +90,6 @@ export const PROCESS_WATCH_MAX_ARGUMENT_CHARS = COMMAND_MAX_ARGUMENT_CHARS;
 
 /** A nested quantifier such as `(a+)+` or `(.*)*`, the shape that backtracks without end. */
 export const PROCESS_WATCH_NESTED_QUANTIFIER = /\((?:[^()\\]|\\.)*[+*](?:[^()\\]|\\.)*\)[+*{]/u;
+
+/** The most one line may take to test against `untilMatch`; past it the pattern is dropped. */
+export const PROCESS_WATCH_MATCH_BUDGET_MS = 100;

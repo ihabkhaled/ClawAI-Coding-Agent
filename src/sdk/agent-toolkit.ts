@@ -6,6 +6,7 @@ import { permissionsForMode } from './permission-modes';
 import { processWatchToolkit } from './process-watch-toolkit';
 import { PLAN_TOOL_WITHHELD_PATTERN } from './task-plan-tool.constants';
 import { combineToolkits, restrictToolkit } from './toolkit-compose';
+import { resolveToolsProfile } from './tools-profile';
 import { httpVision } from './vision-port-http';
 import { visionToolkit } from './vision-tool';
 import { httpWebResearch } from './web-research-http';
@@ -50,12 +51,18 @@ export function agentToolkit(
     ...optionalParts(config, permissions, token, team),
   ];
   const combined = parts.length === 1 ? workspace : combineToolkits(parts);
-  return restrictToolkit(combined, {
+  const profile =
+    config.toolsProfile === undefined ? undefined : resolveToolsProfile(config.toolsProfile);
+  const filtered = restrictToolkit(combined, {
     allow: config.allowedTools,
-    deny: offersPlan(config)
+    deny: offersPlan(config, profile?.taskPlan === true)
       ? config.disallowedTools
       : [...(config.disallowedTools ?? []), PLAN_TOOL_WITHHELD_PATTERN],
   });
+  // A profile narrows what the model is offered and may call; it grants nothing.
+  return profile?.allow === undefined
+    ? filtered
+    : restrictToolkit(filtered, { allow: profile.allow });
 }
 
 /** The toolkits that exist only when their option, grant or research mode asks for them. */
@@ -108,8 +115,11 @@ function offersProcessWatch(permissions: AgentPermissions): boolean {
 }
 
 /** `task.plan` is offered when the run asked for a plan in any of the three ways. */
-function offersPlan(config: AgentConfig): boolean {
+function offersPlan(config: AgentConfig, profileAsksForPlan: boolean): boolean {
   return (
-    config.taskPlan === true || config.requirePlan === true || (config.planSteps ?? []).length > 0
+    config.taskPlan === true ||
+    config.requirePlan === true ||
+    profileAsksForPlan ||
+    (config.planSteps ?? []).length > 0
   );
 }

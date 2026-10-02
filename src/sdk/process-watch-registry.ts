@@ -46,6 +46,7 @@ export class ProcessRegistry {
   private directory: string | undefined;
   private withdraw: (() => void) | undefined;
   private disposed = false;
+  private started = 0;
 
   public constructor(private readonly options: ProcessWatchOptions) {
     this.maxConcurrent = Math.min(
@@ -80,9 +81,10 @@ export class ProcessRegistry {
     );
     if (existing !== undefined) this.discard(request.name, existing);
     this.evictFinished();
+    this.started += 1;
     const file = new WatchLogFile(
       this.logDirectory(),
-      request.name,
+      logFileName(this.started, request.name),
       this.options.fileBytes ?? PROCESS_WATCH_FILE_BYTES,
     );
     const log = new WatchLog(this.options.memoryChars ?? PROCESS_WATCH_MEMORY_CHARS, file);
@@ -228,7 +230,8 @@ export class ProcessRegistry {
     return {
       name: watched.name,
       running: !watched.finished,
-      exitCode: watched.exitCode,
+      // A process the run stopped reports the stop, not the code the kill left behind (1 on Windows).
+      exitCode: watched.stopRequested ? null : watched.exitCode,
       signal: watched.signal,
       ...(watched.stopRequested ? { stopped: true } : {}),
       ...(watched.error === undefined ? {} : { error: watched.error }),
@@ -314,4 +317,13 @@ function latest(
   limit: number,
 ): ReturnType<WatchLog['read']> {
   return log.read(since ?? Math.max(log.base, log.end - limit), limit);
+}
+
+/**
+ * The log file's base name: a sequence number first, so a model-chosen name such
+ * as `CON` or `nul` (reserved device names on Windows, whatever extension follows)
+ * can never make the log a device, and two names can never share a file.
+ */
+function logFileName(sequence: number, name: string): string {
+  return `${String(sequence)}-${name}`;
 }

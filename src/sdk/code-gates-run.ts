@@ -3,6 +3,7 @@ import path from 'node:path';
 import { redactText } from '../core/redaction';
 import { isAllowedExecutable } from '../headless/headless-command-policy';
 
+import { plainRelativeFiles } from './code-gates-files';
 import { missingToolReason, plainText, summarizeOutput } from './code-gates-parse';
 import {
   GATE_FLAKY_RERUN_FILES,
@@ -150,15 +151,24 @@ function resultOf(
     durationMs: result.durationMs,
     summary,
     tail: passed ? '' : tailOf(output, summary),
-    ...(note === undefined ? {} : { note }),
+    ...(passed ? noteOf(note, summary) : note === undefined ? {} : { note }),
   };
+}
+
+/**
+ * A pass whose output still lists failures: the exit code decides `ok`, and the
+ * output (which the project's own code wrote) is never trusted to overrule it, but the
+ * mismatch is said aloud so nobody reads a green `ok` as a clean run.
+ */
+function noteOf(note: string | undefined, summary: GateSummary): { note?: string } {
+  if (summary.errors === 0) return note === undefined ? {} : { note };
+  const mismatch = `exit code 0, but the output lists ${String(summary.errors)} failure(s): ok follows the exit code, read the findings`;
+  return { note: note === undefined ? mismatch : `${note}; ${mismatch}` };
 }
 
 /** The test files that failed, project-relative and unique, for a one-time re-run. */
 function failingFiles(result: GateResult): readonly string[] {
-  const files = result.summary.failedTests
-    .map((test) => test.file)
-    .filter((file) => file.length > 0);
+  const files = plainRelativeFiles(result.summary.failedTests.map((test) => test.file));
   return [...new Set(files)].slice(0, GATE_FLAKY_RERUN_FILES);
 }
 

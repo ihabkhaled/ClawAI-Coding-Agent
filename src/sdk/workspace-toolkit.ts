@@ -23,6 +23,7 @@ import type { AgentToolCall, AgentToolkit } from './agent-sdk.types';
 import type { CommandTool } from './command-tool.types';
 import type { ShellTool } from './shell-tool.types';
 import type {
+  AgentApprovalRequest,
   AgentPermissions,
   AgentToolCategory,
   WorkspaceMemory,
@@ -88,7 +89,7 @@ export function workspaceToolkit(
       if (category === 'shell')
         return authorizeShell(call, extras.shell, limits.workspace, permissions);
       if (permissions.approve === undefined) return true;
-      return isApproved(await permissions.approve({ ...call, category }));
+      return isApproved(await permissions.approve(approvedSnapshot(call, category)));
     },
   };
 }
@@ -108,7 +109,15 @@ async function authorizeShell(
   if (shell === undefined || call.toolName !== SHELL_TOOL_NAME) return false;
   if (shell.screen(call.arguments, workspace) !== undefined) return true;
   if (permissions.approve === undefined) return false;
-  return isApproved(await permissions.approve({ ...call, category: 'shell' }));
+  return isApproved(await permissions.approve(approvedSnapshot(call, 'shell')));
+}
+
+/**
+ * What the approver is shown: a deep copy, so nothing the callback does to the
+ * request it receives can change the arguments that are executed afterwards.
+ */
+function approvedSnapshot(call: AgentToolCall, category: AgentToolCategory): AgentApprovalRequest {
+  return { ...call, arguments: structuredClone(call.arguments), category };
 }
 
 /** The command tool; with a routine's secrets it spawns with them and scrubs its results. */

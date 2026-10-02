@@ -95,10 +95,10 @@ export function createKnowledgeTool(
       if (operation === 'index') body = indexKnowledge(source.listing(signal), args.prefix);
       else if (operation === 'read') body = readKnowledge(workspace, args);
       else if (operation === 'search')
-        body = redactText(searchKnowledge(source.corpus(signal), args));
+        body = redactText(withoutHidden(searchKnowledge(source.corpus(signal), args)));
       else {
         const description = text(args.description, 'description', KNOWLEDGE_TASK_MAX_DESCRIPTION);
-        body = redactText(taskKnowledge(source.corpus(signal), description));
+        body = redactText(withoutHidden(taskKnowledge(source.corpus(signal), description)));
       }
       return `${KNOWLEDGE_UNTRUSTED_NOTICE}\n${withoutHidden(body)}`;
     },

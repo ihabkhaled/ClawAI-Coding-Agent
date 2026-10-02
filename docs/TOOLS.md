@@ -23,19 +23,19 @@ The model pays for every offered definition on every turn, so tools stay off unt
 
 | Tool                | Operations | Characters | About tokens |
 | ------------------- | ---------- | ---------- | ------------ |
-| `workspace.file`    | 9          | 2627       | 657          |
-| `workspace.command` | 4          | 1899       | 475          |
-| `workspace.git`     | 14         | 1549       | 387          |
-| `workspace.notes`   | 5          | 1196       | 299          |
-| `task.plan`         | 4          | 1035       | 259          |
-| `code.gates`        | 3          | 1337       | 334          |
-| `workspace.shell`   | 1          | 1277       | 319          |
-| `http.request`      | 1          | 1650       | 413          |
-| `process.watch`     | 6          | 1210       | 303          |
-| `knowledge.context` | 4          | 1472       | 368          |
-| `browser.page`      | 11         | 1933       | 483          |
-| `vision.describe`   | 1          | 1076       | 269          |
-| `agent.team`        | 7          | 3119       | 780          |
+| `workspace.file`    | 9          | 1916       | 479          |
+| `workspace.command` | 4          | 1198       | 300          |
+| `workspace.git`     | 14         | 1292       | 323          |
+| `workspace.notes`   | 5          | 894        | 224          |
+| `task.plan`         | 4          | 983        | 246          |
+| `code.gates`        | 3          | 1091       | 273          |
+| `workspace.shell`   | 1          | 1068       | 267          |
+| `http.request`      | 1          | 1366       | 342          |
+| `process.watch`     | 6          | 1041       | 260          |
+| `knowledge.context` | 4          | 941        | 235          |
+| `browser.page`      | 11         | 1321       | 330          |
+| `vision.describe`   | 1          | 748        | 187          |
+| `agent.team`        | 7          | 2014       | 504          |
 | `workspace.web`     | 4          | 1484       | 371          |
 | `runtime.mcp`       | 3          | 1053       | 263          |
 
@@ -60,7 +60,7 @@ The model pays for every offered definition on every turn, so tools stay off unt
 Read, search, create, change, delete and move files inside the workspace folder.
 
 - **Turn it on:** On by default (`read`); changing files needs `--allow-tools read,write`.
-- **Cost:** the definition is 2627 characters (about 657 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 1916 characters (about 479 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -92,24 +92,24 @@ Read, search, create, change, delete and move files inside the workspace folder.
 
 | Name            | Type    | Bounds           |
 | --------------- | ------- | ---------------- |
-| `path`          | string  | max 4096 chars   |
-| `to`            | string  | max 4096 chars   |
+| `path`          | string  |                  |
+| `to`            | string  |                  |
 | `content`       | string  | max 100000 chars |
-| `startLine`     | integer | 1..100000000     |
-| `endLine`       | integer | 1..100000000     |
-| `offset`        | integer | 0..100000000     |
-| `limit`         | integer | 1..100000000     |
-| `maxChars`      | integer | 500..48000       |
+| `startLine`     | integer |                  |
+| `endLine`       | integer |                  |
+| `offset`        | integer |                  |
+| `limit`         | integer |                  |
+| `maxChars`      | integer |                  |
 | `recursive`     | boolean |                  |
-| `depth`         | integer | 1..4             |
-| `pattern`       | string  | max 300 chars    |
-| `query`         | string  | max 300 chars    |
-| `regex`         | string  | max 300 chars    |
-| `include`       | string  | max 300 chars    |
+| `depth`         | integer |                  |
+| `pattern`       | string  |                  |
+| `query`         | string  |                  |
+| `regex`         | string  |                  |
+| `include`       | string  |                  |
 | `caseSensitive` | boolean |                  |
 | `oldText`       | string  | max 100000 chars |
 | `newText`       | string  | max 100000 chars |
-| `expectedCount` | integer | 1..1000000       |
+| `expectedCount` | integer |                  |
 | `replaceAll`    | boolean |                  |
 
 **Limits**
@@ -140,7 +140,7 @@ createAgent({ auth: { token }, workspaceRoot: dir, permissions: { allow: ['read'
 Run one program (no shell) and read its exit code and output; long jobs can run in the background.
 
 - **Turn it on:** `--allow-tools command` (add programs with `--allow-command`; default `node`, `npm`, `npx`).
-- **Cost:** the definition is 1899 characters (about 475 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 1198 characters (about 300 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -160,16 +160,16 @@ Run one program (no shell) and read its exit code and output; long jobs can run 
 
 **Arguments the model may send** (from the tool definition)
 
-| Name             | Type    | Bounds         |
-| ---------------- | ------- | -------------- |
-| `executable`     | string  | max 200 chars  |
-| `arguments`      | array   | max 50 items   |
-| `cwd`            | string  | max 4096 chars |
-| `timeoutMs`      | integer | 1..1800000     |
-| `maxOutputChars` | integer | 200..48000     |
-| `background`     | boolean |                |
-| `processId`      | string  | max 64 chars   |
-| `sinceOffset`    | integer | 0..            |
+| Name             | Type    | Bounds |
+| ---------------- | ------- | ------ |
+| `executable`     | string  |        |
+| `arguments`      | array   |        |
+| `cwd`            | string  |        |
+| `timeoutMs`      | integer |        |
+| `maxOutputChars` | integer |        |
+| `background`     | boolean |        |
+| `processId`      | string  |        |
+| `sinceOffset`    | integer |        |
 
 **Limits**
 
@@ -203,7 +203,7 @@ createAgent({
 Look at the repository, and (with a second grant) stage, commit, fetch, pull, push and switch branches.
 
 - **Turn it on:** Reads are on by default (`git`); everything that changes a repository needs `git-write`.
-- **Cost:** the definition is 1549 characters (about 387 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 1292 characters (about 323 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -243,19 +243,19 @@ Look at the repository, and (with a second grant) stage, commit, fetch, pull, pu
 
 **Arguments the model may send** (from the tool definition)
 
-| Name             | Type    | Bounds          |
-| ---------------- | ------- | --------------- |
-| `path`           | string  | max 4096 chars  |
-| `staged`         | boolean |                 |
-| `maxCount`       | integer | 1..50           |
-| `ref`            | string  | max 200 chars   |
-| `paths`          | array   | max 100 items   |
-| `message`        | string  | max 100 chars   |
-| `body`           | string  | max 20000 chars |
-| `trailers`       | array   | max 10 items    |
-| `branch`         | string  | max 200 chars   |
-| `create`         | boolean |                 |
-| `timeoutSeconds` | integer | 1..3600         |
+| Name             | Type    | Bounds |
+| ---------------- | ------- | ------ |
+| `path`           | string  |        |
+| `staged`         | boolean |        |
+| `maxCount`       | integer |        |
+| `ref`            | string  |        |
+| `paths`          | array   |        |
+| `message`        | string  |        |
+| `body`           | string  |        |
+| `trailers`       | array   |        |
+| `branch`         | string  |        |
+| `create`         | boolean |        |
+| `timeoutSeconds` | integer |        |
 
 **Limits**
 
@@ -289,7 +289,7 @@ createAgent({
 The agent’s own working memory, so a long run does not re-read what it already learned.
 
 - **Turn it on:** On by default (`read`).
-- **Cost:** the definition is 1196 characters (about 299 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 894 characters (about 224 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -311,12 +311,12 @@ The agent’s own working memory, so a long run does not re-read what it already
 
 **Arguments the model may send** (from the tool definition)
 
-| Name    | Type    | Bounds         |
-| ------- | ------- | -------------- |
-| `text`  | string  | max 2000 chars |
-| `tag`   | string  | max 32 chars   |
-| `query` | string  | max 200 chars  |
-| `id`    | integer | 1..            |
+| Name    | Type    | Bounds |
+| ------- | ------- | ------ |
+| `text`  | string  |        |
+| `tag`   | string  |        |
+| `query` | string  |        |
+| `id`    | integer |        |
 
 **Limits**
 
@@ -340,7 +340,7 @@ createAgent({ auth: { token }, workspaceRoot: dir }); // notes come with the def
 Run a real shell script (pipes, `&&`, redirects, globs) when one program is not enough.
 
 - **Turn it on:** OFF by default. Needs BOTH `--allow-tools shell` and `--allow-shell`, plus a `--permission-mode`.
-- **Cost:** the definition is 1277 characters (about 319 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 1068 characters (about 267 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -354,12 +354,12 @@ Run a real shell script (pipes, `&&`, redirects, globs) when one program is not 
 
 **Arguments the model may send** (from the tool definition)
 
-| Name        | Type                             | Bounds          |
-| ----------- | -------------------------------- | --------------- |
-| `script`    | string                           | max 20000 chars |
-| `shell`     | one of bash, sh, powershell, cmd |                 |
-| `cwd`       | string                           | max 4096 chars  |
-| `timeoutMs` | integer                          | 1..1800000      |
+| Name        | Type                             | Bounds |
+| ----------- | -------------------------------- | ------ |
+| `script`    | string                           |        |
+| `shell`     | one of bash, sh, powershell, cmd |        |
+| `cwd`       | string                           |        |
+| `timeoutMs` | integer                          |        |
 
 **Limits**
 
@@ -501,7 +501,7 @@ createAgent({
 Start something that outlives one call (a dev server, a slow push hook, watch-mode tests), wait for a line, read only what is new, stop it.
 
 - **Turn it on:** `--allow-tools command` (same allowlist as `workspace.command`).
-- **Cost:** the definition is 1210 characters (about 303 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 1041 characters (about 260 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -517,25 +517,25 @@ Start something that outlives one call (a dev server, a slow push hook, watch-mo
 | Operation | Grant     | plan    | ask  | accept-edits | autonomous-scoped | strict |
 | --------- | --------- | ------- | ---- | ------------ | ----------------- | ------ |
 | start     | `command` | removed | asks | asks         | runs              | asks   |
-| status    | `command` | removed | runs | runs         | runs              | runs   |
-| output    | `command` | removed | runs | runs         | runs              | runs   |
-| wait      | `command` | removed | runs | runs         | runs              | runs   |
-| stop      | `command` | removed | runs | runs         | runs              | runs   |
-| list      | `command` | removed | runs | runs         | runs              | runs   |
+| status    | `command` | removed | runs | runs         | runs              | asks   |
+| output    | `command` | removed | runs | runs         | runs              | asks   |
+| wait      | `command` | removed | runs | runs         | runs              | asks   |
+| stop      | `command` | removed | runs | runs         | runs              | asks   |
+| list      | `command` | removed | runs | runs         | runs              | asks   |
 
 **Arguments the model may send** (from the tool definition)
 
-| Name          | Type    | Bounds         |
-| ------------- | ------- | -------------- |
-| `name`        | string  | max 40 chars   |
-| `executable`  | string  | max 200 chars  |
-| `arguments`   | array   | max 50 items   |
-| `cwd`         | string  | max 4096 chars |
-| `sinceCursor` | integer | 0..            |
-| `maxChars`    | integer | 200..32000     |
-| `untilExit`   | boolean |                |
-| `untilMatch`  | string  | max 200 chars  |
-| `timeoutMs`   | integer | 1..600000      |
+| Name          | Type    | Bounds |
+| ------------- | ------- | ------ |
+| `name`        | string  |        |
+| `executable`  | string  |        |
+| `arguments`   | array   |        |
+| `cwd`         | string  |        |
+| `sinceCursor` | integer |        |
+| `maxChars`    | integer |        |
+| `untilExit`   | boolean |        |
+| `untilMatch`  | string  |        |
+| `timeoutMs`   | integer |        |
 
 **Limits**
 
@@ -566,7 +566,7 @@ createAgent({ auth: { token }, workspaceRoot: dir, permissions: { allow: ['read'
 Run the project’s own lint, typecheck, test, build and format checks and get a short, structured answer instead of a log.
 
 - **Turn it on:** `--allow-tools command`; `--done-check-gates lint,typecheck,test` makes the same gates a completion check.
-- **Cost:** the definition is 1337 characters (about 334 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 1091 characters (about 273 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -578,18 +578,18 @@ Run the project’s own lint, typecheck, test, build and format checks and get a
 
 | Operation | Grant     | plan    | ask  | accept-edits | autonomous-scoped | strict |
 | --------- | --------- | ------- | ---- | ------------ | ----------------- | ------ |
-| detect    | `command` | removed | runs | runs         | runs              | runs   |
+| detect    | `command` | removed | runs | runs         | runs              | asks   |
 | run       | `command` | removed | asks | asks         | runs              | asks   |
-| report    | `command` | removed | runs | runs         | runs              | runs   |
+| report    | `command` | removed | runs | runs         | runs              | asks   |
 
 **Arguments the model may send** (from the tool definition)
 
-| Name        | Type                                        | Bounds         |
-| ----------- | ------------------------------------------- | -------------- |
-| `gate`      | one of lint, typecheck, test, build, format |                |
-| `scope`     | string                                      | max 4096 chars |
-| `files`     | array                                       | max 100 items  |
-| `timeoutMs` | integer                                     | 1000..1800000  |
+| Name        | Type                                        | Bounds |
+| ----------- | ------------------------------------------- | ------ |
+| `gate`      | one of lint, typecheck, test, build, format |        |
+| `scope`     | string                                      |        |
+| `files`     | array                                       |        |
+| `timeoutMs` | integer                                     |        |
 
 **Limits**
 
@@ -625,7 +625,7 @@ createAgent({
 Keep a step plan for a big job; a step with a check cannot be marked done until the check passes.
 
 - **Turn it on:** `--task-plan`, `--plan-file <json>` or `--require-plan` (SDK `taskPlan`, `planSteps`, `requirePlan`). Never offered otherwise.
-- **Cost:** the definition is 1035 characters (about 259 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 983 characters (about 246 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -686,7 +686,7 @@ createAgent({
 Read the repository’s own rules, skills and docs the way an engineer would, before coding.
 
 - **Turn it on:** `--load-knowledge` (SDK `loadKnowledge: true`) with the `read` grant.
-- **Cost:** the definition is 1472 characters (about 368 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 941 characters (about 235 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -706,15 +706,15 @@ Read the repository’s own rules, skills and docs the way an engineer would, be
 
 **Arguments the model may send** (from the tool definition)
 
-| Name          | Type    | Bounds         |
-| ------------- | ------- | -------------- |
-| `description` | string  | max 1000 chars |
-| `query`       | string  | max 200 chars  |
-| `limit`       | integer | 1..15          |
-| `path`        | string  | max 300 chars  |
-| `startLine`   | integer | 1..            |
-| `endLine`     | integer | 1..            |
-| `prefix`      | string  | max 200 chars  |
+| Name          | Type    | Bounds |
+| ------------- | ------- | ------ |
+| `description` | string  |        |
+| `query`       | string  |        |
+| `limit`       | integer |        |
+| `path`        | string  |        |
+| `startLine`   | integer |        |
+| `endLine`     | integer |        |
+| `prefix`      | string  |        |
 
 **Limits**
 
@@ -739,7 +739,7 @@ createAgent({ auth: { token }, workspaceRoot: dir, loadKnowledge: true });
 Send one HTTP request to test an API: status, headers and body, with secrets hidden.
 
 - **Turn it on:** `--http-allow-host <host>` (repeatable). GET and HEAD are `http`, POST, PUT, PATCH and DELETE are `http-write`. With no host the tool does not exist.
-- **Cost:** the definition is 1650 characters (about 413 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 1366 characters (about 342 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -750,22 +750,22 @@ Send one HTTP request to test an API: status, headers and body, with secrets hid
 | Operation                          | Grant        | plan    | ask  | accept-edits | autonomous-scoped | strict |
 | ---------------------------------- | ------------ | ------- | ---- | ------------ | ----------------- | ------ |
 | request (GET, HEAD)                | `http`       | runs    | runs | runs         | runs              | runs   |
-| request (POST, PUT, PATCH, DELETE) | `http-write` | removed | asks | asks         | asks              | asks   |
+| request (POST, PUT, PATCH, DELETE) | `http-write` | removed | asks | asks         | runs              | asks   |
 
 **Arguments the model may send** (from the tool definition)
 
-| Name              | Type                                       | Bounds         |
-| ----------------- | ------------------------------------------ | -------------- |
-| `method`          | one of GET, HEAD, POST, PUT, PATCH, DELETE |                |
-| `url`             | string                                     | max 2048 chars |
-| `headers`         | object                                     |                |
-| `json`            | any                                        |                |
-| `body`            | string                                     |                |
-| `timeoutMs`       | integer                                    | 100..60000     |
-| `followRedirects` | boolean                                    |                |
-| `save`            | object                                     |                |
-| `expectStatus`    | any                                        |                |
-| `maxBodyChars`    | integer                                    | 200..24000     |
+| Name              | Type                                       | Bounds |
+| ----------------- | ------------------------------------------ | ------ |
+| `method`          | one of GET, HEAD, POST, PUT, PATCH, DELETE |        |
+| `url`             | string                                     |        |
+| `headers`         | object                                     |        |
+| `json`            | any                                        |        |
+| `body`            | string                                     |        |
+| `timeoutMs`       | integer                                    |        |
+| `followRedirects` | boolean                                    |        |
+| `save`            | object                                     |        |
+| `expectStatus`    | any                                        |        |
+| `maxBodyChars`    | integer                                    |        |
 
 **Limits**
 
@@ -802,7 +802,7 @@ createAgent({
 Drive one real headless Chromium page to test a web UI: open, read, click, type, resize, screenshot, read errors.
 
 - **Turn it on:** `--allow-tools browser`, or `--browser-allow-host <host>` (which grants `browser` too). Needs `playwright-core` and a Chromium.
-- **Cost:** the definition is 1933 characters (about 483 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 1321 characters (about 330 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -823,33 +823,33 @@ Drive one real headless Chromium page to test a web UI: open, read, click, type,
 | Operation  | Grant     | plan    | ask  | accept-edits | autonomous-scoped | strict |
 | ---------- | --------- | ------- | ---- | ------------ | ----------------- | ------ |
 | open       | `browser` | removed | asks | asks         | runs              | asks   |
-| snapshot   | `browser` | removed | runs | runs         | runs              | runs   |
-| click      | `browser` | removed | asks | asks         | runs              | asks   |
-| type       | `browser` | removed | asks | asks         | runs              | asks   |
-| press      | `browser` | removed | asks | asks         | runs              | asks   |
-| wait       | `browser` | removed | runs | runs         | runs              | runs   |
-| screenshot | `browser` | removed | runs | runs         | runs              | runs   |
-| resize     | `browser` | removed | runs | runs         | runs              | runs   |
-| console    | `browser` | removed | runs | runs         | runs              | runs   |
-| network    | `browser` | removed | runs | runs         | runs              | runs   |
-| close      | `browser` | removed | runs | runs         | runs              | runs   |
+| snapshot   | `browser` | removed | runs | runs         | runs              | asks   |
+| click      | `browser` | removed | asks | asks         | asks              | asks   |
+| type       | `browser` | removed | asks | asks         | asks              | asks   |
+| press      | `browser` | removed | asks | asks         | asks              | asks   |
+| wait       | `browser` | removed | runs | runs         | runs              | asks   |
+| screenshot | `browser` | removed | runs | runs         | runs              | asks   |
+| resize     | `browser` | removed | runs | runs         | runs              | asks   |
+| console    | `browser` | removed | runs | runs         | runs              | asks   |
+| network    | `browser` | removed | runs | runs         | runs              | asks   |
+| close      | `browser` | removed | runs | runs         | runs              | asks   |
 
 **Arguments the model may send** (from the tool definition)
 
-| Name       | Type    | Bounds         |
-| ---------- | ------- | -------------- |
-| `url`      | string  | max 2048 chars |
-| `ref`      | string  | max 20 chars   |
-| `selector` | string  | max 500 chars  |
-| `text`     | string  | max 2000 chars |
-| `submit`   | boolean |                |
-| `key`      | string  | max 40 chars   |
-| `ms`       | integer | 1..30000       |
-| `fullPage` | boolean |                |
-| `maxChars` | integer | 500..20000     |
-| `width`    | integer | 200..4000      |
-| `height`   | integer | 200..4000      |
-| `clear`    | boolean |                |
+| Name       | Type    | Bounds |
+| ---------- | ------- | ------ |
+| `url`      | string  |        |
+| `ref`      | string  |        |
+| `selector` | string  |        |
+| `text`     | string  |        |
+| `submit`   | boolean |        |
+| `key`      | string  |        |
+| `ms`       | integer |        |
+| `fullPage` | boolean |        |
+| `maxChars` | integer |        |
+| `width`    | integer |        |
+| `height`   | integer |        |
+| `clear`    | boolean |        |
 
 **Limits**
 
@@ -885,7 +885,7 @@ createAgent({
 Let any model look at an image file (such as a screenshot) through a vision model.
 
 - **Turn it on:** `--vision`, `--vision-model <provider/model>` or `--image <path>` (SDK `vision: {}`), with the `read` grant.
-- **Cost:** the definition is 1076 characters (about 269 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 748 characters (about 187 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -899,10 +899,10 @@ Let any model look at an image file (such as a screenshot) through a vision mode
 
 **Arguments the model may send** (from the tool definition)
 
-| Name       | Type   | Bounds         |
-| ---------- | ------ | -------------- |
-| `path`     | string |                |
-| `question` | string | max 2000 chars |
+| Name       | Type   | Bounds |
+| ---------- | ------ | ------ |
+| `path`     | string |        |
+| `question` | string |        |
 
 **Limits**
 
@@ -931,7 +931,7 @@ createAgent({ auth: { token }, workspaceRoot: dir, vision: { model: 'provider/mo
 Run other agents in parallel on separate parts of one job, each with less power than the lead.
 
 - **Turn it on:** `--allow-tools agents` (`--max-agents N`, 1 to 8, default 4). Never a default.
-- **Cost:** the definition is 3119 characters (about 780 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 2014 characters (about 504 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -947,7 +947,7 @@ Run other agents in parallel on separate parts of one job, each with less power 
 
 | Operation | Grant    | plan    | ask  | accept-edits | autonomous-scoped | strict |
 | --------- | -------- | ------- | ---- | ------------ | ----------------- | ------ |
-| spawn     | `agents` | removed | asks | runs         | runs              | asks   |
+| spawn     | `agents` | removed | asks | asks         | runs              | asks   |
 | message   | `agents` | removed | runs | runs         | runs              | runs   |
 | inbox     | `agents` | removed | runs | runs         | runs              | runs   |
 | wait      | `agents` | removed | runs | runs         | runs              | runs   |
@@ -957,20 +957,20 @@ Run other agents in parallel on separate parts of one job, each with less power 
 
 **Arguments the model may send** (from the tool definition)
 
-| Name              | Type                  | Bounds         |
-| ----------------- | --------------------- | -------------- |
-| `name`            | string                | max 24 chars   |
-| `task`            | string                | max 8000 chars |
-| `model`           | string                | max 80 chars   |
-| `tools`           | array                 | max 6 items    |
-| `writeScope`      | array                 | max 16 items   |
-| `budget`          | object                |                |
-| `workspaceSubdir` | string                | max 200 chars  |
-| `isolation`       | one of none, worktree |                |
-| `to`              | string                | max 24 chars   |
-| `text`            | string                | max 2000 chars |
-| `names`           | array                 | max 8 items    |
-| `timeoutMs`       | integer               | 1000..240000   |
+| Name              | Type                  | Bounds |
+| ----------------- | --------------------- | ------ |
+| `name`            | string                |        |
+| `task`            | string                |        |
+| `model`           | string                |        |
+| `tools`           | array                 |        |
+| `writeScope`      | array                 |        |
+| `budget`          | object                |        |
+| `workspaceSubdir` | string                |        |
+| `isolation`       | one of none, worktree |        |
+| `to`              | string                |        |
+| `text`            | string                |        |
+| `names`           | array                 |        |
+| `timeoutMs`       | integer               |        |
 
 **Limits**
 

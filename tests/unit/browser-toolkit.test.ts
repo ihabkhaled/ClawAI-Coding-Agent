@@ -121,9 +121,13 @@ describe('browser tool under permission modes', () => {
     },
   );
 
-  it('autonomous-scoped lets the run work inside the hosts the operator allowed', async () => {
-    for (const operation of ['open', 'click', 'type', 'press', 'snapshot']) {
+  it('autonomous-scoped loads and looks at pages inside the allowed hosts, but asks before acting on one', async () => {
+    for (const operation of ['open', 'snapshot']) {
       expect(await decide('autonomous-scoped', operation)).toEqual({ allowed: true, asked: false });
+    }
+    // A click, a keystroke or a typed value can submit a form to a remote site: a network write.
+    for (const operation of ['click', 'type', 'press']) {
+      expect(await decide('autonomous-scoped', operation)).toEqual({ allowed: true, asked: true });
     }
   });
 

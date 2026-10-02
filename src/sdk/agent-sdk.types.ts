@@ -72,6 +72,19 @@ export interface RuntimeTransportPort {
     run: { runId: string; generation: string; threadId: string },
     signal?: AbortSignal,
   ) => AsyncIterable<HeadlessStreamEvent>;
+  /**
+   * Optional: supplies full definitions for tools the run declared deferred at start
+   * (`POST chat-messages/runtime/runs/:runId/tools`). Without it `deferTools` is ignored.
+   */
+  readonly loadTools?: (
+    token: string,
+    run: { runId: string; generation: string; threadId: string },
+    definitions: readonly unknown[],
+    signal?: AbortSignal,
+  ) => Promise<{
+    catalogVersion: number;
+    loaded: readonly { name: string; version: string }[];
+  }>;
 }
 
 export interface AgentRunOptions {
@@ -118,6 +131,11 @@ export interface AgentRunOptions {
   readonly deadlineMs?: number | undefined;
   /** Substituted in tests, and by a caller speaking to a different backend. */
   readonly transport?: RuntimeTransportPort | undefined;
+  /**
+   * Send rarely used tools as short stubs and load their full definition only when the
+   * model asks (`runtime.tool_search`). `true` defers the default set; a list names the tools.
+   */
+  readonly deferTools?: boolean | readonly string[] | undefined;
   readonly now?: (() => number) | undefined;
 }
 

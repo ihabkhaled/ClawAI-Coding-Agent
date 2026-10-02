@@ -10,6 +10,7 @@ import { writeScopeProblem } from '../sdk/write-scope';
 
 import { checkedControls } from './headless-args-controls';
 import { planFlags } from './headless-args-plan';
+import { toolsFlags } from './headless-args-tools';
 import { visionFlags } from './headless-args-vision';
 import { parseDoneCheckFlags } from './headless-done-checks';
 
@@ -49,6 +50,8 @@ type Extras = Partial<
     | 'visionModel'
     | 'vision'
     | 'maxAgents'
+    | 'toolsProfile'
+    | 'deferTools'
   >
 >;
 
@@ -127,14 +130,16 @@ function browserFlags(values: Values): Extras | string {
   }
 }
 
-function agentFlags(values: Values): Extras | string {
+function agentFlags(values: Values, flags: Flags): Extras | string {
+  const tools = toolsFlags(values, flags);
+  if (typeof tools === 'string') return tools;
   const raw = lastOf(values, 'maxAgents');
-  if (raw === undefined) return {};
+  if (raw === undefined) return tools;
   const value = Number(raw);
   const problem = maxAgentsProblem(Number.isNaN(value) ? undefined : value);
   if (Number.isNaN(value) || problem !== undefined)
     return '--max-agents must be a whole number from 1 to 8.';
-  return { maxAgents: value };
+  return { ...tools, maxAgents: value };
 }
 
 function doneFlags(values: Values, cwd: string): Extras | string {
@@ -188,7 +193,7 @@ export function checkedExtras(values: Values, flags: Flags, cwd: string): Extras
   if (typeof browser === 'string') return browser;
   const vision = visionFlags(values, flags, cwd);
   if (typeof vision === 'string') return vision;
-  const agents = agentFlags(values);
+  const agents = agentFlags(values, flags);
   if (typeof agents === 'string') return agents;
   return {
     ...vision,

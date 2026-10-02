@@ -1,7 +1,7 @@
 import { PROCESS_WATCH_IDLE_WAITS_NOTE } from './process-watch-tool.constants';
 
 import type { WatchLog } from './process-watch-log';
-import type { WatchedProcess, WatchWaitReason } from './process-watch-tool.types';
+import type { LinePattern, WatchedProcess, WatchWaitReason } from './process-watch-tool.types';
 
 /** What a wait watches: the process and its log. */
 export interface WatchTarget {
@@ -15,7 +15,7 @@ export interface WatchWaitOptions {
   readonly signal: AbortSignal | undefined;
   /** Output before this position is not searched; defaults to the start. */
   readonly sinceCursor: number | undefined;
-  readonly pattern: RegExp | undefined;
+  readonly pattern: LinePattern | undefined;
 }
 
 export interface WatchWaitOutcome {
@@ -24,6 +24,9 @@ export interface WatchWaitOutcome {
   readonly waitedMs: number;
   readonly note?: string;
 }
+
+const SLOW_NOTE =
+  '"untilMatch" took too long on a line and was dropped (it can backtrack without end); wait with a simpler pattern.';
 
 const IDLE_NOTE =
   'No new output across several waits. The process may be stuck or just quiet: read status, ' +
@@ -46,7 +49,7 @@ export function waitForProcess(options: WatchWaitOptions): Promise<WatchWaitOutc
     return found.match?.line;
   };
   const outcome = (reason: WatchWaitReason, matchedLine?: string): WatchWaitOutcome => {
-    const note = idleNote(watched, log.end, reason);
+    const note = options.pattern?.tooSlow === true ? SLOW_NOTE : idleNote(watched, log.end, reason);
     return {
       reason,
       waitedMs: Date.now() - began,

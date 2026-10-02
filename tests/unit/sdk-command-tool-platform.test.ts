@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { COMMAND_TOOL_INPUT_SCHEMA } from '../../src/sdk/command-tool-definition.constants';
+import { parseRunRequest } from '../../src/sdk/command-tool-request';
 import {
   commandEnvironment,
   isUnsafeShimArgument,
@@ -200,9 +201,19 @@ describe('command tool definition', () => {
         'timeoutMs',
       ].sort(),
     );
-    expect(COMMAND_TOOL_INPUT_SCHEMA.properties.timeoutMs.maximum).toBe(1_800_000);
-    expect(COMMAND_TOOL_INPUT_SCHEMA.properties.maxOutputChars.maximum).toBe(48_000);
-    expect(COMMAND_TOOL_INPUT_SCHEMA.properties.arguments.maxItems).toBe(50);
+    // The schema is sent slim; the tool itself enforces the bounds on arrival.
+    const parsed = parseRunRequest(
+      { executable: 'node', timeoutMs: 99_999_999, maxOutputChars: 9_999_999 },
+      process.cwd(),
+    );
+    expect(parsed.timeoutMs).toBe(1_800_000);
+    expect(parsed.maxOutputChars).toBe(48_000);
+    expect(() =>
+      parseRunRequest(
+        { executable: 'node', arguments: Array<string>(51).fill('x') },
+        process.cwd(),
+      ),
+    ).toThrow(/at most 50/u);
   });
 
   it('puts run, output, wait and stop in the command category', () => {

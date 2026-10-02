@@ -44,6 +44,9 @@ export function childConfig(input: {
     permissions: {
       allow: grant.granted,
       allowedExecutables: parent.permissions?.allowedExecutables,
+      ...(grant.httpAllowHosts.length > 0 ? { httpAllowHosts: grant.httpAllowHosts } : {}),
+      // The second shell switch is the parent's own; the child inherits its denials and its approver.
+      ...(grant.shell ? { shell: parent.permissions?.shell } : {}),
       writeScope: grant.writeScope,
       writeDeny: grant.writeDeny,
       // The parent's own approver: a child never asks anyone else, and with none it is denied.
@@ -57,6 +60,10 @@ export function childConfig(input: {
     retry: parent.retry,
     transport: parent.transport,
     mcp: grant.granted.includes('mcp') ? parent.mcp : undefined,
+    browser: grant.granted.includes('browser')
+      ? { ...parent.browser, allowHosts: grant.browserAllowHosts }
+      : undefined,
+    doneChecks: request.doneChecks,
     research: parent.research,
     webResearch: parent.webResearch,
     teamLink: input.link,

@@ -15,7 +15,7 @@ describe('agent.team under each permission mode', () => {
   it.each([
     ['ask', 'spawn', true],
     ['strict', 'spawn', true],
-    ['accept-edits', 'spawn', false],
+    ['accept-edits', 'spawn', true],
     ['autonomous-scoped', 'spawn', false],
     ['ask', 'wait', false],
     ['ask', 'message', false],
@@ -29,7 +29,9 @@ describe('agent.team under each permission mode', () => {
     expect(await strict.approve?.(request('spawn'))).toBe(false);
     expect(await strict.approve?.(request('wait'))).toBe(true);
     const accept = permissionsForMode('accept-edits', { allow: ['read', 'agents'] });
-    expect(await accept.approve?.(request('spawn'))).toBe(true);
+    expect(await accept.approve?.(request('spawn'))).toBe(false);
+    const scoped = permissionsForMode('autonomous-scoped', { allow: ['read', 'agents'] });
+    expect(await scoped.approve?.(request('spawn'))).toBe(true);
   });
 
   it('plan mode drops the agents grant', () => {

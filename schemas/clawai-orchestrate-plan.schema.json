@@ -1,0 +1,284 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "type": "object",
+  "properties": {
+    "name": {
+      "type": "string",
+      "pattern": "^[a-z][a-z0-9-]{0,23}$"
+    },
+    "goal": {
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 2000
+    },
+    "workspace": {
+      "default": ".",
+      "description": "The folder every agent works in.",
+      "type": "string",
+      "minLength": 1,
+      "maxLength": 500
+    },
+    "stages": {
+      "minItems": 1,
+      "maxItems": 20,
+      "type": "array",
+      "items": {
+        "type": "object",
+        "properties": {
+          "id": {
+            "type": "string",
+            "pattern": "^[a-z][a-z0-9-]{0,31}$"
+          },
+          "dependsOn": {
+            "default": [],
+            "maxItems": 20,
+            "type": "array",
+            "items": {
+              "type": "string",
+              "pattern": "^[a-z][a-z0-9-]{0,31}$"
+            }
+          },
+          "agents": {
+            "minItems": 1,
+            "maxItems": 32,
+            "type": "array",
+            "items": {
+              "type": "object",
+              "properties": {
+                "name": {
+                  "type": "string",
+                  "pattern": "^[a-z][a-z0-9-]{0,23}$",
+                  "description": "Unique in the plan: a-z, 0-9 and -, up to 24 characters."
+                },
+                "task": {
+                  "type": "string",
+                  "minLength": 1,
+                  "maxLength": 7000,
+                  "description": "A self-contained brief: goal, exact paths, interfaces, how to verify, what to report."
+                },
+                "model": {
+                  "description": "A model id, or \"pool:<name>\" to take one from modelPools. Default: the run model.",
+                  "type": "string",
+                  "pattern": "^(?:pool:[a-z][a-z0-9-]{0,23}|[A-Za-z0-9][A-Za-z0-9._:/-]{0,79})$"
+                },
+                "tools": {
+                  "minItems": 1,
+                  "maxItems": 8,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "enum": [
+                      "read",
+                      "write",
+                      "command",
+                      "git",
+                      "git-write",
+                      "http",
+                      "http-write",
+                      "browser"
+                    ]
+                  },
+                  "description": "Categories the agent holds, at most the run grants. Shell is the shell flag."
+                },
+                "writeScope": {
+                  "default": [],
+                  "description": "Workspace-relative globs the agent may change. Parallel agents must not overlap.",
+                  "maxItems": 16,
+                  "type": "array",
+                  "items": {
+                    "type": "string",
+                    "minLength": 1,
+                    "maxLength": 200
+                  }
+                },
+                "budget": {
+                  "type": "object",
+                  "properties": {
+                    "maxToolCalls": {
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 2000
+                    },
+                    "maxDurationSec": {
+                      "type": "integer",
+                      "minimum": 10,
+                      "maximum": 7200
+                    }
+                  },
+                  "required": ["maxToolCalls", "maxDurationSec"],
+                  "additionalProperties": false
+                },
+                "doneChecks": {
+                  "default": [],
+                  "maxItems": 10,
+                  "type": "array",
+                  "items": {
+                    "type": "object",
+                    "properties": {
+                      "label": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 80,
+                        "description": "Names the check in events and the report."
+                      },
+                      "command": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 1000,
+                        "description": "Executable and arguments, split on spaces; \"...\" groups words. No shell, no pipes."
+                      },
+                      "cwd": {
+                        "description": "Folder inside the workspace; default the root.",
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 200
+                      },
+                      "timeoutSec": {
+                        "description": "Default 600.",
+                        "type": "integer",
+                        "minimum": 1,
+                        "maximum": 3600
+                      }
+                    },
+                    "required": ["label", "command"],
+                    "additionalProperties": false
+                  }
+                },
+                "isolation": {
+                  "default": "none",
+                  "description": "worktree: own git checkout from HEAD, merged back when the agent completes.",
+                  "type": "string",
+                  "enum": ["worktree", "none"]
+                },
+                "http": {
+                  "type": "object",
+                  "properties": {
+                    "allowHosts": {
+                      "maxItems": 16,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "description": "Host rules: host, host:port or *.example.com."
+                    }
+                  },
+                  "required": ["allowHosts"],
+                  "additionalProperties": false
+                },
+                "browser": {
+                  "type": "object",
+                  "properties": {
+                    "allowHosts": {
+                      "maxItems": 16,
+                      "type": "array",
+                      "items": {
+                        "type": "string",
+                        "minLength": 1,
+                        "maxLength": 120
+                      },
+                      "description": "Host rules: host, host:port or *.example.com."
+                    }
+                  },
+                  "required": ["allowHosts"],
+                  "additionalProperties": false
+                },
+                "shell": {
+                  "default": false,
+                  "description": "Gives the agent workspace.shell. The run must have the shell on; every script is approved.",
+                  "type": "boolean"
+                }
+              },
+              "required": ["name", "task", "tools", "budget"],
+              "additionalProperties": false
+            }
+          },
+          "gate": {
+            "description": "Checks the orchestrator runs after every agent of the stage has finished.",
+            "type": "object",
+            "properties": {
+              "doneChecks": {
+                "minItems": 1,
+                "maxItems": 10,
+                "type": "array",
+                "items": {
+                  "type": "object",
+                  "properties": {
+                    "label": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 80,
+                      "description": "Names the check in events and the report."
+                    },
+                    "command": {
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 1000,
+                      "description": "Executable and arguments, split on spaces; \"...\" groups words. No shell, no pipes."
+                    },
+                    "cwd": {
+                      "description": "Folder inside the workspace; default the root.",
+                      "type": "string",
+                      "minLength": 1,
+                      "maxLength": 200
+                    },
+                    "timeoutSec": {
+                      "description": "Default 600.",
+                      "type": "integer",
+                      "minimum": 1,
+                      "maximum": 3600
+                    }
+                  },
+                  "required": ["label", "command"],
+                  "additionalProperties": false
+                }
+              }
+            },
+            "required": ["doneChecks"],
+            "additionalProperties": false
+          }
+        },
+        "required": ["id", "agents"],
+        "additionalProperties": false
+      }
+    },
+    "maxParallel": {
+      "default": 2,
+      "description": "Agents running at once, across all stages.",
+      "type": "integer",
+      "minimum": 1,
+      "maximum": 8
+    },
+    "onFailure": {
+      "default": "stop",
+      "description": "stop | continue | retry:1..3. See docs/ORCHESTRATION.md.",
+      "type": "string",
+      "pattern": "^(?:stop|continue|retry:[1-3])$"
+    },
+    "timeoutSec": {
+      "type": "integer",
+      "minimum": 10,
+      "maximum": 86400
+    },
+    "modelPools": {
+      "default": {},
+      "type": "object",
+      "propertyNames": {
+        "type": "string",
+        "pattern": "^[a-z][a-z0-9-]{0,23}$"
+      },
+      "additionalProperties": {
+        "minItems": 1,
+        "maxItems": 8,
+        "type": "array",
+        "items": {
+          "type": "string",
+          "pattern": "^(?:pool:[a-z][a-z0-9-]{0,23}|[A-Za-z0-9][A-Za-z0-9._:/-]{0,79})$"
+        }
+      }
+    }
+  },
+  "required": ["name", "goal", "stages"],
+  "additionalProperties": false
+}

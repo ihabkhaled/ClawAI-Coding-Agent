@@ -1,6 +1,8 @@
 import { readdirSync, readFileSync } from 'node:fs';
 import { join } from 'node:path';
 
+import { TOOL_PERMISSION_ROWS } from '../../src/sdk/tool-permission-table.constants';
+
 export interface DiscoveredOperation {
   readonly tool: string;
   readonly operation: string;
@@ -70,6 +72,9 @@ export function discoverToolOperations(root: string): readonly DiscoveredOperati
       seen.set(`${item.tool}.${item.operation}`, item);
     }
   }
+  // The headless agent's tools are not executors; their operations come from the SDK permission table.
+  for (const { tool, operation } of TOOL_PERMISSION_ROWS)
+    seen.set(`${tool}.${operation}`, { tool, operation });
   return [...seen.values()].sort((a, b) =>
     `${a.tool}.${a.operation}`.localeCompare(`${b.tool}.${b.operation}`),
   );

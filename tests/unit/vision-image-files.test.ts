@@ -32,7 +32,7 @@ describe('readWorkspaceImage', () => {
     put(root, 'shots/home.png', redRectanglePng([pngChunk('tEXt', Buffer.from('a\0/home/ihab'))]));
     const image = readWorkspaceImage(root, 'shots/home.png');
     expect(image.mimeType).toBe('image/png');
-    expect(image.filename).toBe('home.png');
+    expect(image.filename).toBe('image.png');
     expect(image.stripped).toBe(true);
     expect(image.bytes.toString('latin1')).not.toContain('/home/ihab');
   });

@@ -1,7 +1,16 @@
+import { compileGlobMatcher } from './knowledge-glob-match';
+
+import type { GlobMatcher } from './knowledge-glob-match';
+
+/** Rules kept per workspace and the longest line read; a hostile .gitignore cannot grow the stack without bound. */
+const MAX_RULES = 5_000;
+const MAX_LINE = 1_024;
+
 /** One .gitignore line, compiled. */
 interface IgnoreRule {
   readonly base: string;
-  readonly regex: RegExp;
+  readonly matcher: GlobMatcher;
+  readonly anchored: boolean;
   readonly negate: boolean;
   readonly directoryOnly: boolean;
 }
@@ -14,33 +23,11 @@ export interface IgnoreStack {
   ignored(relativePath: string, isDirectory: boolean): boolean;
 }
 
-const SPECIALS = /[.+^${}()|\\]/gu;
-
-function globBody(pattern: string): string {
-  let out = '';
-  for (let index = 0; index < pattern.length; index += 1) {
-    const char = pattern.charAt(index);
-    if (char === '*') {
-      if (pattern.charAt(index + 1) === '*') {
-        const slash = pattern.charAt(index + 2) === '/';
-        out += slash ? '(?:.*/)?' : '.*';
-        index += slash ? 2 : 1;
-      } else out += '[^/]*';
-    } else if (char === '?') out += '[^/]';
-    else if (char === '[') {
-      const close = pattern.indexOf(']', index + 2);
-      if (close === -1) out += '\\[';
-      else {
-        out += `[${pattern.slice(index + 1, close).replace(/^!/u, '^')}]`;
-        index = close;
-      }
-    } else out += char.replace(SPECIALS, '\\$&');
-  }
-  return out;
-}
-
 function compileLine(line: string, base: string): IgnoreRule | undefined {
-  let text = line.replace(/\r$/u, '').replace(/(?<!\\)\s+$/u, '');
+  let text = line
+    .slice(0, MAX_LINE)
+    .replace(/\r$/u, '')
+    .replace(/(?<!\\)\s+$/u, '');
   if (text.length === 0 || text.startsWith('#')) return undefined;
   const negate = text.startsWith('!');
   if (negate) text = text.slice(1);
@@ -49,9 +36,7 @@ function compileLine(line: string, base: string): IgnoreRule | undefined {
   const anchored = text.startsWith('/') || text.includes('/');
   if (text.startsWith('/')) text = text.slice(1);
   if (text.length === 0) return undefined;
-  const body = globBody(text);
-  const regex = new RegExp(anchored ? `^${body}$` : `(?:^|/)${body}$`, 'u');
-  return { base, regex, negate, directoryOnly };
+  return { base, matcher: compileGlobMatcher(text), anchored, negate, directoryOnly };
 }
 
 /** An empty stack; `add` the root .gitignore first. */
@@ -61,7 +46,7 @@ export function createIgnoreStack(): IgnoreStack {
     add: (directory, text) => {
       for (const line of text.split('\n')) {
         const rule = compileLine(line, directory);
-        if (rule !== undefined) rules.push(rule);
+        if (rule !== undefined && rules.length < MAX_RULES) rules.push(rule);
       }
     },
     ignored: (relativePath, isDirectory) => {
@@ -70,7 +55,8 @@ export function createIgnoreStack(): IgnoreStack {
         if (rule.directoryOnly && !isDirectory) continue;
         const prefix = rule.base.length === 0 ? '' : `${rule.base}/`;
         if (!relativePath.startsWith(prefix)) continue;
-        if (rule.regex.test(relativePath.slice(prefix.length))) result = !rule.negate;
+        if (rule.matcher.test(relativePath.slice(prefix.length), !rule.anchored))
+          result = !rule.negate;
       }
       return result;
     },

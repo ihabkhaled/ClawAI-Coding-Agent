@@ -1,5 +1,6 @@
 import os from 'node:os';
 
+import { denyOutcome } from './shell-deny';
 import {
   commandsNamed,
   containsPath,
@@ -21,7 +22,8 @@ const PATH_FLAGS = ['-path', '-filepath', '-destination', '-literalpath'];
 /** The script in the two forms the rules read: with its quotes, and flattened to what a shell would run. */
 export function screenView(script: string): ScreenView {
   const text = script.replaceAll('\r\n', '\n').replaceAll(/\\\n|`\n/gu, ' ');
-  const plain = text.toLowerCase().replaceAll(/['"]/gu, '').replaceAll('\\', '/');
+  // `^` is cmd's escape character (`c^url`, `r^d`) and means nothing a screen cares about elsewhere.
+  const plain = text.toLowerCase().replaceAll(/['"^]/gu, '').replaceAll('\\', '/');
   return { text, plain };
 }
 
@@ -103,6 +105,23 @@ export function compileDenyRule(source: string): RegExp | string {
   }
 }
 
+/** Both forms are tested (a quote inside a word must not slip past a pattern); a pattern that cannot finish refuses. */
+function denyRefusal(view: ScreenView, deny: readonly RegExp[]): ShellRefusal | undefined {
+  for (const pattern of deny) {
+    const outcomes = [denyOutcome(pattern, view.text), denyOutcome(pattern, view.plain)];
+    if (outcomes.includes('slow')) {
+      return refusal(
+        'operator-deny',
+        `the operator's pattern /${pattern.source}/ could not be evaluated in time on this script, so it is refused`,
+      );
+    }
+    if (outcomes.includes('match')) {
+      return refusal('operator-deny', `the operator forbids scripts matching /${pattern.source}/`);
+    }
+  }
+  return undefined;
+}
+
 function refusal(rule: string, reason: string): ShellRefusal {
   return {
     rule,
@@ -133,8 +152,5 @@ export function screenScript(
   for (const rule of SHELL_PATH_RULES) {
     if (rule.test(view, context)) return refusal(rule.id, rule.reason);
   }
-  const custom = deny.find((pattern) => pattern.test(view.text));
-  return custom === undefined
-    ? undefined
-    : refusal('operator-deny', `the operator forbids scripts matching /${custom.source}/`);
+  return denyRefusal(view, deny);
 }

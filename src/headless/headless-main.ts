@@ -6,6 +6,8 @@ import { headlessExitCode } from '../core/headless-outcome';
 import { HEADLESS_EXIT_GRACE_MS } from './headless-args.constants';
 import { runHeadlessCli } from './headless-cli';
 import { openUrlWithPlatform } from './mcp/mcp-open-url';
+import { runOrchestrateCli } from './orchestrate-cli';
+import { ORCHESTRATE_COMMAND } from './orchestrate-cli.constants';
 
 /**
  * The process entry point: `clawai -p "<task>"`, or `node dist/headless.mjs`.
@@ -44,9 +46,11 @@ function exitWhenDrained(code: number): void {
 }
 
 try {
+  const args = argv.slice(2);
+  const run = args[0] === ORCHESTRATE_COMMAND ? runOrchestrateCli : runHeadlessCli;
   exitWhenDrained(
-    await runHeadlessCli(
-      argv.slice(2),
+    await run(
+      args[0] === ORCHESTRATE_COMMAND ? args.slice(1) : args,
       env,
       {
         stdout: (text) => stdout.write(text),

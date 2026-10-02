@@ -84,6 +84,10 @@ export interface HeadlessInvocation {
   readonly vision?: true | undefined;
   /** `--max-agents`: sub-agents working at once, 1 to 8. */
   readonly maxAgents?: number | undefined;
+  /** `--tools-profile`: narrows the offered tools (minimal, dev, full or patterns); grants nothing. */
+  readonly toolsProfile?: string | undefined;
+  /** `--defer-tools`: rarely used tools go out as stubs and load when the model asks. */
+  readonly deferTools?: true | undefined;
 }
 
 /** `--list-models`: print the account's models and exit. */

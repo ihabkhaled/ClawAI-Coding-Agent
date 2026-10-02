@@ -6,7 +6,7 @@ import { containedPath } from '../core/workspace-containment';
 
 import { isMarkdownName, parseHeadings, sectionChunks } from './knowledge-chunks';
 import { knowledgeKind, posixPath } from './knowledge-files';
-import { integerArgument } from './knowledge-sanitize';
+import { integerArgument, withoutHidden } from './knowledge-sanitize';
 import {
   KNOWLEDGE_OUTLINE_MAX_ENTRIES,
   KNOWLEDGE_OUTLINE_MAX_LEVEL,
@@ -143,6 +143,11 @@ function lineWindow(
   return { from, to };
 }
 
+/** Redacts after hidden characters are gone, so a secret split by zero-width characters cannot slip past. */
+function redactHidden(text: string): string {
+  return redactText(withoutHidden(text));
+}
+
 /** `read`: a bounded slice of one knowledge file, or its outline when it is too large to return whole. */
 export function readKnowledge(workspace: string, args: Args): string {
   const relative = resolveKnowledgePath(workspace, args.path);
@@ -152,12 +157,12 @@ export function readKnowledge(workspace: string, args: Args): string {
   const { from, to } = lineWindow(relative, lines.length, args);
   if (from === undefined && to === undefined) {
     const whole = lines.join('\n');
-    return redactText(
+    return redactHidden(
       whole.length > KNOWLEDGE_READ_MAX_CHARS
         ? outline(relative, lines, bytes)
         : `${relative} (${String(lines.length)} lines)\n${whole}`,
     );
   }
   const first = from ?? 1;
-  return redactText(slice(relative, lines, first, to ?? first + 199));
+  return redactHidden(slice(relative, lines, first, to ?? first + 199));
 }

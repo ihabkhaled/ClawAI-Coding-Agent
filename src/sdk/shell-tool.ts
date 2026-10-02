@@ -70,6 +70,9 @@ function directoryFor(value: unknown, workspace: string): string {
 export function parseShellRequest(args: ToolArguments, workspace: string): ShellRequest {
   const script = typeof args.script === 'string' ? args.script : '';
   if (script.trim().length === 0) throw new Error('workspace.shell run requires a "script".');
+  if (script.includes('\u0000')) {
+    throw new Error('"script" may not contain a NUL character.');
+  }
   if (script.length > SHELL_MAX_SCRIPT_CHARS) {
     throw new Error(
       `"script" is at most ${String(SHELL_MAX_SCRIPT_CHARS)} characters; put long logic in a file with workspace.file and run that.`,

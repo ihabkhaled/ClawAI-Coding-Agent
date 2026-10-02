@@ -80,12 +80,16 @@ describe('permission matrix: classification', () => {
   });
 
   // An operation whose name says it changes something must not be classed a read.
-  // The listed exceptions start or stop a trace or read a stored file, not the workspace.
+  // The listed exceptions start or stop a trace, stop a process the run itself started, or read a stored file, not the workspace.
   const MUTATING_WORD =
     /(?:^|-)(?:write|create|delete|remove|update|patch|rename|copy|mkdir|push|publish|tag|commit|merge|rebase|stage|unstage|stash|revert|pull|start|stop|restart|run|exec|click|fill|type|upload|download|drag|select|keyboard|insert|replace|apply|terminate|pause|resume|register|restore|save|post|send|trigger|enter|exit|apply|migration|integrate|execute)(?:-|$)/u;
   const READ_EXCEPTIONS = new Set([
     'workspace.browser.trace-start',
     'workspace.browser.trace-stop',
+    // Stops only a process this run started; see the process.watch row in the classification table.
+    'process.watch.stop',
+    // Changes only the plan; a check the model wrote is put to the approver as a `workspace.command` run.
+    'task.plan.update',
   ]);
 
   it('never classes an operation with a mutating name as a read', () => {

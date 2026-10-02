@@ -130,6 +130,18 @@ export interface AgentConfig {
   readonly webResearch?: WebResearchPort | undefined;
   /** With the `agents` grant: how many sub-agents work at once, 1 to 8 (default 4). */
   readonly maxAgents?: number | undefined;
+  /**
+   * Narrows the tools the model is offered, to cut what every turn pays for the catalog:
+   * `minimal`, `dev`, `full`, or tool patterns (`workspace.file.read,code.gates`), added
+   * together. A profile never grants more than `permissions`, `permissionMode` and the
+   * allow and deny lists already allow; see `tools-profile.ts`.
+   */
+  readonly toolsProfile?: string | undefined;
+  /**
+   * Send rarely used tools as short stubs and load their full definition only when the
+   * model asks (`runtime.tool_search`): `true` defers the default set, a list names tools.
+   */
+  readonly deferTools?: boolean | readonly string[] | undefined;
   /** Set by a parent that starts this agent as a child; not for callers. */
   readonly teamLink?: TeamLink | undefined;
 }

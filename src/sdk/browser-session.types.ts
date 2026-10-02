@@ -1,3 +1,4 @@
+import type { BrowserEgressProxy, BrowserResolver } from './browser-egress.types';
 import type { Browser, BrowserContext, Page } from 'playwright-core';
 
 /** The slice of `playwright-core` the tool launches with. */
@@ -7,6 +8,7 @@ export interface PlaywrightModule {
       readonly headless: boolean;
       readonly executablePath?: string;
       readonly args?: string[];
+      readonly proxy?: { readonly server: string; readonly bypass?: string };
     }) => Promise<Browser>;
   };
 }
@@ -31,6 +33,8 @@ export interface BrowserNetworkEntry {
 /** A live browser with its pages and the evidence it has collected. */
 export interface BrowserSession {
   readonly browser: Browser;
+  /** The only way the browser reaches the network; closed with it. */
+  readonly proxy: BrowserEgressProxy;
   readonly context: BrowserContext;
   readonly pages: Page[];
   readonly console: BrowserConsoleEntry[];
@@ -46,6 +50,9 @@ export interface BrowserLimits {
   readonly allowHosts: readonly string[];
   readonly maxPages: number;
   readonly maxRunMs: number;
+  /** The longest one call may take before the browser is closed. */
+  readonly maxCallMs: number;
+  readonly resolver: BrowserResolver | undefined;
   readonly scratchDirectory: string;
   readonly executablePath: string | undefined;
 }
@@ -61,4 +68,6 @@ export interface BrowserPageFacts {
   readonly focus: string;
   readonly viewport: string;
   readonly overflow: boolean;
+  /** What password fields hold; never shown to the model. */
+  readonly secrets: readonly string[];
 }

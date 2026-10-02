@@ -1,5 +1,6 @@
 import * as vscode from 'vscode';
 
+import { currentOptInToolValues } from './vscode-opt-in-tool-settings';
 import { detectRuntimePrerequisites } from './vscode-runtime-target-adapter';
 
 import type { RuntimeHostProbe } from './vscode-runtime-target.types';
@@ -46,6 +47,7 @@ export function probeRuntimeHost(
       uri: folder.uri.toString(),
     })),
     workspaceTrusted: vscode.workspace.isTrusted,
+    optInTools: currentOptInToolValues(),
     prerequisites: detectRuntimePrerequisites(context.extensionUri.fsPath),
   };
 }

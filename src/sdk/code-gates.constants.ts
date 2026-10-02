@@ -48,14 +48,12 @@ export const GATES_TOOL_OPERATIONS: Readonly<Record<string, AgentToolCategory>> 
 };
 
 export const GATES_TOOL_DESCRIPTION =
-  'Validate your code with short structured results, not logs. ' +
-  'detect {scope?}: projects, their gate commands, and the folders your changed files are in. ' +
-  'run {gate, scope?: folder|"changed", files?}: runs one gate (lint, typecheck, test, build, format), returns ' +
-  '{status: pass|fail|unavailable|timeout, ok, summary:{errors, warnings, failedTests:[{name,file,message}], ' +
-  'issues:["file:line:col message"]}, tail, notRun?}. Failing tests are re-run once; passing then is flaky?. ' +
-  'unavailable = could not run (see reason): never a pass, say so in your answer. ' +
-  'A pass lists notRun: gates not yet run; run those the task names before saying done. ' +
-  'report: latest result per gate. Run in the touched folder, never the whole monorepo.';
+  'Validate code with short structured results, not logs. detect {scope?}: projects, gate commands, folders of your changed files. ' +
+  'run {gate: lint|typecheck|test|build|format, scope?: folder|"changed", files? (lint, format, test), timeoutMs?} returns ' +
+  '{status: pass|fail|unavailable|timeout, ok, summary:{errors, warnings, failedTests:[{name,file,message}], issues:["file:line:col message"]}, tail, notRun?}. ' +
+  'Failing tests re-run once (pass then = flaky). unavailable = could not run: never a pass; say so. ' +
+  'A pass lists notRun gates: run those the task names before saying done. report: latest per gate. ' +
+  'Run in the touched folder, not the whole monorepo.';
 
 /** One schema for the three operations. */
 export const GATES_TOOL_INPUT_SCHEMA = {
@@ -63,17 +61,8 @@ export const GATES_TOOL_INPUT_SCHEMA = {
   additionalProperties: false,
   properties: {
     gate: { type: 'string', enum: GATE_NAMES },
-    scope: {
-      type: 'string',
-      maxLength: 4096,
-      description: 'folder in the workspace, or "changed".',
-    },
-    files: {
-      type: 'array',
-      maxItems: GATE_MAX_FILES,
-      items: { type: 'string' },
-      description: 'only these files (lint, format, test).',
-    },
-    timeoutMs: { type: 'integer', minimum: 1000, maximum: GATE_MAX_TIMEOUT_MS },
+    scope: { type: 'string' },
+    files: { type: 'array', items: { type: 'string' } },
+    timeoutMs: { type: 'integer' },
   },
 } as const;

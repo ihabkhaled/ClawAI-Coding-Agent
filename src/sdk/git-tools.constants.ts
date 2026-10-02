@@ -105,36 +105,27 @@ export const GIT_TOOL_OPERATIONS: Readonly<Record<string, AgentToolCategory>> = 
 };
 
 export const GIT_TOOL_DESCRIPTION =
-  'Git in the workspace repository. Read: status, diff, log, show, branch, remote (URLs redacted). ' +
+  'Git in the workspace repo. Read: status, diff {staged?, path?}, log {maxCount<=50}, show {ref}, branch, remote (URLs redacted). ' +
   'Write (granted separately): add/unstage/restore take explicit "paths" (never "." or a wildcard); ' +
-  'commit runs the repository hooks and takes a one-line "message" (at most 100 characters), an optional ' +
-  '"body" and Co-Authored-By "trailers"; fetch; pull (rebase only, no autostash, a conflict is reported ' +
-  'and the rebase aborted); push (HEAD to origin, current or named "branch", never forced); switch ' +
-  '("branch", optional "create"). Hooks can take minutes: "timeoutSeconds" (default 1800, at most 3600).';
+  'commit {message (one line, <=100 chars), body?, trailers?[Co-Authored-By]} runs the hooks; fetch; ' +
+  'pull (rebase only, no autostash; a conflict is reported and the rebase aborted); ' +
+  'push (HEAD to origin, current or named "branch", never forced); switch {branch, create?}. ' +
+  'Hooks can take minutes: timeoutSeconds (default 1800, max 3600).';
 
 export const GIT_TOOL_INPUT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    path: { type: 'string', maxLength: 4096 },
+    path: { type: 'string' },
     staged: { type: 'boolean' },
-    maxCount: { type: 'integer', minimum: 1, maximum: GIT_LOG_MAX_COUNT },
-    ref: { type: 'string', maxLength: GIT_MAX_REF_CHARS },
-    paths: {
-      type: 'array',
-      items: { type: 'string', maxLength: 4096 },
-      minItems: 1,
-      maxItems: GIT_MAX_PATHS,
-    },
-    message: { type: 'string', maxLength: GIT_MAX_HEADER_CHARS },
-    body: { type: 'string', maxLength: GIT_MAX_BODY_CHARS },
-    trailers: {
-      type: 'array',
-      items: { type: 'string', maxLength: GIT_MAX_TRAILER_CHARS },
-      maxItems: GIT_MAX_TRAILERS,
-    },
-    branch: { type: 'string', maxLength: GIT_MAX_REF_CHARS },
+    maxCount: { type: 'integer' },
+    ref: { type: 'string' },
+    paths: { type: 'array', items: { type: 'string' } },
+    message: { type: 'string' },
+    body: { type: 'string' },
+    trailers: { type: 'array', items: { type: 'string' } },
+    branch: { type: 'string' },
     create: { type: 'boolean' },
-    timeoutSeconds: { type: 'integer', minimum: 1, maximum: GIT_MAX_TIMEOUT_SECONDS },
+    timeoutSeconds: { type: 'integer' },
   },
 } as const;

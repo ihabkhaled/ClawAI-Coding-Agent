@@ -1,7 +1,7 @@
 import dns from 'node:dns';
 
 import { canonicalIp } from './http-address';
-import { addressProblem, matchingRule, urlPort } from './http-host-rules';
+import { addressProblem, matchingRule, portHint, urlPort } from './http-host-rules';
 
 import type {
   HttpApprovedTarget,
@@ -61,7 +61,7 @@ export async function approveTarget(
   }
   if (matchingRule(url, rules) === undefined) {
     throw new HttpRefusal(
-      `${url.hostname}:${String(port)} is not an allowed host. Allowed: ${rules.length === 0 ? 'none' : describeRules(rules)}.`,
+      `${url.hostname}:${String(port)} is not an allowed host. Allowed: ${rules.length === 0 ? 'none' : describeRules(rules)}.${portHint(url, rules)}`,
     );
   }
   const literal = literalAddress(url);

@@ -193,6 +193,24 @@ const runtimeTools: Readonly<Record<string, ToolTable>> = {
 };
 
 const workspaceTools: Readonly<Record<string, ToolTable>> = {
+  // The headless agent's own tools. The SDK permission table
+  // (src/sdk/tool-permission-table.constants.ts) is checked against these rows,
+  // so the editor and the SDK cannot disagree about what a call is.
+  'agent.team': merge(
+    group(RUN, ['spawn']),
+    group(READ, ['message', 'inbox', 'wait', 'status', 'result', 'cancel']),
+  ),
+  // Loading a page reaches the network. Acting on one can submit a form to a
+  // remote site (R3), whatever the operator's host list says about WHERE it may go.
+  'browser.page': merge(
+    group(FETCH, ['open']),
+    group(NETWORK, ['click', 'type', 'press']),
+    group(READ, ['snapshot', 'wait', 'screenshot', 'resize', 'console', 'network', 'close']),
+  ),
+  'knowledge.context': group(READ, ['index', 'read', 'search', 'task']),
+  'task.plan': group(READ, ['set', 'update', 'list', 'next']),
+  // Reads a workspace image and sends the bytes to a model: cost, and the pixels leave the machine.
+  'vision.describe': group(FETCH, ['describe']),
   'workspace.artifact': merge(group(READ, ['prepare']), group(PUBLISH, ['publish'])),
   // Anything that acts on a page can change state on a remote site. `click-at`
   // and `type-text` were missing from the old pattern and fell through to
@@ -203,6 +221,12 @@ const workspaceTools: Readonly<Record<string, ToolTable>> = {
     group(READ, BROWSER_OBSERVATION),
   ),
   'workspace.command': group(RUN, ['run']),
+  // A read asks a server for something; a send changes data there, and is a network write.
+  // `request` is the SDK tool's single operation (GET and HEAD; the SDK table makes a
+  // POST, PUT, PATCH or DELETE the `http-write` category), `get`/`send` are the editor's.
+  'http.request': merge(group(FETCH, ['request', 'get']), group(NETWORK, ['send'])),
+  // A script can do anything the user can: an irreversible local mutation that every mode asks about.
+  'workspace.shell': group(MUTATE, ['run']),
   // Only starting a process changes anything; the rest watch or stop one the run started.
   'process.watch': merge(
     group(RUN, ['start']),

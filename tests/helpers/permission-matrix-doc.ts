@@ -1,4 +1,5 @@
 import { EFFECT_KINDS, RISK_CLASSES, type ProjectPolicy } from '../../src/core/policy-v2';
+import { TOOL_PERMISSION_ROWS } from '../../src/sdk/tool-permission-table.constants';
 import { classify } from '../../src/services/runtime-policy-v2-adapter';
 
 import { decide, MATRIX_CEILINGS, MATRIX_MODES, type Verdict } from './permission-matrix';
@@ -8,6 +9,30 @@ import type { DiscoveredOperation } from './permission-matrix-discovery';
 const LETTER: Readonly<Record<Verdict, string>> = { allow: 'A', ask: 'Q', deny: 'D' };
 const MODE_LABEL = ['Plan', 'Strict', 'Ask', 'Auto', 'Full'] as const;
 const CEILING_LABEL = ['none', 'Plan', 'Ask'] as const;
+const SDK_MODES = ['plan', 'ask', 'accept-edits', 'autonomous-scoped', 'strict'] as const;
+const DIFFERENCE_NOTE: Readonly<Record<string, string>> = {
+  READ_NEVER_ASKED: 'editor asks (a read)',
+  PLAN_WITHHOLDS_CATEGORY: 'SDK withholds category',
+};
+
+/** The headless agent's tools, decided by the SDK table that `--permission-mode` enforces. */
+function sdkToolSection(): string[] {
+  const lines = [
+    `| Tool operation | Category | ${SDK_MODES.join(' | ')} | Where the editor differs |`,
+    `| --- | --- | ${SDK_MODES.map(() => ':-:').join(' | ')} | --- |`,
+  ];
+  for (const row of TOOL_PERMISSION_ROWS) {
+    const letters = SDK_MODES.map((mode) => LETTER[row.decisions[mode]]).join(' | ');
+    const notes = SDK_MODES.flatMap((mode) => {
+      const code = row.editorDiffers[mode];
+      return code === undefined ? [] : [`${mode}: ${DIFFERENCE_NOTE[code] ?? code}`];
+    });
+    lines.push(
+      `| \`${row.tool}.${row.operation}\` | ${row.category} | ${letters} | ${notes.join('; ') || 'agrees'} |`,
+    );
+  }
+  return lines;
+}
 
 export interface MatrixRow {
   readonly key: string;
@@ -108,6 +133,14 @@ export async function renderPermissionMatrix(
     '',
     ...table,
     ...body,
+    '',
+    '## Headless agent tools and `--permission-mode`',
+    '',
+    "The headless CLI and the SDK take `--permission-mode plan|ask|accept-edits|autonomous-scoped|strict`: the editor's Plan, Ask for Approval, Auto Edit, Autonomous Scoped and Strict. The decisions below are the single table in `src/sdk/tool-permission-table.constants.ts`, which the SDK enforces. `tests/unit/tool-permission-editor-agreement.test.ts` runs the same classification through the editor policy above and fails unless every difference is named in the last column; `tests/unit/tool-permission-drift.test.ts` fails when a tool operation has no row. In `plan` the SDK does not offer a withheld category at all, so `D` there means the tool is absent or refused on arrival.",
+    '',
+    "Rules: `autonomous-scoped` never runs a network write, a form submission or a shell script unasked; `workspace.shell` is asked in every mode; a child agent holds its parent's mode and approver and can never hold a category its parent does not. `A` allow, `Q` ask, `D` deny, refuse on arrival or absent.",
+    '',
+    ...sdkToolSection(),
     '',
     '## Project policy',
     '',

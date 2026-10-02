@@ -77,3 +77,9 @@ export interface WatchRequest {
   readonly arguments: readonly string[];
   readonly cwd: string;
 }
+
+/** A line test that cannot hang the host: `tooSlow` is set once the pattern exceeded its time budget. */
+export interface LinePattern {
+  test(line: string): boolean;
+  readonly tooSlow?: boolean;
+}

@@ -6,6 +6,7 @@ import { browserAllowedOrigins } from '../core/browser-origins';
 import { flagshipHostIdentityHash } from '../core/flagship-delivery';
 import { browserToolDefinition } from '../infrastructure/browser-tool-executor';
 
+import { describeRuntimeEffect } from './runtime-approval-card';
 import { TargetAwareToolRouter } from './target-aware-tool-router';
 
 import type { ConfigurationService, RuntimeConfiguration } from './configuration-service';
@@ -41,13 +42,7 @@ export async function approveRuntimeEffect(
         kind: 'runtimeEffect',
         title: vscode.l10n.t('Approve agent effect'),
         message: vscode.l10n.t('Review the exact scope before this operation runs.'),
-        effect: {
-          purpose: request.effect,
-          target: request.scope.targetId,
-          risk: request.risk,
-          sideEffects: [request.effect],
-          reversibility: request.reversible ? 'reversible' : 'irreversible',
-        },
+        effect: describeRuntimeEffect(request),
       },
       signal,
     );

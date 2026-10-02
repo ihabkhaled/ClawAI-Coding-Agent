@@ -41,7 +41,14 @@ export async function commitOperation(context: GitToolContext): Promise<ToolResu
       write: true,
       timeoutMs: timeoutMilliseconds(context.args, GIT_SLOW_TIMEOUT_MS),
     });
-    if (result.exitCode !== 0) return outcome(result, { committed: false });
+    if (result.exitCode !== 0) {
+      return outcome(result, {
+        committed: false,
+        failure:
+          `The commit did not happen: git exited ${String(result.exitCode)}. A pre-commit or commit-msg hook ` +
+          'may have refused it: read stderr, fix the cause, stage again and retry. Never bypass the hook.',
+      });
+    }
     const hash = await headHash(context);
     return outcome(result, { committed: true, ...(hash === undefined ? {} : { hash }) });
   } finally {

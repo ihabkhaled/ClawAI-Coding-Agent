@@ -1,3 +1,5 @@
+import type { BrowserResolver } from './browser-egress.types';
+
 /** What an operator may configure for the browser tool. */
 export interface AgentBrowserOptions {
   /**
@@ -14,6 +16,10 @@ export interface AgentBrowserOptions {
   readonly maxPages?: number | undefined;
   /** Total milliseconds the browser may stay in use in one run. Default 10 minutes. */
   readonly maxRunMs?: number | undefined;
+  /** Milliseconds one call may take before the browser is closed; at most 60 s, which is also the default. */
+  readonly maxCallMs?: number | undefined;
+  /** How names are resolved for the egress check; the system resolver unless a test substitutes one. */
+  readonly resolver?: BrowserResolver | undefined;
 }
 
 /** The browser tool over one run: operations in, bounded structured results out. */

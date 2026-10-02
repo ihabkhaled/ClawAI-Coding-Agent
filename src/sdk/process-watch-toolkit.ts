@@ -64,7 +64,13 @@ export function processWatchToolkit(
       const category = PROCESS_WATCH_OPERATIONS[call.operation];
       if (category === undefined || !permissions.allow.includes(category)) return false;
       if (permissions.approve === undefined) return true;
-      return isApproved(await permissions.approve({ ...call, category }));
+      return isApproved(
+        await permissions.approve({
+          ...call,
+          arguments: structuredClone(call.arguments),
+          category,
+        }),
+      );
     },
   };
 }

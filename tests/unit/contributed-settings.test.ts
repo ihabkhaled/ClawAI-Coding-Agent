@@ -17,7 +17,11 @@ const manifest = JSON.parse(readFileSync('package.json', 'utf8')) as {
   contributes: { configuration: { properties: Record<string, SettingSchema> } };
 };
 const settings = Object.entries(manifest.contributes.configuration.properties);
-const sources = readFileSync('src/services/configuration-service.ts', 'utf8');
+// The configuration service, plus the module that reads the opt-in tool settings
+// (it reads them by suffix the same way, from the user and machine scopes only).
+const sources = ['src/services/configuration-service.ts', 'src/core/opt-in-tool-settings.ts']
+  .map((file) => readFileSync(file, 'utf8'))
+  .join(String.fromCharCode(10));
 
 /**
  * Every contributed setting, checked against the manifest rather than a list

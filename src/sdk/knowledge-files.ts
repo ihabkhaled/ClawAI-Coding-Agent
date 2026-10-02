@@ -89,7 +89,7 @@ interface Pending {
 /** Reads a .gitignore if there is one; a missing or unreadable one is no rules. */
 function ignoreText(absolute: string): string {
   try {
-    return readFileSync(path.join(absolute, '.gitignore'), 'utf8');
+    return readFileSync(path.join(absolute, '.gitignore'), 'utf8').slice(0, 262_144);
   } catch {
     return '';
   }

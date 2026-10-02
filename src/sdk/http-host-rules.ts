@@ -82,6 +82,20 @@ export function matchingRule(url: URL, rules: readonly HttpHostRule[]): HttpHost
   return rules.find((rule) => hostMatches(rule, url.hostname) && portAllowed(rule, port));
 }
 
+/**
+ * The sentence that explains a refusal of a host some rule does name, on a port it does not allow
+ * (a rule `127.0.0.1` allows 80 and 443 only, which a local server on 4310 trips over); empty
+ * when no rule names the host at all.
+ */
+export function portHint(url: URL, rules: readonly HttpHostRule[]): string {
+  const rule = rules.find((candidate) => hostMatches(candidate, url.hostname));
+  if (rule === undefined) return '';
+  const port = String(urlPort(url));
+  return rule.port === undefined
+    ? ` A rule without a port allows only ports 80 and 443, never "any port": the operator adds --http-allow-host ${url.hostname}:${port}.`
+    : ` ${url.hostname} is allowed only on port ${String(rule.port)}.`;
+}
+
 /** Whether a name is one that lives inside a network on purpose (`claw.local`, `localhost`). */
 export function isLocalName(hostname: string): boolean {
   return (

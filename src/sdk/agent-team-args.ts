@@ -2,6 +2,7 @@ import path from 'node:path';
 
 import { redactText } from '../core/redaction';
 
+import { parseExtras } from './agent-team-extras';
 import {
   TEAM_MAX_TOTAL,
   TEAM_MAX_WAIT_NAMES,
@@ -27,6 +28,9 @@ const CATEGORIES: readonly AgentToolCategory[] = [
   'git',
   'git-write',
   'mcp',
+  'http',
+  'http-write',
+  'browser',
   'agents',
 ];
 
@@ -53,12 +57,12 @@ export function agentName(raw: unknown): string {
 function categories(raw: unknown): readonly AgentToolCategory[] | string | undefined {
   if (raw === undefined) return undefined;
   if (!Array.isArray(raw))
-    return '"tools" is a list of: read, write, command, git, git-write, agents.';
+    return '"tools" is a list of: read, write, command, git, git-write, http, http-write, browser, agents.';
   const found: AgentToolCategory[] = [];
   for (const entry of raw) {
     const category = CATEGORIES.find((candidate) => candidate === entry);
     if (category === undefined || category === 'mcp') {
-      return `"${String(entry).slice(0, 30)}" is not a tool category a child can be given: use read, write, command, git, git-write, agents.`;
+      return `"${String(entry).slice(0, 30)}" is not a tool category a child can be given: use read, write, command, git, git-write, http, http-write, browser, agents (shell is the "shell": true switch).`;
     }
     found.push(category);
   }
@@ -169,7 +173,9 @@ export function parseSpawn(args: Args): Checked {
   if (typeof limits === 'string') return { problem: limits };
   const placement = placementOf(args);
   if (typeof placement === 'string') return { problem: placement };
-  return { request: { ...brief, ...limits, ...placement } };
+  const extras = parseExtras(args);
+  if (typeof extras === 'string') return { problem: extras };
+  return { request: { ...brief, ...limits, ...placement, ...extras } };
 }
 
 /** The names a `wait` is for, or undefined for "all of mine"; a string is a problem. */

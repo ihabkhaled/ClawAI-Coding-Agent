@@ -4,10 +4,15 @@ import path from 'node:path';
 import { containedPath } from '../core/workspace-containment';
 import { isSensitiveWorkspacePath } from '../core/workspace-path-policy';
 
-import { sniffImageType, withoutMetadata } from './vision-image';
-import { VISION_EXTENSION_TYPES, VISION_MAX_IMAGE_BYTES } from './vision-tool.constants';
+import { declaredSize, sniffImageType, withoutMetadata } from './vision-image';
+import {
+  VISION_EXTENSION_TYPES,
+  VISION_MAX_IMAGE_BYTES,
+  VISION_MAX_SIDE_PIXELS,
+  VISION_MAX_TOTAL_PIXELS,
+} from './vision-tool.constants';
 
-import type { VisionImage } from './vision-tool.types';
+import type { VisionImage, VisionMimeType } from './vision-tool.types';
 
 const EXTENSIONS = Object.keys(VISION_EXTENSION_TYPES).join(', ');
 
@@ -21,12 +26,20 @@ const EXTENSIONS = Object.keys(VISION_EXTENSION_TYPES).join(', ');
 export function readWorkspaceImage(workspace: string, requested: string): VisionImage {
   const absolute = containedPath(workspace, requested);
   const relative = path.relative(realpathSync(workspace), absolute).split(path.sep).join('/');
-  if (isSensitiveWorkspacePath(relative)) {
+  if (looksSecret(relative)) {
     throw new Error(
       `Refused: "${relative}" looks like it holds secrets. Screenshots of credential files are never sent to a model.`,
     );
   }
-  return readImageFile(absolute, relative);
+  return readImageFile(absolute, relative, true);
+}
+
+/** Whether the path, or the path without its image extension (`id_rsa.png` is a picture of `id_rsa`), names a secret. */
+function looksSecret(relative: string): boolean {
+  return (
+    isSensitiveWorkspacePath(relative) ||
+    isSensitiveWorkspacePath(relative.slice(0, relative.length - path.extname(relative).length))
+  );
 }
 
 /**
@@ -35,15 +48,15 @@ export function readWorkspaceImage(workspace: string, requested: string): Vision
  */
 export function readOperatorImage(absolute: string): VisionImage {
   const name = path.basename(absolute);
-  if (isSensitiveWorkspacePath(name)) {
+  if (looksSecret(name)) {
     throw new Error(
       `Refused: "${name}" looks like it holds secrets. Rename the file if it is safe to send.`,
     );
   }
-  return readImageFile(absolute, name);
+  return readImageFile(absolute, name, false);
 }
 
-function readImageFile(absolute: string, shown: string): VisionImage {
+function readImageFile(absolute: string, shown: string, anonymous: boolean): VisionImage {
   const extension = path.extname(absolute).toLowerCase();
   const expected = VISION_EXTENSION_TYPES[extension];
   if (expected === undefined) {
@@ -67,13 +80,34 @@ function readImageFile(absolute: string, shown: string): VisionImage {
   if (actual !== expected) {
     throw new Error(`"${shown}" has a ${extension} name but ${actual} content. Rename it.`);
   }
+  assertReasonableSize(bytes, actual, shown);
   const clean = withoutMetadata(bytes, actual);
   return {
     bytes: clean,
     mimeType: actual,
-    filename: path.basename(absolute),
+    filename: anonymous ? anonymousName(extension) : path.basename(absolute),
     stripped: clean.length !== bytes.length,
   };
+}
+
+/** The name sent for an image the model chose: only its type, since a file name can carry a person, a project or a secret. */
+function anonymousName(extension: string): string {
+  return `image${extension === '.jpeg' ? '.jpg' : extension}`;
+}
+
+/** Refuses a file whose header declares a picture too big to decode safely. */
+function assertReasonableSize(bytes: Buffer, type: VisionMimeType, shown: string): void {
+  const size = declaredSize(bytes, type);
+  if (size === undefined) return;
+  if (
+    size.width > VISION_MAX_SIDE_PIXELS ||
+    size.height > VISION_MAX_SIDE_PIXELS ||
+    size.width * size.height > VISION_MAX_TOTAL_PIXELS
+  ) {
+    throw new Error(
+      `"${shown}" declares ${String(size.width)}x${String(size.height)} pixels, more than a screenshot can be; it is refused as a possible decompression bomb.`,
+    );
+  }
 }
 
 function statOrFail(absolute: string, shown: string): Stats {

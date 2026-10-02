@@ -3,6 +3,7 @@ import { statSync } from 'node:fs';
 import { containedPath } from '../core/workspace-containment';
 
 import { clampedInteger } from './command-tool-request';
+import { BoundedPattern } from './process-watch-pattern';
 import {
   PROCESS_WATCH_DEFAULT_OUTPUT_CHARS,
   PROCESS_WATCH_DEFAULT_WAIT_MS,
@@ -17,7 +18,7 @@ import {
   PROCESS_WATCH_WAIT_OUTPUT_CHARS,
 } from './process-watch-tool.constants';
 
-import type { WatchRequest } from './process-watch-tool.types';
+import type { LinePattern, WatchRequest } from './process-watch-tool.types';
 import type { ToolLimits } from '../headless/headless-main.types';
 
 type ToolArguments = Readonly<Record<string, unknown>>;
@@ -107,7 +108,7 @@ export function cursorArgument(value: unknown): number | undefined {
 }
 
 /** The `untilMatch` pattern as a case-insensitive RegExp, refusing shapes that can hang a match. */
-export function matchPattern(value: unknown): RegExp | undefined {
+export function matchPattern(value: unknown): LinePattern | undefined {
   if (value === undefined || value === '') return undefined;
   if (typeof value !== 'string') {
     throw new Error('"untilMatch" must be a regular expression string.');
@@ -121,7 +122,7 @@ export function matchPattern(value: unknown): RegExp | undefined {
     throw new Error('"untilMatch" has a nested repeat like (a+)+, which can hang; simplify it.');
   }
   try {
-    return new RegExp(value, 'iu');
+    return new BoundedPattern(new RegExp(value, 'iu'));
   } catch (error) {
     const reason = error instanceof Error ? error.message : 'invalid';
     throw new Error(`"untilMatch" is not a valid regular expression: ${reason}`);

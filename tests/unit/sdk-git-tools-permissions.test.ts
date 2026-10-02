@@ -3,6 +3,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { hardenedGitWriteArguments } from '../../src/core/git-hardening';
 import { parseToolList } from '../../src/headless/headless-args';
 import { prepareTrustedGitWriteSpawn } from '../../src/infrastructure/hardened-git';
+import { commitMessage, explicitPaths, timeoutMilliseconds } from '../../src/sdk/git-tools-args';
 import { needsApproval, permissionsForMode } from '../../src/sdk/permission-modes';
 import { AGENT_ALL_TOOL_CATEGORIES } from '../../src/sdk/permission-modes.constants';
 import {
@@ -53,7 +54,7 @@ describe('git categories', () => {
     expect(operationsFor(['read'])).toEqual([]);
   });
 
-  it('declares a closed, bounded input schema', () => {
+  it('declares a closed input schema and the tool enforces the bounds the schema no longer sends', () => {
     const definitions = offeredDefinitions(['git', 'git-write']) as {
       name: string;
       inputSchema: unknown;
@@ -62,14 +63,13 @@ describe('git categories', () => {
       (definition) => definition.name === 'workspace.git',
     )?.inputSchema;
 
-    expect(schema).toMatchObject({
-      additionalProperties: false,
-      properties: {
-        message: { maxLength: 100 },
-        paths: { maxItems: 100, minItems: 1 },
-        timeoutSeconds: { maximum: 3600 },
-      },
-    });
+    expect(schema).toMatchObject({ additionalProperties: false });
+    expect(() => commitMessage({ message: 'x'.repeat(101) })).toThrow(/at most 100/u);
+    expect(() => explicitPaths('add', { paths: [] }, process.cwd())).toThrow(/non-empty/u);
+    expect(() =>
+      explicitPaths('add', { paths: Array<string>(101).fill('a.txt') }, process.cwd()),
+    ).toThrow(/at most 100/u);
+    expect(timeoutMilliseconds({ timeoutSeconds: 999_999 }, 1)).toBe(3_600_000);
   });
 
   it('is accepted by --allow-tools and included with every category', () => {

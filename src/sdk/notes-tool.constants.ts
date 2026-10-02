@@ -38,9 +38,9 @@ export const NOTES_TOOL_OPERATIONS: Readonly<Record<string, AgentToolCategory>> 
 
 /** What the model is told: earlier tool results are condensed, so write down what it will need. */
 export const NOTES_TOOL_DESCRIPTION =
-  'Your working memory. Your earlier tool results are condensed after a while: right after reading ' +
-  'something you will need later (file structure, exact names/paths, decisions, gate results, TODOs), ' +
-  'add a short note; call read to recall instead of re-reading files. ' +
+  'Your working memory: earlier tool results get condensed, so right after reading something you ' +
+  'will need (structure, exact names/paths, decisions, gate results, TODOs) add a short note, and ' +
+  'read to recall instead of re-reading files. ' +
   `add {text (<=${String(NOTE_MAX_TEXT_CHARS)} chars), tag? (<=${String(NOTE_MAX_TAG_CHARS)})}; ` +
   'read {tag?, query?} returns every note (or the matching ones), numbered, newest last; ' +
   'replace {id, text} rewrites a note; remove {id}; clear drops all. ' +
@@ -51,21 +51,9 @@ export const NOTES_TOOL_INPUT_SCHEMA = {
   type: 'object',
   additionalProperties: false,
   properties: {
-    text: {
-      type: 'string',
-      maxLength: NOTE_MAX_TEXT_CHARS,
-      description: 'add, replace: the note.',
-    },
-    tag: {
-      type: 'string',
-      maxLength: NOTE_MAX_TAG_CHARS,
-      description: 'add: a short label. read: only notes with this tag.',
-    },
-    query: {
-      type: 'string',
-      maxLength: 200,
-      description: 'read: only notes containing this text.',
-    },
-    id: { type: 'integer', minimum: 1, description: 'replace, remove: the note number.' },
+    text: { type: 'string' },
+    tag: { type: 'string' },
+    query: { type: 'string' },
+    id: { type: 'integer' },
   },
 } as const;

@@ -46,10 +46,22 @@ strings in a custom address.
 | `clawAI.commandSandbox.dockerImage`  | empty   | The container image for `docker`.                                                               |
 | `clawAI.commandSandbox.allowNetwork` | `false` | Lets sandboxed commands use the network.                                                        |
 | `clawAI.browserOrigins`              | empty   | Extra sites the agent's browser may open without asking, such as `http://localhost:3000`.       |
+| `clawAI.tools.httpAllowHosts`        | empty   | Servers the agent may send web requests to, such as `localhost:3000`. Empty turns the tool off. |
+| `clawAI.tools.shellEnabled`          | `false` | Lets the agent run shell scripts, each shown to you for approval first.                         |
+| `clawAI.tools.shellDeny`             | none    | Extra patterns that make the shell tool refuse a script.                                        |
 | `clawAI.zeroDataRetention`           | `false` | Keep nothing: no saved run history, no uploads, no publishing, no sharing, no model comparison. |
 
 See [Chat and the agent](chat-and-agent.md), [Running commands safely](running-commands-safely.md)
 and [Privacy and security](privacy-and-security.md) for what these mean.
+
+### Tools that stay off until you turn them on
+
+Two tools are off until you switch them on in your own user settings. A project's `.vscode/settings.json` cannot turn them on.
+
+- **Web requests** (`clawAI.tools.httpAllowHosts`). List the servers the agent may call, for example `localhost:3000` or `*.example.com`. It can then read from them while it works. Anything that changes data on a server (post, put, patch, delete) is always asked about. Private and local addresses work only when you name them.
+- **Shell scripts** (`clawAI.tools.shellEnabled`). Lets the agent use pipes, `&&` and redirects. Every script is shown to you first. A built-in check also refuses scripts that reach outside the workspace, read credentials or download and run code; it is a safety net and not a sandbox, so read what you approve.
+
+The browser needs no extra setting. Add the sites it may open to `clawAI.browserOrigins`.
 
 ## Context
 
