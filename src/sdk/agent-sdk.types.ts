@@ -7,6 +7,12 @@ import type { HeadlessRunRequest } from '../headless/headless-transport.types';
 /** `off`: the thread ignores personal memories. `account-default`: left as the account has it. */
 export type AgentMemoryMode = 'off' | 'account-default';
 
+/** A provider and model to run on; `provider` defaults to the primary run's. */
+export interface AgentModelChoice {
+  readonly provider?: string | undefined;
+  readonly model: string;
+}
+
 /** One tool call the model asked for, as a caller's toolkit receives it. */
 export interface AgentToolCall {
   readonly toolName: string;
@@ -125,6 +131,10 @@ export interface AgentRunOptions {
   readonly backendUrl?: string | undefined;
   readonly provider?: string | undefined;
   readonly model?: string | undefined;
+  /** Tried in order, once each, when the model stays rate limited (HTTP 429) at the start. */
+  readonly fallbackModels?: readonly AgentModelChoice[] | undefined;
+  /** Told when a rate-limited model was replaced by a fallback. */
+  readonly onModelFallback?: ((info: { from: string; to: string }) => void) | undefined;
   readonly title?: string | undefined;
   /** Continues this existing thread instead of creating one. */
   readonly threadId?: string | undefined;

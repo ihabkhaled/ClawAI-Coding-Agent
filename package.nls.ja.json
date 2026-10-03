@@ -103,6 +103,7 @@
   "config.commandSandbox.mode": "エージェントのシェルコマンド用サンドボックス。off: 制限のみ。auto: 利用可能な最も強力なもの (Linux では bubblewrap、macOS では sandbox-exec、それ以外はイメージが設定されていれば docker)。何もない場合は 'none' と報告します。名前付きの方式を指定した場合、利用できないときはコマンドが拒否されます。",
   "config.commandSandbox.dockerImage": "コマンドサンドボックスが docker の場合 (または auto が OS のサンドボックスを見つけられない場合) に使うコンテナーイメージ。空にすると docker は無効になります。",
   "config.commandSandbox.allowNetwork": "コマンドサンドボックス内でのネットワークアクセスを許可します。既定ではオフです。",
+  "config.fallbackModels": "選択したモデルのレート制限 (HTTP 429) が続くとき、順に切り替えるモデル。プロバイダー/モデル、またはモデル名のみで指定します。各モデルは 1 回だけ試されます。空のままにすると、実行は分かりやすいメッセージで終了します。",
   "config.selectedModel": "プロバイダー:モデルの形式で指定する手動のモデル選択。",
   "config.autosave": "ClawAI がレビューする前に、編集が触れるファイルの未保存の変更を保存します。",
   "config.maxContextBytes": "ワークスペースのコンテキストとして収集する UTF-8 バイトの合計上限。",

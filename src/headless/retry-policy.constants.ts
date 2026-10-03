@@ -15,6 +15,12 @@ export const RETRY_DEFAULTS = {
   jitter: 0.25,
 } as const;
 
+/** A 429 is retried this many times in a row (the first try included) before the call fails as rate limited. */
+export const RATE_LIMIT_MAX_ATTEMPTS = 4;
+
+/** The status of a rate limit. */
+export const RATE_LIMIT_STATUS = 429;
+
 /** Statuses that mean "try again shortly": timeout, rate limit, and the gateway trio. */
 export const TRANSIENT_STATUSES: readonly number[] = [408, 429, 502, 503, 504];
 

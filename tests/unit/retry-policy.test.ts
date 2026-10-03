@@ -8,7 +8,9 @@ import {
   Retrier,
   withRetries,
 } from '../../src/headless/retry-policy';
+import { RATE_LIMIT_MAX_ATTEMPTS } from '../../src/headless/retry-policy.constants';
 import { RuntimeHttpError } from '../../src/headless/runtime-http-error';
+import { RuntimeRateLimitedError } from '../../src/headless/runtime-rate-limited-error';
 import { isRunLostError } from '../../src/sdk/run-lost';
 
 import type { RetryNotice } from '../../src/headless/retry-policy.types';
@@ -236,5 +238,60 @@ describe('isRunLostError', () => {
     ).toBe(false);
     expect(isRunLostError(http(400, 'RUNTIME_RUN_NOT_FOUND'))).toBe(false);
     expect(isRunLostError(new Error('RUNTIME_RUN_NOT_FOUND'))).toBe(false);
+  });
+});
+
+describe('a rate limit (HTTP 429)', () => {
+  it('waits out each Retry-After, then fails as rate limited after the bounded tries', async () => {
+    const { tuning, sleeps } = clock();
+    let calls = 0;
+    const failure = await withRetries(tuning, () => {
+      calls += 1;
+      return Promise.reject(new RuntimeHttpError('/x', 429, 'busy', 2_000));
+    }).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(RuntimeRateLimitedError);
+    expect((failure as RuntimeRateLimitedError).attempts).toBe(RATE_LIMIT_MAX_ATTEMPTS);
+    expect((failure as Error).message).toContain('Choose another model');
+    expect(calls).toBe(RATE_LIMIT_MAX_ATTEMPTS);
+    expect(sleeps).toEqual([2_000, 2_000, 2_000]);
+  });
+
+  it('falls back to the backoff when the 429 carries no Retry-After', async () => {
+    const { tuning, sleeps } = clock();
+    await withRetries(tuning, () => Promise.reject(http(429))).catch(() => undefined);
+    expect(sleeps).toEqual([1_000, 2_000, 4_000]);
+  });
+
+  it('recovers when a later try succeeds', async () => {
+    const { tuning } = clock();
+    let calls = 0;
+    const value = await withRetries(tuning, () => {
+      calls += 1;
+      return calls < 3 ? Promise.reject(http(429)) : Promise.resolve('ok');
+    });
+    expect(value).toBe('ok');
+  });
+
+  it('counts only consecutive 429s: another transient failure clears the count', async () => {
+    const { tuning } = clock();
+    const retrier = new Retrier(tuning);
+    await retrier.backoff(http(429));
+    await retrier.backoff(http(429));
+    await retrier.backoff(http(503));
+    await retrier.backoff(http(429));
+    await retrier.backoff(http(429));
+    await expect(retrier.backoff(http(429))).resolves.toBeUndefined();
+    await expect(retrier.backoff(http(429))).rejects.toBeInstanceOf(RuntimeRateLimitedError);
+  });
+
+  it('is not cut short for other statuses: a 503 keeps its full allowance', async () => {
+    const { tuning } = clock();
+    let calls = 0;
+    await withRetries(tuning, () => {
+      calls += 1;
+      return calls < 6 ? Promise.reject(http(503)) : Promise.resolve();
+    });
+    expect(calls).toBe(6);
   });
 });

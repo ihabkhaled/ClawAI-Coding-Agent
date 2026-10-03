@@ -213,6 +213,11 @@ const SAMPLES: Record<string, Json> = {
   },
   'run.retrying (status)': { type: 'run.retrying', attempt: 1, waitMs: 1000, status: 503 },
   'run.retrying (code)': { type: 'run.retrying', attempt: 2, waitMs: 2100, code: 'ECONNRESET' },
+  'model.fallback': {
+    type: 'model.fallback',
+    from: 'OLLAMA/kimi-k3',
+    to: 'GEMINI/gemini-2.5-flash',
+  },
   'agent.spawned': {
     type: 'agent.spawned',
     name: 'mod-a',

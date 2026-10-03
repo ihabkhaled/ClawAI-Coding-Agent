@@ -109,6 +109,10 @@ function noticeLine(event: AgentEvent): string | undefined {
   if (event.type === 'thread.memory-unchanged') {
     return `[memory] the backend refused the setting (HTTP ${String(event.status)}); account memories stay on\n`;
   }
+  if (event.type === 'model.fallback') {
+    return `[model] ${event.from} is rate limited; continuing on ${event.to}
+`;
+  }
   if (event.type === 'run.retrying') {
     const cause =
       event.status === undefined ? (event.code ?? 'network error') : `HTTP ${String(event.status)}`;

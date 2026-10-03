@@ -11,6 +11,7 @@ import { permissionModeTranslations } from './permission-mode-translations.mjs';
 import { pluginApprovalTranslations } from './plugin-approval-translations.mjs';
 import { firstRunTranslations } from './first-run-translations.mjs';
 import { nlsGapTranslations } from './nls-gap-translations.mjs';
+import { modelFallbackTranslations } from './model-fallback-translations.mjs';
 import { pluginNetworkTranslations } from './plugin-network-translations.mjs';
 import { pluginSignatureTranslations } from './plugin-signature-translations.mjs';
 import { pluginTreeTranslations } from './plugin-tree-translations.mjs';
@@ -4883,6 +4884,7 @@ function translate(locale, message) {
     pairingRetentionTranslations[locale][message] ??
     optInToolTranslations[locale][message] ??
     nlsGapTranslations[locale][message] ??
+    modelFallbackTranslations[locale][message] ??
     firstRunTranslations[locale][message] ??
     message
   );

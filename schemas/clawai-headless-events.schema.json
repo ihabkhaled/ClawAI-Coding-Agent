@@ -14,6 +14,7 @@
     { "$ref": "#/definitions/budgetExhausted" },
     { "$ref": "#/definitions/runContinued" },
     { "$ref": "#/definitions/runRetrying" },
+    { "$ref": "#/definitions/modelFallback" },
     { "$ref": "#/definitions/noteAdded" },
     { "$ref": "#/definitions/runStuck" },
     { "$ref": "#/definitions/runChecks" },
@@ -312,7 +313,7 @@
       "type": "object",
       "additionalProperties": false,
       "required": ["type", "attempt", "waitMs"],
-      "description": "A runtime call failed transiently (network error, HTTP 408/429/502/503/504, or a 500 saying the state is unavailable) and is being retried after waitMs. At most 12 attempts and 5 minutes per call.",
+      "description": "A runtime call failed transiently (network error, HTTP 408/429/502/503/504, or a 500 saying the state is unavailable) and is being retried after waitMs. At most 12 attempts and 5 minutes per call; a 429 alone is cut off after 4 tries and the call fails as rate limited.",
       "properties": {
         "type": { "const": "run.retrying" },
         "attempt": {
@@ -326,6 +327,17 @@
           "type": "string",
           "description": "A network error code such as ECONNRESET, when there was no status."
         }
+      }
+    },
+    "modelFallback": {
+      "type": "object",
+      "additionalProperties": false,
+      "required": ["type", "from", "to"],
+      "description": "The selected model stayed rate limited (HTTP 429) after the bounded retries, so the run was started on the next fallback model instead.",
+      "properties": {
+        "type": { "const": "model.fallback" },
+        "from": { "type": "string", "minLength": 1 },
+        "to": { "type": "string", "minLength": 1 }
       }
     },
     "agentSpawned": {

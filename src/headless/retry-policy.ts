@@ -1,6 +1,8 @@
 import {
   CAUSE_DEPTH,
   NETWORK_FAILURE_CODE,
+  RATE_LIMIT_MAX_ATTEMPTS,
+  RATE_LIMIT_STATUS,
   RETRY_DEFAULTS,
   BUSY_BODY_PATTERN,
   TRANSIENT_NETWORK_CODES,
@@ -9,6 +11,7 @@ import {
   UNAVAILABLE_BODY_PATTERN,
 } from './retry-policy.constants';
 import { RuntimeHttpError } from './runtime-http-error';
+import { RuntimeRateLimitedError } from './runtime-rate-limited-error';
 import { RuntimeUnavailableError } from './runtime-unavailable-error';
 
 import type { RetryContext, RetryVerdict } from './retry-policy.types';
@@ -94,6 +97,8 @@ export function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> 
  */
 export class Retrier {
   private failures = 0;
+  /** Consecutive 429s; any other failure or progress clears it. */
+  private rateLimited = 0;
   private startedAt: number;
 
   constructor(private readonly context: RetryContext) {
@@ -102,6 +107,7 @@ export class Retrier {
 
   reset(): void {
     this.failures = 0;
+    this.rateLimited = 0;
     this.startedAt = this.now();
   }
 
@@ -111,6 +117,7 @@ export class Retrier {
     const verdict = classifyFailure(error);
     if (!verdict.retry || this.aborted()) throw error;
     this.failures += 1;
+    this.countRateLimit(verdict.status, error);
     const waitMs =
       verdict.retryAfterMs ?? backoffMs(this.failures, this.context.random ?? Math.random);
     if (this.spent(waitMs)) throw this.failures > 1 ? this.giveUp(error) : error;
@@ -122,6 +129,14 @@ export class Retrier {
     });
     await (this.context.sleep ?? abortableSleep)(waitMs, signal);
     if (this.aborted()) throw error;
+  }
+
+  /** Counts consecutive 429s and throws once they outlast the rate-limit allowance. */
+  private countRateLimit(status: number | undefined, error: unknown): void {
+    this.rateLimited = status === RATE_LIMIT_STATUS ? this.rateLimited + 1 : 0;
+    if (this.rateLimited >= RATE_LIMIT_MAX_ATTEMPTS) {
+      throw new RuntimeRateLimitedError(this.rateLimited, this.elapsed(), error);
+    }
   }
 
   /** True when another try, after `waitMs`, would break the attempt or time allowance. */

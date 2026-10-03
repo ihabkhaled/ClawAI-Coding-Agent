@@ -62,6 +62,20 @@ describe('runtime UI projection', () => {
     vi.clearAllMocks();
   });
 
+  it('says in the card when a rate-limited model is replaced', () => {
+    const { projector, view } = harness();
+    projector.modelFallback('OLLAMA/a', 'GEMINI/b');
+
+    expect(view.postEvent).toHaveBeenCalledWith(
+      {
+        type: 'RUNTIME_PHASE',
+        label: 'Switched model',
+        description: 'OLLAMA/a is rate limited; continuing on GEMINI/b',
+      },
+      REQUEST_ID,
+    );
+  });
+
   it('streams every delta to the owning request and finishes with the whole answer', async () => {
     const { projector, view } = harness();
     projector.project(event('model.delta', { text: 'The rules directory ' }));

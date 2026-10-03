@@ -10,6 +10,7 @@ import { isRuntimeRunEnded } from '../core/runtime/runtime-event-reducer';
 
 import { RuntimeJournalTracker } from './runtime-journal-tracker';
 import { RuntimeRunService } from './runtime-run-service';
+import { executeWithModelFallback } from './runtime-studio-fallback';
 
 import type { RuntimeConfiguration } from './configuration-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
@@ -94,7 +95,15 @@ export function forwardLocalTerminals(
   };
 }
 
-export async function executeRuntimeStudio(dependencies: RuntimeStudioExecutionDependencies) {
+export async function executeRuntimeStudio(
+  dependencies: RuntimeStudioExecutionDependencies,
+): Promise<void> {
+  await executeWithModelFallback(dependencies, executeRuntimeStudioOnModel);
+}
+
+async function executeRuntimeStudioOnModel(
+  dependencies: RuntimeStudioExecutionDependencies,
+): Promise<void> {
   const { input, manifest, epochs, router } = dependencies;
   // The caller supplies the catalog so it can describe roots that only exist
   // for this run, such as an approved external output folder.

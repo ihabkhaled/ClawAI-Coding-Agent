@@ -149,6 +149,14 @@ export class RuntimeUiProjector {
     this.activity(label, effect);
   }
 
+  /** A rate-limited model was replaced; the card says so rather than going quiet. */
+  modelFallback(from: string, to: string): void {
+    this.activity(
+      vscode.l10n.t('Switched model'),
+      vscode.l10n.t('{0} is rate limited; continuing on {1}', from, to),
+    );
+  }
+
   project(event: RuntimeEvent): void {
     const terminal = TERMINAL_KINDS[event.type];
     if (terminal !== undefined) {

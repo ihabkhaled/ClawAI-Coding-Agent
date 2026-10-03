@@ -59,6 +59,9 @@ export async function runQueuedAgent(
       onApproval: (phase, effect) => {
         projector.approval(phase, effect);
       },
+      onModelFallback: (info) => {
+        projector.modelFallback(info.from, info.to);
+      },
     });
   } catch (error: unknown) {
     await lease?.rollback();

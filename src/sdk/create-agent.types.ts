@@ -1,5 +1,10 @@
 import type { AgentContextConfig } from './agent-context.types';
-import type { AgentBudgetProfile, AgentMemoryMode, RuntimeTransportPort } from './agent-sdk.types';
+import type {
+  AgentBudgetProfile,
+  AgentMemoryMode,
+  AgentModelChoice,
+  RuntimeTransportPort,
+} from './agent-sdk.types';
 import type { TeamLink } from './agent-team-tool.types';
 import type { AgentBrowserOptions } from './browser-tool.types';
 import type { DoneCheck, DoneCheckSummary } from './done-checks.types';
@@ -34,6 +39,8 @@ export interface AgentConfig {
   readonly backendUrl?: string | undefined;
   readonly model?: string | undefined;
   readonly provider?: string | undefined;
+  /** Tried in order, once each, when the model stays rate limited (HTTP 429) at the start; see `startWithModelFallback`. */
+  readonly fallbackModels?: readonly AgentModelChoice[] | undefined;
   /** Defaults to read and git only; writing and commands are opt-in. */
   readonly permissions?: AgentPermissions | undefined;
   readonly deadlineMs?: number | undefined;
@@ -271,6 +278,13 @@ export type AgentEvent =
       readonly status?: number;
       /** A network error code, when there was no HTTP status. */
       readonly code?: string;
+    }
+  | {
+      readonly type: 'model.fallback';
+      /** The model that stayed rate limited. */
+      readonly from: string;
+      /** The fallback model the run started on instead. */
+      readonly to: string;
     }
   | {
       readonly type: 'note.added';

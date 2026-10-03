@@ -103,6 +103,7 @@
   "config.commandSandbox.mode": "Sandbox para os comandos de shell do agente. off: apenas limitado. auto: o mais forte disponível (bubblewrap no Linux, sandbox-exec no macOS, senão docker quando há uma imagem definida), informando 'none' quando nada existe. Um mecanismo nomeado é obrigatório: os comandos são recusados se ele não estiver disponível.",
   "config.commandSandbox.dockerImage": "Imagem de contêiner usada quando o sandbox de comandos é docker (ou o auto não encontra um sandbox do sistema). Vazio desativa o docker.",
   "config.commandSandbox.allowNetwork": "Permitir acesso à rede dentro do sandbox de comandos. Desativado por padrão.",
+  "config.fallbackModels": "Modelos para os quais mudar, em ordem, quando o modelo escolhido continua limitado por taxa (HTTP 429). Use provedor/modelo ou apenas um modelo. Cada um é tentado uma vez; deixe vazio para encerrar a execução com uma mensagem clara.",
   "config.selectedModel": "Seleção manual do modelo, codificada como provedor:modelo.",
   "config.autosave": "Salvar as alterações não salvas nos arquivos que uma edição toca antes de o ClawAI revisá-los.",
   "config.maxContextBytes": "Total máximo de bytes UTF-8 coletados como contexto do espaço de trabalho.",
