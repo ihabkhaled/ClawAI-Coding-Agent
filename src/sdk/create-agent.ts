@@ -262,6 +262,10 @@ async function runOnce(
       token,
       provider: config.provider,
       model: config.model,
+      fallbackModels: config.fallbackModels,
+      onModelFallback: (info) => {
+        emit({ type: 'model.fallback', ...info });
+      },
       title: options.title,
       budgetProfile: options.budgetProfile,
       threadId: session.threadId,

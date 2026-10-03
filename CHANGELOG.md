@@ -2,6 +2,10 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.100.0
+
+- Rate limits no longer stall or sink a run. A model that answers 429 is retried 4 times, then the run switches to the next model in `clawAI.fallbackModels` (CLI: `--fallback-model`, env `CLAW_FALLBACK_MODELS`), at the start or in the middle of the run, and the panel says "Switched model". Each model is tried once; with no fallback the run ends with a clear "rate limited" message instead of waiting.
+
 ## 1.99.0
 
 - Safer by design: everything that can reach a website, run a script or start another agent is now asked about in every approval mode. The browser can no longer be tricked into reaching private addresses through WebSockets or look-alike names, a stuck page can no longer freeze the agent, and password fields are hidden from page snapshots.

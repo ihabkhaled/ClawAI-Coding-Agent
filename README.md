@@ -9,7 +9,7 @@ project, proposes changes, and waits for your OK before it touches a file.
 It connects to your ClawAI account, so you can use many AI models from one
 place: hosted models, or models running on your own machine.
 
-Version 1.99.0 delivers a more capable agent that can plan, edit files, run
+Version 1.100.0 delivers a more capable agent that can plan, edit files, run
 commands, use git, and drive a browser, all with your approval, and it keeps
 working with the classic chat-and-review flow if a newer feature is not
 available on your ClawAI server. The approval choices now mean what they say

@@ -1,5 +1,6 @@
 import path from 'node:path';
 
+import { parseFallbackModels } from '../core/fallback-model-list';
 import { AGENT_ALL_TOOL_CATEGORIES } from '../sdk/permission-modes.constants';
 
 import { checkedExtras } from './headless-args-extras';
@@ -95,7 +96,7 @@ function invocationFrom(
       ...shell,
       ...budgets,
       workspace: path.resolve(cwd, last('workspace') ?? '.'),
-      ...connectionFrom(last, environment),
+      ...connectionFrom(values, last, environment),
       allowCommands: values.get('allowCommand') ?? [],
     },
   };
@@ -103,10 +104,16 @@ function invocationFrom(
 
 /** The model, provider and backend: the flag, else the environment (older `CLAW_LIVE_*` names last). */
 function connectionFrom(
+  values: ReadonlyMap<string, readonly string[]>,
   last: (field: string) => string | undefined,
   environment: HeadlessEnvironment,
-): Pick<HeadlessInvocation, 'model' | 'provider' | 'backendUrl'> {
+): Pick<HeadlessInvocation, 'model' | 'provider' | 'backendUrl' | 'fallbackModels'> {
+  const fallbackModels = parseFallbackModels(
+    values.get('fallbackModel') ??
+      (environment.CLAW_FALLBACK_MODELS === undefined ? [] : [environment.CLAW_FALLBACK_MODELS]),
+  );
   return {
+    ...(fallbackModels.length === 0 ? {} : { fallbackModels }),
     model: last('model') ?? environment.CLAW_MODEL ?? environment.CLAW_LIVE_MODEL,
     provider: last('provider') ?? environment.CLAW_PROVIDER ?? environment.CLAW_LIVE_PROVIDER,
     backendUrl:

@@ -23,6 +23,9 @@ export function agentConfigFor(input: {
     backendUrl: invocation.backendUrl,
     model: invocation.model,
     provider: invocation.provider,
+    ...(invocation.fallbackModels === undefined
+      ? {}
+      : { fallbackModels: invocation.fallbackModels }),
     permissions: {
       allow: invocation.allowTools,
       allowedExecutables: invocation.allowCommands,

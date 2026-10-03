@@ -103,6 +103,7 @@
   "config.commandSandbox.mode": "代理 Shell 命令的沙盒。off：仅限制。auto：使用可用的最强方案（Linux 上为 bubblewrap，macOS 上为 sandbox-exec，否则在设置了镜像时使用 docker），什么都没有时报告 'none'。必须指定具名机制：若其不可用，命令将被拒绝。",
   "config.commandSandbox.dockerImage": "命令沙盒为 docker 时（或 auto 找不到系统沙盒时）使用的容器镜像。留空则禁用 docker。",
   "config.commandSandbox.allowNetwork": "允许在命令沙盒内访问网络。默认关闭。",
+  "config.fallbackModels": "所选模型持续被限流 (HTTP 429) 时，按顺序切换到的模型。使用 提供商/模型 或仅模型名。每个只尝试一次；留空则运行以清晰的提示结束。",
   "config.selectedModel": "手动选择模型，格式为 提供方:模型。",
   "config.autosave": "在 ClawAI 审阅之前，保存编辑所涉及文件中未保存的更改。",
   "config.maxContextBytes": "作为工作区上下文收集的 UTF-8 字节总数上限。",

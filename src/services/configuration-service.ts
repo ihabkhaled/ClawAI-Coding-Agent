@@ -84,6 +84,8 @@ export interface RuntimeConfiguration extends GlobalConfiguration {
   permissionMode: PermissionMode;
   requestTimeoutMs: number;
   autosave: AutosavePolicy;
+  /** `clawAI.fallbackModels`: models tried in order when the selected one stays rate limited. */
+  fallbackModels?: readonly string[];
 }
 
 function normalizeAutosavePolicy(value: unknown): AutosavePolicy {
@@ -112,6 +114,12 @@ function telemetrySettings(
     telemetryEndpoint: configuration.get<string>('telemetryEndpoint') ?? '',
     telemetryHeaders: configuration.get<Record<string, string>>('telemetryHeaders') ?? {},
   };
+}
+
+function stringList(value: unknown): string[] {
+  return Array.isArray(value)
+    ? value.filter((entry): entry is string => typeof entry === 'string')
+    : [];
 }
 
 function sandboxMode(value: unknown): CommandSandboxMode {
@@ -281,6 +289,7 @@ export class ConfigurationService {
       requestTimeoutMs: numberSetting(configuration, 'requestTimeoutMs', 60_000),
       routingMode: normalizeRoutingMode(configuration.get<unknown>('routingMode') ?? 'AUTO'),
       selectedModel: configuration.get<string>('selectedModel') ?? '',
+      fallbackModels: stringList(configuration.get<unknown>('fallbackModels')),
       maxContextBytes: numberSetting(configuration, 'maxContextBytes', DEFAULT_MAX_CONTEXT_BYTES),
       maxContextFiles: numberSetting(configuration, 'maxContextFiles', DEFAULT_MAX_CONTEXT_FILES),
       exclude: configuration.get<string[]>('exclude') ?? [...DEFAULT_CONTEXT_EXCLUDES],

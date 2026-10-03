@@ -102,6 +102,8 @@ export interface RuntimeStudioInput {
   readonly model?: string;
   readonly signal: AbortSignal;
   readonly onEvent: (event: RuntimeEvent) => void;
+  /** A rate-limited model was replaced by the next `clawAI.fallbackModels` entry. */
+  readonly onModelFallback?: (info: { from: string; to: string }) => void;
   /**
    * A run blocked on the approval dialog looks identical to a run that has
    * hung. Only one Runtime V2 run is active per extension host, so the studio

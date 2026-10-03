@@ -3,15 +3,23 @@ import { randomUUID } from 'node:crypto';
 import { runHeadlessSession } from '../headless/headless-session';
 import { HeadlessTransport, sha256 } from '../headless/headless-transport';
 
+import { runWithFallbacks } from './agent-run-fallback';
 import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
 import { toolCallOf, toolResultFor } from './agent-tool-result';
 import { profileDeadlineMs, resolveRunBudget } from './budget-profiles';
 import { deferralFor, startRunWithDeferral } from './deferred-run';
 import { deferredToolkit } from './deferred-toolkit';
+import {
+  fallbacksAfter,
+  isRateLimitedTerminal,
+  primaryModel,
+  startWithModelFallback,
+} from './model-fallback';
 import { reportUndeliveredImages, uploadPromptImages } from './prompt-images';
 import { openThread } from './thread-memory';
 import { describeTools } from './tool-alias';
 
+import type { AttemptInput, AttemptOutcome } from './agent-run-fallback';
 import type {
   AgentRunOptions,
   AgentRunResult,
@@ -19,6 +27,7 @@ import type {
   RuntimeTransportPort,
 } from './agent-sdk.types';
 import type { DeferredLoaderRef } from './deferred-toolkit';
+import type { ResolvedModel } from './model-fallback';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
 
 /**
@@ -50,8 +59,10 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
 
   const attached = await uploadPromptImages(transport, token, options.images);
   const requestId = `request.${randomUUID()}`;
-  const idempotencyKey = `idem.${randomUUID()}`;
   const startWith = (
+    choice: ResolvedModel,
+    idempotencyKey: string,
+    prompt: string,
     definitions: readonly unknown[],
   ): Promise<{ runId: string; generation: string }> =>
     transport.startRun(token, {
@@ -59,7 +70,7 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
       threadId,
       clientRequestId: requestId,
       idempotencyKey,
-      prompt: options.prompt,
+      prompt,
       ...attached,
       // The catalog and manifest hash a plain serialization, matching the
       // extension. Only the tool-result receipt uses the canonical form, and
@@ -67,53 +78,104 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
       manifestHash: sha256(JSON.stringify({ targets: ['target:workspace'] })),
       toolCatalogHash: sha256(JSON.stringify(definitions)),
       toolDefinitions: definitions,
-      provider: options.provider ?? AGENT_SDK_DEFAULTS.provider,
-      model: options.model ?? AGENT_SDK_DEFAULTS.model,
+      provider: choice.provider,
+      model: choice.model,
       epochs,
       budget: resolveRunBudget(options.budgetProfile, deadlineMs, options.budget),
     });
   const catalog = deferralFor(options.toolkit.definitions, options.deferTools, transport);
-  const { started, deferred } = await startRunWithDeferral(
-    startWith,
-    catalog,
-    options.toolkit.definitions,
-  );
-  const loader: DeferredLoaderRef = { current: undefined };
-  const toolkit =
-    deferred && catalog !== undefined
-      ? deferredToolkit(options.toolkit, catalog, loader)
-      : options.toolkit;
+  const now = options.now ?? ((): number => Date.now());
 
-  const run = { ...started, threadId };
-  loader.current = (definitions, signal) =>
-    transport.loadTools?.(token, run, definitions, signal) ??
-    Promise.reject(new Error('This transport cannot load deferred tools.'));
-  await reportUndeliveredImages(
-    transport,
-    token,
-    run,
-    attached.fileIds,
-    options.onImagesNotDelivered,
-  );
-  options.onStarted?.({ runId: run.runId, threadId, ...(memory === undefined ? {} : { memory }) });
-  const report = await runHeadlessSession({
-    events: () => transport.events(token, run, options.signal),
-    answerTool: async (event) => {
-      const denial = await deniedReason(event, toolkit);
-      await transport.submitResult(
-        token,
-        run,
-        epochs,
-        await toolResultFor(event, toolkit, denial, options.signal),
-      );
+  const attempt = async (input: AttemptInput): Promise<AttemptOutcome> => {
+    const { progress } = input;
+    progress.rest = [];
+    let used = input.target;
+    // A model that was rate limited at the start hands over to the next one
+    // here; one that is limited mid-run is handed over by `runWithFallbacks`.
+    const { started, deferred } = await startWithModelFallback(
+      input.target,
+      input.candidates,
+      (choice) => {
+        used = choice;
+        // A refused start stores nothing, so one key serves a model's own
+        // retries; a fallback model is a different request and gets its own.
+        const idempotencyKey = `idem.${randomUUID()}`;
+        return startRunWithDeferral(
+          (definitions) => startWith(choice, idempotencyKey, input.prompt, definitions),
+          catalog,
+          options.toolkit.definitions,
+        );
+      },
+      options.onModelFallback,
+    );
+    progress.used = used;
+    progress.rest = fallbacksAfter(used, input.candidates);
+    const loader: DeferredLoaderRef = { current: undefined };
+    const toolkit =
+      deferred && catalog !== undefined
+        ? deferredToolkit(options.toolkit, catalog, loader)
+        : options.toolkit;
+
+    const run = { ...started, threadId };
+    loader.current = (definitions, signal) =>
+      transport.loadTools?.(token, run, definitions, signal) ??
+      Promise.reject(new Error('This transport cannot load deferred tools.'));
+    await reportUndeliveredImages(
+      transport,
+      token,
+      run,
+      attached.fileIds,
+      options.onImagesNotDelivered,
+    );
+    options.onStarted?.({
+      runId: run.runId,
+      threadId,
+      ...(memory === undefined ? {} : { memory }),
+    });
+    let swallowed = false;
+    const report = await runHeadlessSession({
+      events: () => transport.events(token, run, options.signal),
+      answerTool: async (event) => {
+        const denial = await deniedReason(event, toolkit);
+        await transport.submitResult(
+          token,
+          run,
+          epochs,
+          await toolResultFor(event, toolkit, denial, options.signal),
+        );
+      },
+      now,
+      deadlineMs: input.timeLeftMs(),
+      onEvent: (event) => {
+        // A rate-limited ending is not reported while a fallback can still take
+        // over: the caller would see a failure that the run then recovers from.
+        if (
+          progress.rest.length > 0 &&
+          options.signal?.aborted !== true &&
+          isRateLimitedTerminal(event)
+        ) {
+          swallowed = true;
+          return;
+        }
+        options.onEvent?.(event);
+      },
+      ...(options.signal === undefined ? {} : { signal: options.signal }),
+    });
+    return { report, runId: run.runId, threadId, swallowed };
+  };
+
+  return runWithFallbacks(
+    {
+      primary: primaryModel(options),
+      fallbacks: options.fallbackModels,
+      prompt: options.prompt,
+      deadlineMs,
+      now,
+      signal: options.signal,
+      onModelFallback: options.onModelFallback,
     },
-    now: options.now ?? ((): number => Date.now()),
-    deadlineMs,
-    ...(options.onEvent === undefined ? {} : { onEvent: options.onEvent }),
-    ...(options.signal === undefined ? {} : { signal: options.signal }),
-  });
-
-  return { ...report, runId: run.runId, threadId };
+    attempt,
+  );
 }
 
 /**

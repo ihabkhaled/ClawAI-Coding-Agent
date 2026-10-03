@@ -1,5 +1,6 @@
 import type { HeadlessLogin } from './mcp/mcp-login.types';
 import type { EffortMode } from '../core/effort-mode';
+import type { FallbackModel } from '../core/fallback-model-list';
 import type { ResearchMode } from '../core/research-mode';
 import type { SpeedMode } from '../core/speed-mode';
 import type { AgentContextConfig } from '../sdk/agent-context.types';
@@ -17,6 +18,8 @@ export interface HeadlessInvocation {
   readonly workspace: string;
   readonly model?: string | undefined;
   readonly provider?: string | undefined;
+  /** `--fallback-model`: tried in order, once each, when the model stays rate limited. */
+  readonly fallbackModels?: readonly FallbackModel[] | undefined;
   readonly backendUrl?: string | undefined;
   readonly allowTools: readonly AgentToolCategory[];
   readonly allowCommands: readonly string[];
