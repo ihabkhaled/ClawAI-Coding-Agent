@@ -58,18 +58,17 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
   const epochs = { account: 1, workspace: 1, target: 1, policy: 1 };
 
   const attached = await uploadPromptImages(transport, token, options.images);
-  const requestId = `request.${randomUUID()}`;
   const startWith = (
     choice: ResolvedModel,
-    idempotencyKey: string,
+    ids: { readonly requestId: string; readonly idempotencyKey: string },
     prompt: string,
     definitions: readonly unknown[],
   ): Promise<{ runId: string; generation: string }> =>
     transport.startRun(token, {
       schemaVersion: '2.0',
       threadId,
-      clientRequestId: requestId,
-      idempotencyKey,
+      clientRequestId: ids.requestId,
+      idempotencyKey: ids.idempotencyKey,
       prompt,
       ...attached,
       // The catalog and manifest hash a plain serialization, matching the
@@ -98,10 +97,15 @@ export async function runAgent(options: AgentRunOptions): Promise<AgentRunResult
       (choice) => {
         used = choice;
         // A refused start stores nothing, so one key serves a model's own
-        // retries; a fallback model is a different request and gets its own.
-        const idempotencyKey = `idem.${randomUUID()}`;
+        // retries. A fallback model is a different request and gets its own key
+        // AND its own request id: the run that failed was admitted under the
+        // old id, and reusing it is refused as a conflicting admission (409).
+        const ids = {
+          requestId: `request.${randomUUID()}`,
+          idempotencyKey: `idem.${randomUUID()}`,
+        };
         return startRunWithDeferral(
-          (definitions) => startWith(choice, idempotencyKey, input.prompt, definitions),
+          (definitions) => startWith(choice, ids, input.prompt, definitions),
           catalog,
           options.toolkit.definitions,
         );

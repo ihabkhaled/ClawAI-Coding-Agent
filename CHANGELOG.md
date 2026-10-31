@@ -2,6 +2,11 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.103.0
+
+- A fallback model now takes over when the chosen model's provider is busy or down, or no longer offers it, not only on a 429 or spent credit. Found by running the CLI live against a busy Gemini model: it exited 1 without switching.
+- A fallback start no longer fails with HTTP 409 "admission conflicts with an earlier request". Every start now carries its own request id as well as its own idempotency key. Also found live: the switch announced itself, then the new run was refused.
+
 ## 1.102.0
 
 - Runs in the panel are harder to break. A run that repeats the same workspace call is refused on the 3rd try and stopped on the 8th (polling tools such as process watch, agent team and browser are never counted). A run whose stream stays connected but sends no real event for 10 minutes re-attaches once, then ends as failed with "The run stopped responding" instead of hanging. Starting a run, posting a tool result and reading the protocol now retry on 429, 502/503/504 and dropped connections, with `Retry-After` honoured; a run start is retried only when the server cannot have admitted it, so a lost reply never starts a second run.

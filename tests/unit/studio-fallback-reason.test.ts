@@ -37,6 +37,8 @@ describe('model fallback reason', () => {
     expect(fallbackReasonFor('PAYG_FREE_ALLOWANCE_EXHAUSTED')).toBe('credit');
     expect(fallbackReasonFor('HTTP 429 too many requests')).toBe('rate-limit');
     expect(fallbackReasonFor('')).toBe('rate-limit');
+    expect(fallbackReasonFor('CLOUD_PROVIDER_UNAVAILABLE')).toBe('rate-limit');
+    expect(fallbackReasonFor('PROVIDER_CREDIT_EXHAUSTED')).toBe('credit');
   });
 
   it('reports credit when the refusal names a credit code', async () => {

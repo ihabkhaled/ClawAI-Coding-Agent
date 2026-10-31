@@ -36,7 +36,15 @@ export const RATE_LIMIT_FAILURE_PATTERN = /\b429\b|rate[\s-]?limit|too many requ
  * so a prompt or tool output that quotes a code cannot switch the model.
  */
 export const CREDIT_FAILURE_CODE_PATTERN =
-  /^PAYG_(?:CREDIT_EXHAUSTED|FREE_ALLOWANCE_EXHAUSTED|MODEL_NOT_IN_FREE_ALLOWANCE|PROMPT_TOO_EXPENSIVE)$/u;
+  /^(?:PAYG_(?:CREDIT_EXHAUSTED|FREE_ALLOWANCE_EXHAUSTED|MODEL_NOT_IN_FREE_ALLOWANCE|PROMPT_TOO_EXPENSIVE)|PROVIDER_CREDIT_EXHAUSTED)$/u;
+
+/**
+ * The platform's codes for a model that cannot answer right now: its provider is
+ * busy or down (`CLOUD_PROVIDER_UNAVAILABLE`, whose message reads "busy at its
+ * provider") or no longer offers it. Another model can still answer.
+ */
+export const PROVIDER_UNAVAILABLE_CODE_PATTERN =
+  /^(?:CLOUD_PROVIDER_UNAVAILABLE|PROVIDER_MODEL_UNAVAILABLE)$/u;
 
 /**
  * What the fallback model is told when it takes over a run that was cut off.

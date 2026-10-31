@@ -36,7 +36,7 @@ strings in a custom address.
 | `clawAI.autoCompact`   | `prompt`  | For a nearly full conversation: `off`, `prompt` (offer to summarize, as a card in the chat) or `automatic`.                  |
 | `clawAI.outputStyle`   | `default` | How answers are written: `default`, `concise`, `explanatory`, `learning`, or one of your own.                                |
 
-`clawAI.fallbackModels` (a list of `provider/model` or bare model names, empty by default) names the models to switch to, each tried once, when the chosen model is rate limited (HTTP 429) or refused because credit is spent (`PAYG_CREDIT_EXHAUSTED`, `PAYG_FREE_ALLOWANCE_EXHAUSTED`, `PAYG_MODEL_NOT_IN_FREE_ALLOWANCE`, `PAYG_PROMPT_TOO_EXPENSIVE`). With none configured, the original error is shown.
+`clawAI.fallbackModels` (a list of `provider/model` or bare model names, empty by default) names the models to switch to, each tried once, when the chosen model is rate limited (HTTP 429) or refused because credit is spent or the provider is busy or down (`PAYG_CREDIT_EXHAUSTED`, `PAYG_FREE_ALLOWANCE_EXHAUSTED`, `PAYG_MODEL_NOT_IN_FREE_ALLOWANCE`, `PAYG_PROMPT_TOO_EXPENSIVE`). With none configured, the original error is shown.
 
 ## Approval and safety
 

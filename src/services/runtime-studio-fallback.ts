@@ -5,7 +5,7 @@ import {
 } from '../sdk/agent-sdk.constants';
 import { failurePayloadCode } from '../sdk/runtime-failure';
 
-import { fallbackReasonFor, isCreditText } from './runtime-studio-fallback-notice';
+import { fallbackReasonFor, isFallbackText } from './runtime-studio-fallback-notice';
 
 import type { ModelFallbackReason, RuntimeStudioInput } from './runtime-studio.types';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
@@ -31,7 +31,7 @@ export function isStudioRateLimit(error: unknown): boolean {
   return (
     error instanceof Error &&
     error.name === 'BackendRequestError' &&
-    ((error as { status?: unknown }).status === 429 || isCreditText(error.message))
+    ((error as { status?: unknown }).status === 429 || isFallbackText(error.message))
   );
 }
 
@@ -40,7 +40,7 @@ export function isRateLimitedFailure(event: RuntimeEvent): boolean {
   return (
     event.type === 'run.failed' &&
     (RATE_LIMIT_FAILURE_PATTERN.test(JSON.stringify(event.payload)) ||
-      isCreditText(failurePayloadCode(event.payload) ?? ''))
+      isFallbackText(failurePayloadCode(event.payload) ?? ''))
   );
 }
 
