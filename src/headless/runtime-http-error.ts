@@ -14,6 +14,8 @@ export class RuntimeHttpError extends Error {
     readonly detail: string,
     /** The server's `Retry-After`, in milliseconds and already capped. */
     readonly retryAfterMs?: number,
+    /** The platform error `code` from the body, read before `detail` is cut short. */
+    readonly code?: string,
   ) {
     super(`${path} refused: HTTP ${String(status)} ${detail}`.trim());
     this.name = 'RuntimeHttpError';
@@ -22,6 +24,23 @@ export class RuntimeHttpError extends Error {
   /** The error for a non-2xx response, carrying its `Retry-After`. */
   static fromResponse(path: string, response: Response, body: string): RuntimeHttpError {
     const retryAfterMs = parseRetryAfter(response.headers.get('retry-after'));
-    return new RuntimeHttpError(path, response.status, body.slice(0, 300), retryAfterMs);
+    return new RuntimeHttpError(
+      path,
+      response.status,
+      body.slice(0, 300),
+      retryAfterMs,
+      bodyCode(body),
+    );
+  }
+}
+
+/** The string `code` of a JSON error body, or nothing. */
+function bodyCode(body: string): string | undefined {
+  if (!body.trimStart().startsWith('{')) return undefined;
+  try {
+    const code = (JSON.parse(body) as { code?: unknown }).code;
+    return typeof code === 'string' ? code : undefined;
+  } catch {
+    return undefined;
   }
 }

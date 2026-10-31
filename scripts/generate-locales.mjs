@@ -8,6 +8,7 @@ import { integrationTranslations } from './integration-translations.mjs';
 import { pairingRetentionTranslations } from './pairing-retention-translations.mjs';
 import { parityComposerTranslations } from './parity-composer-translations.mjs';
 import { permissionModeTranslations } from './permission-mode-translations.mjs';
+import { fallbackCreditTranslations } from './fallback-credit-translations.mjs';
 import { pluginApprovalTranslations } from './plugin-approval-translations.mjs';
 import { firstRunTranslations } from './first-run-translations.mjs';
 import { nlsGapTranslations } from './nls-gap-translations.mjs';
@@ -4829,6 +4830,7 @@ function translate(locale, message) {
     pluginNetworkTranslations[locale][message] ??
     pluginSignatureTranslations[locale][message] ??
     parityComposerTranslations[locale][message] ??
+    fallbackCreditTranslations[locale][message] ??
     permissionModeTranslations[locale][message] ??
     pullRequestTranslations[locale][message] ??
     remoteChannelTranslations[locale][message] ??

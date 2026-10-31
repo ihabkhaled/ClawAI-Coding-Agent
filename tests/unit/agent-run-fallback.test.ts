@@ -1,9 +1,11 @@
 import { describe, expect, it, vi } from 'vitest';
 
+import { RuntimeHttpError } from '../../src/headless/runtime-http-error';
 import { RuntimeRateLimitedError } from '../../src/headless/runtime-rate-limited-error';
 import { runWithFallbacks } from '../../src/sdk/agent-run-fallback';
 import {
   fallbacksAfter,
+  isRateLimitFailure,
   isRateLimitedTerminal,
   resolvedFallbacks,
 } from '../../src/sdk/model-fallback';
@@ -176,10 +178,28 @@ describe('the model list helpers', () => {
     expect(fallbacksAfter({ provider: 'OLLAMA', model: 'a' }, list)).toEqual(list);
   });
 
+  it('treats a refusal for spent credit like a rate limit, and nothing else', () => {
+    const credit = new RuntimeHttpError('/runs', 402, 'cut', undefined, 'PAYG_CREDIT_EXHAUSTED');
+    expect(isRateLimitFailure(credit)).toBe(true);
+    expect(isRateLimitFailure(new RuntimeHttpError('/runs', 400, 'rate limit docs'))).toBe(false);
+    expect(
+      isRateLimitFailure(
+        new RuntimeHttpError('/runs', 400, 'PAYG_CREDIT_EXHAUSTED', undefined, 'BAD'),
+      ),
+    ).toBe(false);
+    expect(isRateLimitFailure(new RuntimeHttpError('/runs', 429, ''))).toBe(true);
+    expect(isRateLimitFailure(new RuntimeHttpError('/runs', 500, 'boom'))).toBe(false);
+    expect(isRateLimitFailure(new Error('PAYG_CREDIT_EXHAUSTED'))).toBe(false);
+  });
+
   it.each([
     ['run.failed', { reason: 'HTTP 429 Too Many Requests' }, true],
     ['run.failed', { message: 'provider rate-limited the request' }, true],
     ['run.failed', { message: 'rate limit exceeded' }, true],
+    ['run.failed', { message: 'Not enough credit', code: 'PAYG_CREDIT_EXHAUSTED' }, true],
+    ['run.failed', { message: 'Free allowance used', code: 'PAYG_FREE_ALLOWANCE_EXHAUSTED' }, true],
+    ['run.failed', { reason: { code: 'PAYG_MODEL_NOT_IN_FREE_ALLOWANCE' } }, true],
+    ['run.failed', { message: 'grep found PAYG_CREDIT_EXHAUSTED in the file' }, false],
     ['run.failed', { message: 'tool exploded' }, false],
     ['run.completed', { message: 'rate limit' }, false],
   ])('reads %s %j as limited: %s', (type, payload, expected) => {

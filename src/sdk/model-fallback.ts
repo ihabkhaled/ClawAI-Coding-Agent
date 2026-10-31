@@ -1,8 +1,12 @@
 import { RuntimeHttpError } from '../headless/runtime-http-error';
 import { RuntimeRateLimitedError } from '../headless/runtime-rate-limited-error';
 
-import { AGENT_SDK_DEFAULTS, RATE_LIMIT_FAILURE_PATTERN } from './agent-sdk.constants';
-import { runtimeFailureReason } from './runtime-failure';
+import {
+  AGENT_SDK_DEFAULTS,
+  CREDIT_FAILURE_CODE_PATTERN,
+  RATE_LIMIT_FAILURE_PATTERN,
+} from './agent-sdk.constants';
+import { failurePayloadCode, runtimeFailureReason } from './runtime-failure';
 
 import type { AgentModelChoice } from './agent-sdk.types';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
@@ -55,18 +59,28 @@ export function fallbacksAfter(
   return index < 0 ? [...pending] : pending.slice(index + 1);
 }
 
-/** A 429 that outlasted the bounded retries, or one the retry budget cut short. */
+/** A refusal whose platform `code` says credit is spent, a model is outside the allowance or a prompt is too dear. */
+function isCreditCode(code: string | undefined): boolean {
+  return code !== undefined && CREDIT_FAILURE_CODE_PATTERN.test(code);
+}
+
+/**
+ * A 429 that outlasted the bounded retries, one the retry budget cut short, or a
+ * refusal carrying a credit-gate code: another model can still answer.
+ */
 export function isRateLimitFailure(error: unknown): boolean {
   return (
     error instanceof RuntimeRateLimitedError ||
-    (error instanceof RuntimeHttpError && error.status === 429)
+    (error instanceof RuntimeHttpError && (error.status === 429 || isCreditCode(error.code)))
   );
 }
 
-/** A `run.failed` whose reason says the model was rate limited. */
+/** A `run.failed` whose reason says the model was rate limited, or whose code is a credit refusal. */
 export function isRateLimitedTerminal(event: HeadlessStreamEvent): boolean {
   return (
-    event.type === 'run.failed' && RATE_LIMIT_FAILURE_PATTERN.test(runtimeFailureReason(event))
+    event.type === 'run.failed' &&
+    (RATE_LIMIT_FAILURE_PATTERN.test(runtimeFailureReason(event)) ||
+      isCreditCode(failurePayloadCode(event.payload)))
   );
 }
 

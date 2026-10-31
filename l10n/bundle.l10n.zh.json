@@ -239,6 +239,7 @@
   "Create a step-by-step implementation plan for my next change. Do not edit files.": "Create a step-by-step implementation plan for my next change. Do not edit files.",
   "Create the documented .clawai rules, context, memory, skills, prompts, and ignore files in this workspace?": "Create the documented .clawai rules, context, memory, skills, prompts, and ignore files in this workspace?",
   "Created {0} .clawai files. Existing files were preserved.": "Created {0} .clawai files. Existing files were preserved.",
+  "Credit used up on {0}, continuing on {1}": "{0} 的额度已用完,改用 {1} 继续",
   "Ctrl/⌘ + Enter to send · approval follows the selected mode": "Ctrl/⌘ + Enter 发送 · 审批方式取决于所选模式",
   "Current model": "当前模型",
   "Custom": "自定义",

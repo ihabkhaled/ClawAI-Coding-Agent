@@ -27,6 +27,18 @@ export function runtimeFailureReason(event: HeadlessStreamEvent): string {
   return reason.slice(0, FAILURE_REASON_MAX_CHARS);
 }
 
+/** The platform error code of a failure payload: its `code`, or the `code` of a nested `reason` or `error`. */
+export function failurePayloadCode(payload: unknown): string | undefined {
+  const record =
+    typeof payload === 'object' && payload !== null ? (payload as Record<string, unknown>) : {};
+  for (const value of [record, record.reason, record.error]) {
+    const code =
+      typeof value === 'object' && value !== null ? (value as { code?: unknown }).code : undefined;
+    if (typeof code === 'string') return code;
+  }
+  return undefined;
+}
+
 /** What a runtime failure adds to a result: its reason as `error`, and `unknownTool` when the model named a missing tool. */
 export function failureFields(
   report: { readonly terminalEvent?: string },

@@ -18,17 +18,17 @@ Owner decisions that shape it: browser only (no desktop control), user-hosted ru
 - [x] W1-10 backend crawl profiles for runtime clients (monorepo)
 - [x] W1-11 extension parity (secrets env, heartbeat report, resume, repositoryRef, PAYG cost, approval-queue hint, CI lessons)
 - [x] W1-12 backend capability audit (dynamic tools, images, sub-agent runs)
-- [ ] W1-13 F093 prompt caching (monorepo)
+- [ ] W1-13 F093 prompt caching (monorepo) (open: unfinished, no CHANGELOG entry says it shipped)
 - [x] W1-14 F108 PAYG cost events (monorepo)
 
 ## Wave 2
 
-- [ ] W2-01 orchestration runner (plan file run by parallel agents)
-- [ ] W2-02 permission matrix and approvals for every new tool
-- [ ] W2-03 adversarial security rounds
-- [ ] W2-04 live QA in the real-editor lane (4 models)
-- [ ] W2-05 performance (tool-definition token cost, latency)
-- [ ] W2-06 docs and skills
+- [x] W2-01 orchestration runner (plan file run by parallel agents) (1.99.0: `clawai orchestrate --plan plan.json`)
+- [x] W2-02 permission matrix and approvals for every new tool (1.99.0: website, script and sub-agent tools asked about in every approval mode)
+- [ ] W2-03 adversarial security rounds (partial: 1.99.0 records about 300 attack rounds on the script screen, process watcher, code checker and sub-agent limits; not shown to cover every new tool)
+- [ ] W2-04 live QA in the real-editor lane (4 models) (open: no CHANGELOG entry records a 4-model live run)
+- [x] W2-05 performance (tool-definition token cost, latency) (1.99.0: tool descriptions about a quarter smaller, `--tools-profile`, `--defer-tools`)
+- [x] W2-06 docs and skills (1.98.0: generated `docs/TOOLS.md`, FAQ, step-by-step guides)
 - [x] W2-07 integrator: merge, one check, one commit, ship, install (1.96.0, d4b60a5); ClawAI pointer still to do
 
 ## Protocol
@@ -42,3 +42,17 @@ Shipped in 1.96.0: browser.page, http.request, task.plan, process.watch, knowled
 Open: W1-13 F093 prompt caching (monorepo agent unfinished); image input reaching the model (backend `markPublished` wipes `fileIds`: merge instead of replace in `runtime-v2-run.service.ts`); access-token refresh for runs longer than 15 minutes; live smoke of the combined build once model credit returns; all of wave 2.
 
 Findings that shaped the design: each added tool costs about 540 input tokens per turn, so new tools stay off unless granted (default tool definitions stay at 5,274 characters); agent.team was slower and used about 5x the tokens on small tasks.
+
+## Remaining work (2026-10-31)
+
+Seven audit workstreams, in order:
+
+1. Credit fallback and picker marks: the model fallback now also fires on a spent-credit refusal (src/sdk/model-fallback.ts, src/services/runtime-studio-fallback.ts); marks in the model picker are still to do.
+2. Extension loop guard, idle watchdog, retries and non-modal compaction.
+3. Live proof round (also covers W2-04, live QA with 4 models).
+4. CLAUDE.md and AGENTS.md loading in the extension.
+5. PR merge and review, and SDK git merge, rebase, stash and tag.
+6. Prompt caching (W1-13).
+7. Media readers.
+
+Sizes, owners and dates for these: unknown, not yet recorded.
