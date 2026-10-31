@@ -4,6 +4,7 @@ import { RuntimeRateLimitedError } from '../headless/runtime-rate-limited-error'
 import {
   AGENT_SDK_DEFAULTS,
   CREDIT_FAILURE_CODE_PATTERN,
+  PROVIDER_UNAVAILABLE_CODE_PATTERN,
   RATE_LIMIT_FAILURE_PATTERN,
 } from './agent-sdk.constants';
 import { failurePayloadCode, runtimeFailureReason } from './runtime-failure';
@@ -59,9 +60,12 @@ export function fallbacksAfter(
   return index < 0 ? [...pending] : pending.slice(index + 1);
 }
 
-/** A refusal whose platform `code` says credit is spent, a model is outside the allowance or a prompt is too dear. */
+/** A refusal whose platform `code` says credit is spent, the provider is busy, or the model is gone. */
 function isCreditCode(code: string | undefined): boolean {
-  return code !== undefined && CREDIT_FAILURE_CODE_PATTERN.test(code);
+  return (
+    code !== undefined &&
+    (CREDIT_FAILURE_CODE_PATTERN.test(code) || PROVIDER_UNAVAILABLE_CODE_PATTERN.test(code))
+  );
 }
 
 /**

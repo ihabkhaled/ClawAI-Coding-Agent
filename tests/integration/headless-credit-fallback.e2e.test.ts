@@ -44,6 +44,12 @@ describe('the headless CLI against a start endpoint that answers 402 credit exha
 
     expect(code).toBe(0);
     expect(starts(runtime.calls).map(modelOf)).toEqual(['credit-m', 'included-m']);
+    // The failed run was admitted under its request id; reusing it for the
+    // fallback is refused by the backend as a conflicting admission (409).
+    const [first, second] = starts(runtime.calls);
+    expect(first?.body?.clientRequestId).toEqual(expect.any(String));
+    expect(second?.body?.clientRequestId).not.toEqual(first?.body?.clientRequestId);
+    expect(second?.body?.idempotencyKey).not.toEqual(first?.body?.idempotencyKey);
     expect(err.join('')).toContain('OLLAMA/credit-m');
     expect(err.join('')).toContain('OLLAMA/included-m');
   }, 20_000);

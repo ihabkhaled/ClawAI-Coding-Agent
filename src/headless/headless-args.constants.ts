@@ -116,7 +116,7 @@ export const HEADLESS_USAGE = [
   '  -p, --prompt <text>          The task. Required.',
   '  --model <id>                 Model to run (env CLAW_MODEL).',
   '  --provider <id>              Provider connector (env CLAW_PROVIDER).',
-  '  --fallback-model <ref>       Model to switch to when the run stays rate limited (HTTP 429): PROVIDER/model or a bare model,',
+  '  --fallback-model <ref>       Model to switch to when the run stays rate limited (HTTP 429), the credit is spent or the provider is busy or down: PROVIDER/model or a bare model,',
   '                               repeatable or comma separated, each tried once (env CLAW_FALLBACK_MODELS). With none, a rate limit ends the run (exit 1).',
   '  --workspace <dir>            Directory the tools are confined to (default: cwd).',
   '  --backend-url <url>          Runtime API base (env CLAW_BACKEND_URL).',
