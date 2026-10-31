@@ -239,6 +239,7 @@
   "Create a step-by-step implementation plan for my next change. Do not edit files.": "Create a step-by-step implementation plan for my next change. Do not edit files.",
   "Create the documented .clawai rules, context, memory, skills, prompts, and ignore files in this workspace?": "Create the documented .clawai rules, context, memory, skills, prompts, and ignore files in this workspace?",
   "Created {0} .clawai files. Existing files were preserved.": "Created {0} .clawai files. Existing files were preserved.",
+  "Credit used up on {0}, continuing on {1}": "Guthaben bei {0} aufgebraucht, weiter mit {1}",
   "Ctrl/⌘ + Enter to send · approval follows the selected mode": "Ctrl/⌘ + Enter zum Senden · Freigaben folgen dem ausgewählten Modus",
   "Current model": "Aktuelles Modell",
   "Custom": "Benutzerdefiniert",

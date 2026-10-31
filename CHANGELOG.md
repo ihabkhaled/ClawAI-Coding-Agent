@@ -2,6 +2,10 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.101.0
+
+- A model refused because credit is spent now hands over to the next model in `clawAI.fallbackModels` (CLI: `--fallback-model`), like a 429. It reacts only to the platform's credit codes (`PAYG_CREDIT_EXHAUSTED`, `PAYG_FREE_ALLOWANCE_EXHAUSTED`, `PAYG_MODEL_NOT_IN_FREE_ALLOWANCE`, `PAYG_PROMPT_TOO_EXPENSIVE`), never to text that merely mentions them. The panel says "Credit used up on A, continuing on B" in 12 languages. With no fallback configured the original error is still shown. The fallback list is yours, so choose models you are happy to be billed for.
+
 ## 1.100.0
 
 - Rate limits no longer stall or sink a run. A model that answers 429 is retried 4 times, then the run switches to the next model in `clawAI.fallbackModels` (CLI: `--fallback-model`, env `CLAW_FALLBACK_MODELS`), at the start or in the middle of the run, and the panel says "Switched model". Each model is tried once; with no fallback the run ends with a clear "rate limited" message instead of waiting.

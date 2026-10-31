@@ -3,8 +3,11 @@ import {
   FALLBACK_CONTINUATION_PROMPT,
   RATE_LIMIT_FAILURE_PATTERN,
 } from '../sdk/agent-sdk.constants';
+import { failurePayloadCode } from '../sdk/runtime-failure';
 
-import type { RuntimeStudioInput } from './runtime-studio.types';
+import { fallbackReasonFor, isCreditText } from './runtime-studio-fallback-notice';
+
+import type { ModelFallbackReason, RuntimeStudioInput } from './runtime-studio.types';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 
 /** The part of the execution dependencies the fallback reads and replaces. */
@@ -23,19 +26,21 @@ export function studioModelLabel(choice: StudioModel): string {
   return `${choice.provider ?? 'AUTO'}/${choice.model ?? 'AUTO'}`;
 }
 
-/** A backend refusal that is a 429, as the extension's own client reports it. */
+/** A backend refusal that is a 429 or names a spent-credit code, as the extension's own client reports it. */
 export function isStudioRateLimit(error: unknown): boolean {
   return (
     error instanceof Error &&
     error.name === 'BackendRequestError' &&
-    (error as { status?: unknown }).status === 429
+    ((error as { status?: unknown }).status === 429 || isCreditText(error.message))
   );
 }
 
-/** A `run.failed` whose reason says the model was rate limited. */
+/** A `run.failed` whose reason says the model was rate limited, or whose code is a credit refusal. */
 export function isRateLimitedFailure(event: RuntimeEvent): boolean {
   return (
-    event.type === 'run.failed' && RATE_LIMIT_FAILURE_PATTERN.test(JSON.stringify(event.payload))
+    event.type === 'run.failed' &&
+    (RATE_LIMIT_FAILURE_PATTERN.test(JSON.stringify(event.payload)) ||
+      isCreditText(failurePayloadCode(event.payload) ?? ''))
   );
 }
 
@@ -61,7 +66,7 @@ function dependenciesFor<D extends FallbackDependencies>(
   dependencies: D,
   choice: StudioModel,
   index: number,
-  onRateLimited: (() => void) | undefined,
+  onRateLimited: ((reason: ModelFallbackReason) => void) | undefined,
 ): D {
   const { input } = dependencies;
   return {
@@ -81,7 +86,7 @@ function dependenciesFor<D extends FallbackDependencies>(
       onEvent: (event) => {
         // The rate-limited ending is not shown while a fallback can take over.
         if (onRateLimited !== undefined && isRateLimitedFailure(event)) {
-          onRateLimited();
+          onRateLimited(fallbackReasonFor(failurePayloadCode(event.payload) ?? ''));
           return;
         }
         input.onEvent(event);
@@ -106,12 +111,18 @@ export async function executeWithModelFallback<D extends FallbackDependencies>(
 ): Promise<void> {
   const { input } = dependencies;
   const chain = studioModelChain(input, dependencies.configuration().fallbackModels);
+  let lastReason: ModelFallbackReason = 'rate-limit';
   for (const [index, choice] of chain.entries()) {
     const last = index === chain.length - 1;
     let limited = false;
+    let reason: ModelFallbackReason = 'rate-limit';
     const previous = chain[index - 1];
     if (previous !== undefined) {
-      input.onModelFallback?.({ from: studioModelLabel(previous), to: studioModelLabel(choice) });
+      input.onModelFallback?.({
+        from: studioModelLabel(previous),
+        to: studioModelLabel(choice),
+        reason: lastReason,
+      });
     }
     try {
       await attempt(
@@ -121,15 +132,18 @@ export async function executeWithModelFallback<D extends FallbackDependencies>(
           index,
           last
             ? undefined
-            : () => {
+            : (why) => {
                 limited = true;
+                reason = why;
               },
         ),
       );
     } catch (error) {
       if (last || input.signal.aborted || !isStudioRateLimit(error)) throw error;
       limited = true;
+      reason = fallbackReasonFor(error instanceof Error ? error.message : '');
     }
+    lastReason = reason;
     if (!limited || input.signal.aborted) return;
   }
 }

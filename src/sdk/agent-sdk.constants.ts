@@ -30,6 +30,15 @@ export const AGENT_SDK_DEFAULTS = {
 export const RATE_LIMIT_FAILURE_PATTERN = /\b429\b|rate[\s-]?limit|too many requests/iu;
 
 /**
+ * The platform's credit-gate codes (a spent wallet or free allowance, a model
+ * outside the allowance, a prompt dearer than what is left): another model can
+ * still answer. Matched against an error's `code` field only, never free text,
+ * so a prompt or tool output that quotes a code cannot switch the model.
+ */
+export const CREDIT_FAILURE_CODE_PATTERN =
+  /^PAYG_(?:CREDIT_EXHAUSTED|FREE_ALLOWANCE_EXHAUSTED|MODEL_NOT_IN_FREE_ALLOWANCE|PROMPT_TOO_EXPENSIVE)$/u;
+
+/**
  * What the fallback model is told when it takes over a run that was cut off.
  *
  * The thread already holds every earlier message and tool result, so this asks

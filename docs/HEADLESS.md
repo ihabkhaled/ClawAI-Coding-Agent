@@ -605,9 +605,11 @@ up`, `fetch failed`, a stream cut off by the server), HTTP 408, 429, 502, 503, 5
   minutes-long wait). With `--fallback-model <PROVIDER/model|model>` (repeatable or comma separated; env
   `CLAW_FALLBACK_MODELS`; SDK `fallbackModels`; VS Code `clawAI.fallbackModels`) a model that stays limited, at
   the start or in the middle of the run, hands over to the next entry: a new run on the same thread, told to
-  check the workspace and carry on. Each model is used once, a cancel or a spent `--max-duration` stops the walk,
+  check the workspace and carry on. The same handover happens when the backend refuses the call for spent credit
+  (codes `PAYG_CREDIT_EXHAUSTED`, `PAYG_FREE_ALLOWANCE_EXHAUSTED`, `PAYG_MODEL_NOT_IN_FREE_ALLOWANCE`,
+  `PAYG_PROMPT_TOO_EXPENSIVE`), not only on a 429. Each model is used once, a cancel or a spent `--max-duration` stops the walk,
   and a `model.fallback` event (`[model] ... continuing on ...` in text mode) marks each switch. With none left,
-  or none configured, the error above ends the run (exit 1).
+  or none configured, the original error ends the run (exit 1).
 - **Event:** `run.retrying {attempt, waitMs, status | code}` before each wait (a `[retry]` line in
   text mode).
 - **Safe to repeat:** a retried call sends the same body. A tool result carries its

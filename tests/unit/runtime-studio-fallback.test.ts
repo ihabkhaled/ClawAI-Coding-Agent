@@ -36,7 +36,7 @@ function setup(
   signal = new AbortController().signal,
 ) {
   const delivered: RuntimeEvent[] = [];
-  const switched: { from: string; to: string }[] = [];
+  const switched: { from: string; to: string; reason?: string }[] = [];
   const input: RuntimeStudioInput = {
     prompt: 'do it',
     threadId: 'thread-1',
@@ -95,7 +95,7 @@ describe('executeWithModelFallback', () => {
     ]);
     expect(seen[1]?.requestId).toBe('request-1.fallback1');
     expect(seen[1]?.prompt).toMatch(/rate limited.*Task:\ndo it$/su);
-    expect(switched).toEqual([{ from: 'OLLAMA/a', to: 'GEMINI/b' }]);
+    expect(switched).toEqual([{ from: 'OLLAMA/a', to: 'GEMINI/b', reason: 'rate-limit' }]);
   });
 
   it('holds back a rate-limited run.failed and continues on the fallback', async () => {
@@ -112,7 +112,7 @@ describe('executeWithModelFallback', () => {
 
     expect(calls).toBe(2);
     expect(delivered).toEqual([finish]);
-    expect(switched).toEqual([{ from: 'OLLAMA/a', to: 'OLLAMA/b' }]);
+    expect(switched).toEqual([{ from: 'OLLAMA/a', to: 'OLLAMA/b', reason: 'rate-limit' }]);
   });
 
   it('shows the limit as the ending when the last model is limited too', async () => {
@@ -171,6 +171,9 @@ describe('the fallback helpers', () => {
   it('reads a 429 only from the extension client error', () => {
     expect(isStudioRateLimit(new BackendRequestError('x', 429, true))).toBe(true);
     expect(isStudioRateLimit(new BackendRequestError('x', 500, true))).toBe(false);
+    expect(
+      isStudioRateLimit(new BackendRequestError('No credit (PAYG_CREDIT_EXHAUSTED)', 402, false)),
+    ).toBe(true);
     expect(isStudioRateLimit(new Error('429'))).toBe(false);
   });
 

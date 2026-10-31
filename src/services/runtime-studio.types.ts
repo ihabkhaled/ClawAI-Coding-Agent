@@ -85,6 +85,16 @@ export interface RuntimeStudioAnalysisTools {
 
 export type RuntimeApprovalPhase = 'waiting' | 'approved' | 'rejected';
 
+/** Why a run left a model: it was rate limited, or its credit was used up. */
+export type ModelFallbackReason = 'rate-limit' | 'credit';
+
+/** A model switch: the labels and, when known, why. */
+export interface ModelFallbackInfo {
+  readonly from: string;
+  readonly to: string;
+  readonly reason?: ModelFallbackReason;
+}
+
 export interface RuntimeStudioInput {
   readonly prompt: string;
   /**
@@ -102,8 +112,8 @@ export interface RuntimeStudioInput {
   readonly model?: string;
   readonly signal: AbortSignal;
   readonly onEvent: (event: RuntimeEvent) => void;
-  /** A rate-limited model was replaced by the next `clawAI.fallbackModels` entry. */
-  readonly onModelFallback?: (info: { from: string; to: string }) => void;
+  /** A rate-limited or credit-spent model was replaced by the next `clawAI.fallbackModels` entry. */
+  readonly onModelFallback?: (info: ModelFallbackInfo) => void;
   /**
    * A run blocked on the approval dialog looks identical to a run that has
    * hung. Only one Runtime V2 run is active per extension host, so the studio

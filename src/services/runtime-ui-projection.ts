@@ -3,7 +3,7 @@ import * as vscode from 'vscode';
 import { type RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import { toolActivity } from '../core/tool-activity';
 
-import { type RuntimeApprovalPhase } from './runtime-studio.types';
+import { type ModelFallbackReason, type RuntimeApprovalPhase } from './runtime-studio.types';
 import { RUNTIME_PHASE_EVENTS } from './runtime-ui-projection.constants';
 
 import type { OutputLogger } from '../infrastructure/output-logger';
@@ -149,11 +149,13 @@ export class RuntimeUiProjector {
     this.activity(label, effect);
   }
 
-  /** A rate-limited model was replaced; the card says so rather than going quiet. */
-  modelFallback(from: string, to: string): void {
+  /** A rate-limited or credit-spent model was replaced; the card says so rather than going quiet. */
+  modelFallback(from: string, to: string, reason?: ModelFallbackReason): void {
     this.activity(
       vscode.l10n.t('Switched model'),
-      vscode.l10n.t('{0} is rate limited; continuing on {1}', from, to),
+      reason === 'credit'
+        ? vscode.l10n.t('Credit used up on {0}, continuing on {1}', from, to)
+        : vscode.l10n.t('{0} is rate limited; continuing on {1}', from, to),
     );
   }
 

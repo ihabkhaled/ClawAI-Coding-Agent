@@ -239,6 +239,7 @@
   "Create a step-by-step implementation plan for my next change. Do not edit files.": "Create a step-by-step implementation plan for my next change. Do not edit files.",
   "Create the documented .clawai rules, context, memory, skills, prompts, and ignore files in this workspace?": "Create the documented .clawai rules, context, memory, skills, prompts, and ignore files in this workspace?",
   "Created {0} .clawai files. Existing files were preserved.": "Created {0} .clawai files. Existing files were preserved.",
+  "Credit used up on {0}, continuing on {1}": "{0} पर क्रेडिट खत्म हो गया, {1} पर जारी है",
   "Ctrl/⌘ + Enter to send · approval follows the selected mode": "भेजने के लिए Ctrl/⌘ + Enter · स्वीकृति चयनित मोड के अनुसार होगी",
   "Current model": "वर्तमान मॉडल",
   "Custom": "कस्टम",
