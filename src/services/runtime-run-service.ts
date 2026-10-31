@@ -3,6 +3,7 @@ import {
   reduceRuntimeEvent,
   type RuntimeSnapshot,
 } from '../core/runtime/runtime-event-reducer';
+import { RuntimeStuckError } from '../core/runtime/runtime-repetition';
 import { RuntimeBudgetExhaustedError } from '../core/runtime/runtime-run-budget';
 import {
   acknowledgeSteering,
@@ -253,12 +254,14 @@ export class RuntimeRunService {
     try {
       return await this.dispatchWithinBudget(value, continuation);
     } catch (error) {
-      if (error instanceof RuntimeBudgetExhaustedError) this.endOnBudgetExhaustion(error);
+      if (error instanceof RuntimeBudgetExhaustedError || error instanceof RuntimeStuckError) {
+        this.endOnBudgetExhaustion(error);
+      }
       throw error;
     }
   }
 
-  private endOnBudgetExhaustion(error: RuntimeBudgetExhaustedError): void {
+  private endOnBudgetExhaustion(error: RuntimeBudgetExhaustedError | RuntimeStuckError): void {
     const active = this.active;
     if (active === undefined) return;
     active.steering = closeSteeringQueue(active.steering, 'failed');
@@ -345,6 +348,7 @@ export class RuntimeRunService {
     active.controller.signal.throwIfAborted();
     this.assertCurrentEpochs(active.start.epochs);
     this.publish(active, runtimeEvent(active, invocation, result, this.dependencies.clock.now()));
+    active.dispatcher.throwIfStuck();
     const lifecycle = terminalSteeringLifecycle(result, continuation);
     if (lifecycle !== undefined) {
       active.steering = closeSteeringQueue(

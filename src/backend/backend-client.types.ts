@@ -1,5 +1,6 @@
 import { z } from 'zod';
 
+import type { BackendRetryTuning } from './backend-retry.types';
 import type { RoutingMode } from '../core/configuration';
 import type { ResearchMode } from '../core/research-mode';
 import type { WireToolDefinition } from '../core/runtime/runtime-deferred-tools.types';
@@ -65,6 +66,8 @@ export interface BackendClientOptions {
   sessionVault: SessionVault;
   fetcher?: typeof fetch;
   clientName?: string;
+  /** Test seam for the retry clock, sleep and jitter; production leaves it unset. */
+  retry?: BackendRetryTuning;
 }
 
 export interface MessageRequest {

@@ -49,11 +49,11 @@ import type {
   AgentRunCallOptions,
 } from './create-agent.types';
 import type { NotesStore } from './notes-tool.types';
-import type { StuckInfo } from './repetition-guard.types';
 import type { RunBudgetTrip } from './run-budget.types';
 import type { PlanStore } from './task-plan-tool.types';
 import type { VisionImage } from './vision-tool.types';
 import type { HeadlessOutcome } from '../core/headless-outcome.types';
+import type { StuckInfo } from '../core/repetition-guard.types';
 
 /** What one agent remembers between runs: its thread, its tool list, and images not yet sent. */
 interface AgentSession {

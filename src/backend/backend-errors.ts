@@ -1,11 +1,27 @@
+import { redactText } from '../core/redaction';
+
+export interface BackendRequestErrorDetail {
+  /** The transport code of a dropped connection (`ECONNRESET`, ...), when there was one. */
+  readonly code?: string | undefined;
+  /** The server's `Retry-After` in milliseconds, already capped. */
+  readonly retryAfterMs?: number | undefined;
+}
+
 export class BackendRequestError extends Error {
+  readonly code: string | undefined;
+  /** Set once the response headers are known; the retrier waits at least this long. */
+  retryAfterMs: number | undefined;
+
   constructor(
     message: string,
     readonly status: number,
     readonly retryable: boolean,
+    detail: BackendRequestErrorDetail = {},
   ) {
     super(message);
     this.name = 'BackendRequestError';
+    this.code = detail.code;
+    this.retryAfterMs = detail.retryAfterMs;
   }
 }
 
@@ -68,4 +84,3 @@ export function bindBackendSession(
   if (!sameAccount) throw new BackendSessionChangedError();
   return incoming;
 }
-import { redactText } from '../core/redaction';

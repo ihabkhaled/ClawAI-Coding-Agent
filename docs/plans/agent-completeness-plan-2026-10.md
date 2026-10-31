@@ -48,7 +48,12 @@ Findings that shaped the design: each added tool costs about 540 input tokens pe
 Seven audit workstreams, in order:
 
 1. Credit fallback and picker marks: the model fallback now also fires on a spent-credit refusal (src/sdk/model-fallback.ts, src/services/runtime-studio-fallback.ts); marks in the model picker are still to do.
-2. Extension loop guard, idle watchdog, retries and non-modal compaction.
+2. DONE (2026-10-31): extension loop guard, idle watchdog, retries and non-modal compaction.
+   - Repetition guard: `src/core/repetition-guard*.ts` shared with the SDK; panel hook `src/services/runtime-tool-repetition.ts`; 3rd identical call refused, 8th ends the run (`RUNTIME_RUN_STUCK`); only a successful workspace change resets.
+   - Idle watchdog: `src/core/runtime/runtime-stream-idle*.ts`, `RUNTIME_STREAM_IDLE_MS` 600000, one re-attach, then "The run stopped responding"; a pending tool call holds the window open.
+   - Retries: `src/core/retry-classifier.ts`, `src/backend/backend-retry.ts`; run start, tool-result post and protocol read; 408/429/502/503/504 and network resets; POSTs only with an `idempotencyKey`.
+   - Compaction: in `prompt` mode an inline card replaces the modal (`compactionOffer`, `compactionDecision`); the dialog stays for the explicit command and when no panel is open.
+   - Honest gaps: the stuck message ("The run was stopped: it made the same ...") is English-only (not passed through `l10n`; the idle message is); the stuck path through the run service is covered by its own tests only if the integration lane covers it (unverified); GET retry is opt-in per call, not default (only the protocol read opts in); the SDK "read too long" nudge is not ported to the panel.
 3. Live proof round (also covers W2-04, live QA with 4 models).
 4. CLAUDE.md and AGENTS.md loading in the extension.
 5. PR merge and review, and SDK git merge, rebase, stash and tag.

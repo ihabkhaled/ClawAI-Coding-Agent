@@ -42,6 +42,10 @@ export interface ChatViewActions {
   openFolder(): Promise<void>;
   /** The panel's running token total for a conversation, which only it knows. */
   conversationTokens(threadId: string, tokens: number): Promise<void>;
+  /** The user's answer to an inline compaction offer. */
+  compactionDecision(requestId: string, accept: boolean): Promise<void>;
+  /** An offer no panel ever showed, whose conversation moved on or closed. */
+  compactionOfferAbandoned(requestId: string): Promise<void>;
   /** Files dragged onto the composer from the editor or the explorer. */
   dropUris(uriList: string, shiftKey: boolean): Promise<void>;
   /** The composer microphone could not run; explain why and what works. */

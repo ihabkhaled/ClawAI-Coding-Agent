@@ -891,7 +891,10 @@ function historyMessageModelLabel(message) {
 }
 
 function renderHistoryMessages(messages) {
+  const keptOffer = shownCompactionOffer;
   elements.conversation.replaceChildren();
+  compactionOfferCard = null;
+  shownCompactionOffer = null;
   responseBodies.clear();
   streamStates.clear();
   activityLists.clear();
@@ -909,6 +912,7 @@ function renderHistoryMessages(messages) {
   elements.conversation.lastElementChild?.scrollIntoView({ block: 'end', behavior: 'smooth' });
   setConversationVisibility();
   renderConversationTokenCount();
+  if (keptOffer !== null) renderCompactionOffer(keptOffer);
 }
 
 function appendHistoryTurns(messages) {
@@ -2064,6 +2068,106 @@ function showNotice(message) {
   const toast = textElement('div', 'toast', message);
   elements.toastStack.append(toast);
   window.setTimeout(() => toast.remove(), 4000);
+}
+
+// The "summarize and continue" offer is a card in the transcript, not a dialog:
+// the user keeps typing, scrolling and reading while it waits. Text only, and
+// the host ignores an answer for an id it did not issue, so a stale card is inert.
+const UUID_PATTERN = /^[0-9a-f]{8}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{4}-[0-9a-f]{12}$/iu;
+let compactionOfferCard = null;
+// The offer on screen, so a transcript redraw can put it back instead of losing it.
+let shownCompactionOffer = null;
+
+function removeCompactionOffer() {
+  compactionOfferCard?.remove();
+  compactionOfferCard = null;
+  shownCompactionOffer = null;
+  setConversationVisibility();
+}
+
+// The host closed an offer another panel answered; only the matching card goes.
+function closeCompactionOffer(message) {
+  if (
+    typeof message.requestId === 'string' &&
+    compactionOfferCard?.dataset.requestId === message.requestId
+  ) {
+    removeCompactionOffer();
+  }
+}
+
+function answerCompactionOffer(requestId, accept) {
+  removeCompactionOffer();
+  vscode.postMessage({ type: 'compactionDecision', requestId, accept });
+}
+
+function compactionOfferButton(text, className, action, onActivate) {
+  const button = describeText(textElement('button', className, text), text);
+  button.type = 'button';
+  button.dataset.action = action;
+  button.addEventListener('click', onActivate);
+  return button;
+}
+
+function renderCompactionOffer(message) {
+  const percent = Number(message.usedPercent);
+  const sameThread =
+    typeof message.threadId === 'string' &&
+    message.threadId.length > 0 &&
+    message.threadId === currentSession?.threadId;
+  if (
+    !sameThread ||
+    typeof message.requestId !== 'string' ||
+    !UUID_PATTERN.test(message.requestId) ||
+    !Number.isInteger(percent) ||
+    percent < 0 ||
+    percent > 100
+  ) {
+    return;
+  }
+  if (compactionOfferCard?.dataset.requestId === message.requestId) {
+    // A repeat of the offer already on screen: confirm it again, draw nothing.
+    vscode.postMessage({ type: 'compactionOfferShown', requestId: message.requestId });
+    return;
+  }
+  removeCompactionOffer();
+  const card = document.createElement('section');
+  card.id = 'compactionOffer';
+  card.className = 'compaction-offer';
+  card.dataset.requestId = message.requestId;
+  card.setAttribute('role', 'group');
+  card.setAttribute('aria-labelledby', 'compactionOfferTitle');
+  const title = textElement('strong', 'compaction-offer-title', labels.compactionOfferTitle);
+  title.id = 'compactionOfferTitle';
+  const body = textElement(
+    'span',
+    'compaction-offer-text',
+    translatedTemplate(labels.compactionOfferText, percent),
+  );
+  const actions = document.createElement('span');
+  actions.className = 'compaction-offer-actions';
+  actions.append(
+    compactionOfferButton(
+      labels.compactionOfferAccept,
+      'send-button compaction-offer-accept',
+      'compaction-accept',
+      () => answerCompactionOffer(message.requestId, true),
+    ),
+    compactionOfferButton(
+      labels.compactionOfferDecline,
+      'quiet-button compaction-offer-decline',
+      'compaction-decline',
+      () => answerCompactionOffer(message.requestId, false),
+    ),
+  );
+  card.append(title, body, actions);
+  elements.conversation.append(card);
+  compactionOfferCard = card;
+  shownCompactionOffer = message;
+  setConversationVisibility();
+  card.scrollIntoView({ block: 'end', behavior: 'auto' });
+  elements.announcer.textContent = `${labels.compactionOfferTitle}. ${body.textContent}`;
+  // Only now is it on screen, so only now may the host stop re-posting it.
+  vscode.postMessage({ type: 'compactionOfferShown', requestId: message.requestId });
 }
 
 function backendStatusLabel(status) {
@@ -3877,6 +3981,9 @@ window.addEventListener('message', (event) => {
   if (message?.type === 'state') {
     renderState(message.state);
   } else if (message?.type === 'session') {
+    if (currentSession?.threadId !== message.session.threadId) {
+      removeCompactionOffer();
+    }
     currentSession = message.session;
     elements.conversationTitle.textContent = message.session.subject;
     elements.historySelect.value = message.session.threadId ?? '';
@@ -3888,6 +3995,10 @@ window.addEventListener('message', (event) => {
       active: 0,
     };
     renderMentions();
+  } else if (message?.type === 'compactionOffer') {
+    renderCompactionOffer(message);
+  } else if (message?.type === 'compactionOfferClosed') {
+    closeCompactionOffer(message);
   } else if (message?.type === 'historyLoaded') {
     renderHistoryMessages(message.messages ?? []);
   } else if (message?.type === 'accountReset') {

@@ -10,6 +10,11 @@ import {
 } from '../core/runtime/runtime-event-stream';
 import { RuntimeRunEndedError } from '../core/runtime/runtime-invocation-registry';
 import {
+  reattachWhenIdle,
+  createRuntimeStreamIdleTracker,
+} from '../core/runtime/runtime-stream-idle';
+import { RUNTIME_STREAM_IDLE_MS } from '../core/runtime/runtime-stream-idle.constants';
+import {
   asStreamTransportFailure,
   isResumableStreamFailure,
   streamResumeDelayMs,
@@ -19,7 +24,9 @@ import { parseToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import { SseDecoder } from '../core/sse-decoder';
 
 import type {
+  RuntimeStreamIdleOptions,
   RuntimeStreamObserver,
+  RuntimeStreamProgress,
   RuntimeStreamRuntimePort,
 } from './runtime-event-stream-service.types';
 import type { RuntimeDispatchState } from '../core/runtime/runtime-event-stream.types';
@@ -32,7 +39,10 @@ export type {
 
 /** Follows a runtime event stream and dispatches admitted tool requests. */
 export class RuntimeEventStreamService {
-  constructor(private readonly transport: BackendRuntimeTransport) {}
+  constructor(
+    private readonly transport: BackendRuntimeTransport,
+    private readonly idleOptions: RuntimeStreamIdleOptions = {},
+  ) {}
 
   async follow(
     runId: string,
@@ -48,7 +58,13 @@ export class RuntimeEventStreamService {
     if (!Number.isInteger(initialCursor) || initialCursor < -1) {
       throw new Error('Runtime stream cursor is invalid');
     }
-    const progress = { cursor: initialCursor };
+    const progress: RuntimeStreamProgress = {
+      cursor: initialCursor,
+      idle: createRuntimeStreamIdleTracker(
+        this.idleOptions.now ?? Date.now,
+        this.idleOptions.idleMs ?? RUNTIME_STREAM_IDLE_MS,
+      ),
+    };
     const dispatchState: RuntimeDispatchState = {
       failureController: new AbortController(),
       pendingDispatches: new Set<Promise<void>>(),
@@ -107,12 +123,49 @@ export class RuntimeEventStreamService {
     return this.transport.openStream(runId, after, signal);
   }
 
+  /** Starts a requested tool locally. True means the run ended and the follow is done. */
+  private dispatchRequestedTool(
+    rawInvocation: unknown,
+    runtime: RuntimeStreamRuntimePort,
+    dispatchState: RuntimeDispatchState,
+  ): boolean {
+    // The run ended on this side while the backend was still streaming.
+    // Nothing is left to dispatch into, and the frames that follow
+    // describe a run the user has already stopped caring about.
+    if (!runtime.hasActiveRun()) return true;
+    const invocation = parseToolInvocation(rawInvocation);
+    try {
+      runtime.beginModelTurn(false, invocation.turnId);
+    } catch (error: unknown) {
+      // The run ended between the frame arriving and this turn opening
+      // — the step just dispatched was denied or blocked. Nothing is
+      // left to dispatch into; the sentence this used to raise reached
+      // the user as the assistant's whole answer.
+      if (error instanceof RuntimeRunEndedError) return true;
+      throw error;
+    }
+    const dispatch = runtime
+      .dispatch(invocation, {
+        action: 'continue',
+        nextTurnId: `turn_${randomUUID()}`,
+      })
+      .then(() => undefined)
+      .catch((error: unknown) => {
+        recordRuntimeDispatchFailure(dispatchState, error);
+      })
+      .finally(() => {
+        dispatchState.pendingDispatches.delete(dispatch);
+      });
+    dispatchState.pendingDispatches.add(dispatch);
+    return false;
+  }
+
   private async consume(
     response: Response,
     runtime: RuntimeStreamRuntimePort,
     observer: RuntimeStreamObserver,
     signal: AbortSignal,
-    progress: { cursor: number },
+    progress: RuntimeStreamProgress,
     dispatchState: RuntimeDispatchState,
   ): Promise<boolean> {
     throwRuntimeDispatchFailure(dispatchState);
@@ -138,37 +191,14 @@ export class RuntimeEventStreamService {
           const event = readRuntimeStreamEvent(candidate);
           if (event.sequence <= progress.cursor) continue;
           progress.cursor = event.sequence;
+          progress.idle.recordEvent();
           throwRuntimeDispatchFailure(dispatchState);
           await observer.onEvent(event);
-          if (event.type === 'tool.requested') {
-            // The run ended on this side while the backend was still streaming.
-            // Nothing is left to dispatch into, and the frames that follow
-            // describe a run the user has already stopped caring about.
-            if (!runtime.hasActiveRun()) return true;
-            const invocation = parseToolInvocation(event.payload.invocation);
-            try {
-              runtime.beginModelTurn(false, invocation.turnId);
-            } catch (error: unknown) {
-              // The run ended between the frame arriving and this turn opening
-              // — the step just dispatched was denied or blocked. Nothing is
-              // left to dispatch into; the sentence this used to raise reached
-              // the user as the assistant's whole answer.
-              if (error instanceof RuntimeRunEndedError) return true;
-              throw error;
-            }
-            const dispatch = runtime
-              .dispatch(invocation, {
-                action: 'continue',
-                nextTurnId: `turn_${randomUUID()}`,
-              })
-              .then(() => undefined)
-              .catch((error: unknown) => {
-                recordRuntimeDispatchFailure(dispatchState, error);
-              })
-              .finally(() => {
-                dispatchState.pendingDispatches.delete(dispatch);
-              });
-            dispatchState.pendingDispatches.add(dispatch);
+          if (
+            event.type === 'tool.requested' &&
+            this.dispatchRequestedTool(event.payload.invocation, runtime, dispatchState)
+          ) {
+            return true;
           }
           if (isTerminalRuntimeEvent(event)) {
             await interruptRuntimeStreamOperation(
@@ -180,6 +210,8 @@ export class RuntimeEventStreamService {
             return true;
           }
         }
+        // Heartbeats never reset the idle window; a tool in flight holds it open.
+        if (reattachWhenIdle(progress.idle, dispatchState)) return false;
       }
       signal.throwIfAborted();
       return false;

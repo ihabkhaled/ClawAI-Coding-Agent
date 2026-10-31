@@ -25,10 +25,4 @@ export interface RetryContext extends RetryTuning {
   readonly onRetry?: ((notice: RetryNotice) => void) | undefined;
 }
 
-/** Whether a failure is worth trying again, and what it says about when. */
-export interface RetryVerdict {
-  readonly retry: boolean;
-  readonly retryAfterMs?: number;
-  readonly status?: number;
-  readonly code?: string;
-}
+export type { RetryVerdict } from '../core/retry-classifier.types';

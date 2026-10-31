@@ -1,15 +1,15 @@
 import {
-  CAUSE_DEPTH,
-  NETWORK_FAILURE_CODE,
+  backoffMs,
+  classifyHttpFailure,
+  networkFailureCode,
+  retryBudgetSpent,
+} from '../core/retry-classifier';
+import {
   RATE_LIMIT_MAX_ATTEMPTS,
   RATE_LIMIT_STATUS,
   RETRY_DEFAULTS,
-  BUSY_BODY_PATTERN,
-  TRANSIENT_NETWORK_CODES,
-  TRANSIENT_NETWORK_MESSAGE,
-  TRANSIENT_STATUSES,
-  UNAVAILABLE_BODY_PATTERN,
-} from './retry-policy.constants';
+} from '../core/retry-classifier.constants';
+
 import { RuntimeHttpError } from './runtime-http-error';
 import { RuntimeRateLimitedError } from './runtime-rate-limited-error';
 import { RuntimeUnavailableError } from './runtime-unavailable-error';
@@ -27,48 +27,19 @@ import type { RetryContext, RetryVerdict } from './retry-policy.types';
  */
 export function classifyFailure(error: unknown): RetryVerdict {
   if (error instanceof RuntimeHttpError) return classifyHttp(error);
-  const code = networkCode(error);
+  const code = networkFailureCode(error);
   return code === undefined ? { retry: false } : { retry: true, code };
 }
 
 function classifyHttp(error: RuntimeHttpError): RetryVerdict {
-  const transient =
-    TRANSIENT_STATUSES.includes(error.status) ||
-    (error.status === 500 && UNAVAILABLE_BODY_PATTERN.test(error.detail)) ||
-    (error.status === 400 && BUSY_BODY_PATTERN.test(error.detail));
-  if (!transient) return { retry: false };
-  return {
-    retry: true,
+  return classifyHttpFailure({
     status: error.status,
-    ...(error.retryAfterMs === undefined ? {} : { retryAfterMs: error.retryAfterMs }),
-  };
+    detail: error.detail,
+    retryAfterMs: error.retryAfterMs,
+  });
 }
 
-/** The transport code of a dropped connection, looking through `cause` wrappers. */
-function networkCode(error: unknown): string | undefined {
-  let current: unknown = error;
-  for (let depth = 0; depth < CAUSE_DEPTH && current instanceof Error; depth += 1) {
-    const code = (current as { code?: unknown }).code;
-    if (typeof code === 'string' && TRANSIENT_NETWORK_CODES.includes(code)) return code;
-    if (TRANSIENT_NETWORK_MESSAGE.test(current.message)) {
-      return depth === 0 ? (deepCode(current.cause) ?? NETWORK_FAILURE_CODE) : NETWORK_FAILURE_CODE;
-    }
-    current = current.cause;
-  }
-  return undefined;
-}
-
-function deepCode(error: unknown): string | undefined {
-  const code = error instanceof Error ? (error as { code?: unknown }).code : undefined;
-  return typeof code === 'string' && TRANSIENT_NETWORK_CODES.includes(code) ? code : undefined;
-}
-
-/** The wait before retry `attempt` (1 for the first), grown, jittered and capped. */
-export function backoffMs(attempt: number, random: () => number): number {
-  const grown = RETRY_DEFAULTS.baseMs * RETRY_DEFAULTS.factor ** (attempt - 1);
-  const spread = 1 + RETRY_DEFAULTS.jitter * (random() * 2 - 1);
-  return Math.round(Math.min(RETRY_DEFAULTS.capMs, grown * spread));
-}
+export { backoffMs };
 
 /** Waits `ms`, or less when `signal` aborts; it never throws, the caller checks the signal. */
 export function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {
@@ -141,7 +112,13 @@ export class Retrier {
 
   /** True when another try, after `waitMs`, would break the attempt or time allowance. */
   private spent(waitMs: number): boolean {
-    return this.failures >= this.maxAttempts() || this.elapsed() + waitMs > this.budgetMs();
+    return retryBudgetSpent({
+      failures: this.failures,
+      elapsedMs: this.elapsed(),
+      waitMs,
+      maxAttempts: this.maxAttempts(),
+      budgetMs: this.budgetMs(),
+    });
   }
 
   private aborted(): boolean {

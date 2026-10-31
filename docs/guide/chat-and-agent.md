@@ -114,8 +114,28 @@ An approval only covers the action shown.
 When a conversation gets close to its limit, the `clawAI.autoCompact` setting decides
 what happens: `off` does nothing, `prompt` (the default) offers to summarize, and
 `automatic` summarizes for you.
-**ClawAI: Compact Conversation** does it on demand: it writes a summary and
-continues in a new conversation. The original is kept in your history.
+In `prompt` mode the offer is a card inside the chat ("Context nearly full") with
+**Summarize and continue** and **Not now**, so it does not block the editor. If no
+chat panel is open, a dialog asks instead.
+**ClawAI: Compact Conversation** does it on demand (it always asks in a dialog): it
+writes a summary and continues in a new conversation. The original is kept in your
+history.
+
+## Runs that loop, hang or hit a network error
+
+- **Repeated calls.** If the agent makes the exact same tool call again and again
+  with nothing changing, the 3rd identical call is not run and the agent is told to
+  take a different step. The 8th ends the run as failed with "The run was stopped:
+  it made the same ... call 8 times and nothing changed." Only a successful change
+  to the workspace resets the count.
+- **No progress.** If the run stream carries only heartbeats for 10 minutes, the
+  panel reconnects once from where it left off. If it is still silent for another 10
+  minutes, the run fails with "The run stopped responding". A tool call that is still
+  running (a long build or test) keeps the window open.
+- **Short outages.** Starting a run, sending a tool result and reading the protocol
+  are retried on timeouts, rate limits (408, 429) and gateway errors (502, 503, 504),
+  and on dropped connections, waiting longer each time and honouring `Retry-After`.
+  Other requests (steer, cancel, loading tools) are not retried.
 
 Related helpers: **ClawAI: Ask a Side Question** (answered outside the
 conversation), **ClawAI: Session Recap**, **ClawAI: Show Usage**, and

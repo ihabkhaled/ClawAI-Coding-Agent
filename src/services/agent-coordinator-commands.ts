@@ -49,8 +49,11 @@ export interface CoordinatorCommands {
   showSessionRecap(): Promise<void>;
   selectOutputStyle(): Promise<void>;
   compactConversation(): Promise<void>;
-  /** The same compaction, without the question. Only the automatic mode uses it. */
-  compactConversationUnattended(): Promise<void>;
+  /**
+   * The same compaction, without the question. The automatic mode and an
+   * accepted inline offer use it; an offer names its own conversation.
+   */
+  compactConversationUnattended(threadId?: string): Promise<void>;
   askSideQuestion(): Promise<void>;
   createCheckpoint(): Promise<void>;
   restoreCheckpoint(): Promise<void>;
@@ -160,9 +163,9 @@ export function coordinatorCommands(parts: CommandCollaborators): CoordinatorCom
         summarize: (threadId, instruction) => parts.summarize()(threadId, instruction),
         startContinuation: (seed) => parts.startContinuation()(seed),
       }),
-    compactConversationUnattended: () =>
+    compactConversationUnattended: (threadId) =>
       compactConversation({
-        activeThreadId: () => parts.view()?.activeThreadId(),
+        activeThreadId: () => threadId ?? parts.view()?.activeThreadId(),
         summarize: (threadId, instruction) => parts.summarize()(threadId, instruction),
         startContinuation: (seed) => parts.startContinuation()(seed),
         unattended: true,

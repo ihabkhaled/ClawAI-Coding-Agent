@@ -1,15 +1,14 @@
 import { headlessExitCode } from '../core/headless-outcome';
-
 import {
   STUCK_CONTINUATION_LINE,
   STUCK_ERROR_PREFIX,
   STUCK_PROMPT_TAIL,
-} from './repetition-guard.constants';
+} from '../core/repetition-guard.constants';
 
 import type { AgentEvent } from './create-agent.types';
-import type { StuckInfo } from './repetition-guard.types';
 import type { RunBudgetTrip } from './run-budget.types';
 import type { HeadlessOutcome } from '../core/headless-outcome.types';
+import type { StuckInfo } from '../core/repetition-guard.types';
 
 const describeWhat = (stuck: StuckInfo): string =>
   `${stuck.tool} ${stuck.operation}${stuck.target.length === 0 ? '' : ` on ${stuck.target}`}`;

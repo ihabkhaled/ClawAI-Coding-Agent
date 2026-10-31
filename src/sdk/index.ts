@@ -106,7 +106,7 @@ export type {
 export type { McpTokenProvider } from '../infrastructure/mcp/mcp-transport.types';
 export type { RetryTuning } from '../headless/retry-policy.types';
 export type { ShellOptions } from './shell-tool.types';
-export type { StuckInfo } from './repetition-guard.types';
+export type { StuckInfo } from '../core/repetition-guard.types';
 export type { AgentMemoryMode, AgentModelChoice } from './agent-sdk.types';
 export type {
   VisionAskInput,

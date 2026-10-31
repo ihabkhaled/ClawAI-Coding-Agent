@@ -3212,3 +3212,52 @@ body[data-view-density='focus'] .conversation {
   background: var(--claw-tint);
   outline: 1px solid var(--claw-accent);
 }
+
+/* Inline, non-modal offer to summarize a nearly full conversation. It lives in
+   the transcript, wraps instead of overflowing at 320px, and uses logical
+   properties so it mirrors in right-to-left locales. */
+.compaction-offer {
+  display: flex;
+  min-width: 0;
+  max-width: 100%;
+  flex-wrap: wrap;
+  align-items: center;
+  gap: var(--sp-1) var(--sp-3);
+  margin-block: var(--sp-2) var(--sp-4);
+  padding: var(--sp-2) var(--sp-3);
+  border: 1px solid var(--claw-line);
+  border-inline-start: 3px solid var(--vscode-focusBorder, var(--claw-line));
+  border-radius: var(--radius-sm);
+  color: var(--claw-text);
+  background: var(--claw-surface-raised);
+  font-size: var(--fs-xs);
+  line-height: 1.4;
+}
+
+.compaction-offer > * {
+  min-width: 0;
+  max-width: 100%;
+}
+
+.compaction-offer-title {
+  flex: 1 1 100%;
+  overflow-wrap: anywhere;
+}
+
+.compaction-offer-text {
+  flex: 1 1 14em;
+  overflow-wrap: anywhere;
+}
+
+.compaction-offer-actions {
+  display: flex;
+  min-width: 0;
+  flex: 1 1 100%;
+  flex-wrap: wrap;
+  gap: var(--sp-2);
+}
+
+.compaction-offer-actions > button {
+  max-width: 100%;
+  white-space: normal;
+}

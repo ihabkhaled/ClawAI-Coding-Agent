@@ -11,6 +11,7 @@ import { rememberClosedSession, takeClosedSession } from '../core/closed-session
 import { resolvePlacementColumn } from '../core/panel-placement';
 import { redactReasoningEvent } from '../core/reasoning-visibility';
 
+import { CompactionOfferHost } from './chat-compaction-offer-host';
 import { toCompareLiveMessage } from './chat-compare-message';
 import { publicHistoryMessage } from './chat-history-message';
 import {
@@ -22,12 +23,14 @@ import {
 } from './chat-inbound-message';
 import { renderChatMarkup } from './chat-markup';
 import { toPublicChatState } from './chat-public-state';
+import { handleSelectionControl } from './chat-selection-control';
 import { ChatSessionRegistry } from './chat-session-registry';
 import { markSessionRead, syncSessions } from './chat-session-sync';
 import { runPromptAdmissionFlow } from './prompt-admission-flow';
 import { requestScope } from './request-scope';
 import { runSetupAction } from './setup-action';
 
+import type { CompactionOfferMessage } from './chat-compaction-offer.types';
 import type { PlacementMemory } from './chat-placement.types';
 import type { ChatViewActions } from './chat-view-actions';
 import type { ChatMessage } from '../backend/contracts';
@@ -49,6 +52,12 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   /** Sessions the user closed, most recent first, so one can be brought back. */
   private closedSessions: ClosedSession[] = [];
   private view: vscode.WebviewView | null = null;
+  private readonly offers = new CompactionOfferHost({
+    panels: () => this.sessions.list(),
+    abandoned: (requestId) => this.actions.compactionOfferAbandoned(requestId),
+    decide: (requestId, accept) => this.actions.compactionDecision(requestId, accept),
+    broadcast: (message) => this.broadcast(message),
+  });
   private readonly unsubscribe: () => void;
 
   constructor(
@@ -141,6 +150,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     sessionId: string,
     patch: { subject?: string; threadId?: string },
   ): Promise<void> {
+    const before = this.sessions.get(sessionId)?.descriptor.threadId;
     const session = this.sessions.update(sessionId, {
       ...patch,
       updatedAt: Date.now(),
@@ -153,6 +163,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       type: 'session',
       session: session.descriptor,
     });
+    await this.offers.sessionChanged(before, session);
   }
 
   async postHistory(sessionId: string, messages: ChatMessage[]): Promise<void> {
@@ -206,6 +217,20 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
    */
   async appendToComposer(text: string): Promise<void> {
     await this.broadcast({ type: 'appendToComposer', text });
+  }
+
+  /**
+   * Shows the non-modal "summarize and continue" card in the panel that holds
+   * this conversation. False when no open panel does, so the caller can fall
+   * back to the modal instead of losing the offer.
+   */
+  async postCompactionOffer(offer: Omit<CompactionOfferMessage, 'type'>): Promise<boolean> {
+    return this.offers.post(offer);
+  }
+
+  /** Whether an open panel is showing this conversation. */
+  holdsThread(threadId: string): boolean {
+    return this.offers.holds(threadId);
   }
 
   /** A host-made file (a browser screenshot) joins the composer's own attachments. */
@@ -277,9 +302,11 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
         });
       }
       this.sessions.remove(sessionId);
+      void this.offers.abandon(closed?.threadId);
     });
     await this.postStateTo(panel.webview);
     await panel.webview.postMessage({ type: 'session', session: descriptor });
+    await this.offers.redeliver({ descriptor, target: panel });
     return sessionId;
   }
 
@@ -316,6 +343,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
       const session = this.sessions.get(sourceSessionId);
       if (session !== undefined) {
         await sourceWebview.postMessage({ type: 'session', session: session.descriptor });
+        await this.offers.redeliver(session);
       }
       return;
     }
@@ -375,7 +403,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     } else if (request.type === 'answerQuestion') {
       this.actions.answerQuestion(request.requestId, request.selection);
     } else {
-      await this.handleSelectionControl(request);
+      await handleSelectionControl(this.actions, request, () => this.postState());
     }
   }
 
@@ -411,7 +439,7 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     if (request.type === 'connect') await this.actions.connect(request);
     else if (request.type === 'logout') await this.actions.logout();
     else if (request.type === 'cancel') await this.actions.cancel(request.requestId);
-    else return false;
+    else return this.offers.handleReport(request);
     return true;
   }
 
@@ -422,31 +450,6 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
     else if (request.type === 'runtimeSteer') await this.actions.runtimeSteer(request.message);
     else return false;
     return true;
-  }
-
-  private async handleSelectionControl(request: ControlMessage): Promise<void> {
-    if (request.type === 'configureLanguage') {
-      await this.actions.configureLanguage();
-    } else if (request.type === 'configureConnections') {
-      await this.actions.configureConnections(request);
-    } else if (request.type === 'manageExternalOutputFolders') {
-      await this.actions.manageExternalOutputFolders();
-    } else if (request.type === 'selectModel') {
-      await this.actions.selectModel(request.modelKey);
-    } else if (request.type === 'selectViewDensity') {
-      await this.actions.selectViewDensity(request.density);
-    } else if (request.type === 'selectAgentMode') {
-      await this.actions.selectAgentMode(request.mode);
-    } else if (request.type === 'selectEffortMode') {
-      await this.actions.selectEffortMode(request.mode);
-    } else if (request.type === 'selectSpeedMode') {
-      await this.actions.selectSpeedMode(request.mode);
-    } else if (request.type === 'selectPermissionMode') {
-      await this.actions.selectPermissionMode(request.mode);
-      await this.postState();
-    } else if (request.type === 'selectWorkspaceFolder') {
-      await this.actions.selectWorkspaceFolder(request.folderKey);
-    }
   }
 
   private async handlePromptMessage(
