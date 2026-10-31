@@ -65,6 +65,16 @@ Remote commands you did not answer within two minutes are refused automatically.
 To avoid many prompts, raise the approval level in a folder you trust. See
 [Chat and the agent](chat-and-agent.md).
 
+## A run stopped by itself
+
+- **"The run was stopped: it made the same ... call N times and nothing changed."**
+  The agent was looping on one call. Start a new message with exact file paths and a
+  concrete next step, or tell it what to do differently.
+- **"The run stopped responding."** Nothing but heartbeats arrived for 10 minutes,
+  even after one automatic reconnect. Send the task again; check **ClawAI: Show Logs**
+  if it repeats. The first message is English in every language; the second is
+  translated.
+
 ## The backend is unreachable
 
 The message is "ClawAI backend is unavailable. Check the app address or start the
@@ -76,6 +86,10 @@ services, then retry."
 3. For **Cloud** or **Custom**, check your internet connection, VPN or proxy.
 4. If requests time out, raise `clawAI.requestTimeoutMs`.
 5. Retry, then check **ClawAI: Show Logs** for the error.
+
+Brief outages are retried for you: reads up to 3 tries in 20 seconds, starting a run
+or sending a tool result up to 8 tries in 120 seconds. You only see this message
+after that allowance is spent.
 
 ## Other common problems
 

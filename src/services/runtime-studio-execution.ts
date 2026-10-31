@@ -11,6 +11,7 @@ import { isRuntimeRunEnded } from '../core/runtime/runtime-event-reducer';
 import { RuntimeJournalTracker } from './runtime-journal-tracker';
 import { RuntimeRunService } from './runtime-run-service';
 import { executeWithModelFallback } from './runtime-studio-fallback';
+import { endIdleRun, type RuntimeStudioOutcome } from './runtime-studio-idle-failure';
 
 import type { RuntimeConfiguration } from './configuration-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
@@ -140,18 +141,39 @@ async function executeRuntimeStudioOnModel(
   const telemetry = new RunTelemetryRecorder(traceId, spanId);
   // Whether the run reached an end state of its own, as opposed to the stream
   // being torn down under it by an error, a cancel, or a dropped connection.
-  const outcome = { ended: false };
+  const outcome: RuntimeStudioOutcome = { ended: false, idleFailed: false };
+  let followedRunId: string | undefined;
+  let recordJournal: ((event: RuntimeEvent) => Promise<void>) | undefined;
   const deliver = (event: RuntimeEvent): void => {
     if (isRuntimeRunEnded(event.type)) outcome.ended = true;
     dependencies.state.applyRuntimeEvent(event);
     input.onEvent(event);
   };
+  const failOnIdle = (error: unknown): Promise<Error | undefined> =>
+    endIdleRun(
+      error,
+      followedRunId === undefined
+        ? undefined
+        : {
+            runId: followedRunId,
+            epochs,
+            state: dependencies.state,
+            toPanel: input.onEvent,
+            ...(recordJournal === undefined ? {} : { record: recordJournal }),
+          },
+      outcome,
+    );
   const runtime = new RuntimeRunService({
     clock: { now: Date.now },
     currentEpochs: () => epochs,
-    eventSink: forwardLocalTerminals(input.onEvent, () => {
-      outcome.ended = true;
-    }),
+    eventSink: forwardLocalTerminals(
+      (event) => {
+        if (!outcome.idleFailed) input.onEvent(event);
+      },
+      () => {
+        outcome.ended = true;
+      },
+    ),
     executor: dependencies.targetRouter(manifest),
     policy: dependencies.policy,
     ...(dependencies.hooks === undefined ? {} : { hooks: dependencies.hooks }),
@@ -187,7 +209,9 @@ async function executeRuntimeStudioOnModel(
     };
     const receipt = await runtime.start(runStart);
     dependencies.setActive(runtime, receipt.runId);
+    followedRunId = receipt.runId;
     const journal = new RuntimeJournalTracker(dependencies.journals);
+    recordJournal = (event) => journal.record(event);
     await journal.start({
       runId: receipt.runId,
       threadId: input.threadId,
@@ -259,14 +283,16 @@ async function executeRuntimeStudioOnModel(
       definitions.length,
       'error',
     );
-    throw error;
+    // The idle watchdog's reason is shown in the user's language, and ends the
+    // run as a failure before the cleanup cancel below can look like a user stop.
+    throw (await failOnIdle(error)) ?? error;
   } finally {
     // A run nobody is following any more has to be told to stop. Leaving it
     // meant the backend went on executing a run whose answer could no longer
     // reach anyone, and kept holding the one runtime slot — so the user's next
     // prompt queued behind a run that had already failed in front of them.
     // `cancel` is idempotent, so a run that ended on its own is left alone.
-    if (!outcome.ended) await runtime.cancel().catch(() => undefined);
+    if (!outcome.ended || outcome.idleFailed) await runtime.cancel().catch(() => undefined);
     // Whatever this run was still asking the user, it can no longer hear the
     // answer. An abandoned prompt is modal: it swallows every click aimed at
     // the composer, so the next message cannot be typed at all.
@@ -282,7 +308,7 @@ export async function recoverRuntimeStudio(
 ): Promise<void> {
   const capsule = journal.recovery;
   if (capsule === undefined) throw new Error('Runtime recovery capsule is unavailable');
-  const outcome = { ended: false };
+  const outcome: RuntimeStudioOutcome = { ended: false, idleFailed: false };
   const deliver = (event: RuntimeEvent): void => {
     if (isRuntimeRunEnded(event.type)) outcome.ended = true;
     dependencies.state.applyRuntimeEvent(event);
@@ -291,9 +317,14 @@ export async function recoverRuntimeStudio(
   const runtime = new RuntimeRunService({
     clock: { now: Date.now },
     currentEpochs: () => binding.epochs,
-    eventSink: forwardLocalTerminals(dependencies.input.onEvent, () => {
-      outcome.ended = true;
-    }),
+    eventSink: forwardLocalTerminals(
+      (event) => {
+        if (!outcome.idleFailed) dependencies.input.onEvent(event);
+      },
+      () => {
+        outcome.ended = true;
+      },
+    ),
     executor: dependencies.targetRouter(dependencies.manifest),
     policy: dependencies.policy,
     ...(dependencies.hooks === undefined ? {} : { hooks: dependencies.hooks }),
@@ -338,8 +369,22 @@ export async function recoverRuntimeStudio(
       dependencies.input.signal,
       journal.lastEventSequence,
     );
+  } catch (error) {
+    throw (
+      (await endIdleRun(
+        error,
+        {
+          runId: journal.runId,
+          epochs: binding.epochs,
+          state: dependencies.state,
+          toPanel: dependencies.input.onEvent,
+          record: (event) => tracker.record(event),
+        },
+        outcome,
+      )) ?? error
+    );
   } finally {
-    if (!outcome.ended) await runtime.cancel().catch(() => undefined);
+    if (!outcome.ended || outcome.idleFailed) await runtime.cancel().catch(() => undefined);
     dependencies.releaseApprovals();
     dependencies.setActive(undefined);
   }

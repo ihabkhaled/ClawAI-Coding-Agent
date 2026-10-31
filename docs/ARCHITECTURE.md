@@ -36,12 +36,25 @@ boundaries. Tool execution stays disabled until 0.19.
 ## Layers
 
 - `src/core`: pure URL, session schema, state, model catalog, context,
-  redaction, SSE, and edit-plan logic.
-- `src/backend`: runtime contracts and the single authenticated HTTP client.
+  redaction, SSE, and edit-plan logic. It also holds the run-resilience logic
+  shared with the SDK or used by the panel: `repetition-guard*.ts` (identical
+  tool-call guard), `retry-classifier*.ts` and `retry-after.ts` (what to retry and
+  how long to wait), and `runtime/runtime-stream-idle*.ts` (idle watchdog).
+- `src/backend`: runtime contracts and the single authenticated HTTP client,
+  including `backend-retry.ts` (opt-in retries: GET only when the caller asks for
+  `read`; POST only as `command` with an `idempotencyKey`; allowance 3 tries/20 s
+  read, 8 tries/120 s command).
 - `src/services`: chat, workflow, model, project/global context, configuration,
-  initialization, and edit orchestration.
+  initialization, and edit orchestration. `runtime-tool-repetition.ts` applies the
+  repetition guard in `runtime-tool-dispatcher.ts` (3rd identical call refused, 8th
+  ends the run as `RUNTIME_RUN_STUCK`); `runtime-studio-execution.ts` turns the idle
+  watchdog's failure (`RUNTIME_STREAM_IDLE_MS` = 600000, one re-attach, pending tool
+  calls hold the window open) into "The run stopped responding".
 - `src/infrastructure`: VS Code output and atomic workspace-edit adapters.
-- `src/views` and `src/webview`: editor presentation only.
+- `src/views` and `src/webview`: editor presentation only. Auto-compaction in
+  `prompt` mode is a card in the transcript (`compactionOffer` to the panel,
+  `compactionDecision` back); the modal remains for the explicit command and when
+  no panel holds the conversation.
 
 Services use structural ports where meaningful, allowing security-critical
 logic to run under Node without a VS Code host.

@@ -500,21 +500,19 @@ export class AgentCoordinator implements vscode.Disposable {
       ),
   });
 
-  /** What the panel reports and this side resolves: tokens, and dropped files. */
-  private readonly panel = panelReports({
+  /** What the panel reports and this side resolves: tokens, compaction answers, dropped files. */
+  readonly panel = panelReports({
     snapshot: () => this.state.snapshot,
     configuration: () => this.configuration.read(),
     workspaceRoot: () => this.workspaceScope.selectedFolder().uri.fsPath,
     appendToComposer: async (text) => this.view?.appendToComposer(text),
     compact: () => this.commands.compactConversation(),
-    compactSilently: () => this.commands.compactConversationUnattended(),
+    compactSilently: (threadId) => this.commands.compactConversationUnattended(threadId),
+    threadExists: (threadId) =>
+      this.state.snapshot.history.some((entry) => entry.id === threadId) ||
+      this.view?.holdsThread(threadId) === true,
+    offerCompaction: async (offer) => (await this.view?.postCompactionOffer(offer)) === true,
   });
-
-  conversationTokens = (threadId: string, tokens: number): Promise<void> =>
-    this.panel.conversationTokens(threadId, tokens);
-
-  dropUris = (uriList: string, shiftKey: boolean): Promise<void> =>
-    this.panel.dropUris(uriList, shiftKey);
 
   private readonly refreshConversations = conversationRefresher(() => ({
     backend: this.backend,

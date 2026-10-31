@@ -2,6 +2,12 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.102.0
+
+- Runs in the panel are harder to break. A run that repeats the same workspace call is refused on the 3rd try and stopped on the 8th (polling tools such as process watch, agent team and browser are never counted). A run whose stream stays connected but sends no real event for 10 minutes re-attaches once, then ends as failed with "The run stopped responding" instead of hanging. Starting a run, posting a tool result and reading the protocol now retry on 429, 502/503/504 and dropped connections, with `Retry-After` honoured; a run start is retried only when the server cannot have admitted it, so a lost reply never starts a second run.
+- Context compaction no longer blocks the editor. With `clawAI.autoCompact` set to `prompt`, the chat shows an inline card ("Context nearly full", Summarize and continue / Not now) for the conversation it belongs to. The dialog stays for the explicit compact command and when no panel is open.
+- Known gaps: the "run was stopped" repeat message is English only; GET retries are opt-in per call; the SDK's "reading too long" nudge is not in the panel yet.
+
 ## 1.101.0
 
 - A model refused because credit is spent now hands over to the next model in `clawAI.fallbackModels` (CLI: `--fallback-model`), like a 429. It reacts only to the platform's credit codes (`PAYG_CREDIT_EXHAUSTED`, `PAYG_FREE_ALLOWANCE_EXHAUSTED`, `PAYG_MODEL_NOT_IN_FREE_ALLOWANCE`, `PAYG_PROMPT_TOO_EXPENSIVE`), never to text that merely mentions them. The panel says "Credit used up on A, continuing on B" in 12 languages. With no fallback configured the original error is still shown. The fallback list is yours, so choose models you are happy to be billed for.

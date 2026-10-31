@@ -29,10 +29,19 @@ export function panelReports(parts: PanelReportCollaborators): PanelReportHandle
     busy: () => parts.snapshot().busy,
     compact: parts.compact,
     compactSilently: parts.compactSilently,
+    threadExists: parts.threadExists,
+    offerInline: parts.offerCompaction,
   });
   return {
     conversationTokens: async (threadId, tokens) => {
       await autoCompaction.observe(threadId, tokens);
+    },
+    compactionDecision: async (requestId, accept) => {
+      await autoCompaction.decide(requestId, accept);
+    },
+    compactionOfferAbandoned: (requestId) => {
+      autoCompaction.abandon(requestId);
+      return Promise.resolve();
     },
     dropUris: async (uriList, shiftKey) => {
       await dropUris(

@@ -33,6 +33,8 @@ import {
 import { normalizeToolInvocationForAdmission } from '../core/runtime/runtime-tool-normalization';
 import { buildRuntimeToolResult } from '../core/runtime/runtime-tool-result';
 
+import { RuntimeToolRepetition } from './runtime-tool-repetition';
+
 import type { LifecycleHookPort } from './lifecycle-hook.types';
 
 export interface RuntimeToolPolicyDecision {
@@ -131,6 +133,7 @@ function epochsMatch(left: ToolInvocation['epochs'], right: ToolInvocation['epoc
 export class RuntimeToolDispatcher {
   private readonly activeDeadlines = new Map<string, RuntimeDeadline>();
   private state: RuntimeToolDispatcherSnapshot;
+  private readonly repetition = new RuntimeToolRepetition();
 
   constructor(private readonly input: RuntimeToolDispatcherInput) {
     this.state = {
@@ -166,6 +169,11 @@ export class RuntimeToolDispatcher {
     );
     this.state = { ...this.state, budget, registry };
     return budget;
+  }
+
+  /** Ends the run once a stuck call's own result has been submitted and published. */
+  throwIfStuck(): void {
+    this.repetition.throwIfStuck();
   }
 
   assertWithinBudget(): void {
@@ -286,26 +294,9 @@ export class RuntimeToolDispatcher {
     const deadline = this.createDeadline(signal);
     this.activeDeadlines.set(admission.invocation.invocationId, deadline);
     try {
-      let outcome: RuntimeToolDispatchOutcome | undefined;
+      let outcome: RuntimeToolDispatchOutcome;
       try {
-        const decision = await this.awaitWithinDeadline(
-          this.input.policy.evaluate(admission.invocation, deadline.signal),
-          deadline.signal,
-        );
-        this.assertCurrentEpochs();
-        if (decision.decision === 'deny') {
-          outcome = {
-            status: 'denied',
-            error: {
-              code: decision.code,
-              message: decision.message,
-              retryable: false,
-              redactionApplied: false,
-            },
-          };
-        } else {
-          outcome = await this.executeWithHooks(admission, deadline);
-        }
+        outcome = await this.guardedOutcome(admission, deadline);
       } catch (error: unknown) {
         this.assertCurrentEpochs();
         outcome = this.failureOutcome(deadline, error);
@@ -321,6 +312,34 @@ export class RuntimeToolDispatcher {
       this.activeDeadlines.delete(admission.invocation.invocationId);
       deadline.dispose();
     }
+  }
+
+  /** Repetition check first (a refused call is never approved), then policy, then the run. */
+  private async guardedOutcome(
+    admission: { invocation: ToolInvocation },
+    deadline: RuntimeDeadline,
+  ): Promise<RuntimeToolDispatchOutcome> {
+    const refused = this.repetition.begin(admission.invocation);
+    if (refused !== undefined) return refused;
+    const decision = await this.awaitWithinDeadline(
+      this.input.policy.evaluate(admission.invocation, deadline.signal),
+      deadline.signal,
+    );
+    this.assertCurrentEpochs();
+    if (decision.decision === 'deny') {
+      return {
+        status: 'denied',
+        error: {
+          code: decision.code,
+          message: decision.message,
+          retryable: false,
+          redactionApplied: false,
+        },
+      };
+    }
+    return this.repetition.observe(admission.invocation, () =>
+      this.executeWithHooks(admission, deadline),
+    );
   }
 
   private createDeadline(signal: AbortSignal | undefined): RuntimeDeadline {

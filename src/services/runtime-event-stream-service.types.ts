@@ -1,5 +1,19 @@
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
+import type { RuntimeStreamIdleTracker } from '../core/runtime/runtime-stream-idle.types';
 import type { Continuation, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+
+/** Mutable follow state that must survive a stream that breaks partway through. */
+export type RuntimeStreamProgress = {
+  cursor: number;
+  readonly idle: RuntimeStreamIdleTracker;
+};
+
+export type RuntimeStreamIdleOptions = {
+  /** Injectable clock, for tests. Defaults to `Date.now`. */
+  readonly now?: () => number;
+  /** Idle budget in milliseconds. Defaults to `RUNTIME_STREAM_IDLE_MS`. */
+  readonly idleMs?: number;
+};
 
 export type RuntimeStreamObserver = {
   readonly onEvent: (event: RuntimeEvent) => void | Promise<void>;

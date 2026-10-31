@@ -52,6 +52,16 @@ export const inboundMessageSchema = z.discriminatedUnion('type', [
     threadId: z.string().min(1).max(200),
     tokens: z.number().int().min(0).max(100_000_000),
   }),
+  // The answer to the inline "summarize and continue" offer. The id must be one
+  // the host issued; anything else is ignored there, not trusted here.
+  z.object({
+    type: z.literal('compactionDecision'),
+    requestId: z.uuid(),
+    accept: z.boolean(),
+  }),
+  // The panel confirms the card is on screen. Until then the host may post the
+  // offer again; an id the host did not issue is ignored there.
+  z.object({ type: z.literal('compactionOfferShown'), requestId: z.uuid() }),
   // The panel forwards the drag payload rather than resolving it: only the
   // host knows the workspace root, and only the host owns the path policy that
   // decides whether a dropped URI may be read at all.

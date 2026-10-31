@@ -12,6 +12,7 @@ import {
   type RuntimeDeferredLoadAck,
 } from './runtime-deferred-tools.contracts';
 
+import type { BackendRetryClass } from './backend-retry.types';
 import type { RuntimeProtocolWireDescriptor } from '../core/runtime/runtime-negotiation';
 import type { ToolDefinition, ToolResult } from '../core/runtime/runtime-tool-contracts';
 import type { z } from 'zod';
@@ -22,6 +23,7 @@ type Request = <T>(
   options?: {
     method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
     body?: unknown;
+    retry?: BackendRetryClass;
     signal?: AbortSignal;
     timeoutMs?: number;
   },
@@ -53,6 +55,7 @@ export class BackendRuntimeClient {
 
   getProtocol(signal?: AbortSignal): Promise<RuntimeProtocolWireDescriptor> {
     return this.request('/agent/runtime/protocol', runtimeProtocolWireDescriptorSchema, {
+      retry: 'read',
       ...(signal === undefined ? {} : { signal }),
     });
   }
@@ -61,6 +64,7 @@ export class BackendRuntimeClient {
     return this.request('/chat-messages/runtime/runs', runtimeStartAckSchema, {
       body: input,
       method: 'POST',
+      retry: 'start', // narrower than 'command': a repeat of an admitted start is a 409 (fresh messageId per call)
       timeoutMs: RUNTIME_COMMAND_TIMEOUT_MS,
       ...(signal === undefined ? {} : { signal }),
     });
@@ -82,6 +86,7 @@ export class BackendRuntimeClient {
         result,
       },
       signal,
+      'command',
     );
   }
 
@@ -151,6 +156,7 @@ export class BackendRuntimeClient {
     command: 'results' | 'steering' | 'cancel',
     body: unknown,
     signal?: AbortSignal,
+    retry?: BackendRetryClass,
   ): Promise<RuntimeMutationAck> {
     const query = new URLSearchParams({ threadId: binding.threadId });
     return this.request(
@@ -159,6 +165,7 @@ export class BackendRuntimeClient {
       {
         body,
         method: 'POST',
+        ...(retry === undefined ? {} : { retry }),
         timeoutMs: RUNTIME_COMMAND_TIMEOUT_MS,
         ...(signal === undefined ? {} : { signal }),
       },

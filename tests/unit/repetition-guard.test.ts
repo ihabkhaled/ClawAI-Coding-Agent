@@ -2,8 +2,8 @@ import { describe, expect, it } from 'vitest';
 
 import { createRepetitionGuard } from '../../src/sdk/repetition-guard';
 
+import type { StuckInfo } from '../../src/core/repetition-guard.types';
 import type { AgentToolCall, AgentToolkit } from '../../src/sdk/agent-sdk.types';
-import type { StuckInfo } from '../../src/sdk/repetition-guard.types';
 
 const call = (
   toolName: string,

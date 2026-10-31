@@ -276,6 +276,10 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
     </div>
   </section>
   <div id="i18n" hidden
+    data-compaction-offer-title="${translated('Context nearly full')}"
+    data-compaction-offer-text="${translated('This conversation has used {0}% of the model’s room. Summarize it and continue in a new one? The original stays in your history.')}"
+    data-compaction-offer-accept="${translated('Summarize and continue')}"
+    data-compaction-offer-decline="${translated('Not now')}"
     data-question-dismissed="${translated('Question dismissed without an answer.')}"
     data-turn-position="${translated('{who}, turn {position} of {total}')}"
     data-context-overflow="${translated('This message will not fit. The oldest of the conversation will be dropped.')}"

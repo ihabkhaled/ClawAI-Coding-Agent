@@ -266,8 +266,7 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
     {
       agent: (input) => coordinator.runAgent(input),
       cancel: (requestId) => coordinator.cancel(requestId),
-      conversationTokens: (threadId, tokens) => coordinator.conversationTokens(threadId, tokens),
-      dropUris: (uriList, shiftKey) => coordinator.dropUris(uriList, shiftKey),
+      ...coordinator.panel,
       dictationUnavailable: (code) => reportDictationUnavailable(code),
       captureAdmission: (threadId) => coordinator.captureAdmission(threadId),
       compare: (input) => coordinator.compare(input),

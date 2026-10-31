@@ -26,6 +26,8 @@ import { runnerRoutineTranslations } from './runner-routine-translations.mjs';
 import { cronScheduleTranslations } from './cron-schedule-translations.mjs';
 import { remoteSessionTranslations } from './remote-session-translations.mjs';
 import { compareLiveTranslations } from './compare-live-translations.mjs';
+import { compactionOfferTranslations } from './compaction-offer-translations.mjs';
+import { idleRunTranslations } from './idle-run-translations.mjs';
 import { optInToolTranslations } from './opt-in-tool-translations.mjs';
 import { usageBreakdownTranslations } from './usage-breakdown-translations.mjs';
 
@@ -4822,6 +4824,8 @@ const marketplaceDescriptionTranslations = {
 function translate(locale, message) {
   return (
     compareLiveTranslations[locale][message] ??
+    compactionOfferTranslations[locale][message] ??
+    idleRunTranslations[locale][message] ??
     marketplaceDescriptionTranslations[locale][message] ??
     authorizationPageTranslations[locale][message] ??
     conversationRewindTranslations[locale][message] ??

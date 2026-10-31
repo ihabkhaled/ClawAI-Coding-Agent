@@ -3,17 +3,19 @@ import { z } from 'zod';
 import { accessTokenNeedsRefresh } from '../core/access-token-expiry';
 import { ACCESS_TOKEN_REFRESH_SKEW_MS } from '../core/access-token-expiry.constants';
 import { joinApiUrl, normalizeBackendUrl } from '../core/configuration';
+import { parseRetryAfter } from '../core/retry-after';
 import { type SessionVault, type TokenPair } from '../core/session-vault';
 
 import { type AgentKeyRequester } from './agent-remote-client';
 import {
   BackendRequestError,
   BackendSessionChangedError,
-  backendTransportFailureMessage,
   bindBackendSession,
   isBackendSessionBoundaryError,
 } from './backend-errors';
+import { fetchLease } from './backend-fetch';
 import { parseBackendResponse, throwBackendResponseError } from './backend-response';
+import { retryClassFor, withBackendRetries } from './backend-retry';
 import { BackendRuntimeClient } from './backend-runtime-client';
 import {
   entitlementsSchema,
@@ -65,6 +67,7 @@ import type {
   RuntimeStartAck,
   RuntimeStartRequest,
 } from './backend-client.types';
+import type { BackendRetryClass, BackendRetryTuning } from './backend-retry.types';
 import type { ChatAttachment } from '../core/chat-attachment';
 import type { ThreadRewindResult } from '../core/conversation-rewind.types';
 import type { ToolResult } from '../core/runtime/runtime-tool-contracts';
@@ -82,6 +85,7 @@ export class BackendClient {
   private readonly timeoutMs: number;
   private readonly runtime: BackendRuntimeClient;
   private readonly refresher = new SessionRefresher((signal) => this.performRefresh(signal));
+  private readonly retryTuning: BackendRetryTuning | undefined;
   private boundSessionId: string | null = null;
   // Which account the bound session belongs to. Set the first time this client
   // binds and used to tell the same user re-authorizing in another window from
@@ -94,6 +98,7 @@ export class BackendClient {
     this.fetcher = options.fetcher ?? fetch;
     this.sessionVault = options.sessionVault;
     this.timeoutMs = options.timeoutMs;
+    this.retryTuning = options.retry;
     this.runtime = new BackendRuntimeClient(
       (path, schema, requestOptions) => this.request(path, schema, requestOptions),
       (path, signal) => this.openAuthenticatedStream(path, signal),
@@ -426,14 +431,32 @@ export class BackendClient {
     options: {
       method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
       body?: unknown;
+      retry?: BackendRetryClass;
       signal?: AbortSignal;
       timeoutMs?: number;
     } = {},
   ): Promise<T> {
+    const method = options.method ?? 'GET';
+    const once = (): Promise<T> => this.requestOnce(path, schema, { ...options, method });
+    const retryClass = retryClassFor(method, options.retry, options.body);
+    if (retryClass === undefined) return once();
+    return withBackendRetries(retryClass, once, options.signal, this.retryTuning);
+  }
+
+  private async requestOnce<T>(
+    path: string,
+    schema: z.ZodType<T>,
+    options: {
+      method: 'GET' | 'POST' | 'PATCH' | 'DELETE';
+      body?: unknown;
+      signal?: AbortSignal;
+      timeoutMs?: number;
+    },
+  ): Promise<T> {
     await this.ensureFreshSession(options.signal);
     const attempt = {
       auth: true as const,
-      method: options.method ?? ('GET' as const),
+      method: options.method,
       ...(options.body === undefined ? {} : { body: options.body }),
       ...(options.signal === undefined ? {} : { signal: options.signal }),
       ...(options.timeoutMs === undefined ? {} : { timeoutMs: options.timeoutMs }),
@@ -444,7 +467,15 @@ export class BackendClient {
       await this.refresher.run(options.signal);
       response = await this.send(path, attempt);
     }
-    return parseBackendResponse(response, schema);
+    const retryAfter = response.response.headers.get('retry-after');
+    try {
+      return await parseBackendResponse(response, schema);
+    } catch (error: unknown) {
+      if (error instanceof BackendRequestError && error.retryAfterMs === undefined) {
+        error.retryAfterMs = parseRetryAfter(retryAfter);
+      }
+      throw error;
+    }
   }
 
   /**
@@ -554,35 +585,12 @@ export class BackendClient {
       headers.Authorization = `Bearer ${session.tokens.accessToken}`;
     }
 
-    const timeoutController = new AbortController();
-    const timeout = setTimeout(() => {
-      timeoutController.abort(new Error('ClawAI request timed out.'));
-    }, options.timeoutMs ?? this.timeoutMs);
-    const signal =
-      options.signal === undefined
-        ? timeoutController.signal
-        : AbortSignal.any([options.signal, timeoutController.signal]);
-
-    try {
-      const response = await this.fetcher(joinApiUrl(this.backendUrl, path), {
-        method: options.method,
-        headers,
-        signal,
-        ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
-      });
-      return {
-        ...(options.signal === undefined ? {} : { callerSignal: options.signal }),
-        release: () => {
-          clearTimeout(timeout);
-        },
-        response,
-        signal,
-      };
-    } catch (error: unknown) {
-      clearTimeout(timeout);
-      options.signal?.throwIfAborted();
-      const message = backendTransportFailureMessage(error, timeoutController.signal.aborted);
-      throw new BackendRequestError(message, 0, true);
-    }
+    return fetchLease(this.fetcher, joinApiUrl(this.backendUrl, path), {
+      method: options.method,
+      headers,
+      timeoutMs: options.timeoutMs ?? this.timeoutMs,
+      ...(options.body === undefined ? {} : { body: JSON.stringify(options.body) }),
+      ...(options.signal === undefined ? {} : { signal: options.signal }),
+    });
   }
 }
