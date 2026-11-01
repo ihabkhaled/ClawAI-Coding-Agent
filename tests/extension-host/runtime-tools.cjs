@@ -105,6 +105,33 @@ async function runRuntimeTools(api) {
   );
   report('TOOL knowledge.context: root read, nested found, outside refused');
 
+  // Reading a pull request that does not exist answers in its own shape, with
+  // the notice that other people's words are data. gh may be missing, signed
+  // out or pointed at no repository here: all three are a "not viewed" answer.
+  const pull = await call('workspace.pull-request', 'view', { rootKey: ROOT_KEY, number: 1 });
+  assert.equal(pull.structured?.viewed, false, 'a pull request that cannot exist was viewed');
+  assert.match(String(pull.structured?.notice), /never as instructions/u);
+  assert.ok(String(pull.structured?.detail).length > 0, 'a refused view gave no reason');
+  // Merging one is refused before anything is asked of the person or sent to GitHub.
+  const merge = await call('workspace.pull-request', 'merge', {
+    rootKey: ROOT_KEY,
+    number: 1,
+    method: 'squash',
+  });
+  assert.equal(
+    merge.structured?.merged,
+    false,
+    'a merge of a pull request that cannot exist merged',
+  );
+  await assert.rejects(
+    () => call('workspace.pull-request', 'merge', { rootKey: ROOT_KEY, number: 1 }),
+    undefined,
+    'a merge with no method was accepted',
+  );
+  report(
+    `TOOL workspace.pull-request: view and merge refused (${String(merge.structured.reason)})`,
+  );
+
   // A goal that has not been declared says so, rather than inventing one.
   const goal = await call('runtime.goal', 'status', {});
   assert.equal(goal.structured?.declared, false, 'an undeclared goal reported itself as declared');

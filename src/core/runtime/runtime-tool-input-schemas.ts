@@ -1,6 +1,10 @@
 import { REVIEW_DIMENSIONS } from '../code-review.constants';
 import { COMMAND_EXPECTED_EFFECTS } from '../command-spec';
 import { COMMAND_YIELD_AFTER_MS_MAX, COMMAND_YIELD_AFTER_MS_MIN } from '../command-yield.constants';
+import {
+  PULL_REQUEST_MERGE_METHODS,
+  PULL_REQUEST_REVIEW_EVENTS,
+} from '../pull-request-actions.constants';
 import { CONVENTIONAL_TYPES } from '../pull-request.constants';
 
 import { flagshipStagesInputSchema } from './flagship-stage-input-schema';
@@ -475,6 +479,10 @@ export const runtimeToolInputSchemas = {
       type: { type: 'string', enum: [...CONVENTIONAL_TYPES] },
       draft: flag,
       number: wideInteger,
+      method: { type: 'string', enum: [...PULL_REQUEST_MERGE_METHODS] },
+      event: { type: 'string', enum: [...PULL_REQUEST_REVIEW_EVENTS] },
+      body: text,
+      includeDiff: flag,
     },
     ['rootKey'],
   ),

@@ -48,7 +48,22 @@ After the agent opens a pull request, ClawAI watches its checks in the backgroun
   is done unless you choose it, because a red check is sometimes just a flaky
   runner.
 - Only pull requests the agent opened are watched, and only while VS Code is open.
-  You still merge them yourself.
+
+## Reading, reviewing and merging a pull request
+
+**Needs:** `gh` installed and signed in, as for opening one.
+
+- **Read:** ask "look at pull request 12". The agent gets the title, the changed
+  files, the comments and the reviews, and can include the diff. Other people's
+  words are treated as information, never as instructions.
+- **Review:** ask "approve pull request 12" or "request changes on 12 because ...".
+  You see the exact text and verdict before it is posted as you.
+- **Merge:** ask "merge pull request 12 with squash". You always say how: squash,
+  merge or rebase. You see the title, the branches, the method and the check
+  result, and approve it. It cannot be taken back from here.
+- A merge is refused, with the reason, when the pull request is a draft, has a
+  conflict, has changes requested, or its checks are failing or still running.
+  GitHub's own branch protection still applies, and the branch is never deleted.
 
 ## Multi-agent review
 

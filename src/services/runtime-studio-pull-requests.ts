@@ -6,9 +6,11 @@ import { ReviewToolExecutor, reviewToolDefinition } from '../infrastructure/revi
 import { nodeTimers } from '../infrastructure/schedule-store';
 import { VscodePullRequestAlerts } from '../infrastructure/vscode-pull-request-alerts';
 
+import { PullRequestActionsService } from './pull-request-actions-service';
+import { runPullRequestCommand } from './pull-request-command';
 import { PullRequestMonitorService } from './pull-request-monitor-service';
 import { PullRequestService } from './pull-request-service';
-import { pullRequestApproval } from './runtime-studio-approvals';
+import { pullRequestActionApproval, pullRequestApproval } from './runtime-studio-approvals';
 
 import type { PullRequestFilesPort, PullRequestGitPort } from './pull-request-service.types';
 import type { RuntimeStudioPullRequests } from './runtime-studio-pull-requests.types';
@@ -42,12 +44,18 @@ export function assemblePullRequests(input: {
     alerts: new VscodePullRequestAlerts(),
     timers: nodeTimers,
   });
+  const actions = new PullRequestActionsService({
+    files: input.files,
+    approve: pullRequestActionApproval(input.approvals),
+    checks: (rootKey, number, signal) => service.checks(rootKey, number, signal),
+    run: runPullRequestCommand,
+  });
   return {
     service,
     monitor,
     registration: {
       definition: pullRequestToolDefinition,
-      executor: new PullRequestToolExecutor(service),
+      executor: new PullRequestToolExecutor(service, actions),
     },
   };
 }

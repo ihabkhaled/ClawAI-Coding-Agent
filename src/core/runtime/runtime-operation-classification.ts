@@ -290,8 +290,8 @@ const workspaceTools: Readonly<Record<string, ToolTable>> = {
   'workspace.process': group(RUN, PROCESS_OPERATIONS),
   'workspace.pull-request': merge(
     group(READ, ['draft']),
-    group(FETCH, ['fetch-checks', 'fetch-failure-logs']),
-    group(PUBLISH, ['publish']),
+    group(FETCH, ['fetch-checks', 'fetch-failure-logs', 'view']),
+    group(PUBLISH, ['merge', 'publish', 'review']),
   ),
   'workspace.quality': merge(
     group(RUN, ['run']),

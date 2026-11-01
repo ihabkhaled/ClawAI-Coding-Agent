@@ -13,6 +13,10 @@ export const GIT_WRITE_OPERATIONS: readonly string[] = [
   'push',
   'switch',
   'restore',
+  'merge',
+  'rebase',
+  'stash',
+  'tag',
 ];
 
 /** The category of each operation this module owns. */
@@ -28,6 +32,10 @@ export const GIT_TOOL_OPERATION_CATEGORIES: Readonly<Record<string, AgentToolCat
   push: 'git-write',
   switch: 'git-write',
   restore: 'git-write',
+  merge: 'git-write',
+  rebase: 'git-write',
+  stash: 'git-write',
+  tag: 'git-write',
 };
 
 /** The only remote the write operations talk to. */
@@ -109,7 +117,8 @@ export const GIT_TOOL_DESCRIPTION =
   'Write (granted separately): add/unstage/restore take explicit "paths" (never "." or a wildcard); ' +
   'commit {message (one line, <=100 chars), body?, trailers?[Co-Authored-By]} runs the hooks; fetch; ' +
   'pull (rebase only, no autostash; a conflict is reported and the rebase aborted); ' +
-  'push (HEAD to origin, current or named "branch", never forced); switch {branch, create?}. ' +
+  'push (HEAD to origin, current or named "branch", never forced, no tags); switch {branch, create?}; ' +
+  'merge/rebase {branch} (conflict: aborted); stash {action: push|pop|list, message?}; tag {name?, message?, ref?} (local, annotated; no name lists). ' +
   'Hooks can take minutes: timeoutSeconds (default 1800, max 3600).';
 
 export const GIT_TOOL_INPUT_SCHEMA = {
@@ -126,6 +135,8 @@ export const GIT_TOOL_INPUT_SCHEMA = {
     trailers: { type: 'array', items: { type: 'string' } },
     branch: { type: 'string' },
     create: { type: 'boolean' },
+    action: { type: 'string' },
+    name: { type: 'string' },
     timeoutSeconds: { type: 'integer' },
   },
 } as const;
