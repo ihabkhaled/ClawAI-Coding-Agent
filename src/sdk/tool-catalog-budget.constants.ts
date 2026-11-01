@@ -7,11 +7,15 @@
  * the 1.97.0 sizes for the nine newer tools, about 25% for the older four), rounded
  * up to the next 25. `http.request` also lists the allowed hosts, so it has room for a few.
  * `npm run tools:size` prints the current numbers.
+ *
+ * 1.106.0: `workspace.git` grew by about 200 characters (and the catalogs with it)
+ * for merge, rebase, stash and tag, which agents need to finish a branch without
+ * a shell. The catalogs stay under 80% of their 1.97.0 baselines.
  */
 export const TOOL_CHAR_BUDGETS: Readonly<Record<string, number>> = {
   'workspace.file': 1950,
   'workspace.command': 1225,
-  'workspace.git': 1325,
+  'workspace.git': 1550,
   'workspace.notes': 925,
   'task.plan': 1000,
   'code.gates': 1100,
@@ -27,12 +31,12 @@ export const TOOL_CHAR_BUDGETS: Readonly<Record<string, number>> = {
 
 /** The most characters a whole catalog may cost, per scenario label (see `catalogScenarios`). */
 export const CATALOG_CHAR_BUDGETS: Readonly<Record<string, number>> = {
-  'default (read,git)': 4050,
-  'default + command': 7400,
-  'every category': 16_000,
-  'every category, profile minimal': 4350,
-  'every category, profile dev': 7575,
-  'every category, deferred stubs': 10_100,
+  'default (read,git)': 4225,
+  'default + command': 7550,
+  'every category': 16_150,
+  'every category, profile minimal': 4525,
+  'every category, profile dev': 7750,
+  'every category, deferred stubs': 10_300,
 };
 
 /** The 1.97.0 catalog sizes the budgets were cut from, kept so a report can say how far it has come. */

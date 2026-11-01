@@ -3,6 +3,7 @@ import path from 'node:path';
 import { containedPath } from '../core/workspace-containment';
 
 import { branchName, explicitPaths, revision } from './git-tools-args';
+import { mergeOperation, rebaseOperation, stashOperation, tagOperation } from './git-tools-local';
 import { commitOperation, fetchOperation, pullOperation, pushOperation } from './git-tools-remote';
 import { redactRemoteUrls, remoteEntries } from './git-tools-remotes-list';
 import { currentBranch, outcome, runGit } from './git-tools-run';
@@ -68,6 +69,10 @@ async function remoteOperation(operation: string, context: GitToolContext): Prom
   if (operation === 'fetch') return fetchOperation(context);
   if (operation === 'pull') return pullOperation(context);
   if (operation === 'push') return pushOperation(context);
+  if (operation === 'merge') return mergeOperation(context);
+  if (operation === 'rebase') return rebaseOperation(context);
+  if (operation === 'stash') return stashOperation(context);
+  if (operation === 'tag') return tagOperation(context);
   throw new Error(`workspace.git ${operation} is not available.`);
 }
 

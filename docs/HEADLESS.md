@@ -328,11 +328,14 @@ NODE_OPTIONS=--use-system-ca clawai -p "test the claw.local login API: wrong pas
 
 `workspace.git` reads under `git` (status, diff, log, show, branch, remote with URL credentials redacted). Everything that changes a repository or talks to a remote is the separate `git-write` category, so a run granted only `git` cannot commit. `ask` and `accept-edits` ask for every git-write call; `plan` denies them.
 
-- Argument lists are fixed per operation. Nothing the model writes becomes a flag: no `--no-verify`, `--no-gpg-sign`, `--force`, `--delete`, `--mirror` or tags.
-- `add`, `unstage`, `restore` take an explicit `paths` list inside the workspace. `.`, `-A`, `--all`, wildcard-only names and `:`-magic are refused; a name like `[id]` is literal. `restore` touches the worktree only. There is no reset, clean, checkout or stash.
+- Argument lists are fixed per operation. Nothing the model writes becomes a flag: no `--no-verify`, `--no-gpg-sign`, `--force`, `--delete`, `--mirror` or pushed tags.
+- `add`, `unstage`, `restore` take an explicit `paths` list inside the workspace. `.`, `-A`, `--all`, wildcard-only names and `:`-magic are refused; a name like `[id]` is literal. `restore` touches the worktree only. There is no reset, clean or checkout.
 - `commit` `{ message (one line, <=100 chars), body?, trailers? (Co-Authored-By only) }` runs the repository's hooks (pre-commit, commit-msg) normally, unlike the hook-free read path. It returns `committed`, `hash`, `exitCode` and the head and tail of hook output; a failing hook is a failed commit.
 - `fetch` and `pull` (`--rebase --no-autostash` only) use `origin`. A pull conflict is a result (`conflicts`, `rebaseAborted`), not an error; the rebase is aborted so the tree stays clean.
 - `push` `{ branch? }` sends `HEAD` to `origin` as the current or named branch, never forced. `gh` on PATH supplies the credential helper (`gh auth git-credential`), otherwise git's default; there is no terminal prompt.
+- `merge` `{ branch }` and `rebase` `{ branch }` take one local branch (never a flag or a range). A conflict is a result (`conflicts`, `mergeAborted` or `rebaseAborted`), not an error: the operation is aborted so the tree stays clean. A rebase is never interactive and never autostashes; push is never forced, so a rewritten branch that was already pushed cannot be published by this tool.
+- `stash` `{ action: push|pop|list, message? }` shelves tracked changes only (untracked files stay). `pop` needs a clean tree; a conflicting pop is reverted (`popReverted`) and the stash is kept (`stashKept`). There is no drop or clear.
+- `tag` `{ name?, message?, ref? }`: with no `name` it lists tags; otherwise it makes one annotated tag on HEAD or `ref`. It never replaces, deletes or pushes a tag (push sends one branch and no tags).
 - `switch` `{ branch, create? }` never discards local changes. Branch names cannot start with `-` or contain refspec syntax.
 - Hooks can run for minutes: commit, fetch, pull and push wait 30 minutes by default; `timeoutSeconds` (max 3600) changes it. Abort or timeout kills the process tree. Each result is bounded JSON under 60 000 characters.
 

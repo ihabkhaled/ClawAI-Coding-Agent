@@ -104,7 +104,8 @@ export async function pullOperation(context: GitToolContext): Promise<ToolResult
   return outcome(result, { conflicts, rebaseAborted: abort.exitCode === 0 });
 }
 
-async function conflictedFiles(context: GitToolContext): Promise<string[]> {
+/** The files left conflicted by the last merge, rebase or stash pop. */
+export async function conflictedFiles(context: GitToolContext): Promise<string[]> {
   const result = await runGit(context, ['diff', '--name-only', '--diff-filter=U'], {
     write: false,
     timeoutMs: GIT_QUICK_TIMEOUT_MS,

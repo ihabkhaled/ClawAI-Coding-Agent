@@ -25,7 +25,7 @@ The model pays for every offered definition on every turn, so tools stay off unt
 | ------------------- | ---------- | ---------- | ------------ |
 | `workspace.file`    | 9          | 1916       | 479          |
 | `workspace.command` | 4          | 1198       | 300          |
-| `workspace.git`     | 14         | 1292       | 323          |
+| `workspace.git`     | 18         | 1531       | 383          |
 | `workspace.notes`   | 5          | 894        | 224          |
 | `task.plan`         | 4          | 983        | 246          |
 | `code.gates`        | 3          | 1091       | 273          |
@@ -203,7 +203,7 @@ createAgent({
 Look at the repository, and (with a second grant) stage, commit, fetch, pull, push and switch branches.
 
 - **Turn it on:** Reads are on by default (`git`); everything that changes a repository needs `git-write`.
-- **Cost:** the definition is 1292 characters (about 323 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 1531 characters (about 383 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -221,6 +221,10 @@ Look at the repository, and (with a second grant) stage, commit, fetch, pull, pu
 - `push` {branch?}: send HEAD to origin; never forced.
 - `switch` {branch, create?}: change branch; never discards changes.
 - `restore` {paths[]}: restore named files in the working tree.
+- `merge` {branch}: merge a local branch; a conflict is reported and the merge aborted.
+- `rebase` {branch}: rebase onto a local branch; a conflict is reported and the rebase aborted.
+- `stash` {action, message?}: push, pop (clean tree only) or list shelved tracked changes.
+- `tag` {name?, message?, ref?}: list tags, or make one local annotated tag; never replaced or pushed.
 
 **Who is asked, per permission mode** (`runs` = no prompt, `asks` = the approval callback, `removed` = the tool is refused in `plan`, `refused` = never allowed)
 
@@ -240,6 +244,10 @@ Look at the repository, and (with a second grant) stage, commit, fetch, pull, pu
 | push      | `git-write` | removed | asks | asks         | asks              | asks   |
 | switch    | `git-write` | removed | asks | asks         | asks              | asks   |
 | restore   | `git-write` | removed | asks | asks         | asks              | asks   |
+| merge     | `git-write` | removed | asks | asks         | asks              | asks   |
+| rebase    | `git-write` | removed | asks | asks         | asks              | asks   |
+| stash     | `git-write` | removed | asks | asks         | asks              | asks   |
+| tag       | `git-write` | removed | asks | asks         | asks              | asks   |
 
 **Arguments the model may send** (from the tool definition)
 
@@ -255,11 +263,13 @@ Look at the repository, and (with a second grant) stage, commit, fetch, pull, pu
 | `trailers`       | array   |        |
 | `branch`         | string  |        |
 | `create`         | boolean |        |
+| `action`         | string  |        |
+| `name`           | string  |        |
 | `timeoutSeconds` | integer |        |
 
 **Limits**
 
-- Arguments are fixed per operation: no `--no-verify`, `--force`, `--delete` or tags can be passed.
+- Arguments are fixed per operation: no `--no-verify`, `--force` or `--delete` can be passed, and push sends no tags.
 - Hooks run for real; commit, fetch, pull and push wait 30 minutes (`timeoutSeconds` up to 3,600).
 - With `--write-scope`, a commit that holds a path outside the scope is refused.
 

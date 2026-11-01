@@ -29,14 +29,27 @@ const request = (operation: string): AgentApprovalRequest => ({
   category: toolCategory(call(operation)) ?? 'git-write',
 });
 
-const WRITES = ['add', 'unstage', 'commit', 'fetch', 'pull', 'push', 'switch', 'restore'];
+const WRITES = [
+  'add',
+  'unstage',
+  'commit',
+  'fetch',
+  'pull',
+  'push',
+  'switch',
+  'restore',
+  'merge',
+  'rebase',
+  'stash',
+  'tag',
+];
 const READS = ['status', 'diff', 'log', 'show', 'remote', 'branch'];
 
 describe('git categories', () => {
   it('puts reads under git and every write under git-write, and nothing else exists', () => {
     for (const operation of READS) expect(toolCategory(call(operation))).toBe('git');
     for (const operation of WRITES) expect(toolCategory(call(operation))).toBe('git-write');
-    for (const operation of ['reset', 'clean', 'checkout', 'stash', 'blame', 'rebase']) {
+    for (const operation of ['reset', 'clean', 'checkout', 'blame', 'cherry-pick']) {
       expect(toolCategory(call(operation))).toBeUndefined();
     }
   });

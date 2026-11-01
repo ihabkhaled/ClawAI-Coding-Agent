@@ -8,7 +8,8 @@ import {
   tailOf,
 } from '../core/pull-request';
 import { MAX_FAILURE_RUNS } from '../core/pull-request.constants';
-import { runCommandSpec } from '../infrastructure/bounded-command-runner';
+
+import { runPullRequestCommand } from './pull-request-command';
 
 import type {
   PullRequestDependencies,
@@ -261,21 +262,6 @@ export class PullRequestService {
     cwd: string,
     signal?: AbortSignal,
   ): Promise<CommandResult> {
-    return runCommandSpec(
-      {
-        executable,
-        arguments: args,
-        cwdRootKey: 'internal',
-        cwd: '.',
-        environment: {},
-        timeoutMs: 120_000,
-        outputLimitBytes: 4_194_304,
-        expectedEffect: 'network',
-        targetId: 'target:workspace',
-        elevation: false,
-      },
-      cwd,
-      signal,
-    );
+    return runPullRequestCommand(executable, args, cwd, signal);
   }
 }

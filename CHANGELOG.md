@@ -2,6 +2,12 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.106.0
+
+- The SDK and CLI `workspace.git` tool can now `merge` and `rebase` a local branch, `stash` (push, pop, list) and `tag`. Each is a `git-write` operation. A merge or rebase conflict is reported and aborted so the tree stays clean; a rebase never autostashes and is never interactive; a stash pop needs a clean tree and is reverted if it conflicts; a tag is annotated and local, never replaced, deleted or pushed. Testing found that `git stash --include-untracked` leaves the files in place under the literal pathspecs every call here runs with, so untracked files are not stashed. The tool definition grew by about 200 characters; the size budgets say so.
+- The panel's `workspace.pull-request` tool can now `view` a pull request (details, files, comments, reviews, optional bounded diff; other people's text is marked as data), `review` it (comment, approve or request changes) and `merge` it. A review and a merge each show their exact words for a second approval after the policy's own. A merge needs a named method (squash, merge or rebase), and is refused for a draft, a conflict, requested changes, or checks that are failing or still running; it never uses `--admin`, `--auto` or branch deletion.
+- Known gaps: the SDK and CLI have no pull request tool (the panel only); pull request review and merge were proven against a fake `gh` and in the real extension host for reachability only, not against a live GitHub pull request.
+
 ## 1.105.0
 
 - The panel's agent can now search the project's own rules, skills and docs. It gets the same read-only `knowledge.context` tool the command line has: `task` names the rule files that govern a piece of work (including a nested `CLAUDE.md` in the folder the task mentions), `search` ranks sections, `read` and `index` open and list files. Results are marked as untrusted repository text and never widen what a run may do. Proven in a real VS Code extension host: the root file is read, a nested `CLAUDE.md` is found, and a path outside the workspace is refused.

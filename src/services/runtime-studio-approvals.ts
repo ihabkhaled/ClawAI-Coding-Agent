@@ -35,6 +35,45 @@ export function gitCommitApproval(
     );
 }
 
+/** The exact words of a pull request review or merge, shown before either happens. */
+export function pullRequestActionApproval(
+  approvals: ApprovalBroker,
+): (
+  action: 'merge' | 'review',
+  preview: string,
+  hash: string,
+  signal?: AbortSignal,
+) => Promise<boolean> {
+  return (action, preview, hash, signal) => {
+    const merge = action === 'merge';
+    const title = merge
+      ? vscode.l10n.t('Approve pull request merge')
+      : vscode.l10n.t('Approve pull request review');
+    return approvals.request(
+      {
+        kind: 'runtimeEffect',
+        title,
+        message: merge
+          ? vscode.l10n.t('Review the pull request and its checks before it is merged.')
+          : vscode.l10n.t('Review the exact text before it is posted on the pull request.'),
+        effect: {
+          purpose: title,
+          target: hash,
+          risk: 'R3',
+          sideEffects: [
+            merge
+              ? vscode.l10n.t('The pull request is merged into its base branch on the remote.')
+              : vscode.l10n.t('The review is posted on the pull request as you.'),
+          ],
+          reversibility: merge ? 'irreversible' : 'partially-reversible',
+          sanitizedPreview: preview,
+        },
+      },
+      signal,
+    );
+  };
+}
+
 /** The exact title and description a pull request is opened with, shown before it is. */
 export function pullRequestApproval(
   approvals: ApprovalBroker,

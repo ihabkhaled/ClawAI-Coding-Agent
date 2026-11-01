@@ -86,9 +86,14 @@ export const CORE_TOOL_NOTES: readonly ToolNote[] = [
       push: '{branch?}: send HEAD to origin; never forced.',
       switch: '{branch, create?}: change branch; never discards changes.',
       restore: '{paths[]}: restore named files in the working tree.',
+      merge: '{branch}: merge a local branch; a conflict is reported and the merge aborted.',
+      rebase:
+        '{branch}: rebase onto a local branch; a conflict is reported and the rebase aborted.',
+      stash: '{action, message?}: push, pop (clean tree only) or list shelved tracked changes.',
+      tag: '{name?, message?, ref?}: list tags, or make one local annotated tag; never replaced or pushed.',
     },
     limits: [
-      'Arguments are fixed per operation: no `--no-verify`, `--force`, `--delete` or tags can be passed.',
+      'Arguments are fixed per operation: no `--no-verify`, `--force` or `--delete` can be passed, and push sends no tags.',
       'Hooks run for real; commit, fetch, pull and push wait 30 minutes (`timeoutSeconds` up to 3,600).',
       'With `--write-scope`, a commit that holds a path outside the scope is refused.',
     ],

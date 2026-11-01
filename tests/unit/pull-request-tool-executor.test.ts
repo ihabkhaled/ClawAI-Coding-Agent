@@ -4,6 +4,7 @@ import {
   PullRequestToolExecutor,
   pullRequestToolDefinition,
 } from '../../src/infrastructure/pull-request-tool-executor';
+import { PullRequestActionsService } from '../../src/services/pull-request-actions-service';
 import { PullRequestService } from '../../src/services/pull-request-service';
 
 import type {
@@ -18,10 +19,20 @@ function fixture() {
     checks: vi.fn(async () => ({ state: 'passing' })),
     failureLogs: vi.fn(async () => ({ logs: 'boom' })),
   };
+  const actions = {
+    view: vi.fn(async () => ({ viewed: true })),
+    review: vi.fn(async () => ({ reviewed: true })),
+    merge: vi.fn(async () => ({ merged: true })),
+  };
   return {
     service,
+    actions,
     executor: new PullRequestToolExecutor(
       Object.assign(Object.create(PullRequestService.prototype) as PullRequestService, service),
+      Object.assign(
+        Object.create(PullRequestActionsService.prototype) as PullRequestActionsService,
+        actions,
+      ),
     ),
   };
 }
@@ -96,7 +107,7 @@ describe('PullRequestToolExecutor', () => {
     await expect(
       executor.execute(call('draft', { rootKey: 'r' }, 'workspace.git')),
     ).rejects.toThrow('Unknown pull request tool');
-    await expect(executor.execute(call('merge', { rootKey: 'r' }))).rejects.toThrow(
+    await expect(executor.execute(call('rewrite', { rootKey: 'r' }))).rejects.toThrow(
       'Unknown pull request operation',
     );
   });
@@ -107,5 +118,42 @@ describe('PullRequestToolExecutor', () => {
     await expect(executor.execute(call('publish', { rootKey: 'r' }))).rejects.toThrow(
       'gh not signed in',
     );
+  });
+
+  it('views, reviews and merges through the actions service with only known fields', async () => {
+    const { actions, executor } = fixture();
+    const signal = new AbortController().signal;
+    await executor.execute(call('view', { rootKey: 'r', number: 4, includeDiff: true }), signal);
+    await executor.execute(
+      call('review', { rootKey: 'r', number: 4, event: 'comment', body: 'looks fine', extra: 1 }),
+      signal,
+    );
+    await executor.execute(call('merge', { rootKey: 'r', number: 4, method: 'squash' }), signal);
+    expect(actions.view).toHaveBeenCalledWith('r', 4, true, signal);
+    expect(actions.review).toHaveBeenCalledWith(
+      'r',
+      { number: 4, event: 'comment', body: 'looks fine' },
+      signal,
+    );
+    expect(actions.merge).toHaveBeenCalledWith('r', { number: 4, method: 'squash' }, signal);
+  });
+
+  it('rejects a merge or review with no method, a bad method or a bad event', async () => {
+    const { actions, executor } = fixture();
+    for (const args of [
+      { rootKey: 'r', number: 4 },
+      { rootKey: 'r', number: 4, method: 'force' },
+      { rootKey: 'r', number: 4, method: '--admin' },
+    ]) {
+      await expect(executor.execute(call('merge', args))).rejects.toThrow();
+    }
+    await expect(
+      executor.execute(call('review', { rootKey: 'r', number: 4, event: 'dismiss' })),
+    ).rejects.toThrow();
+    await expect(
+      executor.execute(call('merge', { rootKey: 'r', number: 0, method: 'squash' })),
+    ).rejects.toThrow();
+    expect(actions.merge).not.toHaveBeenCalled();
+    expect(actions.review).not.toHaveBeenCalled();
   });
 });
