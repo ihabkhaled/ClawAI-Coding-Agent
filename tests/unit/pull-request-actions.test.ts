@@ -21,6 +21,7 @@ const raw = {
   author: { login: 'ada' },
   baseRefName: 'main',
   headRefName: 'feature/thing',
+  headRefOid: 'a'.repeat(40),
   mergeable: 'MERGEABLE',
   mergeStateStatus: 'CLEAN',
   reviewDecision: 'APPROVED',
@@ -101,6 +102,7 @@ describe('previews and flags', () => {
     const text = mergePreview(view, 'squash', 'passed');
     expect(text).toContain('Merge #12: feat: add thing');
     expect(text).toContain('Into: main  From: feature/thing  By: ada');
+    expect(text).toContain(`Head commit: ${'a'.repeat(40)}`);
     expect(text).toContain('Method: squash');
     expect(text).toContain('Checks: passed');
   });
@@ -134,12 +136,15 @@ type Reply = Partial<CommandResult> | Error;
 
 function service(options: {
   view?: Record<string, unknown>;
+  /** Overrides for the first, second ... `pr view`; the last one repeats. */
+  views?: Record<string, unknown>[];
   signedIn?: boolean;
   approved?: boolean;
   checks?: PullRequestCheckSummary['state'];
   replies?: Record<string, Reply>;
 }) {
   const calls: string[][] = [];
+  let views = 0;
   const run = vi.fn(
     async (_executable: string, args: readonly string[]): Promise<CommandResult> => {
       calls.push([...args]);
@@ -148,7 +153,12 @@ function service(options: {
       const reply = options.replies?.[key];
       if (reply instanceof Error) throw reply;
       if (reply !== undefined) return { ...ok, ...reply };
-      if (key === 'pr view') return { ...ok, stdout: JSON.stringify({ ...raw, ...options.view }) };
+      if (key === 'pr view') {
+        const sequence = options.views ?? [];
+        const step = sequence[Math.min(views, Math.max(sequence.length - 1, 0))];
+        views += 1;
+        return { ...ok, stdout: JSON.stringify({ ...raw, ...options.view, ...step }) };
+      }
       return ok;
     },
   );
@@ -260,13 +270,20 @@ describe('PullRequestActionsService.merge', () => {
       undefined,
     );
     const merge = calls.find((args) => args[1] === 'merge');
-    expect(merge).toEqual(['pr', 'merge', '12', '--squash']);
+    expect(merge).toEqual(['pr', 'merge', '12', '--squash', '--match-head-commit', 'a'.repeat(40)]);
   });
 
   it.each([['merge'], ['rebase']] as const)('passes --%s', async (method) => {
     const { actions, calls } = service({});
     await actions.merge('r', { number: 5, method });
-    expect(calls.find((args) => args[1] === 'merge')).toEqual(['pr', 'merge', '5', `--${method}`]);
+    expect(calls.find((args) => args[1] === 'merge')).toEqual([
+      'pr',
+      'merge',
+      '5',
+      `--${method}`,
+      '--match-head-commit',
+      'a'.repeat(40),
+    ]);
   });
 
   it('refuses a pull request that is not ready, without asking the person', async () => {
@@ -309,6 +326,36 @@ describe('PullRequestActionsService.merge', () => {
       reason: 'failed',
       detail: expect.stringContaining('policy prohibits') as string,
     });
+  });
+
+  it('binds the merge to the head commit the person approved', async () => {
+    const { actions, approve } = service({});
+    await actions.merge('r', { number: 12, method: 'squash' });
+    expect(approve).toHaveBeenCalledWith(
+      'merge',
+      expect.stringContaining(`Head commit: ${'a'.repeat(40)}`),
+      expect.stringMatching(/^sha256:/u),
+      undefined,
+    );
+  });
+
+  it('refuses when the head moves while the checks are read, before asking the person', async () => {
+    const { actions, approve, calls } = service({
+      views: [{}, { headRefOid: 'b'.repeat(40) }],
+    });
+    const result = await actions.merge('r', { number: 12, method: 'squash' });
+    expect(result).toMatchObject({ merged: false, reason: 'not-ready' });
+    expect(approve).not.toHaveBeenCalled();
+    expect(calls.some((args) => args[1] === 'merge')).toBe(false);
+  });
+
+  it('refuses when the head commit cannot be read', async () => {
+    const { actions, approve } = service({ view: { headRefOid: undefined } });
+    expect(await actions.merge('r', { number: 12, method: 'squash' })).toMatchObject({
+      merged: false,
+      reason: 'failed',
+    });
+    expect(approve).not.toHaveBeenCalled();
   });
 
   it('needs gh signed in', async () => {

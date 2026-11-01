@@ -17,6 +17,8 @@ export interface PullRequestView {
   readonly author: string;
   readonly base: string;
   readonly head: string;
+  /** The commit the pull request's head branch points at; a merge is bound to it. */
+  readonly headCommit: string | undefined;
   readonly mergeable: string;
   readonly mergeState: string;
   readonly reviewDecision: string;

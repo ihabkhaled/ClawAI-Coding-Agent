@@ -6,7 +6,7 @@ export const PULL_REQUEST_REVIEW_EVENTS = ['comment', 'approve', 'request-change
 
 /** The fields one `gh pr view` asks for. */
 export const PULL_REQUEST_VIEW_FIELDS =
-  'number,title,state,isDraft,author,baseRefName,headRefName,mergeable,mergeStateStatus,reviewDecision,body,files,comments,reviews,url';
+  'number,title,state,isDraft,author,baseRefName,headRefName,headRefOid,mergeable,mergeStateStatus,reviewDecision,body,files,comments,reviews,url';
 
 /** How much of third-party text one answer carries. */
 export const PULL_REQUEST_BODY_CHARS = 4_000;

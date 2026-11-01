@@ -42,7 +42,9 @@ function digest(preview: string): string {
  * the person first, on top of the runtime policy's own approval, and every
  * refusal is a result the model can act on. A merge never uses `--admin`,
  * `--auto` or `--delete-branch`: branch protection stays GitHub's to enforce,
- * and the branch stays where it is.
+ * and the branch stays where it is. The merge is bound to the head commit the
+ * person approved (`--match-head-commit`), so a push after approval makes it
+ * fail instead of merging code nobody saw.
  */
 export class PullRequestActionsService {
   constructor(private readonly dependencies: PullRequestActionsDependencies) {}
@@ -134,7 +136,20 @@ export class PullRequestActionsService {
         detail: `Pull request #${String(number)} could not be read.`,
       };
     }
+    const commit = view.headCommit;
+    if (commit === undefined) {
+      return { merged: false, reason: 'failed', detail: 'The head commit could not be read.' };
+    }
     const checks = await this.dependencies.checks(rootKey, number, signal);
+    // The checks belong to the head they were read against: if it moved while
+    // they were being read, they say nothing about the commit being approved.
+    if ((await this.read(cwd, number, signal))?.headCommit !== commit) {
+      return {
+        merged: false,
+        reason: 'not-ready',
+        detail: 'The pull request changed while its checks were read. Try again.',
+      };
+    }
     const blockers = mergeBlockers({ view, checks: checks.state });
     if (blockers.length > 0) {
       return {
@@ -150,7 +165,7 @@ export class PullRequestActionsService {
     }
     const result = await this.dependencies.run(
       'gh',
-      ['pr', 'merge', String(number), `--${method}`],
+      ['pr', 'merge', String(number), `--${method}`, '--match-head-commit', commit],
       cwd,
       signal,
     );
