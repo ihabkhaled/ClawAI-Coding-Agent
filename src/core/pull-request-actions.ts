@@ -15,6 +15,8 @@ import type {
   PullRequestView,
 } from './pull-request-actions.types';
 
+const HEAD_COMMIT_PATTERN = /^[0-9a-f]{40,64}$/u;
+
 const text = (limit: number) =>
   z
     .string()
@@ -34,6 +36,7 @@ const viewSchema = z.object({
   author: person,
   baseRefName: text(200),
   headRefName: text(200),
+  headRefOid: z.string().regex(HEAD_COMMIT_PATTERN).optional(),
   mergeable: text(20),
   mergeStateStatus: text(30),
   reviewDecision: text(30),
@@ -73,6 +76,7 @@ export function summarizePullRequest(candidate: unknown): PullRequestView | unde
     author: view.author.login ?? 'unknown',
     base: view.baseRefName,
     head: view.headRefName,
+    headCommit: view.headRefOid,
     mergeable: view.mergeable,
     mergeState: view.mergeStateStatus,
     reviewDecision: view.reviewDecision,
@@ -116,6 +120,7 @@ export function mergePreview(
   return [
     `Merge #${String(view.number)}: ${view.title}`,
     `Into: ${view.base}  From: ${view.head}  By: ${view.author}`,
+    `Head commit: ${view.headCommit ?? 'unknown'}`,
     `Method: ${method}`,
     `Checks: ${checks}`,
     `Files: ${String(view.files.length)}${view.filesTruncated ? '+' : ''}`,

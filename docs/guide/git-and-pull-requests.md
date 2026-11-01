@@ -64,6 +64,8 @@ After the agent opens a pull request, ClawAI watches its checks in the backgroun
 - A merge is refused, with the reason, when the pull request is a draft, has a
   conflict, has changes requested, or its checks are failing or still running.
   GitHub's own branch protection still applies, and the branch is never deleted.
+- The merge is tied to the exact commit you saw in the approval. If someone pushes
+  to the branch after you approve, the merge is refused and you are asked again.
 
 ## Multi-agent review
 

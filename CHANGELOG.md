@@ -2,6 +2,10 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.107.0
+
+- A pull request merge is now bound to the exact commit you approved. The approval shows the head commit, the checks are read against that same commit (a head that moves while they are read is refused before you are asked), and the merge passes `--match-head-commit`, so a push made after you approved makes GitHub refuse the merge instead of merging code nobody saw. Found by the automated security review of 1.106.0.
+
 ## 1.106.0
 
 - The SDK and CLI `workspace.git` tool can now `merge` and `rebase` a local branch, `stash` (push, pop, list) and `tag`. Each is a `git-write` operation. A merge or rebase conflict is reported and aborted so the tree stays clean; a rebase never autostashes and is never interactive; a stash pop needs a clean tree and is reverted if it conflicts; a tag is annotated and local, never replaced, deleted or pushed. Testing found that `git stash --include-untracked` leaves the files in place under the literal pathspecs every call here runs with, so untracked files are not stashed. The tool definition grew by about 200 characters; the size budgets say so.
