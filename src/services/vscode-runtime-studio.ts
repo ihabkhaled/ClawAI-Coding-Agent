@@ -358,6 +358,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
         processes: this.processes,
         accountId: () => this.state.snapshot.user?.id ?? 'account:anonymous',
         pdfText: this.backendTools.pdfText,
+        workspaceRoot: () => this.workspaceScope.selectedFolderPath(),
       }),
       { definition: gitToolDefinition, executor: new GitToolExecutor(this.git) },
       this.pullRequests.registration,

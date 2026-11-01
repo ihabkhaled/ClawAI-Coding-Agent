@@ -55,7 +55,7 @@ Seven audit workstreams, in order:
    - Compaction: in `prompt` mode an inline card replaces the modal (`compactionOffer`, `compactionDecision`); the dialog stays for the explicit command and when no panel is open.
    - Honest gaps: the stuck message ("The run was stopped: it made the same ...") is English-only (not passed through `l10n`; the idle message is); the stuck path through the run service is covered by its own tests only if the integration lane covers it (unverified); GET retry is opt-in per call, not default (only the protocol read opts in); the SDK "read too long" nudge is not ported to the panel.
 3. Live proof round (also covers W2-04, live QA with 4 models).
-4. CLAUDE.md and AGENTS.md loading in the extension. Done in 1.104.0: the panel puts the same bounded summary the SDK uses in front of each run (`clawAI.loadKnowledge`, default on); the closing instruction names `workspace.files (read)` because the panel has no `knowledge.context` tool. Honest gaps: no `knowledge.context` search or task tool in the panel; nested workspace `CLAUDE.md` files are not summarized (only the root files); live proof in a real editor not run.
+4. CLAUDE.md and AGENTS.md loading in the extension. Done in 1.104.0: the panel puts the same bounded summary the SDK uses in front of each run (`clawAI.loadKnowledge`, default on); and 1.105.0 gives the panel the SDK's read-only `knowledge.context` tool (index, read, search, task; nested `CLAUDE.md` found by `task`), proven in the real extension host. Honest gaps: the always-on summary covers the root files only; a full agent run in a real editor with a live model was not driven.
 5. PR merge and review, and SDK git merge, rebase, stash and tag.
 6. Prompt caching (W1-13).
 7. Media readers.

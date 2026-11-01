@@ -111,7 +111,7 @@ An approval only covers the action shown.
 
 ## Project rules
 
-Each agent run starts with a short summary of the workspace's `CLAUDE.md` (or `AGENTS.md`): its title, its sections and the rules listed under headings such as "never", "must" or "prohibitions", at most 3,000 characters. The agent is told to read the full file with the file tool before changing code the file governs. The summary is quoted as untrusted text and grants no tools or approvals. It is on by default; set `clawAI.loadKnowledge` to `false` to turn it off.
+Each agent run starts with a short summary of the workspace's `CLAUDE.md` (or `AGENTS.md`): its title, its sections and the rules listed under headings such as "never", "must" or "prohibitions", at most 3,000 characters. The agent is told to call `knowledge.context` (`task`, `search`, `read`) before changing code, which also finds a nested `CLAUDE.md` in the folder the task names. The summary is quoted as untrusted text and grants no tools or approvals. It is on by default; set `clawAI.loadKnowledge` to `false` to turn it off.
 
 ## Long conversations
 

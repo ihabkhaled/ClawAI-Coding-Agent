@@ -2,10 +2,13 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.105.0
+
+- The panel's agent can now search the project's own rules, skills and docs. It gets the same read-only `knowledge.context` tool the command line has: `task` names the rule files that govern a piece of work (including a nested `CLAUDE.md` in the folder the task mentions), `search` ranks sections, `read` and `index` open and list files. Results are marked as untrusted repository text and never widen what a run may do. Proven in a real VS Code extension host: the root file is read, a nested `CLAUDE.md` is found, and a path outside the workspace is refused.
+
 ## 1.104.0
 
 - The panel's agent now starts a run knowing the project's rules. A short summary of the workspace's `CLAUDE.md` or `AGENTS.md` (title, sections, the rules under "never", "must" and "prohibition" headings, at most 3,000 characters) goes in front of the request, with a pointer to read the full file with the file tool. Quoted as untrusted repository text; it grants nothing. On by default; `clawAI.loadKnowledge` turns it off. The SDK and CLI already had this as `--load-knowledge`.
-- Known gap: the panel has no `knowledge.context` search tool yet; the agent reads rule files with the file tool.
 
 ## 1.103.0
 

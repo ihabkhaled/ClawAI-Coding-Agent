@@ -47,6 +47,8 @@ export interface RuntimeStudioWorkspaceTools {
   readonly accountId: () => string;
   /** Reads a workspace PDF by page. Nothing sent here is stored. */
   readonly pdfText: PdfTextPort;
+  /** The selected folder's path, for the repository-knowledge tool. */
+  readonly workspaceRoot: () => string | undefined;
 }
 
 export interface RuntimeStudioAnalysisTools {

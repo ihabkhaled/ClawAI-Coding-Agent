@@ -1,5 +1,5 @@
 const assert = require('node:assert/strict');
-const { writeFileSync } = require('node:fs');
+const { mkdirSync, writeFileSync } = require('node:fs');
 const path = require('node:path');
 const { stdout } = require('node:process');
 const vscode = require('vscode');
@@ -76,6 +76,34 @@ async function runRuntimeTools(api) {
     );
     report(`TOOL ${toolName}.${operation}: ${key}=${String(output.structured[key].length)}`);
   }
+
+  // The repository's own rules, read back through the real extension: a root
+  // file, a nested one the task names, and a refusal to leave the workspace.
+  mkdirSync(path.join(workspace, 'apps', 'billing'), { recursive: true });
+  writeFileSync(
+    path.join(workspace, 'CLAUDE.md'),
+    ['# Probe policy', '', '## Never', '', '- NEVER log a secret.', ''].join('\n'),
+    'utf8',
+  );
+  writeFileSync(
+    path.join(workspace, 'apps', 'billing', 'CLAUDE.md'),
+    ['# Billing rules', '', '## Never', '', '- NEVER touch card data.', ''].join('\n'),
+    'utf8',
+  );
+  const rules = await call('knowledge.context', 'read', { path: 'CLAUDE.md' });
+  assert.match(String(rules.modelText), /NEVER log a secret/u, 'the root CLAUDE.md was not read');
+  const task = await call('knowledge.context', 'task', { description: 'change billing' });
+  assert.match(
+    String(task.modelText),
+    /apps\/billing\/CLAUDE\.md/u,
+    'the nested CLAUDE.md was not found',
+  );
+  await assert.rejects(
+    () => call('knowledge.context', 'read', { path: '../outside.md' }),
+    undefined,
+    'knowledge.context read a file outside the workspace',
+  );
+  report('TOOL knowledge.context: root read, nested found, outside refused');
 
   // A goal that has not been declared says so, rather than inventing one.
   const goal = await call('runtime.goal', 'status', {});

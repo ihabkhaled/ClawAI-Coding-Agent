@@ -162,6 +162,7 @@ describe('VS Code runtime target adapter', () => {
         'workspace.git',
         'workspace.quality',
         'workspace.intelligence',
+        'knowledge.context',
         'workspace.planning',
         'runtime.journal',
         'runtime.evidence',

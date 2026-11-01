@@ -122,6 +122,7 @@ import {
   worktreeToolDefinition,
 } from '../infrastructure/worktree-tool-executor';
 
+import { knowledgeToolRegistration } from './runtime-studio-knowledge';
 import { optInToolRegistrations } from './runtime-studio-opt-in-tools';
 
 import type {
@@ -296,6 +297,7 @@ export function workspaceToolRegistrations(
       definition: processSupervisorToolDefinition,
       executor: new ProcessSupervisorToolExecutor(parts.processes, parts.accountId, parts.files),
     },
+    knowledgeToolRegistration(parts.workspaceRoot),
     // Off until the user's own settings switch them on; see the module.
     ...optInToolRegistrations(parts.files),
   ];

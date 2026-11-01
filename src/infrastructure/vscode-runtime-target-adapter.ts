@@ -24,6 +24,7 @@ import { gitToolDefinition } from './git-tool-executor';
 import { httpRequestToolDefinition } from './http-request-tool-executor';
 import { integrationToolDefinition } from './integration-tool-executor';
 import { intelligenceToolDefinition } from './intelligence-tool-executor';
+import { knowledgeToolDefinition } from './knowledge-tool-executor';
 import { notifyUserToolDefinition } from './notify-user-tool-executor';
 import { planningToolDefinition } from './planning-tool-executor';
 import { processSupervisorToolDefinition } from './process-supervisor-tool-executor';
@@ -325,6 +326,8 @@ function localToolDefinitions(probe: RuntimeHostProbe) {
     // transport drops it again when nothing in the catalog is deferred.
     toolSearchToolDefinition,
     intelligenceToolDefinition,
+    // Read-only search over the repo's own rules; needs no prerequisite.
+    knowledgeToolDefinition,
     planningToolDefinition,
     runJournalToolDefinition,
     evidenceToolDefinition,

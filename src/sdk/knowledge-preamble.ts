@@ -112,13 +112,9 @@ function cut(lines: readonly string[], limit: number): string {
  *
  * The summary is quoted repository text inside a marked block; hidden
  * characters and anything that could close the block are removed, and the
- * closing sentence says it advises and grants nothing. `instruction` is that
- * closing text; the panel passes its own because it has no `knowledge.context`.
+ * closing sentence says it advises and grants nothing.
  */
-export function knowledgePreamble(
-  workspace: string,
-  instruction: string = KNOWLEDGE_PREAMBLE_INSTRUCTION,
-): string {
+export function knowledgePreamble(workspace: string): string {
   const parts: string[] = [];
   for (const name of KNOWLEDGE_ROOT_FILES) {
     if (parts.length >= KNOWLEDGE_PREAMBLE_FILES_MAX) break;
@@ -127,11 +123,17 @@ export function knowledgePreamble(
   }
   if (parts.length === 0) return '';
   const fixed =
-    KNOWLEDGE_PREAMBLE_OPEN.length + KNOWLEDGE_PREAMBLE_CLOSE.length + instruction.length + 4;
+    KNOWLEDGE_PREAMBLE_OPEN.length +
+    KNOWLEDGE_PREAMBLE_CLOSE.length +
+    KNOWLEDGE_PREAMBLE_INSTRUCTION.length +
+    4;
   const room = KNOWLEDGE_PREAMBLE_MAX_CHARS - fixed;
-  return [KNOWLEDGE_PREAMBLE_OPEN, cut(parts, room), KNOWLEDGE_PREAMBLE_CLOSE, instruction].join(
-    '\n',
-  );
+  return [
+    KNOWLEDGE_PREAMBLE_OPEN,
+    cut(parts, room),
+    KNOWLEDGE_PREAMBLE_CLOSE,
+    KNOWLEDGE_PREAMBLE_INSTRUCTION,
+  ].join('\n');
 }
 
 /** The prompt with the preamble in front, or unchanged when there is nothing to say. */
