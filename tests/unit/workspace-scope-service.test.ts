@@ -81,6 +81,14 @@ describe('WorkspaceScopeService', () => {
     expect(() => service.select('stale-key')).toThrow('no longer available');
   });
 
+  it('gives the selected folder path, and undefined when no folder is open', () => {
+    const service = new WorkspaceScopeService();
+    expect(service.selectedFolderPath()).toBe('/workspace/web');
+
+    vscodeEnvironment.folders = [];
+    expect(new WorkspaceScopeService().selectedFolderPath()).toBeUndefined();
+  });
+
   it('falls back safely when an explicitly selected folder is removed', () => {
     const service = new WorkspaceScopeService();
     service.select(workspaceFolderKey(vscodeEnvironment.api.uri.toString()));

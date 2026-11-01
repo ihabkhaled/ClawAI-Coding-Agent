@@ -12,6 +12,7 @@ import { RuntimeJournalTracker } from './runtime-journal-tracker';
 import { RuntimeRunService } from './runtime-run-service';
 import { executeWithModelFallback } from './runtime-studio-fallback';
 import { endIdleRun, type RuntimeStudioOutcome } from './runtime-studio-idle-failure';
+import { withKnowledge } from './runtime-studio-knowledge';
 
 import type { RuntimeConfiguration } from './configuration-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
@@ -47,6 +48,8 @@ export interface RuntimeStudioExecutionDependencies {
   readonly flagship: FlagshipDeliveryService;
   readonly state: ExtensionState;
   readonly configuration: () => RuntimeConfiguration;
+  /** The workspace-instructions summary for this run; empty when off or absent. */
+  readonly knowledge?: () => string;
   readonly targetRouter: (manifest: CapabilityManifest) => TargetAwareToolRouter;
   readonly fingerprint: (signal: AbortSignal) => Promise<RuntimeFingerprint>;
   readonly hash: (value: unknown) => string;
@@ -192,7 +195,11 @@ async function executeRuntimeStudioOnModel(
       // journal's goal stays the raw request. Resuming re-applies the mode it
       // restores; a goal that already carried the instruction would collect a
       // second copy of it on every resume.
-      prompt: composePrompt({ agentMode, stylePreamble, content: input.prompt }),
+      prompt: composePrompt({
+        agentMode,
+        stylePreamble,
+        content: withKnowledge(dependencies.knowledge, input.prompt),
+      }),
       // Omitted entirely when there are none: the field is optional on the
       // wire, and sending an empty array would make every run look like one
       // that had attachments and lost them.
@@ -346,7 +353,7 @@ export async function recoverRuntimeStudio(
       prompt: composePrompt({
         agentMode: resumeAgentMode(journal.agentMode, dependencies.configuration().agentMode),
         stylePreamble: outputStylePreamble(dependencies.configuration().outputStyle),
-        content: journal.goal,
+        content: withKnowledge(dependencies.knowledge, journal.goal),
       }),
       manifestHash: capsule.start.manifestHash,
       toolCatalogHash: capsule.start.toolCatalogHash,

@@ -66,6 +66,8 @@ export interface RuntimeConfiguration extends GlobalConfiguration {
   viewDensity: ViewDensity;
   outputStyle: OutputStyle;
   autoCompact: AutoCompactionMode;
+  /** Put a summary of the workspace's CLAUDE.md / AGENTS.md in front of each agent run; on unless `false`. */
+  loadKnowledge?: boolean;
   browserOrigins: string[];
   telemetryEndpoint: string;
   /** Legacy: read only to move it into SecretStorage once, then cleared. Never sent. */
@@ -297,6 +299,7 @@ export class ConfigurationService {
       permissionMode: normalizePermissionMode(configuration.get<unknown>('permissionMode')),
       autosave: normalizeAutosavePolicy(configuration.get<unknown>('autosave')),
       autoCompact: normalizeAutoCompactionMode(configuration.get<unknown>('autoCompact')),
+      loadKnowledge: configuration.get<unknown>('loadKnowledge') !== false,
       browserOrigins: configuration.get<string[]>('browserOrigins') ?? [],
       ...telemetrySettings(configuration),
     };

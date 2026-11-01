@@ -176,7 +176,7 @@ export class VscodeRuntimeStudio implements vscode.Disposable {
     private readonly context: vscode.ExtensionContext,
     readonly state: ExtensionState,
     readonly configuration: ConfigurationService,
-    private readonly workspaceScope: WorkspaceScopeService,
+    readonly workspaceScope: WorkspaceScopeService,
     readonly externalOutputs: ExternalOutputGrantStore,
     private readonly approvals: ApprovalBroker,
     backend: () => BackendClient,

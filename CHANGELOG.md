@@ -2,6 +2,11 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.104.0
+
+- The panel's agent now starts a run knowing the project's rules. A short summary of the workspace's `CLAUDE.md` or `AGENTS.md` (title, sections, the rules under "never", "must" and "prohibition" headings, at most 3,000 characters) goes in front of the request, with a pointer to read the full file with the file tool. Quoted as untrusted repository text; it grants nothing. On by default; `clawAI.loadKnowledge` turns it off. The SDK and CLI already had this as `--load-knowledge`.
+- Known gap: the panel has no `knowledge.context` search tool yet; the agent reads rule files with the file tool.
+
 ## 1.103.0
 
 - A fallback model now takes over when the chosen model's provider is busy or down, or no longer offers it, not only on a 429 or spent credit. Found by running the CLI live against a busy Gemini model: it exited 1 without switching.

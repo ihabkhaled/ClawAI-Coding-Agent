@@ -2,6 +2,8 @@ import { RUNTIME_EFFECT_APPROVAL_KIND } from '../core/approval-broker';
 import { describeExternalOutputRoots } from '../core/runtime/external-output-catalog';
 import { executableToolDefinitions } from '../core/runtime/runtime-executable-tools';
 
+import { panelKnowledgePreamble } from './runtime-studio-knowledge';
+
 import type { ExternalOutputGrantStore } from './agent-coordinator.types';
 import type { ConfigurationService } from './configuration-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
@@ -15,6 +17,7 @@ import type { RuntimeStudioExecutionDependencies } from './runtime-studio-execut
 import type { RuntimeStudioInput } from './runtime-studio.types';
 import type { RuntimeToolRouter } from './runtime-tool-router';
 import type { TargetAwareToolRouter } from './target-aware-tool-router';
+import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { ExtensionState } from '../core/extension-state';
 import type { CapabilityManifest } from '../core/runtime/capability-manifest';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -33,6 +36,7 @@ export interface VscodeRuntimeExecutionHost {
   readonly flagship: FlagshipDeliveryService;
   readonly state: ExtensionState;
   readonly configuration: ConfigurationService;
+  readonly workspaceScope: WorkspaceScopeService;
   routeTargets(manifest: CapabilityManifest): TargetAwareToolRouter;
   fingerprint(signal: AbortSignal): ReturnType<RuntimeStudioExecutionDependencies['fingerprint']>;
   setActiveRuntime(runtime: RuntimeRunService | undefined, runId?: string): void;
@@ -63,6 +67,10 @@ export function vscodeRuntimeExecutionDependencies(
     flagship: host.flagship,
     state: host.state,
     configuration: () => host.configuration.read(),
+    knowledge: () =>
+      host.configuration.read().loadKnowledge === false
+        ? ''
+        : panelKnowledgePreamble(host.workspaceScope.selectedFolderPath()),
     targetRouter: (runtimeManifest) => host.routeTargets(runtimeManifest),
     fingerprint: (signal) => host.fingerprint(signal),
     hash: (value) => host.hash(value),
