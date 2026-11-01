@@ -94,6 +94,7 @@
   "config.tools.shellDeny": "Extra patterns (regular expressions) that make the shell tool refuse a script, on top of the built-in safety screen. Only your own user settings count.",
   "config.zeroDataRetention": "Zero data retention: run journals and checkpoints stay in memory for this session only, every request asks the backend not to retain content, and uploads, published pages and chat shares are refused. An organization whose retention limit is zero days turns this on for you.",
   "config.autoCompact": "What to do when a conversation is nearly too long to continue: nothing, offer to summarize it, or summarize it automatically.",
+  "config.loadKnowledge": "Put a short summary of the workspace's CLAUDE.md or AGENTS.md in front of each agent run, so the agent starts knowing the project's rules.",
   "config.routingMode": "How the backend picks a model: automatic, a named strategy, or one you select yourself.",
   "config.mcpServers": "User-level MCP servers, by name. Each is either a local server (`command`, `args`, `env`, `cwd`) or a remote one (`url`, optional `headers` and `oauth`). Workspace servers go in `.clawai/mcp.json`; a user server wins a name clash. Local servers run only in a trusted workspace, and every tool listing and call asks first.",
   "config.agentMode": "Choose automatic execution or read-only planning.",

@@ -109,6 +109,10 @@ An approval only covers the action shown.
   also rewind the conversation to the same moment. A restore goes through the
   normal preview and approval, so it can be undone too.
 
+## Project rules
+
+Each agent run starts with a short summary of the workspace's `CLAUDE.md` (or `AGENTS.md`): its title, its sections and the rules listed under headings such as "never", "must" or "prohibitions", at most 3,000 characters. The agent is told to read the full file with the file tool before changing code the file governs. The summary is quoted as untrusted text and grants no tools or approvals. It is on by default; set `clawAI.loadKnowledge` to `false` to turn it off.
+
 ## Long conversations
 
 When a conversation gets close to its limit, the `clawAI.autoCompact` setting decides

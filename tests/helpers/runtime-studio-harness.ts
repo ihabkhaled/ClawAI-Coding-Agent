@@ -26,6 +26,7 @@ export interface Capture {
 export function studioHarness(
   effortMode: EffortMode,
   agentMode: AgentMode = 'AUTO',
+  knowledge?: () => string,
 ): { capture: Capture; run: () => Promise<void> } {
   const capture: Capture = { starts: [], journals: [], traces: [] };
   const manifest = { capabilities: [] } as never;
@@ -64,6 +65,7 @@ export function studioHarness(
     flagship: { steerIfActive: () => undefined } as never,
     state: { applyRuntimeEvent: () => undefined } as never,
     configuration: () => ({ effortMode, agentMode, permissionMode: 'ASK' }) as never,
+    ...(knowledge === undefined ? {} : { knowledge }),
     targetRouter: () => ({}) as never,
     fingerprint: async () => ({
       account: digest('account'),

@@ -55,6 +55,15 @@ export class WorkspaceScopeService {
     return folder;
   }
 
+  /** The selected folder's path, or undefined when no folder is open. */
+  selectedFolderPath(): string | undefined {
+    try {
+      return this.selectedFolder().uri.fsPath;
+    } catch {
+      return undefined;
+    }
+  }
+
   owns(uri: vscode.Uri): boolean {
     try {
       const selected = this.selectedFolder();

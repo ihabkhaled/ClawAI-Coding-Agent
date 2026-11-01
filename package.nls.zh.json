@@ -94,6 +94,7 @@
   "config.tools.shellDeny": "在内置安全检查之外，让 shell 工具拒绝脚本的额外模式（正则表达式）。只有你自己的用户设置有效。",
   "config.zeroDataRetention": "零数据保留：运行日志和检查点仅在本次会话期间保存在内存中，每个请求都会要求后端不保留内容，并拒绝上传、发布页面和分享聊天。保留期限为零天的组织会为你开启此项。",
   "config.autoCompact": "当对话长到几乎无法继续时的处理方式：不处理、提示是否总结，或自动总结。",
+  "config.loadKnowledge": "在每次智能体运行前附上工作区 CLAUDE.md 或 AGENTS.md 的简短摘要，让智能体一开始就了解项目规则。",
   "config.routingMode": "后端如何选择模型：自动、指定策略，或由你自己选择。",
   "config.mcpServers": "用户级 MCP 服务器，按名称配置。每个服务器可以是本地服务器（`command`、`args`、`env`、`cwd`）或远程服务器（`url`，可选 `headers` 和 `oauth`）。工作区服务器写在 `.clawai/mcp.json` 中；名称冲突时以用户服务器为准。本地服务器仅在受信任的工作区中运行，每次列出工具和每次调用前都会先征求同意。",
   "config.agentMode": "选择自动执行或只读规划。",

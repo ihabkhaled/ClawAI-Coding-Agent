@@ -34,6 +34,7 @@ strings in a custom address.
 | `clawAI.effortMode`    | `ULTRA`   | How much one run may spend: `LOW`, `MEDIUM`, `HIGH`, `MAX`, `XHIGH`, `ULTRA`.                                                |
 | `clawAI.speedMode`     | `1X`      | `1X`, `1.5X` or `2X`: how quickly context is gathered. Nothing else changes.                                                 |
 | `clawAI.autoCompact`   | `prompt`  | For a nearly full conversation: `off`, `prompt` (offer to summarize, as a card in the chat) or `automatic`.                  |
+| `clawAI.loadKnowledge` | `true`    | Put a short summary of the workspace's `CLAUDE.md` or `AGENTS.md` in front of each agent run. Set `false` to turn it off.    |
 | `clawAI.outputStyle`   | `default` | How answers are written: `default`, `concise`, `explanatory`, `learning`, or one of your own.                                |
 
 `clawAI.fallbackModels` (a list of `provider/model` or bare model names, empty by default) names the models to switch to, each tried once, when the chosen model is rate limited (HTTP 429) or refused because credit is spent or the provider is busy or down (`PAYG_CREDIT_EXHAUSTED`, `PAYG_FREE_ALLOWANCE_EXHAUSTED`, `PAYG_MODEL_NOT_IN_FREE_ALLOWANCE`, `PAYG_PROMPT_TOO_EXPENSIVE`). With none configured, the original error is shown.

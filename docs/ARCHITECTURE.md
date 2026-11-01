@@ -182,6 +182,7 @@ into context. An attachment whose name looks like it stores credentials (`.env`,
 | `clawAI.speedMode`           | resource  | `1X` (`1X`, `1.5X`, `2X`)               |
 | `clawAI.routingMode`         | workspace | `AUTO`                                  |
 | `clawAI.agentMode`           | workspace | `AUTO`                                  |
+| `clawAI.loadKnowledge`       | resource  | `true`                                  |
 | `clawAI.selectedModel`       | workspace | empty                                   |
 | `clawAI.maxContextBytes`     | workspace | `200000`                                |
 | `clawAI.maxContextFiles`     | workspace | `40`                                    |

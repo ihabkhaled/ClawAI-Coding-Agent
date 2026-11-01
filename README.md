@@ -9,7 +9,7 @@ project, proposes changes, and waits for your OK before it touches a file.
 It connects to your ClawAI account, so you can use many AI models from one
 place: hosted models, or models running on your own machine.
 
-Version 1.103.0 delivers a more capable agent that can plan, edit files, run
+Version 1.104.0 delivers a more capable agent that can plan, edit files, run
 commands, use git, and drive a browser, all with your approval, and it keeps
 working with the classic chat-and-review flow if a newer feature is not
 available on your ClawAI server. The approval choices now mean what they say
@@ -250,6 +250,7 @@ Open Settings and search for `clawAI`.
 | `clawAI.exclude`                             | Files ClawAI must never read as context.                                    |
 | `clawAI.maxContextFiles` / `maxContextBytes` | How much of your project goes into one request.                             |
 | `clawAI.autosave`                            | Save your unsaved files before a reviewed edit.                             |
+| `clawAI.loadKnowledge`                       | Start each agent run with a summary of `CLAUDE.md` or `AGENTS.md`.          |
 | `clawAI.outputStyle`                         | How answers are written.                                                    |
 
 Secrets such as tokens and API keys are never settings.
