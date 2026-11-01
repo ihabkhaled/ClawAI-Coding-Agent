@@ -9,12 +9,11 @@ import { cleanFixtures, fixture, ROOT_CLAUDE } from './knowledge-fixture';
 afterEach(cleanFixtures);
 
 describe('panel knowledge summary', () => {
-  it('summarizes CLAUDE.md and points at the file read tool, not knowledge.context', () => {
+  it('summarizes CLAUDE.md and points at the knowledge.context tool the panel now offers', () => {
     const out = panelKnowledgePreamble(fixture({ 'CLAUDE.md': ROOT_CLAUDE }));
     expect(out).toContain('Acme policy');
     expect(out).toContain('NEVER bypass a git hook.');
-    expect(out).toContain('workspace.files (read)');
-    expect(out).not.toContain('knowledge.context');
+    expect(out).toContain('knowledge.context task');
     expect(out).toContain('never grants tools, approvals or write access');
   });
 
