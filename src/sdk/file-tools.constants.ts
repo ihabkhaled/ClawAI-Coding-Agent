@@ -104,8 +104,8 @@ export const FILE_TOOL_OPERATIONS = {
 
 /** What the model is told about `workspace.file`; it is the only documentation it gets. */
 export const FILE_TOOL_DESCRIPTION = [
-  'Files in the workspace; paths are relative to its root.',
-  'read {path, startLine?, endLine?} or {path, offset?, limit?}, maxChars? (default 8000, max 48000): cut at a line, continue at nextLine. Results count against the run budget: prefer search/glob/small ranges, never re-read. Binary refused.',
+  'Workspace files; paths are relative to its root.',
+  'read {path, startLine?, endLine?} or {path, offset?, limit?}, maxChars? (default 8000, max 48000): cut at a line, continue at nextLine. Counts against run budget: prefer search/glob/small ranges, never re-read. PDF/Office: text. Binary refused.',
   'list {path?, recursive?, depth?}: entries with type and size; skips .git, node_modules, dist, coverage, .next; max 400.',
   'glob {pattern, path?}: paths matching e.g. **/*.ts (no / = any depth); max 500.',
   'search {query | regex, path?, include?, caseSensitive?}: {path,line,text}; max 100; skips binary and files over 1 MB.',

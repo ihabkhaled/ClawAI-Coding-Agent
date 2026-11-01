@@ -100,5 +100,8 @@ export function workspaceExtras(input: {
   const gates = scope === undefined ? createGatesTool() : scopeGatesTool(createGatesTool(), scope);
   const http = httpToolPart(permissions);
   const shell = granted.includes('shell') ? shellToolFor(permissions, scope) : undefined;
-  return { extras: { plan, gates, http: http.tool, shell }, httpDefinitions: http.definitions };
+  return {
+    extras: { plan, gates, http: http.tool, shell, documents: memory.documents },
+    httpDefinitions: http.definitions,
+  };
 }

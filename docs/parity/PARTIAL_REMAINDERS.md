@@ -11,7 +11,7 @@ backend change or a product decision; nothing here can be finished client-side.
 
 **F081 Plugin marketplaces.** agent-service must serve `allowedPluginMarketplaces` in the policy response. The client already narrows and verifies signatures and will read the field once it exists.
 
-**F093 Automatic prompt caching.** chat-service / connector-service needs a native Anthropic `/v1/messages` transport that sends `cache_control` breakpoints, and the `USAGE` stream event must carry cache-write tokens (for example `cacheCreationPromptTokens`) so `cacheWritePerMillionMicroUsd` can be billed. The extension then reads the new field next to `cachedPromptTokens` in `streamUsage`.
+**F093 Automatic prompt caching.** The backend is SHIPPED (monorepo ADR-153; tool-carrying agent turns cached since 2026-11-01, per-model admin switch default OFF). Remaining extension work: the extension reads only `cachedPromptTokens`, not the cache-write field `cacheCreationPromptTokens`, in `streamUsage`.
 
 **F095 Resume cloud sessions.** chat-service `createThread` must accept a workspace or repository reference, and a resume route must return the runner's capability manifest, so the client can reconcile tools and approvals on resume (only the workspace fit is checked client-side).
 

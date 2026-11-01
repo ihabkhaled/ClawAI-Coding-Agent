@@ -66,7 +66,7 @@ function dispatchWorkspaceTool(
     return guardedGit(call.operation, args, limits, signal);
   }
   if (call.toolName === 'workspace.file')
-    return runFileTool(call.operation, args, limits.workspace, signal);
+    return runFileTool(call.operation, args, limits.workspace, signal, extras.documents);
   throw new Error(`Unsupported tool ${call.toolName}`);
 }
 

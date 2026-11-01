@@ -103,6 +103,8 @@ vision model in a separate thread. Offer it with `--vision`, `--vision-model` or
 prompt with `--image` currently loses the attachment on the server (an `images.not-delivered` event says so); a file in the
 workspace is not affected.
 
+Office files: `workspace.file read` also reads PDF, DOCX, XLSX, PPTX and RTF through the ClawAI backend (5 MB cap; a PDF range via `startLine`/`endLine`). Reading an image, audio or video file says what it is; use `vision.describe` for a png, jpeg or webp.
+
 ## 15. What does the agent remember between runs, and what must I never rely on?
 
 Working notes (`workspace.notes`) and the task plan are saved outside the workspace (`CLAW_STATE_DIR`, default `~/.clawai`) per

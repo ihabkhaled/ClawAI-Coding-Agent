@@ -1,6 +1,7 @@
 import { lstatSync, readFileSync, readdirSync } from 'node:fs';
 import path from 'node:path';
 
+import { unreadableMediaKind, unreadableMediaMessage } from '../core/document-read-format';
 import { containedPath } from '../core/workspace-containment';
 
 import {
@@ -128,11 +129,11 @@ function sliceLines(
   };
 }
 
-/** Reads one text file, never returning more than the read ceiling. */
-export function readFileTool(
+/** The checked path of a file a read may open: inside the workspace, a regular file, under the size cap. */
+export function readableTarget(
   args: FileToolArguments,
   workspace: string,
-): FileReadResult | FileBinaryResult {
+): { relative: string; target: string; stats: Stats } {
   const relative = requirePath('read', args);
   const target = containedPath(workspace, relative);
   const stats = statOf(target);
@@ -151,6 +152,17 @@ export function readFileTool(
       `workspace.file read: ${relative} is ${String(stats.size)} bytes, over the ${String(FILE_READ_MAX_BYTES)}-byte read limit. Use search to find the part you need, then read it with startLine and endLine.`,
     );
   }
+  return { relative, target, stats };
+}
+
+/** Reads one text file, never returning more than the read ceiling. */
+export function readFileTool(
+  args: FileToolArguments,
+  workspace: string,
+): FileReadResult | FileBinaryResult {
+  const { relative, target, stats } = readableTarget(args, workspace);
+  const media = unreadableMediaKind(relative);
+  if (media !== undefined) throw new Error(unreadableMediaMessage(relative, media));
   if (isBinaryFile(target)) {
     return {
       path: relative,

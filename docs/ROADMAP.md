@@ -54,23 +54,23 @@ page, ship-gate hardening, [ADR 0008](adr/0008-ship-gate-ci-parity.md)).
 
 ### Still open (the 11 rows not SHIPPED)
 
-| Row                        | Blocked on | What is left                                                                                              |
-| -------------------------- | ---------- | --------------------------------------------------------------------------------------------------------- |
-| F030 Computer use          | decision   | Desktop-wide input. Browser click, type, scroll, observe and screenshots to vision models are done.       |
-| F067 Panel placement       | platform   | A `secondarySidebar` views container needs engine `^1.106`; the engine is `^1.98`.                        |
-| F081 Marketplaces          | backend    | agent-service serving `allowedPluginMarketplaces`. Signatures are done (ADR 0006).                        |
-| F093 Prompt caching        | backend    | Native `/v1/messages` transport plus cache-write usage; the OpenAI-compatible endpoint ignores the marks. |
-| F095 Resume cloud sessions | backend    | Runner-hosted resume: workspace or repository on `createThread`, capability reconciliation.               |
-| F097 Mobile                | product    | A native app that uses the pairing credential. QR and link are done.                                      |
-| F098 Cloud sessions        | backend    | Hosted runners, cloning, teardown. Handoff and stop are done.                                             |
-| F099 Routines              | backend    | Cron and repository-event triggers; secrets isolation. Prompt routines are done.                          |
-| F100 Runners               | backend    | Process isolation, attestation, an update channel, organization policy.                                   |
-| F101 Integrations          | product    | JetBrains and Desktop are separate products, not started. GitHub, GitLab and Slack are done.              |
-| F108 Telemetry             | backend    | Cost in runtime events (auth-service returns no cost at settlement).                                      |
+| Row                        | Blocked on | What is left                                                                                                     |
+| -------------------------- | ---------- | ---------------------------------------------------------------------------------------------------------------- |
+| F030 Computer use          | decision   | Desktop-wide input. Browser click, type, scroll, observe and screenshots to vision models are done.              |
+| F067 Panel placement       | platform   | A `secondarySidebar` views container needs engine `^1.106`; the engine is `^1.98`.                               |
+| F081 Marketplaces          | backend    | agent-service serving `allowedPluginMarketplaces`. Signatures are done (ADR 0006).                               |
+| F093 Prompt caching        | extension  | Backend shipped (ADR-153). The extension still reads only `cachedPromptTokens`, not `cacheCreationPromptTokens`. |
+| F095 Resume cloud sessions | backend    | Runner-hosted resume: workspace or repository on `createThread`, capability reconciliation.                      |
+| F097 Mobile                | product    | A native app that uses the pairing credential. QR and link are done.                                             |
+| F098 Cloud sessions        | backend    | Hosted runners, cloning, teardown. Handoff and stop are done.                                                    |
+| F099 Routines              | backend    | Cron and repository-event triggers; secrets isolation. Prompt routines are done.                                 |
+| F100 Runners               | backend    | Process isolation, attestation, an update channel, organization policy.                                          |
+| F101 Integrations          | product    | JetBrains and Desktop are separate products, not started. GitHub, GitLab and Slack are done.                     |
+| F108 Telemetry             | backend    | Cost in runtime events (auth-service returns no cost at settlement).                                             |
 
 ### Next increments, in order
 
-1. F093: one transport change with clear acceptance (cache-write usage billed).
+1. F093: read the cache-write field (`cacheCreationPromptTokens`) in the extension; the backend is shipped.
 2. F081 and F108: one backend route or field each.
 3. F067 and F030: record the decision first (raise the engine floor? approve an
    OS-level input tool?), then implement.
