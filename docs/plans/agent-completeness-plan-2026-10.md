@@ -18,7 +18,7 @@ Owner decisions that shape it: browser only (no desktop control), user-hosted ru
 - [x] W1-10 backend crawl profiles for runtime clients (monorepo)
 - [x] W1-11 extension parity (secrets env, heartbeat report, resume, repositoryRef, PAYG cost, approval-queue hint, CI lessons)
 - [x] W1-12 backend capability audit (dynamic tools, images, sub-agent runs)
-- [ ] W1-13 F093 prompt caching (monorepo) (open: unfinished, no CHANGELOG entry says it shipped)
+- [x] W1-13 F093 prompt caching (monorepo) (backend shipped, ADR-153; the extension still reads only `cachedPromptTokens`)
 - [x] W1-14 F108 PAYG cost events (monorepo)
 
 ## Wave 2
@@ -39,7 +39,7 @@ Failing test first, then at least 5 real rounds against the live stack with real
 
 Shipped in 1.96.0: browser.page, http.request, task.plan, process.watch, knowledge.context, workspace.shell, code.gates, vision.describe, agent.team and the extension parity items. Backend on ClawAI main: runtime crawl profiles (ADR-150) and F108 PAYG cost events.
 
-Open: W1-13 F093 prompt caching (monorepo agent unfinished); image input reaching the model (backend `markPublished` wipes `fileIds`: merge instead of replace in `runtime-v2-run.service.ts`); access-token refresh for runs longer than 15 minutes; live smoke of the combined build once model credit returns; all of wave 2.
+Open: image input reaching the model (backend `markPublished` wipes `fileIds`: merge instead of replace in `runtime-v2-run.service.ts`); access-token refresh for runs longer than 15 minutes; live smoke of the combined build once model credit returns; all of wave 2.
 
 Findings that shaped the design: each added tool costs about 540 input tokens per turn, so new tools stay off unless granted (default tool definitions stay at 5,274 characters); agent.team was slower and used about 5x the tokens on small tasks.
 

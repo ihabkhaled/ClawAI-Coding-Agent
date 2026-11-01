@@ -2,6 +2,13 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.109.0
+
+- The SDK and CLI `workspace.file read` can now read PDF, DOCX, XLSX, PPTX and RTF files through your ClawAI backend's extractor, the way the panel already did. It uses the same bearer pattern as web research. The path is checked to be inside the workspace and the file to be within 5 MB before any call is made. A PDF page range is given with `startLine` and `endLine`. A clear error says so when the backend is too old, unreachable, or not configured.
+- Reading an image, audio or video file in the SDK now says what the file is instead of showing it as binary.
+- In the panel, reading a png, jpeg or webp file now tells the model to call `vision.describe`; the read itself never calls a billed model. Reading a gif, bmp, ico, tif, heic or avif file, or an audio or video file, gives a precise message for that type.
+- Backend fixes shipped in the ClawAI monorepo alongside this release: a DOCX upload is now bounded.
+
 ## 1.108.0
 
 - The panel's agent can now read Word, Excel, PowerPoint and RTF files that are in your project, the way it already read PDFs. The text is extracted by your ClawAI backend and kept nowhere; each file comes back as one page (a workbook as one block per sheet, a deck as one block per slide with speaker notes). Reading an image, audio or video file now says what it is and asks you to attach it, instead of "not UTF-8 text". Needs the matching backend release: an older backend refuses these formats with a clear message. Proven against a real DOCX, XLSX, PPTX and RTF through the running stack. Not done: the SDK and CLI still show a binary file as "contents not shown"; audio and video are not transcribed.

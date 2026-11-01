@@ -43,11 +43,23 @@ describe('unreadableMediaKind', () => {
 
 describe('unreadableMediaMessage', () => {
   it('names the file, its kind and what to do', () => {
-    expect(unreadableMediaMessage('a.png', 'image')).toBe(
-      'a.png is an image file, which a text read cannot return. Ask the user to attach it to the message so a model that can see it receives it.',
-    );
     expect(unreadableMediaMessage('a.mp3', 'audio')).toContain('an audio file');
+    expect(unreadableMediaMessage('a.mp3', 'audio')).toContain('cannot be read here');
     expect(unreadableMediaMessage('a.mp4', 'video')).toContain('can watch it');
+    expect(unreadableMediaMessage('a.mp4', 'video')).not.toContain('vision.describe');
+  });
+
+  it('points a png, jpeg or webp at vision.describe with the exact path', () => {
+    const message = unreadableMediaMessage('shots/a b.PNG', 'image');
+    expect(message).toContain('Call vision.describe with {"path": "shots/a b.PNG"');
+    expect(message).toContain('attach the image');
+  });
+
+  it('keeps a precise attach message for an image vision.describe cannot take', () => {
+    const message = unreadableMediaMessage('anim.gif', 'image');
+    expect(message).toContain('only takes png, jpeg or webp');
+    expect(message).toContain('attach it');
+    expect(message).not.toContain('Call vision.describe');
   });
 });
 

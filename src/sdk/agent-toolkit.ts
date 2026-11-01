@@ -1,5 +1,6 @@
 import { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
 import { browserToolkit } from './browser-toolkit';
+import { httpDocumentText } from './document-text-http';
 import { knowledgeToolkit } from './knowledge-toolkit';
 import { mcpToolkit } from './mcp-toolkit';
 import { permissionsForMode } from './permission-modes';
@@ -18,6 +19,7 @@ import type { AgentToolkit } from './agent-sdk.types';
 import type { AgentTeam } from './agent-team-tool.types';
 import type { AgentConfig } from './create-agent.types';
 import type { AgentPermissions, WorkspaceMemory } from './workspace-toolkit.types';
+import type { PdfTextPort } from '../backend/pdf-text-client';
 
 /**
  * What a configured agent may do: the workspace tools, the MCP servers when
@@ -42,6 +44,7 @@ export function agentToolkit(
   const workspace = workspaceToolkit(config.workspaceRoot, permissions, {
     ...memory,
     secretEnvironment: config.secretEnvironment,
+    documents: documentPort(config, memory, token),
   });
   const parts = [
     workspace,
@@ -121,5 +124,16 @@ function offersPlan(config: AgentConfig, profileAsksForPlan: boolean): boolean {
     config.requirePlan === true ||
     profileAsksForPlan ||
     (config.planSteps ?? []).length > 0
+  );
+}
+
+/** The backend text extractor `workspace.file read` uses for PDF and Office files. */
+function documentPort(
+  config: AgentConfig,
+  memory: WorkspaceMemory | undefined,
+  token: () => string | undefined,
+): PdfTextPort {
+  return (
+    memory?.documents ?? httpDocumentText(config.backendUrl ?? AGENT_SDK_DEFAULTS.backendUrl, token)
   );
 }

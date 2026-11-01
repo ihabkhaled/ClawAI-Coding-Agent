@@ -1,6 +1,7 @@
 import {
   DOCUMENT_READ_FORMATS,
   UNREADABLE_MEDIA_EXTENSIONS,
+  VISION_DESCRIBE_EXTENSIONS,
 } from './document-read-format.constants';
 
 import type { DocumentReadFormat, UnreadableMediaKind } from './document-read-format.types';
@@ -43,5 +44,15 @@ export function unreadableReadMessage(path: string): string {
  * that keeps probing the file, so this names what it is and what to do.
  */
 export function unreadableMediaMessage(path: string, kind: UnreadableMediaKind): string {
-  return `${path} is ${kind === 'video' ? 'a' : 'an'} ${kind} file, which a text read cannot return. Ask the user to attach it to the message so a model that can ${kind === 'image' ? 'see' : kind === 'audio' ? 'listen' : 'watch'} it receives it.`;
+  if (kind === 'image' && visionCanDescribe(path)) {
+    return `${path} is an image file, which a text read cannot return. Call vision.describe with {"path": ${JSON.stringify(path)}, "question": "<one specific question>"} to have a vision model look at it (it costs tokens, so ask one precise question). If vision.describe is not offered in this run, ask the user to attach the image to the message so a model that can see it receives it.`;
+  }
+  if (kind === 'image') {
+    return `${path} is an image file, which a text read cannot return, and vision.describe only takes png, jpeg or webp up to 8 MB. Ask the user to attach it to the message so a model that can see it receives it.`;
+  }
+  return `${path} is ${kind === 'video' ? 'a' : 'an'} ${kind} file, which cannot be read here: no tool turns ${kind} into text. Ask the user to attach it to the message so a model that can ${kind === 'audio' ? 'listen to' : 'watch'} it receives it.`;
+}
+
+function visionCanDescribe(path: string): boolean {
+  return (VISION_DESCRIBE_EXTENSIONS as readonly string[]).includes(extensionOf(path));
 }

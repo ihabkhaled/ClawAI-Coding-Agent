@@ -341,7 +341,8 @@ describe('reading other documents and media from the workspace', () => {
   });
 
   it.each([
-    ['logo.png', /an image file.*attach it.*see it/u],
+    ['logo.png', /an image file.*Call vision\.describe with \{"path": "logo\.png"/u],
+    ['anim.gif', /an image file.*only takes png, jpeg or webp.*attach it/u],
     ['call.m4a', /an audio file.*listen/u],
     ['demo.MP4', /a video file.*watch/u],
   ])('says what %s is instead of "not UTF-8 text"', async (file, message) => {

@@ -2,6 +2,7 @@ import type { GatesTool } from './code-gates-tool';
 import type { HttpTool } from './http-tool.types';
 import type { ShellTool } from './shell-tool.types';
 import type { PlanTool } from './task-plan-tool.types';
+import type { PdfTextPort } from '../backend/pdf-text-client';
 
 /**
  * The optional tools `executeWorkspaceTool` can run besides files, commands,
@@ -13,4 +14,6 @@ export interface WorkspaceToolExtras {
   readonly gates?: GatesTool | undefined;
   readonly http?: HttpTool | undefined;
   readonly shell?: ShellTool | undefined;
+  /** Reads PDF and Office files through the backend extractor; absent, those reads say so. */
+  readonly documents?: PdfTextPort | undefined;
 }

@@ -12,11 +12,13 @@ import path from 'node:path';
 import { containedPath } from '../core/workspace-containment';
 
 import { optionalFlag, optionalInteger, requirePath, requireText } from './file-tools-args';
-import { listFiles, readFileTool, statFileTool } from './file-tools-read';
+import { readWithDocuments } from './file-tools-document';
+import { listFiles, statFileTool } from './file-tools-read';
 import { globFiles, searchFiles } from './file-tools-search';
 import { FILE_UPDATE_MAX_BYTES } from './file-tools.constants';
 
 import type { FileToolArguments } from './file-tools.types';
+import type { PdfTextPort } from '../backend/pdf-text-client';
 
 export { requirePath } from './file-tools-args';
 
@@ -31,11 +33,12 @@ export function runFileTool(
   args: FileToolArguments,
   workspace: string,
   signal?: AbortSignal,
+  documents?: PdfTextPort,
 ): unknown {
   const root = realpathSync(workspace);
   switch (operation) {
     case 'read':
-      return readFileTool(args, workspace);
+      return readWithDocuments(args, workspace, documents, signal);
     case 'list':
       return listFiles(args, workspace, root);
     case 'glob':

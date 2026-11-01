@@ -67,8 +67,14 @@ Things to know:
   per sheet, a deck one block per slide with its speaker notes.
 - The file is sent to your backend to read and is not kept: it does not appear in your
   file list.
-- Images, audio and video in your project cannot be read as text. The agent says so and
-  asks you to attach the file to the message, so a model that can see or hear it gets it.
+- The SDK and command line read these formats too (PDF, DOCX, XLSX, PPTX, RTF) through your
+  backend. The file must be inside the workspace and no larger than 5 MB; a PDF page range is
+  chosen with `startLine` and `endLine`. If the backend is old, unreachable or not configured,
+  the agent gets a clear error.
+- Images, audio and video in your project cannot be read as text. The agent says what the file
+  is. For a png, jpeg or webp image in the panel, it is told to call `vision.describe` (the read
+  itself never calls a billed model). For gif, bmp, ico, tif, heic, avif, audio and video it gets
+  a precise message, and asks you to attach the file to the message instead.
 
 **Needs:** your ClawAI backend for document text.
 

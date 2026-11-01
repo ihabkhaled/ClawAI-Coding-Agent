@@ -136,9 +136,9 @@ describe('workspace.file read', () => {
 
   it('refuses a binary file with a note instead of garbage', () => {
     const root = workspace();
-    put(root, 'image.png', Buffer.from([137, 80, 78, 71, 0, 1, 2, 3, 255]));
+    put(root, 'image.bin', Buffer.from([137, 80, 78, 71, 0, 1, 2, 3, 255]));
 
-    expect(tool(root)('read', { path: 'image.png' })).toMatchObject({
+    expect(tool(root)('read', { path: 'image.bin' })).toMatchObject({
       binary: true,
       content: '',
       size: 9,

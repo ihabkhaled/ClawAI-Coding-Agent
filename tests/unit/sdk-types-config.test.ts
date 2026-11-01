@@ -25,6 +25,8 @@ const HOST_FREE_ROOTS = [
   'src/services/mcp-server-registry',
   // Only zod: the research routes the web tool calls.
   'src/backend/research-client',
+  // Only zod and research-client: the extract-text route `workspace.file read` calls.
+  'src/backend/pdf-text-client',
 ];
 
 function fromRoot(path: string): string {

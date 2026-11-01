@@ -202,6 +202,8 @@ run completes after the refusal, `4` when it then fails.
 A denied call is not an exception: the model receives a `PERMISSION_DENIED` result
 and can try something else. If the run then fails, it is reported as `blocked` (4).
 
+Office files: `workspace.file read` on a PDF, DOCX, XLSX, PPTX or RTF in the workspace is extracted by the ClawAI backend (bearer token, path inside the workspace, 5 MB cap checked before any call; a PDF range via `startLine`/`endLine`). It errors clearly on an old or unreachable backend or with no backend configured.
+
 ## Tool patterns
 
 `--allowed-tools` and `--disallowed-tools` take globs (`*` is the only wildcard,
