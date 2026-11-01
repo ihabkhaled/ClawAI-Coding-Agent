@@ -270,3 +270,111 @@ describe('reading a PDF from the workspace', () => {
     expect(output.structured).toMatchObject({ content: 'hello' });
   });
 });
+
+/**
+ * The same read for Word, Excel, PowerPoint and RTF files, and a plain answer
+ * for an image, audio or video file instead of "not UTF-8 text".
+ */
+describe('reading other documents and media from the workspace', () => {
+  const bytes = new Uint8Array([0x50, 0x4b, 0x03, 0x04, 0xff, 0xfe]);
+
+  function executorWith(port?: PdfTextPort): VscodeFilesystemToolExecutor {
+    const adapter = new VscodeFileTransactionAdapter();
+    adapter.registerRuntimeRoot('workspace-1', WORKSPACE_ROOT);
+    return new VscodeFilesystemToolExecutor(
+      adapter,
+      new FileTransactionService(adapter),
+      { record: () => undefined },
+      port,
+    );
+  }
+
+  beforeEach(() => {
+    vi.clearAllMocks();
+    vi.mocked(vscode.workspace.fs.stat).mockResolvedValue({ type: 1 } as never);
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(bytes);
+  });
+
+  it.each([
+    ['plan.docx', 'docx'],
+    ['sales.XLSX', 'xlsx'],
+    ['deck.pptx', 'pptx'],
+    ['memo.rtf', 'rtf'],
+  ])('sends %s to the extractor as one page, with no page range', async (file, format) => {
+    const port = portAnswering([page(1, 'the whole document')], 1);
+
+    const output = await executorWith(port).execute(
+      invocation({ rootKey: 'workspace-1', path: `docs/${file}` }),
+    );
+
+    expect(port.extract.mock.calls[0]?.[0]).toMatchObject({ filename: file });
+    expect(port.extract.mock.calls[0]?.[0]).not.toHaveProperty('pages');
+    expect(output.structured).toMatchObject({ format, totalPages: 1, truncated: false });
+    expect(deliveredPages(output)[0]?.text).toBe('the whole document');
+    expect(isRuntimeToolExecutionOutputValid(output)).toBe(true);
+  });
+
+  it('does not forward a page range for a format that has no pages', async () => {
+    const port = portAnswering([page(1)], 1);
+
+    await executorWith(port).execute(
+      invocation({ rootKey: 'workspace-1', path: 'a.docx', pages: { from: 4, to: 6 } }),
+    );
+
+    expect(port.extract.mock.calls[0]?.[0]).not.toHaveProperty('pages');
+  });
+
+  it('names the format when the host has no backend', async () => {
+    await expect(
+      executorWith(undefined).execute(invocation({ rootKey: 'workspace-1', path: 'a.xlsx' })),
+    ).rejects.toThrow(/Excel workbook.*no backend/u);
+  });
+
+  it('refuses an empty office file by name', async () => {
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(new Uint8Array());
+
+    await expect(
+      executorWith(portAnswering([], 0)).execute(
+        invocation({ rootKey: 'workspace-1', path: 'a.pptx' }),
+      ),
+    ).rejects.toThrow(/empty file/u);
+  });
+
+  it.each([
+    ['logo.png', /an image file.*attach it.*see it/u],
+    ['call.m4a', /an audio file.*listen/u],
+    ['demo.MP4', /a video file.*watch/u],
+  ])('says what %s is instead of "not UTF-8 text"', async (file, message) => {
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(new Uint8Array([0xff, 0xd8, 0xff]));
+    const port = portAnswering([], 0);
+
+    await expect(
+      executorWith(port).execute(invocation({ rootKey: 'workspace-1', path: file })),
+    ).rejects.toThrow(message);
+    expect(port.extract).not.toHaveBeenCalled();
+  });
+
+  it('keeps the old message for a binary file it does not recognise', async () => {
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(new Uint8Array([0xff, 0xfe, 0x00]));
+
+    await expect(
+      executorWith(portAnswering([], 0)).execute(
+        invocation({ rootKey: 'workspace-1', path: 'data.bin' }),
+      ),
+    ).rejects.toThrow(/not UTF-8 text/u);
+  });
+
+  it('still reads an SVG as the text it is', async () => {
+    vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(
+      new TextEncoder().encode('<svg xmlns="http://www.w3.org/2000/svg"/>'),
+    );
+
+    const output = await executorWith(portAnswering([], 0)).execute(
+      invocation({ rootKey: 'workspace-1', path: 'icon.svg' }),
+    );
+
+    expect(output.structured).toMatchObject({
+      content: '<svg xmlns="http://www.w3.org/2000/svg"/>',
+    });
+  });
+});

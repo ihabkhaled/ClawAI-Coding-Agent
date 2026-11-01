@@ -56,14 +56,21 @@ Things to know:
 - With zero data retention on, uploads are refused. See
   [Privacy and security](privacy-and-security.md).
 
-## PDFs
+## PDFs and office documents
 
 - Attach a PDF to a message like any other file.
 - The agent can also read a PDF that is in your project, a few pages at a time. The
   text is extracted by your ClawAI backend. If a PDF is only scanned pages, the
   agent is told so instead of getting an empty result.
+- It reads Word (`.docx`), Excel (`.xlsx`), PowerPoint (`.pptx`) and RTF files the same
+  way. These have no pages, so the text comes back whole. A workbook shows one block
+  per sheet, a deck one block per slide with its speaker notes.
+- The file is sent to your backend to read and is not kept: it does not appear in your
+  file list.
+- Images, audio and video in your project cannot be read as text. The agent says so and
+  asks you to attach the file to the message, so a model that can see or hear it gets it.
 
-**Needs:** your ClawAI backend for PDF text.
+**Needs:** your ClawAI backend for document text.
 
 ## Terminal output
 
