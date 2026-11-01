@@ -2,6 +2,8 @@ import * as vscode from 'vscode';
 import { z } from 'zod';
 
 import { deliveredArtifactsFromReceipt } from '../core/delivered-artifact';
+import { documentFormatOf, unreadableReadMessage } from '../core/document-read-format';
+import { DOCUMENT_FORMAT_LABELS } from '../core/document-read-format.constants';
 import { fileTransactionSchema } from '../core/file-transaction';
 import { normalizeTransactionEncoding } from '../core/file-transaction-encoding';
 import {
@@ -38,6 +40,7 @@ import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-ada
 import type { SearchHit } from './vscode-filesystem-tool-executor.types';
 import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { DeliveredArtifact } from '../core/delivered-artifact';
+import type { DocumentReadFormat } from '../core/document-read-format.types';
 import type { FileTransaction } from '../core/file-transaction';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { FileTransactionService } from '../services/file-transaction-service';
@@ -407,11 +410,18 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     }
     // On the extension, not on decoding failing: an uncompressed PDF can be
     // valid UTF-8, and would otherwise come back as raw PDF source.
-    if (input.path.toLowerCase().endsWith('.pdf')) {
-      return this.readPdf(input.path, snapshot.bytes, input.pages, input.maxBytes);
+    const documentFormat = documentFormatOf(input.path);
+    if (documentFormat !== undefined) {
+      return this.readDocument(
+        input.path,
+        documentFormat,
+        snapshot.bytes,
+        input.pages,
+        input.maxBytes,
+      );
     }
     if (snapshot.text === undefined) {
-      throw new Error(`${input.path} is not UTF-8 text and cannot be read`);
+      throw new Error(unreadableReadMessage(input.path));
     }
     const lines = snapshot.text.split(/\r?\n/u);
     const totalLines = lines.length;
@@ -453,7 +463,7 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
   }
 
   /**
-   * A workspace PDF, as text, by page.
+   * A workspace document (PDF, Word, Excel, PowerPoint or RTF), as text.
    *
    * The bytes go to the backend's extractor, which keeps nothing: this is a
    * read, not an upload, so the file never lands in the user's file list.
@@ -461,33 +471,38 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
    * Pages are delivered whole and in order until the byte budget is spent,
    * then `nextPage` says where to resume — the page-shaped twin of the text
    * read's `nextStartLine`. Cutting a page mid-way would hand the model half a
-   * sentence it cannot tell is half.
+   * sentence it cannot tell is half. Only a PDF has pages; the other formats
+   * come back as one, so no range is sent for them.
    */
-  private async readPdf(
+  private async readDocument(
     path: string,
+    format: DocumentReadFormat,
     bytes: Uint8Array | undefined,
     requested: { from: number; to: number } | undefined,
     maxBytes: number,
   ): Promise<RuntimeToolExecutionOutput> {
     if (this.pdfText === undefined) {
-      throw new Error(`${path} is a PDF, and this host has no backend to extract its text`);
+      throw new Error(
+        `${path} is a ${DOCUMENT_FORMAT_LABELS[format]}, and this host has no backend to extract its text`,
+      );
     }
     if (bytes === undefined || bytes.byteLength === 0) {
       throw new Error(`${path} is an empty file`);
     }
-    const pages = requested ?? { from: 1, to: PDF_DEFAULT_PAGE_WINDOW };
+    const pages =
+      format === 'pdf' ? (requested ?? { from: 1, to: PDF_DEFAULT_PAGE_WINDOW }) : undefined;
     const extracted = await this.pdfText.extract({
       filename: path.split('/').pop() ?? path,
       contentBase64: Buffer.from(bytes).toString('base64'),
-      pages,
+      ...(pages === undefined ? {} : { pages }),
     });
 
-    const window = fitPdfPages(extracted.pages, extracted.totalPages, pages.from, maxBytes);
+    const window = fitPdfPages(extracted.pages, extracted.totalPages, pages?.from ?? 1, maxBytes);
     const nextPage = window.nextPage;
     return {
       structured: {
         path,
-        format: 'pdf',
+        format,
         totalPages: extracted.totalPages,
         pages: window.pages,
         // A scanned page has no text layer however often it is read. Saying

@@ -2,6 +2,10 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.108.0
+
+- The panel's agent can now read Word, Excel, PowerPoint and RTF files that are in your project, the way it already read PDFs. The text is extracted by your ClawAI backend and kept nowhere; each file comes back as one page (a workbook as one block per sheet, a deck as one block per slide with speaker notes). Reading an image, audio or video file now says what it is and asks you to attach it, instead of "not UTF-8 text". Needs the matching backend release: an older backend refuses these formats with a clear message. Proven against a real DOCX, XLSX, PPTX and RTF through the running stack. Not done: the SDK and CLI still show a binary file as "contents not shown"; audio and video are not transcribed.
+
 ## 1.107.0
 
 - A pull request merge is now bound to the exact commit you approved. The approval shows the head commit, the checks are read against that same commit (a head that moves while they are read is refused before you are asked), and the merge passes `--match-head-commit`, so a push made after you approved makes GitHub refuse the merge instead of merging code nobody saw. Found by the automated security review of 1.106.0.
