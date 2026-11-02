@@ -2,14 +2,14 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.112.0
+
+- Formatting and wording fixes to the 1.111.0 documentation; no behaviour change beyond 1.111.0. The audio and video reader now never retries its billed POST (a repeated request could bill twice), and the SDK declaration emit stays free of host code.
+
 ## 1.111.0
 
 - The SDK and CLI `workspace.file read` now transcribes audio and video (mp3, m4a, wav, ogg, flac, aac, webm, mp4, mov, mkv) through your ClawAI backend's `POST /files/transcribe-text`. This is a billed call: the result says "billed to your credit", and a 402 (not enough credit) stops with a clear message that says nothing was billed. It is never retried on purpose, because a re-sent POST could bill twice. The extension refuses files over 15 MB before any call; the backend has its own limits (audio 12 MB, video up to the shorter of your plan limit and 30 minutes). Only the transcript comes back, not the picture. Code: `src/sdk/media-transcribe-http.ts`, `file-tools-media.ts`, `src/core/document-read-format*.ts`. Live proof pending: tested with a fake backend, not yet run against a live one.
-- The model picker marks each model with a cost band (`# Changelog
-
-What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
-
-to `$$`, `0` for free) and dims models outside your free allowance, from `POST /chat-messages/model-access`. It is a hint only: a dimmed model is still selectable, the send path stays the gate, and an older backend or a failed call shows no marks (it fails open). Code: `src/backend/model-access-client.ts`.
+- The model picker marks each model with a cost band (`$` to `$$$$`, `0` for free) and dims models outside your free allowance, from `POST /chat-messages/model-access`. It is a hint only: a dimmed model is still selectable, the send path stays the gate, and an older backend or a failed call shows no marks (it fails open). Code: `src/backend/model-access-client.ts`.
 
 - Cache write tokens (F093) are now shown: in the panel token tooltip, in the usage dialog (a "Cache write" column) and in Runtime V2 usage events (`cacheWriteTokens`). Tested with fixtures; not yet seen against a backend with the per-model cache switch ON.
 - A plan or credit limit now reads as a plan limit, not "rate limited", in the panel too, through a new `plan` fallback reason.
