@@ -213,7 +213,7 @@ after that allowance is spent.
   Compact Conversation**.
 - **Attachments are refused.** Limits are 10 files, 25 MiB each and 50 MiB in total,
   and zero data retention refuses uploads.
- marks or look dimmed in the picker.** The marks are a cost
+  marks or look dimmed in the picker.** The marks are a cost
   band (`# Troubleshooting
 
 Start with the logs, then find your problem below.
@@ -318,7 +318,7 @@ after that allowance is spent.
   Compact Conversation**.
 - **Attachments are refused.** Limits are 10 files, 25 MiB each and 50 MiB in total,
   and zero data retention refuses uploads.
- cheap to `$$` dearest, `0` free). A dimmed model is outside your free
+  cheap to `$$` dearest, `0` free). A dimmed model is outside your free
   allowance but you can still pick it. No marks at all means the backend could not
   say, which is not an error.
 - **Pull requests fail.** The GitHub tool `gh` must be installed and signed in.
