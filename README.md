@@ -9,7 +9,7 @@ project, proposes changes, and waits for your OK before it touches a file.
 It connects to your ClawAI account, so you can use many AI models from one
 place: hosted models, or models running on your own machine.
 
-Version 1.110.0 delivers a more capable agent that can plan, edit files, run
+Version 1.111.0 delivers a more capable agent that can plan, edit files, run
 commands, use git, and drive a browser, all with your approval, and it keeps
 working with the classic chat-and-review flow if a newer feature is not
 available on your ClawAI server. The approval choices now mean what they say
@@ -105,6 +105,7 @@ choice for that trusted workspace.
 
 ### Attachments: images, PDF and voice
 
+- Headless and SDK runs can read audio and video files (mp3, mp4, wav and more) as a transcript. This is billed to your credit, capped at 15 MB, and live proof is still pending.
 - Paste, drop, or pick screenshots, images, videos, documents, PDFs, and source
   files into the message box.
 - Attach terminal output with one command.

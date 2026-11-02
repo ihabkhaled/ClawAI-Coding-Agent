@@ -89,6 +89,8 @@ export interface HeadlessInvocation {
   readonly maxAgents?: number | undefined;
   /** `--tools-profile`: narrows the offered tools (minimal, dev, full or patterns); grants nothing. */
   readonly toolsProfile?: string | undefined;
+  /** `--pull-requests`: `workspace.pr` is offered (view, review, merge through gh). */
+  readonly pullRequests?: true | undefined;
   /** `--defer-tools`: rarely used tools go out as stubs and load when the model asks. */
   readonly deferTools?: true | undefined;
 }

@@ -114,11 +114,57 @@ describe('stash', () => {
     expect(git(repository, 'status', '--porcelain')).toBe('M seed.txt');
   });
 
-  it('leaves untracked files where they are', async () => {
+  it('shelves untracked files too, leaves ignored ones, and pop brings them back', async () => {
     const repository = makeRepository();
+    writeIn(repository, '.gitignore', 'ignored.log\n');
+    git(repository, 'add', '.gitignore');
+    git(repository, 'commit', '-m', 'ignore');
     writeIn(repository, 'new.txt', 'n\n');
-    await gitCall(repository, 'stash', { action: 'push' });
-    expect(git(repository, 'status', '--porcelain')).toBe('?? new.txt');
+    writeIn(repository, 'deep/er/file.txt', 'd\n');
+    writeIn(repository, 'ignored.log', 'i\n');
+
+    const pushed = await gitCall(repository, 'stash', { action: 'push', message: 'with new' });
+
+    expect(pushed).toMatchObject({ ok: true, stashed: true, untracked: 2 });
+    expect(git(repository, 'status', '--porcelain')).toBe('');
+    expect(
+      git(repository, 'ls-tree', '-r', '--name-only', 'refs/stash^3').split('\n').sort(),
+    ).toEqual(['deep/er/file.txt', 'new.txt']);
+
+    const popped = await gitCall(repository, 'stash', { action: 'pop' });
+    expect(popped).toMatchObject({ exitCode: 0, conflicts: [] });
+    expect(git(repository, 'status', '--porcelain').split('\n').sort()).toEqual([
+      '?? deep/',
+      '?? new.txt',
+    ]);
+  });
+
+  it('says nothing was stashed on a clean tree', async () => {
+    const repository = makeRepository();
+    expect(await gitCall(repository, 'stash', { action: 'push' })).toMatchObject({
+      stashed: false,
+    });
+    expect(git(repository, 'stash', 'list')).toBe('');
+  });
+
+  it('refuses to stash a tree with unresolved conflicts, and drops nothing', async () => {
+    const repository = makeRepository();
+    git(repository, 'switch', '-c', 'other');
+    commitFile(repository, 'seed.txt', 'other\n');
+    git(repository, 'switch', 'main');
+    commitFile(repository, 'seed.txt', 'main\n');
+    try {
+      git(repository, 'merge', 'other');
+    } catch {
+      // The conflict is the set-up.
+    }
+    writeIn(repository, 'new.txt', 'n\n');
+
+    await expect(gitCall(repository, 'stash', { action: 'push' })).rejects.toThrow(
+      'unresolved conflicts',
+    );
+    expect(git(repository, 'stash', 'list')).toBe('');
+    expect(git(repository, 'status', '--porcelain')).toContain('?? new.txt');
   });
 
   it('refuses to pop onto a dirty tree', async () => {

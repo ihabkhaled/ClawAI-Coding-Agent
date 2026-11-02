@@ -29,6 +29,7 @@ import { compareLiveTranslations } from './compare-live-translations.mjs';
 import { compactionOfferTranslations } from './compaction-offer-translations.mjs';
 import { loadKnowledgeTranslations } from './load-knowledge-translations.mjs';
 import { idleRunTranslations } from './idle-run-translations.mjs';
+import { modelCostTranslations } from './model-cost-translations.mjs';
 import { optInToolTranslations } from './opt-in-tool-translations.mjs';
 import { usageBreakdownTranslations } from './usage-breakdown-translations.mjs';
 
@@ -4894,6 +4895,7 @@ function translate(locale, message) {
     nlsGapTranslations[locale][message] ??
     modelFallbackTranslations[locale][message] ??
     firstRunTranslations[locale][message] ??
+    modelCostTranslations[locale][message] ??
     message
   );
 }

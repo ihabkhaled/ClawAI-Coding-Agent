@@ -9,7 +9,7 @@ import type { ToolPermissionRow } from '../../src/sdk/tool-permission-table.type
 import type { VisionPort } from '../../src/sdk/vision-tool.types';
 import type { AgentToolCategory } from '../../src/sdk/workspace-toolkit.types';
 
-/** The tools the composed toolkit builds itself; `agent.team` needs a team and is covered in agent-team-modes. */
+/** The tools the composed toolkit builds itself (workspace.pr only with `pullRequests`, which toolkitFor sets); `agent.team` needs a team and is covered in agent-team-modes. */
 const COMPOSED = TOOL_PERMISSION_ROWS.filter((row) => row.category !== 'agents');
 
 const EVERYTHING: readonly AgentToolCategory[] = [
@@ -59,6 +59,7 @@ function toolkitFor(mode: AgentPermissionMode, approve: (() => boolean) | undefi
     },
     taskPlan: true,
     loadKnowledge: true,
+    pullRequests: true,
     vision: { port: VISION },
   });
 }

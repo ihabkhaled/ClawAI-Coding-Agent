@@ -22,3 +22,15 @@ export const UNREADABLE_MEDIA_EXTENSIONS = {
   audio: ['mp3', 'wav', 'm4a', 'aac', 'flac', 'ogg', 'oga', 'opus'],
   video: ['mp4', 'mov', 'avi', 'mkv', 'webm', 'mpeg', 'mpg', 'm4v'],
 } as const;
+
+/**
+ * Audio and video the backend transcribes to text (`POST /files/transcribe-text`).
+ * A subset of UNREADABLE_MEDIA_EXTENSIONS: every other media extension stays refused.
+ */
+export const TRANSCRIBABLE_MEDIA_EXTENSIONS = {
+  audio: ['mp3', 'm4a', 'wav', 'ogg', 'flac', 'aac', 'webm'],
+  video: ['mp4', 'mov', 'webm', 'mkv'],
+} as const;
+
+/** Largest audio or video file the extension sends; the backend may refuse audio above 12 MB itself. */
+export const TRANSCRIBE_MAX_BYTES = 15 * 1024 * 1024;

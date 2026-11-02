@@ -10,6 +10,7 @@ import { agentRemoteClient } from '../../src/backend/agent-remote-client';
 import { publishArtifact } from '../../src/backend/artifact-client';
 import { connectionOperationErrorMessage } from '../../src/backend/backend-error-message';
 import { BackendRequestError } from '../../src/backend/backend-errors';
+import { BACKEND_RETRY_ALLOWANCE } from '../../src/backend/backend-retry.constants';
 import { channelClient } from '../../src/backend/channel-client';
 import { devicePairingClient } from '../../src/backend/device-pairing-client';
 import { fetchOrganizationPolicy } from '../../src/backend/organization-policy-client';
@@ -105,7 +106,9 @@ describe.each(CHAOS_SCENARIOS)('chaos: $name', (scenario) => {
 
     const { error } = await settle(call(client));
 
-    expect(calls()).toBeLessThanOrEqual(scenario.maxCalls * (FAN_OUT.get(name) ?? 1));
+    expect(calls()).toBeLessThanOrEqual(
+      scenario.maxCalls * (FAN_OUT.get(name) ?? 1) * BACKEND_RETRY_ALLOWANCE.read.maxAttempts,
+    );
     if (error === undefined) return;
     expect(error, String(error)).toBeInstanceOf(BackendRequestError);
     const shown = connectionOperationErrorMessage(error);

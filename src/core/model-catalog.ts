@@ -54,6 +54,9 @@ export interface LocalFrontierModelInput {
   downloadStatus: string;
 }
 
+/** The cost bands a model is marked with; the band only, never a rate. */
+export type ModelCostBand = 'FREE' | 'CHEAP' | 'STANDARD' | 'PREMIUM' | 'ULTRA';
+
 export interface ModelCatalogEntry {
   id: string;
   key: string;
@@ -67,6 +70,12 @@ export interface ModelCatalogEntry {
   supportsVision: boolean;
   supportsStructuredOutput: boolean;
   contextTokens: number | null;
+  /** From `/chat-messages/model-access`; absent when the backend did not say, which shows no mark. */
+  costClass?: ModelCostBand | undefined;
+  /** False when the user may not pick it; a hint to dim the entry, never a gate. */
+  allowed?: boolean | undefined;
+  /** False when using it would draw on credit; a hint to dim the entry, never a gate. */
+  coveredByAllowance?: boolean | undefined;
 }
 
 export interface ResolvedModelSelection {

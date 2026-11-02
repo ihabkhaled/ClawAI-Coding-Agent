@@ -1,0 +1,212 @@
+// Model-picker cost bands and availability hint, the cache-write figure, the plan and
+// credit limit wording, and the "run was stopped" (stuck) message of the panel.
+const keys = {
+  write: 'Cache write',
+  written: '{0} written to cache',
+  free: 'Free',
+  cheap: 'Low cost',
+  standard: 'Standard cost',
+  premium: 'Premium cost',
+  ultra: 'Highest cost',
+  dimmed: 'Not covered by your plan allowance',
+  plan: 'Plan limit reached on {0}, continuing on {1}',
+  credit: 'Your ClawAI credit is used up ({0}). Top up the credit to continue.',
+  limit:
+    'Your ClawAI plan limit is reached ({0}). Wait for it to reset or upgrade the plan to continue. Another model does not help.',
+  stuck: 'The run was stopped: it made the same {0} {1} call {2} times and nothing changed.',
+};
+
+const text = {
+  ar: {
+    write: 'كتابة التخزين المؤقت',
+    written: 'تمت كتابة {0} في التخزين المؤقت',
+    free: 'مجاني',
+    cheap: 'تكلفة منخفضة',
+    standard: 'تكلفة عادية',
+    premium: 'تكلفة مرتفعة',
+    ultra: 'أعلى تكلفة',
+    dimmed: 'غير مشمول ضمن حصة خطتك',
+    plan: 'تم بلوغ حد الخطة على {0}، وسنواصل على {1}',
+    credit: 'نفد رصيد ClawAI لديك ({0}). اشحن الرصيد للمتابعة.',
+    limit:
+      'تم بلوغ حد خطة ClawAI لديك ({0}). انتظر إعادة التعيين أو قم بترقية الخطة للمتابعة. استخدام نموذج آخر لا يفيد.',
+    stuck: 'تم إيقاف التشغيل: كرر استدعاء {0} {1} نفسه {2} مرات دون أي تغيير.',
+  },
+  de: {
+    write: 'Cache-Schreibvorgang',
+    written: '{0} in den Cache geschrieben',
+    free: 'Kostenlos',
+    cheap: 'Niedrige Kosten',
+    standard: 'Standardkosten',
+    premium: 'Hohe Kosten',
+    ultra: 'Höchste Kosten',
+    dimmed: 'Nicht im Kontingent deines Tarifs enthalten',
+    plan: 'Tariflimit bei {0} erreicht, weiter mit {1}',
+    credit: 'Dein ClawAI-Guthaben ist aufgebraucht ({0}). Lade das Guthaben auf, um fortzufahren.',
+    limit:
+      'Das Limit deines ClawAI-Tarifs ist erreicht ({0}). Warte auf das Zurücksetzen oder wechsle den Tarif, um fortzufahren. Ein anderes Modell hilft nicht.',
+    stuck:
+      'Der Lauf wurde gestoppt: Er hat denselben Aufruf {0} {1} {2}-mal wiederholt, ohne dass sich etwas geändert hat.',
+  },
+  es: {
+    write: 'Escritura en caché',
+    written: '{0} escritos en la caché',
+    free: 'Gratis',
+    cheap: 'Coste bajo',
+    standard: 'Coste estándar',
+    premium: 'Coste alto',
+    ultra: 'Coste máximo',
+    dimmed: 'No cubierto por la asignación de tu plan',
+    plan: 'Límite del plan alcanzado en {0}, se continúa con {1}',
+    credit: 'Tu crédito de ClawAI se agotó ({0}). Recarga el crédito para continuar.',
+    limit:
+      'Se alcanzó el límite de tu plan de ClawAI ({0}). Espera a que se restablezca o mejora el plan para continuar. Otro modelo no ayuda.',
+    stuck:
+      'La ejecución se detuvo: repitió la misma llamada {0} {1} {2} veces sin que nada cambiara.',
+  },
+  fa: {
+    write: 'نوشتن در حافظه نهان',
+    written: '{0} در حافظه نهان نوشته شد',
+    free: 'رایگان',
+    cheap: 'هزینه کم',
+    standard: 'هزینه متوسط',
+    premium: 'هزینه بالا',
+    ultra: 'بالاترین هزینه',
+    dimmed: 'در سهمیه طرح شما پوشش داده نمی‌شود',
+    plan: 'سقف طرح در {0} پر شد، ادامه با {1}',
+    credit: 'اعتبار ClawAI شما تمام شد ({0}). برای ادامه اعتبار را شارژ کنید.',
+    limit:
+      'سقف طرح ClawAI شما پر شده است ({0}). منتظر بازنشانی بمانید یا برای ادامه طرح را ارتقا دهید. مدل دیگر کمکی نمی‌کند.',
+    stuck: 'اجرا متوقف شد: همان فراخوانی {0} {1} را {2} بار تکرار کرد بدون اینکه چیزی تغییر کند.',
+  },
+  fr: {
+    write: 'Écriture en cache',
+    written: '{0} écrits dans le cache',
+    free: 'Gratuit',
+    cheap: 'Coût faible',
+    standard: 'Coût standard',
+    premium: 'Coût élevé',
+    ultra: 'Coût maximal',
+    dimmed: 'Non couvert par le quota de votre offre',
+    plan: "Limite de l'offre atteinte sur {0}, poursuite sur {1}",
+    credit: 'Votre crédit ClawAI est épuisé ({0}). Rechargez-le pour continuer.',
+    limit:
+      "La limite de votre offre ClawAI est atteinte ({0}). Attendez la réinitialisation ou passez à une offre supérieure pour continuer. Un autre modèle n'y changera rien.",
+    stuck:
+      "L'exécution a été arrêtée : elle a répété le même appel {0} {1} {2} fois sans rien changer.",
+  },
+  hi: {
+    write: 'कैश राइट',
+    written: '{0} कैश में लिखे गए',
+    free: 'मुफ़्त',
+    cheap: 'कम लागत',
+    standard: 'सामान्य लागत',
+    premium: 'उच्च लागत',
+    ultra: 'सर्वाधिक लागत',
+    dimmed: 'आपके प्लान के कोटे में शामिल नहीं',
+    plan: '{0} पर प्लान की सीमा पूरी हो गई, {1} पर जारी है',
+    credit: 'आपका ClawAI क्रेडिट समाप्त हो गया है ({0}). जारी रखने के लिए क्रेडिट टॉप-अप करें।',
+    limit:
+      'आपके ClawAI प्लान की सीमा पूरी हो गई है ({0}). रीसेट का इंतज़ार करें या जारी रखने के लिए प्लान अपग्रेड करें। दूसरा मॉडल मदद नहीं करता।',
+    stuck: 'रन रोक दिया गया: उसने वही {0} {1} कॉल {2} बार दोहराई और कुछ नहीं बदला।',
+  },
+  it: {
+    write: 'Scrittura in cache',
+    written: '{0} scritti nella cache',
+    free: 'Gratis',
+    cheap: 'Costo basso',
+    standard: 'Costo standard',
+    premium: 'Costo alto',
+    ultra: 'Costo massimo',
+    dimmed: 'Non coperto dalla quota del tuo piano',
+    plan: 'Limite del piano raggiunto su {0}, si continua su {1}',
+    credit: 'Il tuo credito ClawAI è esaurito ({0}). Ricarica il credito per continuare.',
+    limit:
+      'Il limite del tuo piano ClawAI è stato raggiunto ({0}). Attendi il ripristino o passa a un piano superiore per continuare. Un altro modello non aiuta.',
+    stuck:
+      "L'esecuzione è stata interrotta: ha ripetuto la stessa chiamata {0} {1} per {2} volte senza che nulla cambiasse.",
+  },
+  ja: {
+    write: 'キャッシュ書き込み',
+    written: '{0} をキャッシュに書き込み',
+    free: '無料',
+    cheap: '低コスト',
+    standard: '標準コスト',
+    premium: '高コスト',
+    ultra: '最高コスト',
+    dimmed: 'ご利用プランの利用枠に含まれません',
+    plan: '{0} でプランの上限に達しました。{1} で続行します',
+    credit: 'ClawAI のクレジットを使い切りました ({0})。続行するにはクレジットを追加してください。',
+    limit:
+      'ClawAI のプランの上限に達しました ({0})。リセットを待つか、プランをアップグレードして続行してください。別のモデルでは解決しません。',
+    stuck: '実行を停止しました。同じ {0} {1} の呼び出しを {2} 回繰り返し、何も変化しませんでした。',
+  },
+  pt: {
+    write: 'Gravação em cache',
+    written: '{0} gravados no cache',
+    free: 'Grátis',
+    cheap: 'Custo baixo',
+    standard: 'Custo padrão',
+    premium: 'Custo alto',
+    ultra: 'Custo máximo',
+    dimmed: 'Não coberto pela franquia do seu plano',
+    plan: 'Limite do plano atingido em {0}, continuando em {1}',
+    credit: 'Seu crédito do ClawAI acabou ({0}). Recarregue o crédito para continuar.',
+    limit:
+      'O limite do seu plano do ClawAI foi atingido ({0}). Aguarde a renovação ou faça upgrade do plano para continuar. Outro modelo não resolve.',
+    stuck:
+      'A execução foi interrompida: repetiu a mesma chamada {0} {1} {2} vezes sem que nada mudasse.',
+  },
+  ru: {
+    write: 'Запись в кэш',
+    written: '{0} записано в кэш',
+    free: 'Бесплатно',
+    cheap: 'Низкая стоимость',
+    standard: 'Обычная стоимость',
+    premium: 'Высокая стоимость',
+    ultra: 'Максимальная стоимость',
+    dimmed: 'Не входит в лимит вашего тарифа',
+    plan: 'Лимит тарифа достигнут на {0}, продолжаем на {1}',
+    credit: 'Кредит ClawAI исчерпан ({0}). Пополните кредит, чтобы продолжить.',
+    limit:
+      'Достигнут лимит вашего тарифа ClawAI ({0}). Дождитесь сброса или перейдите на другой тариф, чтобы продолжить. Другая модель не поможет.',
+    stuck:
+      'Запуск остановлен: один и тот же вызов {0} {1} повторился {2} раз без каких-либо изменений.',
+  },
+  th: {
+    write: 'การเขียนแคช',
+    written: 'เขียนลงแคช {0}',
+    free: 'ฟรี',
+    cheap: 'ค่าใช้จ่ายต่ำ',
+    standard: 'ค่าใช้จ่ายปกติ',
+    premium: 'ค่าใช้จ่ายสูง',
+    ultra: 'ค่าใช้จ่ายสูงสุด',
+    dimmed: 'ไม่รวมอยู่ในโควตาของแพ็กเกจคุณ',
+    plan: 'ถึงขีดจำกัดของแพ็กเกจที่ {0} แล้ว ทำงานต่อบน {1}',
+    credit: 'เครดิต ClawAI ของคุณหมดแล้ว ({0}) เติมเครดิตเพื่อใช้งานต่อ',
+    limit:
+      'ถึงขีดจำกัดของแพ็กเกจ ClawAI ของคุณแล้ว ({0}) รอให้รีเซ็ตหรืออัปเกรดแพ็กเกจเพื่อใช้งานต่อ การเปลี่ยนโมเดลไม่ช่วย',
+    stuck: 'หยุดการทำงานแล้ว: เรียก {0} {1} เดิมซ้ำ {2} ครั้งโดยไม่มีอะไรเปลี่ยนแปลง',
+  },
+  zh: {
+    write: '缓存写入',
+    written: '已写入缓存 {0}',
+    free: '免费',
+    cheap: '低成本',
+    standard: '标准成本',
+    premium: '高成本',
+    ultra: '最高成本',
+    dimmed: '不在你的套餐额度内',
+    plan: '{0} 已达到套餐上限，改用 {1} 继续',
+    credit: '你的 ClawAI 额度已用完 ({0})。请充值后继续。',
+    limit: '你的 ClawAI 套餐上限已达到 ({0})。请等待重置或升级套餐后继续。换用其他模型无济于事。',
+    stuck: '运行已停止：同一个 {0} {1} 调用重复了 {2} 次，且没有任何变化。',
+  },
+};
+
+export const modelCostTranslations = Object.fromEntries(
+  Object.entries(text).map(([locale, strings]) => [
+    locale,
+    Object.fromEntries(Object.entries(keys).map(([id, english]) => [english, strings[id]])),
+  ]),
+);

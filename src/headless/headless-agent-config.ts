@@ -47,6 +47,7 @@ export function agentConfigFor(input: {
         ? undefined
         : { allowHosts: invocation.browserAllowHosts },
     loadKnowledge: invocation.loadKnowledge,
+    ...(invocation.pullRequests === true ? { pullRequests: true } : {}),
     ...(invocation.images === undefined ? {} : { images: invocation.images }),
     ...(invocation.vision === true ? { vision: { model: invocation.visionModel } } : {}),
     maxAgents: invocation.maxAgents,

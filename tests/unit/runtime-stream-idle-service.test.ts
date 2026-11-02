@@ -132,6 +132,73 @@ describe('RuntimeEventStreamService idle watchdog', () => {
     expect(h.controllers).toHaveLength(1);
   });
 
+  it('recovers an idle run: the re-attach resumes from the cursor and the run completes', async () => {
+    const h = harness();
+    const onEvent = vi.fn();
+    const following = h.service.follow(
+      'run-id-0001',
+      { beginModelTurn: vi.fn(), dispatch: vi.fn(), hasActiveRun: () => true },
+      { onEvent },
+      new AbortController().signal,
+    );
+    await vi.waitFor(() => {
+      expect(h.controllers).toHaveLength(1);
+    });
+    h.send(0, event(0, 'run.started', {}));
+    await vi.waitFor(() => {
+      expect(onEvent).toHaveBeenCalledTimes(1);
+    });
+    h.clock.now = IDLE;
+    h.send(0, heartbeat);
+    await vi.waitFor(() => {
+      expect(h.controllers).toHaveLength(2);
+    });
+    expect(h.afters).toEqual([-1, 0]);
+
+    h.send(1, event(1, 'run.started', {}), event(2, 'run.completed', {}));
+
+    await expect(following).resolves.toBeUndefined();
+    expect(onEvent).toHaveBeenCalledTimes(3);
+    expect(h.controllers).toHaveLength(2);
+  });
+
+  it('gives a recovered run a fresh allowance: a second idle spell re-attaches again, not fails', async () => {
+    const h = harness();
+    const onEvent = vi.fn();
+    const following = h.service.follow(
+      'run-id-0001',
+      { beginModelTurn: vi.fn(), dispatch: vi.fn(), hasActiveRun: () => true },
+      { onEvent },
+      new AbortController().signal,
+    );
+    const outcome = following.then(
+      () => 'done',
+      (error: unknown) => error,
+    );
+    await vi.waitFor(() => {
+      expect(h.controllers).toHaveLength(1);
+    });
+    h.clock.now = IDLE;
+    h.send(0, heartbeat);
+    await vi.waitFor(() => {
+      expect(h.controllers).toHaveLength(2);
+    });
+    h.send(1, event(0, 'run.started', {}));
+    await vi.waitFor(() => {
+      expect(onEvent).toHaveBeenCalledTimes(1);
+    });
+
+    h.clock.now = IDLE * 2;
+    h.send(1, heartbeat);
+    await vi.waitFor(() => {
+      expect(h.controllers).toHaveLength(3);
+    });
+    expect(h.afters).toEqual([-1, -1, 0]);
+    h.send(2, event(1, 'run.completed', {}));
+
+    await expect(outcome).resolves.toBe('done');
+  });
+
   it('does not count a tool call in flight as idle', async () => {
     const h = harness();
     const invocation = runtimeInvocation();

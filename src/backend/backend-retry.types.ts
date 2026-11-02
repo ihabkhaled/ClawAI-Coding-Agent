@@ -6,6 +6,9 @@
  */
 export type BackendRetryClass = 'read' | 'command' | 'start';
 
+/** What a caller may ask for: a class, or `never` to keep a GET from being repeated. A GET asking for nothing is a `read`. */
+export type BackendRetryRequest = BackendRetryClass | 'never';
+
 /** The knobs of one retrying call; tests inject `sleep`, `random` and `now`. */
 export interface BackendRetryTuning {
   readonly sleep?: ((ms: number, signal?: AbortSignal) => Promise<void>) | undefined;

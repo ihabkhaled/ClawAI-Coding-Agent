@@ -1,7 +1,7 @@
 import { readFileSync } from 'node:fs';
 import path from 'node:path';
 
-import { documentFormatOf } from '../core/document-read-format';
+import { documentFormatOf, transcribableMediaKind } from '../core/document-read-format';
 import { DOCUMENT_FORMAT_LABELS } from '../core/document-read-format.constants';
 import { fitPdfPages } from '../core/pdf-page-budget';
 import { RuntimeHttpError } from '../headless/runtime-http-error';
@@ -11,6 +11,7 @@ import {
   DOCUMENT_OLD_BACKEND_MARKER,
   DOCUMENT_READ_DEFAULT_PAGE_WINDOW,
 } from './file-tools-document.constants';
+import { readMedia } from './file-tools-media';
 import { readableTarget, readFileTool } from './file-tools-read';
 import {
   FILE_READ_DEFAULT_CHARS,
@@ -18,6 +19,7 @@ import {
   FILE_READ_MIN_CHARS,
 } from './file-tools.constants';
 
+import type { FileTranscriptResult } from './file-tools-media';
 import type { FileBinaryResult, FileReadResult, FileToolArguments } from './file-tools.types';
 import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { DocumentReadFormat } from '../core/document-read-format.types';
@@ -135,8 +137,11 @@ export function readWithDocuments(
   workspace: string,
   documents: PdfTextPort | undefined,
   signal?: AbortSignal,
-): FileReadResult | FileBinaryResult | Promise<FileDocumentResult> {
-  const format = documentFormatOf(requirePath('read', args));
+): FileReadResult | FileBinaryResult | Promise<FileDocumentResult | FileTranscriptResult> {
+  const file = requirePath('read', args);
+  const mediaKind = transcribableMediaKind(file);
+  if (mediaKind !== undefined) return readMedia(args, workspace, mediaKind, documents, signal);
+  const format = documentFormatOf(file);
   return format === undefined
     ? readFileTool(args, workspace)
     : readDocument(args, workspace, format, documents, signal);

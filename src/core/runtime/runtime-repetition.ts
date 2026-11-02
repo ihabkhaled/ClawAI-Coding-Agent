@@ -4,6 +4,7 @@ import {
   REPETITION_GUARDED_TOOL_PREFIX,
   REPETITION_NOTES_TOOL,
   REPETITION_NOTE_OPERATIONS,
+  STUCK_FAILURE_CODE,
 } from './runtime-repetition.constants';
 
 import type { RuntimeRepetitionVerdictClass } from './runtime-repetition.types';
@@ -36,7 +37,7 @@ export function runtimeRepetitionClass(call: {
 
 /** Ends a panel run that repeated one call without getting anywhere. */
 export class RuntimeStuckError extends Error {
-  readonly code = 'RUNTIME_RUN_STUCK';
+  readonly code = STUCK_FAILURE_CODE;
 
   constructor(readonly info: StuckInfo) {
     super(

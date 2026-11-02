@@ -262,4 +262,20 @@ describe('parseHeadlessArgs session, prompt, MCP and permission flags', () => {
       run(['-p', 'x', '--allow-tools', 'read,http-write', '--http-allow-host', 'a']).allowTools,
     ).toEqual(['read', 'http-write']);
   });
+
+  it('--pull-requests offers workspace.pr: a read grant alone, and writes only under a permission mode', () => {
+    const six = ['read', 'write', 'command', 'git', 'git-write', 'mcp'];
+
+    expect(run(['-p', 'x']).pullRequests).toBeUndefined();
+    expect(run(['-p', 'x', '--pull-requests']).pullRequests).toBe(true);
+    expect(run(['-p', 'x', '--pull-requests']).allowTools).toEqual(['read', 'git', 'http']);
+    expect(run(['-p', 'x', '--pull-requests', '--permission-mode', 'ask']).allowTools).toEqual([
+      ...six,
+      'http',
+      'http-write',
+    ]);
+    expect(run(['-p', 'x', '--pull-requests', '--allow-tools', 'read']).allowTools).toEqual([
+      'read',
+    ]);
+  });
 });

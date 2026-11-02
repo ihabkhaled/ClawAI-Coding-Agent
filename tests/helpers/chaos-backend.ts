@@ -19,7 +19,7 @@ export const SECRET_MARKERS: readonly string[] = [ACCESS_SECRET, REFRESH_SECRET,
 export interface ChaosScenario {
   readonly name: string;
   readonly build: () => { fetcher: typeof fetch; calls: () => number };
-  /** Requests one client call may make: the original plus at most one retry after a refresh. */
+  /** Requests one client call may make: the original plus at most one retry after a refresh (a GET may repeat that, up to its read allowance). */
   readonly maxCalls: number;
 }
 
@@ -59,6 +59,8 @@ export async function chaosClient(fetcher: typeof fetch): Promise<BackendClient>
     fetcher,
     sessionVault: vault,
     timeoutMs: CHAOS_TIMEOUT_MS,
+    // A GET is repeated by default: skip the real backoff wait, keep the real attempt bound.
+    retry: { sleep: () => Promise.resolve() },
   });
 }
 

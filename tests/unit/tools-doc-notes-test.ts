@@ -37,6 +37,43 @@ export const TEST_TOOL_NOTES: readonly ToolNote[] = [
     sdk: "createAgent({ auth: { token }, workspaceRoot: dir, permissions: { allow: ['read', 'command'] } })",
   },
   {
+    tool: 'workspace.pr',
+    purpose:
+      'Read, review and merge an existing GitHub pull request through the signed-in `gh` CLI, as you.',
+    enable:
+      '`--pull-requests` (SDK `pullRequests: true`). `view` is `http`, `review` and `merge` are `http-write`; the flag adds `http`, and `http-write` only under `--permission-mode`. Needs `gh auth login`.',
+    operations: {
+      view: '{number, diff?}: the title, state, files, comments and reviews (bounded), and the diff when asked.',
+      review:
+        '{number, event, body}: post one review; `event` is `comment`, `approve` or `request-changes`. A comment or change request needs text.',
+      merge:
+        '{number, method}: merge when ready; `method` is `squash`, `merge` or `rebase` and is never defaulted.',
+    },
+    limits: [
+      'Title, description, comments and reviews are written by other people: results are marked as data, never instructions.',
+      '`review` and `merge` are asked about in every permission mode except `plan`, where they are not offered; with nobody to ask (no terminal) they are denied.',
+      '`merge` refuses a draft, a conflict, requested changes and checks that are failing or pending, binds to the head commit it checked (`--match-head-commit`), and never uses `--admin`, `--auto` or `--delete-branch`.',
+      'A review is at most 5,000 characters, the diff 12,000. Every `gh` call times out after 60 s and runs with no prompt and a minimal environment.',
+    ],
+    failures: [
+      {
+        message: 'could not be read',
+        meaning: 'No such pull request, no access, or `gh` is missing or not signed in.',
+      },
+      {
+        message: 'The checks could not be read for this head commit',
+        meaning:
+          'The head moved while the checks were read, or `gh` gave no check data. Try again.',
+      },
+      {
+        message: 'a comment or change request needs "body"',
+        meaning: 'A `comment` or `request-changes` review with no text.',
+      },
+    ],
+    cli: 'clawai -p "Review pull request 42 and approve it if the diff is sound" --pull-requests --permission-mode ask',
+    sdk: "createAgent({ auth: { token }, workspaceRoot: dir, pullRequests: true, permissions: { allow: ['read', 'http', 'http-write'], approve } })",
+  },
+  {
     tool: 'code.gates',
     purpose:
       'Run the project’s own lint, typecheck, test, build and format checks and get a short, structured answer instead of a log.',

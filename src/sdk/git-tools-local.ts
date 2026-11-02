@@ -11,6 +11,9 @@ import type { GitToolContext } from './git-tools.types';
 
 type ToolResult = Record<string, unknown>;
 
+/** Index/worktree status codes of a path that still has an unresolved merge conflict. */
+const UNMERGED_STATUS = /^(?:DD|AU|UD|UA|DU|AA|UU) /u;
+
 const QUICK = { write: true, timeoutMs: GIT_QUICK_TIMEOUT_MS } as const;
 
 /**
@@ -50,8 +53,10 @@ export async function rebaseOperation(context: GitToolContext): Promise<ToolResu
 }
 
 /**
- * `push` shelves tracked changes (untracked files stay: git's cleanup of them
- * does not work under the literal pathspecs every call here runs with), `pop` brings the newest back, `list` shows what is shelved. */
+ * `push` shelves tracked changes AND untracked files (never ignored ones),
+ * `pop` brings the newest back, `list` shows what is shelved. Nothing here
+ * drops or clears a stash.
+ */
 export async function stashOperation(context: GitToolContext): Promise<ToolResult> {
   const action = context.args.action;
   if (action === 'list') return outcome(await runGit(context, ['stash', 'list'], QUICK));
@@ -60,14 +65,72 @@ export async function stashOperation(context: GitToolContext): Promise<ToolResul
   throw new Error('workspace.git stash: "action" is push, pop or list.');
 }
 
+/** Status entries of the tree: `XY path`, untracked files listed one by one. */
+async function treeEntries(context: GitToolContext): Promise<readonly string[]> {
+  const status = await runGit(
+    context,
+    ['status', '--porcelain=v1', '-z', '--untracked-files=all'],
+    { ...QUICK, write: false },
+  );
+  return status.stdout.split('\0').filter((entry) => entry.length > 3);
+}
+
+/**
+ * Shelves the tree, untracked files included, and proves the untracked files
+ * landed in the stash (its third parent) before saying so. A tree git cannot
+ * restore (unresolved conflicts) is refused up front; if the proof fails the
+ * stash is applied back, never dropped, and the answer says so.
+ */
 async function stashPush(context: GitToolContext): Promise<ToolResult> {
   const note = oneLine('stash', context.args.message);
+  const entries = await treeEntries(context);
+  if (entries.some((entry) => UNMERGED_STATUS.test(entry))) {
+    throw new Error(
+      'workspace.git stash push: the tree has unresolved conflicts; resolve them first.',
+    );
+  }
+  const untracked = entries
+    .filter((entry) => entry.startsWith('?? '))
+    .map((entry) => entry.slice(3));
+  const before = await stashTip(context);
   const result = await runGit(
     context,
-    ['stash', 'push', ...(note === undefined ? [] : ['--message', note])],
-    QUICK,
+    ['stash', 'push', '--include-untracked', ...(note === undefined ? [] : ['--message', note])],
+    { ...QUICK, literalPathspecs: false },
   );
-  return outcome(result);
+  const tip = await stashTip(context);
+  if (result.exitCode !== 0 || tip === before) return outcome(result, { stashed: false });
+  const kept = await stashedUntracked(context);
+  if (untracked.every((file) => kept.has(file))) {
+    return outcome(result, { stashed: true, untracked: untracked.length });
+  }
+  const restore = await runGit(context, ['stash', 'apply', '--index'], QUICK);
+  return outcome(result, {
+    stashed: false,
+    stashKept: true,
+    restored: restore.exitCode === 0,
+    problem: 'Untracked files were not found in the stash; the stash was applied back and kept.',
+  });
+}
+
+/** The commit `refs/stash` points at, or undefined when nothing is stashed. */
+async function stashTip(context: GitToolContext): Promise<string | undefined> {
+  const tip = await runGit(context, ['rev-parse', '--verify', '--quiet', 'refs/stash'], {
+    ...QUICK,
+    write: false,
+  });
+  return tip.exitCode === 0 ? tip.stdout.trim() : undefined;
+}
+
+/** The files the newest stash holds as untracked (its third parent). */
+async function stashedUntracked(context: GitToolContext): Promise<ReadonlySet<string>> {
+  const listed = await runGit(context, ['ls-tree', '-r', '--name-only', '-z', 'refs/stash^3'], {
+    ...QUICK,
+    write: false,
+  });
+  return new Set(
+    listed.exitCode === 0 ? listed.stdout.split('\0').filter((f) => f.length > 0) : [],
+  );
 }
 
 function oneLine(operation: string, value: unknown): string | undefined {

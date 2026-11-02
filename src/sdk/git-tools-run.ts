@@ -78,7 +78,7 @@ export function runGitProcess(
     let aborted = false;
     let settled = false;
     const timers: NodeJS.Timeout[] = [];
-    const child = spawn('git', [...args], {
+    const child = spawn(options.executable ?? 'git', [...args], {
       cwd: options.cwd,
       env: { ...options.environment },
       shell: false,
@@ -161,7 +161,10 @@ export function runGit(
   const config = (invocation.config ?? []).flatMap((pair) => ['-c', pair]);
   return runGitProcess([...credentials, ...config, ...prepared.arguments], {
     cwd: context.workspace,
-    environment: { ...prepared.environment, GIT_LITERAL_PATHSPECS: '1' },
+    environment: {
+      ...prepared.environment,
+      GIT_LITERAL_PATHSPECS: invocation.literalPathspecs === false ? '0' : '1',
+    },
     timeoutMs: invocation.timeoutMs,
     signal: context.signal,
   });

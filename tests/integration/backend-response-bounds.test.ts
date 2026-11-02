@@ -167,7 +167,9 @@ describe('BackendClient response bounds', () => {
     const client = await clientFor(
       vi
         .fn<typeof fetch>()
-        .mockResolvedValue(new Response(`secret=${'x'.repeat(64_001)}`, { status: 503 })),
+        .mockImplementation(
+          async () => new Response(`secret=${'x'.repeat(64_001)}`, { status: 503 }),
+        ),
     );
 
     const error = await client.getUsage().catch((reason: unknown) => reason);

@@ -8,6 +8,8 @@ export interface BoundedText {
 /** How to run one git process. */
 export interface GitRunOptions {
   readonly cwd: string;
+  /** The program to run; git unless a tool needs its sibling (`gh`). */
+  readonly executable?: string;
   readonly environment: Readonly<Record<string, string>>;
   readonly timeoutMs: number;
   readonly signal?: AbortSignal | undefined;
@@ -52,4 +54,6 @@ export interface GitInvocation {
   readonly credentials?: boolean;
   /** Extra `-c key=value` pairs, placed before the subcommand. */
   readonly config?: readonly string[];
+  /** False only for a call that names no path, where literal pathspecs would break untracked-file cleanup. Default true. */
+  readonly literalPathspecs?: boolean;
 }

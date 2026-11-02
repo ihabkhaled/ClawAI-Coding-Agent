@@ -124,7 +124,7 @@ describe('usageAttributionLines', () => {
     expect(text).toContain('5 tokens over 1 turns.');
     expect(text).toContain('### By source');
     expect(text).toContain('### By model');
-    expect(text).toContain('| chat | 1 | 3 | 2 | 1 | 5 |');
-    expect(text).toContain('| openai/gpt | 1 | 3 | 2 | 1 | 5 |');
+    expect(text).toContain('| chat | 1 | 3 | 2 | 1 | 0 | 5 |');
+    expect(text).toContain('| openai/gpt | 1 | 3 | 2 | 1 | 0 | 5 |');
   });
 });

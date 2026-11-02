@@ -4,6 +4,7 @@ import { httpDocumentText } from './document-text-http';
 import { knowledgeToolkit } from './knowledge-toolkit';
 import { mcpToolkit } from './mcp-toolkit';
 import { permissionsForMode } from './permission-modes';
+import { prToolkit } from './pr-toolkit';
 import { processWatchToolkit } from './process-watch-toolkit';
 import { PLAN_TOOL_WITHHELD_PATTERN } from './task-plan-tool.constants';
 import { combineToolkits, restrictToolkit } from './toolkit-compose';
@@ -95,6 +96,7 @@ function optionalParts(
           model: config.vision.model,
           port: config.vision.port ?? httpVision(backendUrl, token),
         }),
+    config.pullRequests === true ? prToolkit(config.workspaceRoot, permissions) : undefined,
     team?.toolkit(permissions.allow, permissions.approve),
   ];
   return parts.filter((part): part is AgentToolkit => part !== undefined);

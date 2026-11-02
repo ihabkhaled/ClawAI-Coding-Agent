@@ -103,7 +103,11 @@ vision model in a separate thread. Offer it with `--vision`, `--vision-model` or
 prompt with `--image` currently loses the attachment on the server (an `images.not-delivered` event says so); a file in the
 workspace is not affected.
 
-Office files: `workspace.file read` also reads PDF, DOCX, XLSX, PPTX and RTF through the ClawAI backend (5 MB cap; a PDF range via `startLine`/`endLine`). Reading an image, audio or video file says what it is; use `vision.describe` for a png, jpeg or webp.
+Office files: `workspace.file read` also reads PDF, DOCX, XLSX, PPTX and RTF through the ClawAI backend (5 MB cap; a PDF range via `startLine`/`endLine`). Reading an image says what it is; use `vision.describe` for a png, jpeg or webp.
+
+Audio and video: `workspace.file read` transcribes mp3, m4a, wav, ogg, flac, aac, webm, mp4, mov and mkv through the backend's billed `POST /files/transcribe-text`. You get the transcript only. The result says "billed to your credit"; a 402 stops with a clear message; a file over 15 MB is refused first (the backend caps audio at 12 MB and video at the shorter of your plan limit and 30 minutes). It is never retried, so it cannot bill twice. Live proof against a running backend is pending.
+
+Pull requests: add `--pull-requests` (SDK `pullRequests: true`) and `workspace.pr` can view, review and merge an existing GitHub pull request through `gh`. Review and merge always ask; merge refuses a draft, a conflict or failing checks and never uses `--admin`, `--auto` or `--delete-branch`. Tested with a fake `gh` only, never against a real GitHub pull request. See [HEADLESS](HEADLESS.md#the-pull-request-tool).
 
 ## 15. What does the agent remember between runs, and what must I never rely on?
 
