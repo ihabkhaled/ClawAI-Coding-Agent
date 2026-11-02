@@ -125,9 +125,10 @@ describe('backend failure classification', () => {
 });
 
 describe('retryClassFor', () => {
-  it('allows an opted-in GET and a keyed command, and nothing else', () => {
+  it('repeats a GET by default, a keyed command when asked, and nothing else', () => {
     expect(retryClassFor('GET', 'read', undefined)).toBe('read');
-    expect(retryClassFor('GET', undefined, undefined)).toBeUndefined();
+    expect(retryClassFor('GET', undefined, undefined)).toBe('read');
+    expect(retryClassFor('GET', 'never', undefined)).toBeUndefined();
     expect(retryClassFor('GET', 'command', undefined)).toBeUndefined();
     expect(retryClassFor('POST', 'command', { idempotencyKey: 'k' })).toBe('command');
     expect(retryClassFor('POST', 'start', { idempotencyKey: 'k' })).toBe('start');
@@ -138,6 +139,27 @@ describe('retryClassFor', () => {
     expect(retryClassFor('POST', undefined, { idempotencyKey: 'k' })).toBeUndefined();
     expect(retryClassFor('PATCH', 'command', { idempotencyKey: 'k' })).toBeUndefined();
     expect(retryClassFor('DELETE', 'command', { idempotencyKey: 'k' })).toBeUndefined();
+  });
+});
+
+describe('a GET that nobody opted in', () => {
+  it('is repeated under the bounded read allowance and then gives up', async () => {
+    const h = harness();
+    const failure = http(503);
+    const call = failingThen([failure, failure, failure, failure, failure], 'never reached');
+    const retryClass = retryClassFor('GET', undefined, undefined);
+
+    expect(retryClass).toBe('read');
+    await expect(
+      withBackendRetries(retryClass ?? 'read', call.run, undefined, h.tuning),
+    ).rejects.toBe(failure);
+    expect(call.calls()).toBe(3);
+    expect(h.waits.length).toBe(2);
+  });
+
+  it('is not repeated when the caller says never, and a 404 is never repeated', () => {
+    expect(retryClassFor('GET', 'never', undefined)).toBeUndefined();
+    expect(classifyBackendFailure(http(404))).toEqual({ retry: false });
   });
 });
 

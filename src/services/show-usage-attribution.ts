@@ -8,7 +8,7 @@ import type {
 function row(line: UsageAttributionLine): string {
   return `| ${line.dimension} | ${String(line.turns)} | ${String(line.input)} | ${String(
     line.output,
-  )} | ${String(line.cached)} | ${String(line.total)} |`;
+  )} | ${String(line.cached)} | ${String(line.cacheWrite ?? 0)} | ${String(line.total)} |`;
 }
 
 function table(
@@ -22,8 +22,8 @@ function table(
     '',
     `| ${dimension} | ${vscode.l10n.t('Turns')} | ${vscode.l10n.t('Input')} | ${vscode.l10n.t(
       'Output',
-    )} | ${vscode.l10n.t('Cached')} | ${vscode.l10n.t('Total')} |`,
-    '| --- | --- | --- | --- | --- | --- |',
+    )} | ${vscode.l10n.t('Cached')} | ${vscode.l10n.t('Cache write')} | ${vscode.l10n.t('Total')} |`,
+    '| --- | --- | --- | --- | --- | --- | --- |',
     ...lines.map(row),
   ];
 }

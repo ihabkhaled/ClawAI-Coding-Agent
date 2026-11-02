@@ -1,4 +1,5 @@
 import { BackendRequestError } from '../backend/backend-errors';
+import { accessQueries, mergeModelAccess, type ModelAccessHint } from '../core/model-access-merge';
 import { buildModelCatalog, type ModelCatalogEntry } from '../core/model-catalog';
 
 import type {
@@ -17,6 +18,10 @@ export interface ModelBackendPort {
   getLocalOllamaModels(): Promise<LocalOllamaModel[]>;
   getRouterModels(): Promise<RouterModel[]>;
   getOrganizationPolicy(): Promise<OrganizationPolicy | undefined>;
+  /** Cost band and availability hints for the picker; optional so an older port still works. */
+  getModelAccess?(
+    models: readonly { provider: string; model: string }[],
+  ): Promise<readonly ModelAccessHint[]>;
 }
 
 export interface ModelRefreshResult {
@@ -118,13 +123,21 @@ export class ModelService {
       localOllamaModels,
       localFrontierModels,
     );
-    return {
-      catalog: applyOrganizationModelAccess(
-        applyModelAccess(catalog, entitlements),
-        organizationPolicy?.allowedModels,
-      ),
-      entitlements,
-      warnings,
-    };
+    const visible = applyOrganizationModelAccess(
+      applyModelAccess(catalog, entitlements),
+      organizationPolicy?.allowedModels,
+    );
+    return { catalog: await this.withAccessHints(visible), entitlements, warnings };
+  }
+
+  /** Marks the catalog with cost bands; any failure leaves it untouched (fail open). */
+  private async withAccessHints(catalog: ModelCatalogEntry[]): Promise<ModelCatalogEntry[]> {
+    const queries = accessQueries(catalog);
+    if (this.backend.getModelAccess === undefined || queries.length === 0) return catalog;
+    try {
+      return mergeModelAccess(catalog, await this.backend.getModelAccess(queries));
+    } catch {
+      return catalog;
+    }
   }
 }

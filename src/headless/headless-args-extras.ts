@@ -52,6 +52,7 @@ type Extras = Partial<
     | 'maxAgents'
     | 'toolsProfile'
     | 'deferTools'
+    | 'pullRequests'
   >
 >;
 

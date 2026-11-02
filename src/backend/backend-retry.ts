@@ -13,7 +13,11 @@ import {
   START_SAFE_STATUSES,
 } from './backend-retry.constants';
 
-import type { BackendRetryClass, BackendRetryTuning } from './backend-retry.types';
+import type {
+  BackendRetryClass,
+  BackendRetryRequest,
+  BackendRetryTuning,
+} from './backend-retry.types';
 import type { RetryVerdict } from '../core/retry-classifier.types';
 
 /** Waits `ms`, or less when `signal` aborts; the caller checks the signal. */
@@ -118,16 +122,18 @@ export async function withBackendRetries<T>(
 
 /**
  * The retry class a request may use, or `undefined` when it must not be
- * repeated. Retrying is opt-in: a GET is repeated only when its caller asked
- * for `read`, and a POST only when it asked for `command` AND its body really
- * carries an idempotency key. Without a key a repeat could act twice.
+ * repeated. A GET is idempotent, so it is repeated by default under the bounded
+ * `read` allowance (3 tries, 20 s); a caller opts out with `'never'`. A POST is
+ * repeated only when its caller asked for `command` or `start` AND its body
+ * really carries an idempotency key: without one a repeat could act twice.
+ * Nothing else is ever repeated.
  */
 export function retryClassFor(
   method: 'GET' | 'POST' | 'PATCH' | 'DELETE',
-  requested: BackendRetryClass | undefined,
+  requested: BackendRetryRequest | undefined,
   body: unknown,
 ): BackendRetryClass | undefined {
-  if (method === 'GET') return requested === 'read' ? 'read' : undefined;
+  if (method === 'GET') return requested === undefined || requested === 'read' ? 'read' : undefined;
   if (method !== 'POST' || (requested !== 'command' && requested !== 'start')) return undefined;
   const key =
     typeof body === 'object' && body !== null

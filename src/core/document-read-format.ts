@@ -1,10 +1,15 @@
 import {
   DOCUMENT_READ_FORMATS,
+  TRANSCRIBABLE_MEDIA_EXTENSIONS,
   UNREADABLE_MEDIA_EXTENSIONS,
   VISION_DESCRIBE_EXTENSIONS,
 } from './document-read-format.constants';
 
-import type { DocumentReadFormat, UnreadableMediaKind } from './document-read-format.types';
+import type {
+  DocumentReadFormat,
+  TranscribableMediaKind,
+  UnreadableMediaKind,
+} from './document-read-format.types';
 
 function extensionOf(path: string): string {
   const name = path.split(/[\\/]/u).pop() ?? path;
@@ -20,6 +25,15 @@ function extensionOf(path: string): string {
 export function documentFormatOf(path: string): DocumentReadFormat | undefined {
   const extension = extensionOf(path);
   return DOCUMENT_READ_FORMATS.find((format) => format === extension);
+}
+
+/** Audio or video the backend can transcribe, decided on the extension; audio wins for webm. */
+export function transcribableMediaKind(path: string): TranscribableMediaKind | undefined {
+  const extension = extensionOf(path);
+  const kinds = Object.keys(TRANSCRIBABLE_MEDIA_EXTENSIONS) as TranscribableMediaKind[];
+  return kinds.find((kind) =>
+    (TRANSCRIBABLE_MEDIA_EXTENSIONS[kind] as readonly string[]).includes(extension),
+  );
 }
 
 /** What an image, audio or video file is, when a text read cannot return it. */

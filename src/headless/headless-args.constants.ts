@@ -60,6 +60,7 @@ export const HEADLESS_BARE_FLAGS: readonly string[] = [
   '--allow-shell',
   '--vision',
   '--defer-tools',
+  '--pull-requests',
 ];
 
 /** Flags that take a value, each mapped to the field it fills. */
@@ -125,6 +126,8 @@ export const HEADLESS_USAGE = [
   '  --allowed-tools <globs>      Comma list of tool patterns to allow, e.g. workspace.file.*,',
   '                               mcp__echo__*. Empty means no restriction. Repeatable.',
   '  --disallowed-tools <globs>   Tool patterns to refuse. Deny wins over allow. Repeatable.',
+  '  --pull-requests              Offer workspace.pr: view a pull request through gh (grant http); review and merge too under',
+  '                               --permission-mode (grant http-write), asked about every time, denied with no one to ask.',
   '  --http-allow-host <host>     Host http.request may reach: host, host:port or *.example.com (no port = 80/443',
   '                               only). Loopback and private addresses only when listed. Repeatable. Default: none.',
   '  --write-scope <globs>        Confine every file and git change to these workspace-relative globs',

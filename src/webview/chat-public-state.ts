@@ -1,9 +1,10 @@
+import { isModelDimmed } from '../core/model-access-merge';
 import { selectedModelRunsTools } from '../core/model-tools';
 import { visibleThreads } from '../core/thread-list';
 import { zeroRetentionPosture } from '../core/zero-retention-posture';
 
 import type { ExtensionSnapshot } from '../core/extension-state';
-import type { ModelCatalogEntry } from '../core/model-catalog';
+import type { ModelCatalogEntry, ModelCostBand } from '../core/model-catalog';
 import type { RuntimeSnapshot } from '../core/runtime/runtime-event-reducer';
 
 export interface PublicRuntimeBudgetState {
@@ -143,7 +144,12 @@ function publicTitle(value: string | null | undefined): string {
 export type PublicModelEntry = Pick<
   ModelCatalogEntry,
   'id' | 'key' | 'provider' | 'model' | 'displayName' | 'isLocal' | 'source' | 'contextTokens'
->;
+> & {
+  /** The cost band only; absent means no mark. */
+  readonly costClass?: ModelCostBand;
+  /** Dim the entry in the picker; a hint, the entry stays selectable. */
+  readonly dimmed?: boolean;
+};
 
 export function publicModelEntry(entry: ModelCatalogEntry): PublicModelEntry {
   return {
@@ -155,6 +161,8 @@ export function publicModelEntry(entry: ModelCatalogEntry): PublicModelEntry {
     isLocal: entry.isLocal,
     source: entry.source,
     contextTokens: entry.contextTokens,
+    ...(entry.costClass === undefined ? {} : { costClass: entry.costClass }),
+    ...(isModelDimmed(entry) ? { dimmed: true } : {}),
   };
 }
 

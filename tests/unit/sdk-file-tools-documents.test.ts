@@ -194,8 +194,8 @@ describe('workspace.file read of documents', () => {
 
   it.each([
     ['a.png', 'an image file'],
-    ['a.mp3', 'an audio file'],
-    ['a.mp4', 'a video file'],
+    ['a.opus', 'an audio file'],
+    ['a.avi', 'a video file'],
   ])('refuses %s with the media message', async (name, phrase) => {
     const root = workspace();
     put(root, name, Buffer.from('not really media'));

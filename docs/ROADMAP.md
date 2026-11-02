@@ -59,7 +59,7 @@ page, ship-gate hardening, [ADR 0008](adr/0008-ship-gate-ci-parity.md)).
 | F030 Computer use          | decision   | Desktop-wide input. Browser click, type, scroll, observe and screenshots to vision models are done.                                                                             |
 | F067 Panel placement       | platform   | A `secondarySidebar` views container needs engine `^1.106`; the engine is `^1.98`.                                                                                              |
 | F081 Marketplaces          | backend    | agent-service serving `allowedPluginMarketplaces`. Signatures are done (ADR 0006).                                                                                              |
-| F093 Prompt caching        | extension  | Backend shipped (ADR-153). Parsing and accumulation of `cacheCreationPromptTokens` are done in 1.110.0; the display (tooltip, usage dialog) and Runtime V2 usage events remain. |
+| F093 Prompt caching        | extension  | Backend shipped (ADR-153). Parsing done in 1.110.0; display (panel token tooltip, usage dialog 'Cache write' column) and Runtime V2 `cacheWriteTokens` done in 1.111.0. Left: live proof with the per-model cache switch ON (default OFF). |
 | F095 Resume cloud sessions | backend    | Runner-hosted resume: workspace or repository on `createThread`, capability reconciliation.                                                                                     |
 | F097 Mobile                | product    | A native app that uses the pairing credential. QR and link are done.                                                                                                            |
 | F098 Cloud sessions        | backend    | Hosted runners, cloning, teardown. Handoff and stop are done.                                                                                                                   |
@@ -70,7 +70,7 @@ page, ship-gate hardening, [ADR 0008](adr/0008-ship-gate-ci-parity.md)).
 
 ### Next increments, in order
 
-1. F093: read the cache-write field (`cacheCreationPromptTokens`) in the extension; the backend is shipped.
+1. F093: live proof of the cache-write display against a backend with the per-model switch ON (display and Runtime V2 field shipped in 1.111.0, fixtures only).
 2. F081 and F108: one backend route or field each.
 3. F067 and F030: record the decision first (raise the engine floor? approve an
    OS-level input tool?), then implement.

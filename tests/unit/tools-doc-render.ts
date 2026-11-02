@@ -12,6 +12,7 @@ import { KNOWLEDGE_TOOL_OPERATIONS } from '../../src/sdk/knowledge-tool.constant
 import { isPolicyDrivenMode, policyOutcome } from '../../src/sdk/permission-mode-policy';
 import { needsApproval } from '../../src/sdk/permission-modes';
 import { AGENT_PLAN_TOOL_CATEGORIES } from '../../src/sdk/permission-modes.constants';
+import { PR_TOOL_OPERATIONS } from '../../src/sdk/pr-tool.constants';
 import { PROCESS_WATCH_OPERATIONS } from '../../src/sdk/process-watch-tool.constants';
 import { VISION_TOOL_OPERATIONS } from '../../src/sdk/vision-tool.constants';
 import { toolCategory } from '../../src/sdk/workspace-toolkit';
@@ -58,6 +59,7 @@ export function realDefinitions(): readonly RealDefinition[] {
     workspaceRoot: os.tmpdir(),
     permissions: { allow: EVERY, httpAllowHosts: ['localhost'], shell: {} },
     loadKnowledge: true,
+    pullRequests: true,
     taskPlan: true,
     vision: {},
     browser: {},
@@ -73,6 +75,7 @@ export function realDefinitions(): readonly RealDefinition[] {
 const OWN_CATEGORIES: Readonly<Record<string, Readonly<Record<string, string | undefined>>>> = {
   'browser.page': BROWSER_TOOL_OPERATIONS,
   'process.watch': PROCESS_WATCH_OPERATIONS,
+  'workspace.pr': PR_TOOL_OPERATIONS,
   'knowledge.context': KNOWLEDGE_TOOL_OPERATIONS,
   'vision.describe': VISION_TOOL_OPERATIONS,
   'agent.team': AGENT_TEAM_TOOL_OPERATIONS,

@@ -13,6 +13,16 @@ function count(value: unknown): number {
 }
 
 /**
+ * Adds a count the backend sent to a running total that stays absent until one arrives.
+ * Cache WRITE tokens (ADR-153) use it: zero would read as "nothing was written" on an
+ * older backend that never reports the field.
+ */
+function addSent(total: number | undefined, sent: unknown): number | undefined {
+  if (typeof sent !== 'number' || !Number.isFinite(sent) || sent < 0) return total;
+  return (total ?? 0) + Math.floor(sent);
+}
+
+/**
  * Turns one run's event stream into tool spans and a usage record.
  *
  * Reads payload fields defensively, the way the sub-agent executor does: the
@@ -31,6 +41,7 @@ export class RunTelemetryRecorder {
   private toolFailures = 0;
   private inputTokens = 0;
   private outputTokens = 0;
+  private cacheWriteTokens: number | undefined;
   private costMicros: number | undefined;
 
   constructor(
@@ -42,6 +53,7 @@ export class RunTelemetryRecorder {
   observe(event: RuntimeEvent): ObservabilitySpan | undefined {
     this.inputTokens += count(event.payload.inputTokens);
     this.outputTokens += count(event.payload.outputTokens);
+    this.cacheWriteTokens = addSent(this.cacheWriteTokens, event.payload.cacheCreationPromptTokens);
     // Only a cost the backend actually sent: a negative or non-finite number is
     // not a cost, and turning it into 0 would read as "free" (F108).
     const sent = event.payload.costMicros;
@@ -73,6 +85,7 @@ export class RunTelemetryRecorder {
       toolFailures: this.toolFailures,
       inputTokens: this.inputTokens,
       outputTokens: this.outputTokens,
+      ...(this.cacheWriteTokens === undefined ? {} : { cacheWriteTokens: this.cacheWriteTokens }),
       ...(this.costMicros === undefined ? {} : { costMicros: this.costMicros }),
       toolsByName: { ...this.toolsByName },
     };

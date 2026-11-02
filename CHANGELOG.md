@@ -2,6 +2,20 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.111.0
+
+- The SDK and CLI `workspace.file read` now transcribes audio and video (mp3, m4a, wav, ogg, flac, aac, webm, mp4, mov, mkv) through your ClawAI backend's `POST /files/transcribe-text`. This is a billed call: the result says "billed to your credit", and a 402 (not enough credit) stops with a clear message that says nothing was billed. It is never retried on purpose, because a re-sent POST could bill twice. The extension refuses files over 15 MB before any call; the backend has its own limits (audio 12 MB, video up to the shorter of your plan limit and 30 minutes). Only the transcript comes back, not the picture. Code: `src/sdk/media-transcribe-http.ts`, `file-tools-media.ts`, `src/core/document-read-format*.ts`. Live proof pending: tested with a fake backend, not yet run against a live one.
+- The model picker marks each model with a cost band (`# Changelog
+
+What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
+
+ to `$$`, `0` for free) and dims models outside your free allowance, from `POST /chat-messages/model-access`. It is a hint only: a dimmed model is still selectable, the send path stays the gate, and an older backend or a failed call shows no marks (it fails open). Code: `src/backend/model-access-client.ts`.
+- Cache write tokens (F093) are now shown: in the panel token tooltip, in the usage dialog (a "Cache write" column) and in Runtime V2 usage events (`cacheWriteTokens`). Tested with fixtures; not yet seen against a backend with the per-model cache switch ON.
+- A plan or credit limit now reads as a plan limit, not "rate limited", in the panel too, through a new `plan` fallback reason.
+- The "run stopped responding" message is translated in all 12 locales (the first, English, line is unchanged).
+- SDK and CLI: a new opt-in `workspace.pr` tool (switch `pullRequests: true`, CLI `--pull-requests`) can view a pull request, review it and merge it through `gh`. Review and merge always ask first; merge refuses a draft, a conflict or failing checks and never uses `--admin`, `--auto` or `--delete-branch`. Tested with a fake `gh` only, never against a real GitHub pull request.
+- `git stash push` in the SDK and CLI now includes untracked files and never drops anything. GET requests to the backend now retry by default, bounded to 3 attempts in 20 seconds. Tests were added for stream-idle recovery.
+
 ## 1.110.0
 
 - A plan or credit limit (the daily chat limit, other plan limits, `RUNTIME_QUOTA_EXCEEDED`, credit used up) now stops on the first attempt with a message that says what happened and what helps, instead of "rate limited, choose another model" after 4 retries. A true model rate limit behaves as before. Model fallback no longer switches model on a plan limit (another model would hit the same limit) but still does when credit is used up. The headless token session now keeps the error code; it dropped it before, so the code never reached the retry logic. The message is English only; the VS Code panel is unchanged for this. Code: `src/core/retry-classifier.ts`, `src/headless/retry-policy.ts`, `token-session.ts`, `runtime-limit-reached-error.ts`.

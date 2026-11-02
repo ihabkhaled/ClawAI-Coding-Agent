@@ -103,6 +103,9 @@ function rows(
  * - `vision.describe` is free until `strict`: the path is workspace-contained,
  *   calls are capped per run and the model is the one the run already talks
  *   to, but pixels (a screenshot of a secret) cannot be redacted.
+ * - `workspace.pr view` is a read like an `http.request` GET; `review` and `merge` change a pull
+ *   request on GitHub (network-write, R3): asked in every mode, never run unasked, and with no
+ *   approver they are denied.
  * - `browser.page click|type|press` is R3 network-write: it can submit a form
  *   to a remote site. `open` is a read from an operator-listed host, like an
  *   `http.request` GET, so `autonomous-scoped` runs it.
@@ -149,6 +152,8 @@ export const TOOL_PERMISSION_ROWS: readonly ToolPermissionRow[] = [
     FREE_BUT_WITHHELD_IN_PLAN,
     READ_R0_WITHHELD_DIFFERS,
   ),
+  ...rows('workspace.pr', 'http', ['view'], FREE, FETCH_R2_DIFFERS),
+  ...rows('workspace.pr', 'http-write', ['review', 'merge'], ALWAYS_ASKED, NONE),
   ...rows('workspace.shell', 'shell', ['run'], ALWAYS_ASKED, NONE),
   ...rows('agent.team', 'agents', ['spawn'], RUNS_LOCAL, NONE),
   ...rows(

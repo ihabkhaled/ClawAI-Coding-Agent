@@ -293,6 +293,8 @@ const workspaceTools: Readonly<Record<string, ToolTable>> = {
     group(FETCH, ['fetch-checks', 'fetch-failure-logs', 'view']),
     group(PUBLISH, ['merge', 'publish', 'review']),
   ),
+  // The SDK's `gh` pull request tool: a read, and two changes to shared state on GitHub.
+  'workspace.pr': merge(group(FETCH, ['view']), group(NETWORK, ['merge', 'review'])),
   'workspace.quality': merge(
     group(RUN, ['run']),
     group(READ, ['discover', 'list-findings', 'plan', 'report']),

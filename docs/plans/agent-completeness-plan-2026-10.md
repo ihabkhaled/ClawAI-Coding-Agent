@@ -18,7 +18,7 @@ Owner decisions that shape it: browser only (no desktop control), user-hosted ru
 - [x] W1-10 backend crawl profiles for runtime clients (monorepo)
 - [x] W1-11 extension parity (secrets env, heartbeat report, resume, repositoryRef, PAYG cost, approval-queue hint, CI lessons)
 - [x] W1-12 backend capability audit (dynamic tools, images, sub-agent runs)
-- [x] W1-13 F093 prompt caching (monorepo) (backend shipped, ADR-153; the extension parses `cacheCreationPromptTokens` since 1.110.0; display still open)
+- [x] W1-13 F093 prompt caching (monorepo) (backend shipped, ADR-153; the extension parses `cacheCreationPromptTokens` since 1.110.0; display shipped in 1.111.0, fixtures only)
 - [x] W1-14 F108 PAYG cost events (monorepo)
 
 ## Wave 2
@@ -56,7 +56,7 @@ Seven audit workstreams, in order:
    - Honest gaps: the stuck message ("The run was stopped: it made the same ...") is English-only (not passed through `l10n`; the idle message is); the stuck path through the run service is covered by its own tests only if the integration lane covers it (unverified); GET retry is opt-in per call, not default (only the protocol read opts in); the SDK "read too long" nudge is not ported to the panel.
 3. Live proof round (also covers W2-04, live QA with 4 models).
 4. CLAUDE.md and AGENTS.md loading in the extension. Done in 1.104.0: the panel puts the same bounded summary the SDK uses in front of each run (`clawAI.loadKnowledge`, default on); and 1.105.0 gives the panel the SDK's read-only `knowledge.context` tool (index, read, search, task; nested `CLAUDE.md` found by `task`), proven in the real extension host. Honest gaps: the always-on summary covers the root files only; a full agent run in a real editor with a live model was not driven.
-5. PR merge and review, and SDK git merge, rebase, stash and tag. Done in 1.106.0: `workspace.git` gains merge, rebase, stash and tag (real-git tests, conflicts abort cleanly); `workspace.pull-request` gains view, review and merge with their own approval. Honest gaps: no pull request tool in the SDK or CLI; the pull request lane was not run against a live GitHub pull request; stash does not include untracked files.
+5. PR merge and review, and SDK git merge, rebase, stash and tag. Done in 1.106.0: `workspace.git` gains merge, rebase, stash and tag (real-git tests, conflicts abort cleanly); `workspace.pull-request` gains view, review and merge with their own approval. Honest gaps at 1.106.0, narrowed in 1.111.0: the SDK and CLI now have the opt-in `workspace.pr` (mocks only, never run against a real GitHub pull request) and `git stash push` includes untracked files; the panel pull request lane was still not run against a live GitHub pull request.
 6. Prompt caching (W1-13).
 7. Media readers.
 

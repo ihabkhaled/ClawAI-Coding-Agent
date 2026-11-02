@@ -41,6 +41,8 @@ import {
 import { submitFeedback, type FeedbackSubmission } from './feedback-client';
 import { deleteFile, uploadFile } from './file-client';
 import { type IntegrationRequester } from './integration-contracts';
+import { fetchModelAccess } from './model-access-client';
+import { type ModelAccessEntry, type ModelAccessQuery } from './model-access-client.types';
 import { modelCatalogClient, type Requester } from './model-catalog-client';
 import { fetchOrganizationPolicy } from './organization-policy-client';
 import { type RemoteRequester } from './remote-session-client';
@@ -67,7 +69,7 @@ import type {
   RuntimeStartAck,
   RuntimeStartRequest,
 } from './backend-client.types';
-import type { BackendRetryClass, BackendRetryTuning } from './backend-retry.types';
+import type { BackendRetryRequest, BackendRetryTuning } from './backend-retry.types';
 import type { ChatAttachment } from '../core/chat-attachment';
 import type { ThreadRewindResult } from '../core/conversation-rewind.types';
 import type { ToolResult } from '../core/runtime/runtime-tool-contracts';
@@ -304,6 +306,10 @@ export class BackendClient {
     return modelCatalogClient.localFrontierModels(this.catalogRequest);
   }
 
+  /** Cost band and availability per model, for the picker; empty when the backend cannot say. */
+  readonly getModelAccess = (models: readonly ModelAccessQuery[]): Promise<ModelAccessEntry[]> =>
+    fetchModelAccess(this.researchPost, models);
+
   authorizationUrl(path: string): string {
     return `${this.backendUrl}${path}`;
   }
@@ -431,7 +437,7 @@ export class BackendClient {
     options: {
       method?: 'GET' | 'POST' | 'PATCH' | 'DELETE';
       body?: unknown;
-      retry?: BackendRetryClass;
+      retry?: BackendRetryRequest;
       signal?: AbortSignal;
       timeoutMs?: number;
     } = {},

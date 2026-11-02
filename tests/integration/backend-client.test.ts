@@ -509,7 +509,7 @@ describe('BackendClient', () => {
 
     const fetcher = vi
       .fn<typeof fetch>()
-      .mockResolvedValue(new Response('token=do-not-log', { status: 429 }));
+      .mockImplementation(async () => new Response('token=do-not-log', { status: 429 }));
     const { client } = await authenticatedClient(fetcher);
     const error = await client.getUsage().catch((reason: unknown) => reason);
     expect(error).toBeInstanceOf(BackendRequestError);

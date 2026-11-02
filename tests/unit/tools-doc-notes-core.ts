@@ -89,7 +89,8 @@ export const CORE_TOOL_NOTES: readonly ToolNote[] = [
       merge: '{branch}: merge a local branch; a conflict is reported and the merge aborted.',
       rebase:
         '{branch}: rebase onto a local branch; a conflict is reported and the rebase aborted.',
-      stash: '{action, message?}: push, pop (clean tree only) or list shelved tracked changes.',
+      stash:
+        '{action, message?}: push (tracked and untracked files, never ignored ones; unresolved conflicts are refused), pop (clean tree only) or list.',
       tag: '{name?, message?, ref?}: list tags, or make one local annotated tag; never replaced or pushed.',
     },
     limits: [

@@ -117,8 +117,8 @@ export const GIT_TOOL_DESCRIPTION =
   'Write (granted separately): add/unstage/restore take explicit "paths" (never "." or a wildcard); ' +
   'commit {message (one line, <=100 chars), body?, trailers?[Co-Authored-By]} runs the hooks; fetch; ' +
   'pull (rebase only, no autostash; a conflict is reported and the rebase aborted); ' +
-  'push (HEAD to origin, current or named "branch", never forced, no tags); switch {branch, create?}; ' +
-  'merge/rebase {branch} (conflict: aborted); stash {action: push|pop|list, message?}; tag {name?, message?, ref?} (local, annotated; no name lists). ' +
+  'push (HEAD to origin, or "branch"; never forced, no tags); switch {branch, create?}; ' +
+  'merge/rebase {branch} (conflict: aborted); stash {action: push (+untracked)|pop|list, message?}; tag {name?, message?, ref?} (local, annotated; no name lists). ' +
   'Hooks can take minutes: timeoutSeconds (default 1800, max 3600).';
 
 export const GIT_TOOL_INPUT_SCHEMA = {

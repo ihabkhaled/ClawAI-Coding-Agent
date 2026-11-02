@@ -3,6 +3,7 @@ import * as vscode from 'vscode';
 import { type RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import { toolActivity } from '../core/tool-activity';
 
+import { localizedFailure } from './runtime-failure-wording';
 import { type ModelFallbackReason, type RuntimeApprovalPhase } from './runtime-studio.types';
 import { RUNTIME_PHASE_EVENTS } from './runtime-ui-projection.constants';
 
@@ -39,9 +40,24 @@ function readReason(payload: Record<string, unknown>): TerminalReason | undefine
   return code.length === 0 && message.length === 0 ? undefined : { code, message };
 }
 
+/** The wording per cause: a plan or credit limit is the account's, not a busy model's. */
+function fallbackDetail(from: string, to: string, reason: ModelFallbackReason | undefined): string {
+  if (reason === 'credit') {
+    return vscode.l10n.t('Credit used up on {0}, continuing on {1}', from, to);
+  }
+  if (reason === 'plan') {
+    return vscode.l10n.t('Plan limit reached on {0}, continuing on {1}', from, to);
+  }
+  return vscode.l10n.t('{0} is rate limited; continuing on {1}', from, to);
+}
+
 function describe(reason: TerminalReason | undefined): string {
   if (reason === undefined) {
     return vscode.l10n.t('The ClawAI run failed without a reported reason.');
+  }
+  const localized = localizedFailure(reason.code, reason.message);
+  if (localized !== undefined) {
+    return localized;
   }
   if (reason.message.length === 0) {
     return vscode.l10n.t('The ClawAI run failed: {0}', reason.code);
@@ -149,14 +165,9 @@ export class RuntimeUiProjector {
     this.activity(label, effect);
   }
 
-  /** A rate-limited or credit-spent model was replaced; the card says so rather than going quiet. */
+  /** A rate-limited, credit-spent or plan-limited model was replaced; the card says so rather than going quiet. */
   modelFallback(from: string, to: string, reason?: ModelFallbackReason): void {
-    this.activity(
-      vscode.l10n.t('Switched model'),
-      reason === 'credit'
-        ? vscode.l10n.t('Credit used up on {0}, continuing on {1}', from, to)
-        : vscode.l10n.t('{0} is rate limited; continuing on {1}', from, to),
-    );
+    this.activity(vscode.l10n.t('Switched model'), fallbackDetail(from, to, reason));
   }
 
   project(event: RuntimeEvent): void {

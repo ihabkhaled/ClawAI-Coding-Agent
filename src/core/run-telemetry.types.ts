@@ -14,6 +14,8 @@ export interface RunUsage {
   readonly toolFailures: number;
   readonly inputTokens: number;
   readonly outputTokens: number;
+  /** Prompt tokens written to the provider's cache; present only when the backend reported them. */
+  readonly cacheWriteTokens?: number;
   /** Integer micro-USD, present only when the backend reported a cost. */
   readonly costMicros?: number;
   /** Calls per tool name, so a dashboard can say which tools a team leans on. */

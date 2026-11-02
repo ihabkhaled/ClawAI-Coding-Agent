@@ -1,3 +1,4 @@
+import { PLAN_LIMIT_CODE_PATTERN } from '../core/retry-classifier.constants';
 import {
   CREDIT_FAILURE_CODE_PATTERN,
   PROVIDER_UNAVAILABLE_CODE_PATTERN,
@@ -26,7 +27,12 @@ export function isFallbackText(text: string): boolean {
   return isCreditText(text) || PROVIDER_UNAVAILABLE_CODE_PATTERN.test(codeOf(text));
 }
 
-/** Why a model was left: spent credit when the refusal carries a credit code, otherwise a rate limit. */
+/**
+ * Why a model was left: spent credit or a reached plan limit when the refusal
+ * carries that code, otherwise a rate limit. A plan or credit 429 is about the
+ * account, so it must not be reported as the model being busy.
+ */
 export function fallbackReasonFor(text: string): ModelFallbackReason {
-  return isCreditText(text) ? 'credit' : 'rate-limit';
+  if (isCreditText(text)) return 'credit';
+  return PLAN_LIMIT_CODE_PATTERN.test(codeOf(text)) ? 'plan' : 'rate-limit';
 }

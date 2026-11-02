@@ -87,8 +87,8 @@ export interface RuntimeStudioAnalysisTools {
 
 export type RuntimeApprovalPhase = 'waiting' | 'approved' | 'rejected';
 
-/** Why a run left a model: it was rate limited, or its credit was used up. */
-export type ModelFallbackReason = 'rate-limit' | 'credit';
+/** Why a run left a model: it was rate limited, its credit was used up, or the plan's own limit was reached. */
+export type ModelFallbackReason = 'rate-limit' | 'credit' | 'plan';
 
 /** A model switch: the labels and, when known, why. */
 export interface ModelFallbackInfo {

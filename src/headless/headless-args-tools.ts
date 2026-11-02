@@ -2,11 +2,12 @@ import { toolsProfileProblem } from '../sdk/tools-profile';
 
 import type { HeadlessInvocation } from './headless-args.types';
 
-type ToolsFlags = Partial<Pick<HeadlessInvocation, 'toolsProfile' | 'deferTools'>>;
+type ToolsFlags = Partial<Pick<HeadlessInvocation, 'toolsProfile' | 'deferTools' | 'pullRequests'>>;
 
 /**
  * `--tools-profile` and `--defer-tools`: the two ways to make the tool catalog
  * cheaper. Neither grants anything; a string is the first mistake found.
+ * `--pull-requests` is the switch for `workspace.pr`; the grants come from `--allow-tools`.
  */
 export function toolsFlags(
   values: ReadonlyMap<string, readonly string[]>,
@@ -18,5 +19,6 @@ export function toolsFlags(
   return {
     ...(profile === undefined ? {} : { toolsProfile: profile }),
     ...(flags.has('--defer-tools') ? { deferTools: true as const } : {}),
+    ...(flags.has('--pull-requests') ? { pullRequests: true as const } : {}),
   };
 }

@@ -1,6 +1,7 @@
 import { z } from 'zod';
 
 import type { ResearchRequester } from './research-client';
+import type { MediaTranscribePort } from '../sdk/media-transcribe.types';
 
 /**
  * What `POST /files/extract-text` returns.
@@ -43,6 +44,8 @@ export async function extractPdfText(
 
 /** The one call the file tool needs to read a PDF. */
 export interface PdfTextPort {
+  /** Audio and video go to the billed transcription route; absent when the host has none. */
+  readonly transcribe?: MediaTranscribePort['transcribe'];
   extract(
     input: {
       filename: string;

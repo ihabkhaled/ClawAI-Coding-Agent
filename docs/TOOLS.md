@@ -25,7 +25,7 @@ The model pays for every offered definition on every turn, so tools stay off unt
 | ------------------- | ---------- | ---------- | ------------ |
 | `workspace.file`    | 9          | 1916       | 479          |
 | `workspace.command` | 4          | 1198       | 300          |
-| `workspace.git`     | 18         | 1531       | 383          |
+| `workspace.git`     | 18         | 1530       | 383          |
 | `workspace.notes`   | 5          | 894        | 224          |
 | `task.plan`         | 4          | 983        | 246          |
 | `code.gates`        | 3          | 1091       | 273          |
@@ -35,6 +35,7 @@ The model pays for every offered definition on every turn, so tools stay off unt
 | `knowledge.context` | 4          | 941        | 235          |
 | `browser.page`      | 11         | 1321       | 330          |
 | `vision.describe`   | 1          | 748        | 187          |
+| `workspace.pr`      | 3          | 704        | 176          |
 | `agent.team`        | 7          | 2014       | 504          |
 | `workspace.web`     | 4          | 1484       | 371          |
 | `runtime.mcp`       | 3          | 1053       | 263          |
@@ -203,7 +204,7 @@ createAgent({
 Look at the repository, and (with a second grant) stage, commit, fetch, pull, push and switch branches.
 
 - **Turn it on:** Reads are on by default (`git`); everything that changes a repository needs `git-write`.
-- **Cost:** the definition is 1531 characters (about 383 tokens), sent on every turn the tool is offered.
+- **Cost:** the definition is 1530 characters (about 383 tokens), sent on every turn the tool is offered.
 
 **Operations**
 
@@ -223,7 +224,7 @@ Look at the repository, and (with a second grant) stage, commit, fetch, pull, pu
 - `restore` {paths[]}: restore named files in the working tree.
 - `merge` {branch}: merge a local branch; a conflict is reported and the merge aborted.
 - `rebase` {branch}: rebase onto a local branch; a conflict is reported and the rebase aborted.
-- `stash` {action, message?}: push, pop (clean tree only) or list shelved tracked changes.
+- `stash` {action, message?}: push (tracked and untracked files, never ignored ones; unresolved conflicts are refused), pop (clean tree only) or list.
 - `tag` {name?, message?, ref?}: list tags, or make one local annotated tag; never replaced or pushed.
 
 **Who is asked, per permission mode** (`runs` = no prompt, `asks` = the approval callback, `removed` = the tool is refused in `plan`, `refused` = never allowed)
@@ -569,6 +570,67 @@ clawai -p "Start node server.js as web, wait until it prints listening, request 
 
 ```ts
 createAgent({ auth: { token }, workspaceRoot: dir, permissions: { allow: ['read', 'command'] } });
+```
+
+### `workspace.pr`
+
+Read, review and merge an existing GitHub pull request through the signed-in `gh` CLI, as you.
+
+- **Turn it on:** `--pull-requests` (SDK `pullRequests: true`). `view` is `http`, `review` and `merge` are `http-write`; the flag adds `http`, and `http-write` only under `--permission-mode`. Needs `gh auth login`.
+- **Cost:** the definition is 704 characters (about 176 tokens), sent on every turn the tool is offered.
+
+**Operations**
+
+- `view` {number, diff?}: the title, state, files, comments and reviews (bounded), and the diff when asked.
+- `review` {number, event, body}: post one review; `event` is `comment`, `approve` or `request-changes`. A comment or change request needs text.
+- `merge` {number, method}: merge when ready; `method` is `squash`, `merge` or `rebase` and is never defaulted.
+
+**Who is asked, per permission mode** (`runs` = no prompt, `asks` = the approval callback, `removed` = the tool is refused in `plan`, `refused` = never allowed)
+
+| Operation | Grant        | plan    | ask  | accept-edits | autonomous-scoped | strict |
+| --------- | ------------ | ------- | ---- | ------------ | ----------------- | ------ |
+| view      | `http`       | runs    | runs | runs         | runs              | runs   |
+| review    | `http-write` | removed | asks | asks         | asks              | asks   |
+| merge     | `http-write` | removed | asks | asks         | asks              | asks   |
+
+**Arguments the model may send** (from the tool definition)
+
+| Name     | Type    | Bounds |
+| -------- | ------- | ------ |
+| `number` | integer |        |
+| `diff`   | boolean |        |
+| `event`  | string  |        |
+| `body`   | string  |        |
+| `method` | string  |        |
+
+**Limits**
+
+- Title, description, comments and reviews are written by other people: results are marked as data, never instructions.
+- `review` and `merge` are asked about in every permission mode except `plan`, where they are not offered; with nobody to ask (no terminal) they are denied.
+- `merge` refuses a draft, a conflict, requested changes and checks that are failing or pending, binds to the head commit it checked (`--match-head-commit`), and never uses `--admin`, `--auto` or `--delete-branch`.
+- A review is at most 5,000 characters, the diff 12,000. Every `gh` call times out after 60 s and runs with no prompt and a minimal environment.
+
+**What the model sees when it fails**
+
+- `could not be read…`: No such pull request, no access, or `gh` is missing or not signed in.
+- `The checks could not be read for this head commit…`: The head moved while the checks were read, or `gh` gave no check data. Try again.
+- `a comment or change request needs "body"…`: A `comment` or `request-changes` review with no text.
+
+**CLI**
+
+```sh
+clawai -p "Review pull request 42 and approve it if the diff is sound" --pull-requests --permission-mode ask
+```
+
+**SDK**
+
+```ts
+createAgent({
+  auth: { token },
+  workspaceRoot: dir,
+  pullRequests: true,
+  permissions: { allow: ['read', 'http', 'http-write'], approve },
+});
 ```
 
 ### `code.gates`

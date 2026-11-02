@@ -409,12 +409,19 @@ function translatedTemplate(template, ...values) {
 // as a capacity number.
 function tokenTooltip(receipt) {
   const detail = translatedTemplate(labels.tokenDetail, receipt.input, receipt.output);
+  const parts = [detail];
   const cached = Number(receipt.cached ?? 0);
-  if (cached <= 0 || receipt.input <= 0) {
-    return detail;
+  if (cached > 0 && receipt.input > 0) {
+    const share = Math.round((cached / receipt.input) * 100);
+    parts.push(translatedTemplate(labels.tokenCached, cached, share));
   }
-  const share = Math.round((cached / receipt.input) * 100);
-  return `${detail} · ${translatedTemplate(labels.tokenCached, cached, share)}`;
+  // Cache WRITE tokens are billed differently from reads, so they get their own
+  // part. Absent (an older backend) or zero says nothing, like the cached part.
+  const written = Number(receipt.cacheWrite ?? 0);
+  if (written > 0) {
+    parts.push(translatedTemplate(labels.tokenCacheWrite, written));
+  }
+  return parts.join(' · ');
 }
 
 function tokenChip(receipt, className = '') {
@@ -1222,6 +1229,49 @@ function requestModelLabel(mode, modelKey, modelKeys) {
   return modelLabel(modelKey);
 }
 
+// The cost BAND of a model, never a rate. Absent or unknown means no mark.
+const COST_BANDS = {
+  FREE: { symbol: '0', labelKey: 'costFree' },
+  CHEAP: { symbol: '$', labelKey: 'costCheap' },
+  STANDARD: { symbol: '$$', labelKey: 'costStandard' },
+  PREMIUM: { symbol: '$$$', labelKey: 'costPremium' },
+  ULTRA: { symbol: '$$$$', labelKey: 'costUltra' },
+};
+
+function costBand(model) {
+  return typeof model.costClass === 'string' ? COST_BANDS[model.costClass] : undefined;
+}
+
+// The picker line: name, then the band mark when there is one.
+function modelOptionText(model) {
+  const band = costBand(model);
+  return band === undefined ? model.displayName : `${model.displayName} · ${band.symbol}`;
+}
+
+// The hover text: the band in words, then why the entry is dimmed. Empty when neither applies.
+function modelOptionHint(model) {
+  const band = costBand(model);
+  const parts = [];
+  if (band !== undefined) {
+    parts.push(labels[band.labelKey]);
+  }
+  if (model.dimmed === true) {
+    parts.push(labels.modelDimmed);
+  }
+  return parts.join(' · ');
+}
+
+// A hint only: the entry stays enabled and selectable.
+function decorateModelElement(element, model) {
+  const hint = modelOptionHint(model);
+  if (hint.length > 0) {
+    element.title = hint;
+  }
+  if (model.dimmed === true) {
+    element.classList.add('model-dimmed');
+  }
+}
+
 function renderModels(models) {
   const existing = new Set(
     [...elements.modelChecks.querySelectorAll('input:checked')].map((input) => input.value),
@@ -1250,7 +1300,8 @@ function renderModels(models) {
     for (const model of groupModels) {
       const option = document.createElement('option');
       option.value = model.key;
-      option.textContent = model.displayName;
+      option.textContent = modelOptionText(model);
+      decorateModelElement(option, model);
       group.append(option);
     }
     elements.modelSelect.append(group);
@@ -1268,10 +1319,16 @@ function renderModels(models) {
       input.checked = existing.has(model.key);
       input.dataset.modelLabel = model.displayName;
       const details = document.createElement('span');
+      const band = costBand(model);
       details.append(
         textElement('strong', '', model.displayName),
-        textElement('small', '', `${model.provider}${model.isLocal ? ` · ${labels.local}` : ''}`),
+        textElement(
+          'small',
+          '',
+          `${model.provider}${model.isLocal ? ` · ${labels.local}` : ''}${band === undefined ? '' : ` · ${band.symbol}`}`,
+        ),
       );
+      decorateModelElement(label, model);
       label.append(input, details);
       options.append(label);
     }

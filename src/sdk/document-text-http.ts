@@ -1,6 +1,8 @@
 import { extractPdfText } from '../backend/pdf-text-client';
 import { RuntimeHttpError } from '../headless/runtime-http-error';
 
+import { httpMediaTranscribe } from './media-transcribe-http';
+
 import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { ResearchRequester } from '../backend/research-client';
 
@@ -31,5 +33,9 @@ export function httpDocumentText(
     if (!response.ok) throw RuntimeHttpError.fromResponse(path, response, text);
     return schema.parse(JSON.parse(text));
   };
-  return { extract: (input, signal) => extractPdfText(post, input, signal) };
+  const media = httpMediaTranscribe(baseUrl, token, fetcher);
+  return {
+    transcribe: (input, signal) => media.transcribe(input, signal),
+    extract: (input, signal) => extractPdfText(post, input, signal),
+  };
 }

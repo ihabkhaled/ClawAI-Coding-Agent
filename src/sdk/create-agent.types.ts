@@ -118,6 +118,12 @@ export interface AgentConfig {
    * research field, so it is not sent to the server. Absent means none.
    */
   readonly research?: ResearchMode | undefined;
+  /**
+   * Offers `workspace.pr` (view, review, merge a pull request through the signed-in `gh`).
+   * `view` needs the `http` grant; `review` and `merge` need `http-write` and an approver,
+   * and are asked about in every permission mode. Off unless asked for.
+   */
+  readonly pullRequests?: boolean | undefined;
   /** Limits and allowed hosts for `browser.page`; the tool needs the `browser` grant. */
   readonly browser?: AgentBrowserOptions | undefined;
   /**

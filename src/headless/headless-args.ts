@@ -80,7 +80,7 @@ function invocationFrom(
   cwd: string,
 ): HeadlessParse {
   const last = (field: string): string | undefined => values.get(field)?.at(-1);
-  const checked = checkedFields(last, flags.has('--json'));
+  const checked = checkedFields(last, flags);
   if (typeof checked === 'string') return { kind: 'usage', message: checked };
   const extras = checkedExtras(values, flags, cwd);
   if (typeof extras === 'string') return { kind: 'usage', message: extras };
@@ -124,17 +124,20 @@ function connectionFrom(
 /** The fields that can be wrong, validated; a string names the first mistake. */
 function checkedFields(
   last: (field: string) => string | undefined,
-  json: boolean,
+  flags: ReadonlySet<string>,
 ): Pick<HeadlessInvocation, 'prompt' | 'outputFormat' | 'allowTools' | 'maxTurns'> | string {
   const prompt = last('prompt');
   if (prompt === undefined || prompt.trim().length === 0) {
     return 'A prompt is required: -p "<task>".';
   }
-  const outputFormat = last('outputFormat') ?? (json ? 'json' : 'text');
+  const outputFormat = last('outputFormat') ?? (flags.has('--json') ? 'json' : 'text');
   if (!isOutputFormat(outputFormat)) {
     return '--output-format must be one of text, json, stream-json.';
   }
-  const allowTools = parseToolList(last('allowTools'), defaultTools(last));
+  const allowTools = parseToolList(
+    last('allowTools'),
+    defaultTools(last, flags.has('--pull-requests')),
+  );
   if (typeof allowTools === 'string') return allowTools;
   const maxTurns = parseMaxTurns(last('maxTurns'));
   if (typeof maxTurns === 'string') return maxTurns;
@@ -168,17 +171,25 @@ export function parseToolList(
  * refused, so each widens the default; without either it stays read and git.
  * A host list is the request for its tool: `--browser-allow-host` adds
  * `browser`, `--http-allow-host` adds `http` (and `http-write`, but only under
- * a permission mode, where every write is put to an approver). `shell` and
+ * a permission mode, where every write is put to an approver); `--pull-requests`
+ * adds the same two for `workspace.pr`. `shell` and
  * `agents` are never a default: they need `--allow-tools` by name.
  */
-function defaultTools(last: (field: string) => string | undefined): readonly AgentToolCategory[] {
+function defaultTools(
+  last: (field: string) => string | undefined,
+  pullRequests: boolean,
+): readonly AgentToolCategory[] {
   const moded = last('permissionMode') !== undefined;
   const base: readonly AgentToolCategory[] = moded ? AGENT_ALL_TOOL_CATEGORIES : ['read', 'git'];
   const mcp: readonly AgentToolCategory[] = moded || last('mcpConfig') === undefined ? [] : ['mcp'];
   const browser: readonly AgentToolCategory[] =
     last('browserAllowHost') === undefined ? [] : ['browser'];
   const http: readonly AgentToolCategory[] =
-    last('httpAllowHost') === undefined ? [] : moded ? ['http', 'http-write'] : ['http'];
+    last('httpAllowHost') === undefined && !pullRequests
+      ? []
+      : moded
+        ? ['http', 'http-write']
+        : ['http'];
   return [...base, ...mcp, ...http, ...browser];
 }
 

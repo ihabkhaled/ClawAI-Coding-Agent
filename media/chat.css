@@ -2337,6 +2337,11 @@ pre {
   background: var(--vscode-list-hoverBackground);
 }
 
+.model-option.model-dimmed,
+option.model-dimmed {
+  opacity: 0.55;
+}
+
 .model-option > span {
   display: grid;
   min-width: 0;
