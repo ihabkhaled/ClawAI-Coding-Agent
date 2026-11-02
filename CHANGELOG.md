@@ -9,7 +9,8 @@ What changed in each release of ClawAI Coding Agent, newest first. The full engi
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
- to `$$`, `0` for free) and dims models outside your free allowance, from `POST /chat-messages/model-access`. It is a hint only: a dimmed model is still selectable, the send path stays the gate, and an older backend or a failed call shows no marks (it fails open). Code: `src/backend/model-access-client.ts`.
+to `$$`, `0` for free) and dims models outside your free allowance, from `POST /chat-messages/model-access`. It is a hint only: a dimmed model is still selectable, the send path stays the gate, and an older backend or a failed call shows no marks (it fails open). Code: `src/backend/model-access-client.ts`.
+
 - Cache write tokens (F093) are now shown: in the panel token tooltip, in the usage dialog (a "Cache write" column) and in Runtime V2 usage events (`cacheWriteTokens`). Tested with fixtures; not yet seen against a backend with the per-model cache switch ON.
 - A plan or credit limit now reads as a plan limit, not "rate limited", in the panel too, through a new `plan` fallback reason.
 - The "run stopped responding" message is translated in all 12 locales (the first, English, line is unchanged).
