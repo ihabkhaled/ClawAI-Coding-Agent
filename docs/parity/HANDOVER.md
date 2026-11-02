@@ -62,15 +62,15 @@ Group by who can unblock. Full "still open" text is in the audit row.
 
 **Backend-blocked (the extension half is done or waits on a route)**
 
-| Row                           | Blocker                                                                                                                                                                                                               |
-| ----------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| F081 Plugin marketplaces      | agent-service must serve `allowedPluginMarketplaces` in policy. Signatures ship client-side (ADR 0006).                                                                                                               |
-| F093 Automatic prompt caching | Backend SHIPPED (monorepo ADR-153; tool-carrying agent turns cached since 2026-11-01, per-model admin switch default OFF). Remaining: the extension reads only `cachedPromptTokens`, not `cacheCreationPromptTokens`. |
-| F095 Resume cloud sessions    | Chat-thread resume exists. Runner-hosted resume needs `createThread` to carry workspace or repository and capability reconciliation.                                                                                  |
-| F098 Cloud coding sessions    | Hosted runners, repository cloning and teardown do not exist. The sandbox runner is a worker-thread dry run.                                                                                                          |
-| F099 Routines                 | Prompt routines ship. Cron and repository-event triggers and secrets isolation need scheduler backend work.                                                                                                           |
-| F100 Self-hosted runners      | Per-runner tokens ship. Process isolation, attestation, update channel and organization policy are open.                                                                                                              |
-| F108 Telemetry and analytics  | Cost in runtime events: auth-service returns no cost at settlement.                                                                                                                                                   |
+| Row                           | Blocker                                                                                                                                                                                                                                                        |
+| ----------------------------- | -------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| F081 Plugin marketplaces      | agent-service must serve `allowedPluginMarketplaces` in policy. Signatures ship client-side (ADR 0006).                                                                                                                                                        |
+| F093 Automatic prompt caching | Backend SHIPPED (monorepo ADR-153; tool-carrying agent turns cached since 2026-11-01, per-model admin switch default OFF). Extension parses `cacheCreationPromptTokens` since 1.110.0; remaining: display (tooltip, usage dialog) and Runtime V2 usage events. |
+| F095 Resume cloud sessions    | Chat-thread resume exists. Runner-hosted resume needs `createThread` to carry workspace or repository and capability reconciliation.                                                                                                                           |
+| F098 Cloud coding sessions    | Hosted runners, repository cloning and teardown do not exist. The sandbox runner is a worker-thread dry run.                                                                                                                                                   |
+| F099 Routines                 | Prompt routines ship. Cron and repository-event triggers and secrets isolation need scheduler backend work.                                                                                                                                                    |
+| F100 Self-hosted runners      | Per-runner tokens ship. Process isolation, attestation, update channel and organization policy are open.                                                                                                                                                       |
+| F108 Telemetry and analytics  | Cost in runtime events: auth-service returns no cost at settlement.                                                                                                                                                                                            |
 
 **Product-blocked (a separate deliverable, not a code gap here)**
 
@@ -109,8 +109,7 @@ is left, exactly:
   already reads `organizationPolicy.allowedPluginMarketplaces` and enforces it.
 - **F093 Automatic prompt caching.** The backend is SHIPPED (monorepo
   ADR-153; tool-carrying agent turns cached since 2026-11-01, per-model admin
-  switch default OFF). Remaining extension work: read the cache-write field
-  (`cacheCreationPromptTokens`); today only `cachedPromptTokens` is read.
+  switch default OFF). Extension work: the extension now parses and accumulates `cacheCreationPromptTokens` (receipt and session ledger, optional). Still open: the display (`media/chat.js` tokenTooltip with a new `tokenCacheWrite` label and 12 locale strings via `l10n:build`, a usage dialog column) and Runtime V2 usage events in `src/core/run-telemetry.ts`.
 - **F095 Resume cloud sessions.** chat-service `createThread` must accept a
   workspace or repository reference, and agent-service must return the
   capabilities a session ran with so the client can reconcile them on resume.

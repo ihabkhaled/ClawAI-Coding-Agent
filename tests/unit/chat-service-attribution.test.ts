@@ -62,6 +62,44 @@ describe('ChatService usage attribution', () => {
     expect(sent).not.toHaveProperty('attribution');
   });
 
+  it('carries the cache write count into the receipt and the ledger', async () => {
+    const ledger = new UsageAttributionLedger();
+    const port = backend([
+      {
+        type: 'usage',
+        usage: {
+          promptTokens: 100,
+          completionTokens: 3,
+          cachedPromptTokens: 20,
+          cacheCreationPromptTokens: 30,
+        },
+      },
+      { type: 'done' },
+    ]);
+    const result = await new ChatService(port, () => undefined, ledger).send(
+      { content: 'Hi', context: [], routingMode: 'AUTO' },
+      () => undefined,
+    );
+
+    expect(result.tokens.cacheWrite).toBe(30);
+    expect(ledger.summary().bySource[0]?.cacheWrite).toBe(30);
+  });
+
+  it('omits the cache write when the backend does not report it', async () => {
+    const ledger = new UsageAttributionLedger();
+    const result = await new ChatService(
+      backend([
+        { type: 'usage', usage: { promptTokens: 5, completionTokens: 1 } },
+        { type: 'done' },
+      ]),
+      () => undefined,
+      ledger,
+    ).send({ content: 'Hi', context: [], routingMode: 'AUTO' }, () => undefined);
+
+    expect(result.tokens).not.toHaveProperty('cacheWrite');
+    expect(ledger.summary().bySource[0]).not.toHaveProperty('cacheWrite');
+  });
+
   it('charges an unlabelled turn to chat and to the requested model', async () => {
     const ledger = new UsageAttributionLedger();
     await new ChatService(backend([{ type: 'done' }]), () => undefined, ledger).send(

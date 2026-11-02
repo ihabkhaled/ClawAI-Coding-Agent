@@ -58,6 +58,8 @@ function addTo(
   line.input += whole(tokens.input);
   line.output += whole(tokens.output);
   line.cached += whole(tokens.cached);
+  if (tokens.cacheWrite !== undefined)
+    line.cacheWrite = (line.cacheWrite ?? 0) + whole(tokens.cacheWrite);
   line.total += whole(tokens.total);
   lines.set(dimension, line);
 }

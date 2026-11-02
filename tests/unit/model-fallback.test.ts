@@ -1,6 +1,7 @@
 import { describe, expect, it, vi } from 'vitest';
 
 import { RuntimeHttpError } from '../../src/headless/runtime-http-error';
+import { RuntimeLimitReachedError } from '../../src/headless/runtime-limit-reached-error';
 import { RuntimeRateLimitedError } from '../../src/headless/runtime-rate-limited-error';
 import { startWithModelFallback } from '../../src/sdk/model-fallback';
 
@@ -73,5 +74,25 @@ describe('startWithModelFallback', () => {
       RuntimeHttpError,
     );
     expect(start).toHaveBeenCalledTimes(1);
+  });
+});
+
+describe('startWithModelFallback and account limits', () => {
+  it('never falls back on a plan limit: another model cannot help', async () => {
+    const start = vi
+      .fn()
+      .mockRejectedValue(new RuntimeLimitReachedError('plan', 'PLAN_DAILY_CHAT_LIMIT_EXCEEDED', 0));
+    await expect(startWithModelFallback(primary, [{ model: 'b' }], start)).rejects.toBeInstanceOf(
+      RuntimeLimitReachedError,
+    );
+    expect(start).toHaveBeenCalledTimes(1);
+  });
+
+  it('still falls back when the credit is spent', async () => {
+    const start = vi
+      .fn()
+      .mockRejectedValueOnce(new RuntimeLimitReachedError('credit', 'PAYG_CREDIT_EXHAUSTED', 0))
+      .mockResolvedValue('run');
+    await expect(startWithModelFallback(primary, [{ model: 'b' }], start)).resolves.toBe('run');
   });
 });

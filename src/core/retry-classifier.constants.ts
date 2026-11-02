@@ -21,6 +21,14 @@ export const RATE_LIMIT_MAX_ATTEMPTS = 4;
 /** The status of a rate limit. */
 export const RATE_LIMIT_STATUS = 429;
 
+/** 429 codes that mean the plan's own allowance is used up (daily chats, calls, quota): another try or model cannot help. */
+export const PLAN_LIMIT_CODE_PATTERN =
+  /^(?:PLAN_[A-Z_]*LIMIT_EXCEEDED|FEATURE_LIMIT_EXCEEDED|RUNTIME_QUOTA_EXCEEDED|QUOTA_EXCEEDED)$/u;
+
+/** 429 codes that mean the credit or free allowance is used up: only a top-up helps. */
+export const CREDIT_LIMIT_CODE_PATTERN =
+  /^(?:PAYG_)?(?:INSUFFICIENT_CREDIT|CREDIT_EXHAUSTED|FREE_ALLOWANCE_EXHAUSTED)$/u;
+
 /** Statuses that mean "try again shortly": timeout, rate limit, and the gateway trio. */
 export const TRANSIENT_STATUSES: readonly number[] = [408, 429, 502, 503, 504];
 

@@ -62,6 +62,46 @@ describe('reconcileTokenReceipt', () => {
   });
 });
 
+describe('cache write tokens', () => {
+  it('records the cache write a provider reported', () => {
+    const reconciled = reconcileTokenReceipt(estimateTokens('prompt'), {
+      input: 44_000,
+      output: 500,
+      cached: 30_000,
+      cacheWrite: 8_000,
+    });
+
+    expect(reconciled.cacheWrite).toBe(8_000);
+  });
+
+  it('leaves the field absent when an older backend did not send it', () => {
+    const reconciled = reconcileTokenReceipt(estimateTokens('prompt'), { input: 10, output: 2 });
+
+    expect(reconciled).not.toHaveProperty('cacheWrite');
+  });
+
+  it('clamps a cache write larger than the uncached input', () => {
+    const reconciled = reconcileTokenReceipt(estimateTokens('prompt'), {
+      input: 1_000,
+      output: 10,
+      cached: 900,
+      cacheWrite: 9_999,
+    });
+
+    expect(reconciled.cacheWrite).toBe(100);
+  });
+
+  it('accumulates across requests and ignores requests without it', () => {
+    const combined = addTokenReceipts(
+      receipt({ cacheWrite: 5 }),
+      addTokenReceipts(receipt({ cacheWrite: 7 }), receipt()),
+    );
+
+    expect(combined.cacheWrite).toBe(12);
+    expect(addTokenReceipts(receipt(), receipt())).not.toHaveProperty('cacheWrite');
+  });
+});
+
 describe('estimateTokens', () => {
   it('never claims a cache hit it could not have observed', () => {
     expect(estimateTokens('some prompt').cached).toBe(0);

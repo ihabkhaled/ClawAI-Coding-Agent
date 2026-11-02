@@ -127,7 +127,7 @@ export async function renderPermissionMatrix(
     '',
     '## What Full (Autonomous Scoped) does and does not promise',
     '',
-    'Full runs routine work without asking: workspace edits and `workspace.command.run` (the `A` in the Full column). It still asks for R3 and R4 work: commit, push, delete, MCP calls. It does **not** widen where a tool may write. A path outside the workspace is refused by workspace containment (`src/core/workspace-containment.ts`, "Path escapes the workspace") in every mode, before the policy is consulted, so it is never offered for approval. The older edit-proposal flow (`src/core/permission-policy.ts`) is separate and still asks before commands.',
+    'Full runs routine work without asking: workspace edits and `workspace.command.run` (the `A` in the Full column). It still asks for R3 and R4 work: commit, push, delete, MCP calls. It does **not** widen where a tool may write. A path outside the workspace is refused in every mode, before the policy is consulted, so it is never offered for approval. The message depends on the path: with a write scope active (headless `--write-scope`/`--write-deny` or the default deny list) the write scope refuses it first (`denied by the write scope. You may change anything except: .git/**`, or `outside the write scope. You may only change: ...` when allow-globs are set); with no write scope, workspace containment refuses it (`src/core/workspace-containment.ts`, "Path escapes the workspace"). The older edit-proposal flow (`src/core/permission-policy.ts`) is separate and still asks before commands.',
     '',
     '## Per-operation decisions',
     '',

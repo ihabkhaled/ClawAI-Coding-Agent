@@ -187,7 +187,7 @@ export class TokenSession {
       .join('[redacted]')
       .split(this.accessToken)
       .join('[redacted]');
-    return new RuntimeHttpError(error.path, error.status, clean, error.retryAfterMs);
+    return new RuntimeHttpError(error.path, error.status, clean, error.retryAfterMs, error.code);
   }
 
   private now(): number {

@@ -11,6 +11,8 @@ export interface UsageAttributionTokens {
   readonly input: number;
   readonly output: number;
   readonly cached: number;
+  /** Prompt-cache write tokens; absent when the backend did not report them. */
+  readonly cacheWrite?: number;
   readonly total: number;
 }
 

@@ -1,6 +1,7 @@
 import {
   backoffMs,
   classifyHttpFailure,
+  limitKind,
   networkFailureCode,
   retryBudgetSpent,
 } from '../core/retry-classifier';
@@ -11,6 +12,7 @@ import {
 } from '../core/retry-classifier.constants';
 
 import { RuntimeHttpError } from './runtime-http-error';
+import { RuntimeLimitReachedError } from './runtime-limit-reached-error';
 import { RuntimeRateLimitedError } from './runtime-rate-limited-error';
 import { RuntimeUnavailableError } from './runtime-unavailable-error';
 
@@ -35,8 +37,18 @@ function classifyHttp(error: RuntimeHttpError): RetryVerdict {
   return classifyHttpFailure({
     status: error.status,
     detail: error.detail,
+    code: error.code,
     retryAfterMs: error.retryAfterMs,
   });
+}
+
+/** The plan or credit limit a 429 reports, as an error that says what to do; nothing for any other failure. */
+function limitError(error: unknown): RuntimeLimitReachedError | undefined {
+  if (!(error instanceof RuntimeHttpError)) return undefined;
+  const kind = limitKind(error.status, error.code);
+  return kind === undefined || error.code === undefined
+    ? undefined
+    : new RuntimeLimitReachedError(kind, error.code, error);
 }
 
 export { backoffMs };
@@ -86,6 +98,7 @@ export class Retrier {
   async backoff(error: unknown): Promise<void> {
     const { signal } = this.context;
     const verdict = classifyFailure(error);
+    this.throwIfLimit(error);
     if (!verdict.retry || this.aborted()) throw error;
     this.failures += 1;
     this.countRateLimit(verdict.status, error);
@@ -100,6 +113,12 @@ export class Retrier {
     });
     await (this.context.sleep ?? abortableSleep)(waitMs, signal);
     if (this.aborted()) throw error;
+  }
+
+  /** An account limit is an answer: it ends the call at once, with the sentence that says what helps. */
+  private throwIfLimit(error: unknown): void {
+    const limit = limitError(error);
+    if (limit !== undefined && !this.aborted()) throw limit;
   }
 
   /** Counts consecutive 429s and throws once they outlast the rate-limit allowance. */
