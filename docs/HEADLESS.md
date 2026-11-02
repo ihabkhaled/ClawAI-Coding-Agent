@@ -182,8 +182,8 @@ asks for R3 and R4 work (commit, push, delete, MCP call). Reads are never asked 
 final-diff review step in a headless run, so none is asked for.
 
 `autonomous-scoped` never asks about a command and never asks about a path. A write outside the workspace
-is refused by workspace containment (`Path escapes the workspace`, `src/core/workspace-containment.ts`) in every mode, before
-any approval is consulted, so it reaches the model as a failed result rather than a question. (Before 1.89.0 the 1.88.0
+is refused in every mode, before
+any approval is consulted, so it reaches the model as a failed result rather than a question. The words differ by path. When a write scope is active (`--write-scope`, `--write-deny`, or the default deny list such as `.git/**`), `src/sdk/write-scope.ts` judges the path first and an outside path fails as `denied by the write scope. You may change anything except: .git/**` (or `outside the write scope. You may only change: ...`). With no write scope, workspace containment (`src/core/workspace-containment.ts`) refuses it as `Path escapes the workspace`. (Before 1.89.0 the 1.88.0
 changelog said Autonomous Scoped "still asks before commands and before writing outside it"; that was wrong for the
 command-line agent and for the editor's runtime tools, which `PERMISSION_MATRIX.md` shows as `A` for `workspace.command.run`.)
 
@@ -605,6 +605,7 @@ up`, `fetch failed`, a stream cut off by the server), HTTP 408, 429, 502, 503, 5
   5 minutes per call. A call that keeps failing ends the run as exit 1 with
   `The ClawAI runtime stayed unavailable: gave up after N attempts...`. Ctrl-C, an aborted signal and
   `--max-duration` all end a wait at once.
+- **Plan and credit limits (not retried).** A 429 that carries a plan or credit code (the daily chat limit, other plan limits, `RUNTIME_QUOTA_EXCEEDED`, spent credit) is raised as `RuntimeLimitReachedError` and stops on the first attempt with a message that says what happened and what helps (English only). Retrying cannot help, so there are no 4 tries. `fallbackModels` is not used for a plan limit, since another model hits the same limit; it is still used when credit is used up. The headless token session keeps the error code so the classifier (`src/core/retry-classifier.ts`, `src/headless/retry-policy.ts`) can see it.
 - **Rate limits (429).** A 429 is cut off sooner: after 4 tries in a row the call fails with
   `The selected model is rate limited ... Choose another model or try again later.` (exit 1, never a
   minutes-long wait). With `--fallback-model <PROVIDER/model|model>` (repeatable or comma separated; env

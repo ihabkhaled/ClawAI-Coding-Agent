@@ -7,9 +7,17 @@ import {
   TRANSIENT_NETWORK_MESSAGE,
   TRANSIENT_STATUSES,
   UNAVAILABLE_BODY_PATTERN,
+  CREDIT_LIMIT_CODE_PATTERN,
+  PLAN_LIMIT_CODE_PATTERN,
+  RATE_LIMIT_STATUS,
 } from './retry-classifier.constants';
 
-import type { HttpFailureShape, RetryBudgetState, RetryVerdict } from './retry-classifier.types';
+import type {
+  HttpFailureShape,
+  LimitKind,
+  RetryBudgetState,
+  RetryVerdict,
+} from './retry-classifier.types';
 
 /**
  * Whether an HTTP refusal says "not there right now": a timeout, a rate limit,
@@ -18,6 +26,7 @@ import type { HttpFailureShape, RetryBudgetState, RetryVerdict } from './retry-c
  */
 export function classifyHttpFailure(failure: HttpFailureShape): RetryVerdict {
   const { status, detail } = failure;
+  if (limitKind(status, failure.code) !== undefined) return { retry: false };
   const transient =
     TRANSIENT_STATUSES.includes(status) ||
     (status === 500 && UNAVAILABLE_BODY_PATTERN.test(detail)) ||
@@ -28,6 +37,16 @@ export function classifyHttpFailure(failure: HttpFailureShape): RetryVerdict {
     status,
     ...(failure.retryAfterMs === undefined ? {} : { retryAfterMs: failure.retryAfterMs }),
   };
+}
+
+/**
+ * Which allowance a 429 says is used up. A plan or credit code is an answer about
+ * the account, not a busy model, so it is never retried and never a model problem.
+ */
+export function limitKind(status: number, code: string | undefined): LimitKind | undefined {
+  if (status !== RATE_LIMIT_STATUS || code === undefined) return undefined;
+  if (PLAN_LIMIT_CODE_PATTERN.test(code)) return 'plan';
+  return CREDIT_LIMIT_CODE_PATTERN.test(code) ? 'credit' : undefined;
 }
 
 /** The transport code of a dropped connection, looking through `cause` wrappers. */

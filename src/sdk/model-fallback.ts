@@ -1,4 +1,5 @@
 import { RuntimeHttpError } from '../headless/runtime-http-error';
+import { RuntimeLimitReachedError } from '../headless/runtime-limit-reached-error';
 import { RuntimeRateLimitedError } from '../headless/runtime-rate-limited-error';
 
 import {
@@ -75,6 +76,7 @@ function isCreditCode(code: string | undefined): boolean {
 export function isRateLimitFailure(error: unknown): boolean {
   return (
     error instanceof RuntimeRateLimitedError ||
+    (error instanceof RuntimeLimitReachedError && error.kind === 'credit') ||
     (error instanceof RuntimeHttpError && (error.status === 429 || isCreditCode(error.code)))
   );
 }

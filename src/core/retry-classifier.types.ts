@@ -13,7 +13,12 @@ export interface HttpFailureShape {
   readonly detail: string;
   /** The server's `Retry-After`, in milliseconds and already capped. */
   readonly retryAfterMs?: number | undefined;
+  /** The platform error `code` from the body, when it has one. */
+  readonly code?: string | undefined;
 }
+
+/** Which allowance a 429 says is used up. */
+export type LimitKind = 'plan' | 'credit';
 
 /** The numbers the allowance check reads. */
 export interface RetryBudgetState {

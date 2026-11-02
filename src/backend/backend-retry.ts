@@ -45,6 +45,7 @@ export function classifyBackendFailure(error: unknown): RetryVerdict {
   return classifyHttpFailure({
     status: error.status,
     detail: error.message,
+    code: error.code,
     retryAfterMs: error.retryAfterMs,
   });
 }

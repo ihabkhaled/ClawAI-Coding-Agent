@@ -2,6 +2,11 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.110.0
+
+- A plan or credit limit (the daily chat limit, other plan limits, `RUNTIME_QUOTA_EXCEEDED`, credit used up) now stops on the first attempt with a message that says what happened and what helps, instead of "rate limited, choose another model" after 4 retries. A true model rate limit behaves as before. Model fallback no longer switches model on a plan limit (another model would hit the same limit) but still does when credit is used up. The headless token session now keeps the error code; it dropped it before, so the code never reached the retry logic. The message is English only; the VS Code panel is unchanged for this. Code: `src/core/retry-classifier.ts`, `src/headless/retry-policy.ts`, `token-session.ts`, `runtime-limit-reached-error.ts`.
+- The extension now reads the cache write token count (`cacheCreationPromptTokens`) next to the cached read count from the usage event, and carries it in the token receipt and the session usage ledger. The field is optional, so an older backend still parses. Not done: it is not shown in the panel tooltip or the usage dialog yet, and Runtime V2 usage events do not carry it.
+
 ## 1.109.0
 
 - The SDK and CLI `workspace.file read` can now read PDF, DOCX, XLSX, PPTX and RTF files through your ClawAI backend's extractor, the way the panel already did. It uses the same bearer pattern as web research. The path is checked to be inside the workspace and the file to be within 5 MB before any call is made. A PDF page range is given with `startLine` and `endLine`. A clear error says so when the backend is too old, unreachable, or not configured.

@@ -18,7 +18,7 @@ Owner decisions that shape it: browser only (no desktop control), user-hosted ru
 - [x] W1-10 backend crawl profiles for runtime clients (monorepo)
 - [x] W1-11 extension parity (secrets env, heartbeat report, resume, repositoryRef, PAYG cost, approval-queue hint, CI lessons)
 - [x] W1-12 backend capability audit (dynamic tools, images, sub-agent runs)
-- [x] W1-13 F093 prompt caching (monorepo) (backend shipped, ADR-153; the extension still reads only `cachedPromptTokens`)
+- [x] W1-13 F093 prompt caching (monorepo) (backend shipped, ADR-153; the extension parses `cacheCreationPromptTokens` since 1.110.0; display still open)
 - [x] W1-14 F108 PAYG cost events (monorepo)
 
 ## Wave 2

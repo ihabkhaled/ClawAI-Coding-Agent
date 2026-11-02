@@ -216,10 +216,13 @@ function streamUsage(event: Record<string, unknown>): ReportedTokenUsage | undef
   // every cached token at full price in the meter people use to decide when to
   // compact.
   const cached = numericValue(usage.cachedPromptTokens);
+  // Cache WRITE tokens (ADR-153); optional so an older backend still parses.
+  const cacheWrite = numericValue(usage.cacheCreationPromptTokens);
   return {
     ...(prompt === undefined ? {} : { input: prompt }),
     ...(completion === undefined ? {} : { output: completion + reasoning }),
     ...(cached === undefined ? {} : { cached }),
+    ...(cacheWrite === undefined ? {} : { cacheWrite }),
     ...(total === undefined ? {} : { total }),
   };
 }

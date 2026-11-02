@@ -14,6 +14,12 @@ export interface TokenReceipt {
    * has room. Cheap is not the same as free of context.
    */
   cached: number;
+  /**
+   * The part of `input` the provider wrote into its prompt cache this turn
+   * (Anthropic cache creation). Absent when the backend did not report it, so
+   * an older backend still parses. Like `cached`, a subset of the input.
+   */
+  cacheWrite?: number;
   source: TokenSource;
   total: number;
 }
@@ -22,6 +28,7 @@ export interface ReportedTokenUsage {
   input?: number;
   output?: number;
   cached?: number;
+  cacheWrite?: number;
   total?: number;
 }
 
@@ -47,13 +54,17 @@ export function reconcileTokenReceipt(
 ): TokenReceipt {
   const input = reported.input === undefined ? estimated.input : normalizeCount(reported.input);
   const output = reported.output === undefined ? estimated.output : normalizeCount(reported.output);
+  const cached = Math.min(input, normalizeCount(reported.cached));
   return {
     input,
     output,
     // Clamped to the input it is part of. A provider reporting more cached
     // tokens than prompt tokens is reporting something this cannot represent,
     // and believing it would show a cache share above one hundred per cent.
-    cached: Math.min(input, normalizeCount(reported.cached)),
+    cached,
+    ...(reported.cacheWrite === undefined
+      ? {}
+      : { cacheWrite: Math.min(input - cached, normalizeCount(reported.cacheWrite)) }),
     source: 'reported',
     total: reported.total === undefined ? input + output : normalizeCount(reported.total),
   };
@@ -66,6 +77,9 @@ export function addTokenReceipts(left: TokenReceipt, right: TokenReceipt): Token
     input,
     output,
     cached: left.cached + right.cached,
+    ...(left.cacheWrite === undefined && right.cacheWrite === undefined
+      ? {}
+      : { cacheWrite: (left.cacheWrite ?? 0) + (right.cacheWrite ?? 0) }),
     source: left.source === 'reported' && right.source === 'reported' ? 'reported' : 'estimated',
     total: input + output,
   };

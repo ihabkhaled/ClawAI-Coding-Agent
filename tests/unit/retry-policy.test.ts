@@ -10,6 +10,7 @@ import {
 } from '../../src/headless/retry-policy';
 import { RATE_LIMIT_MAX_ATTEMPTS } from '../../src/headless/retry-policy.constants';
 import { RuntimeHttpError } from '../../src/headless/runtime-http-error';
+import { RuntimeLimitReachedError } from '../../src/headless/runtime-limit-reached-error';
 import { RuntimeRateLimitedError } from '../../src/headless/runtime-rate-limited-error';
 import { isRunLostError } from '../../src/sdk/run-lost';
 
@@ -293,5 +294,79 @@ describe('a rate limit (HTTP 429)', () => {
       return calls < 6 ? Promise.reject(http(503)) : Promise.resolve();
     });
     expect(calls).toBe(6);
+  });
+});
+
+describe('a 429 that is an account limit, not a busy model', () => {
+  const limited = (code: string): RuntimeHttpError =>
+    new RuntimeHttpError('/chat-threads', 429, `{"code":"${code}"}`, undefined, code);
+
+  it('fails a daily chat limit on the first attempt with a message that says what helps', async () => {
+    const { tuning, sleeps } = clock();
+    let calls = 0;
+    const failure = await withRetries(tuning, () => {
+      calls += 1;
+      return Promise.reject(limited('PLAN_DAILY_CHAT_LIMIT_EXCEEDED'));
+    }).catch((error: unknown) => error);
+
+    expect(failure).toBeInstanceOf(RuntimeLimitReachedError);
+    expect((failure as RuntimeLimitReachedError).kind).toBe('plan');
+    expect((failure as Error).message).toContain('daily chat limit');
+    expect((failure as Error).message).toContain('upgrade the plan');
+    expect((failure as Error).message).not.toContain('rate limited');
+    expect(calls).toBe(1);
+    expect(sleeps).toEqual([]);
+  });
+
+  it.each(['RUNTIME_QUOTA_EXCEEDED', 'PLAN_CALL_LIMIT_EXCEEDED', 'QUOTA_EXCEEDED'])(
+    'does not retry %s',
+    async (code) => {
+      const { tuning } = clock();
+      let calls = 0;
+      const failure = await withRetries(tuning, () => {
+        calls += 1;
+        return Promise.reject(limited(code));
+      }).catch((error: unknown) => error);
+      expect(failure).toBeInstanceOf(RuntimeLimitReachedError);
+      expect(calls).toBe(1);
+    },
+  );
+
+  it.each(['PAYG_INSUFFICIENT_CREDIT', 'PAYG_CREDIT_EXHAUSTED'])(
+    'says to top up for %s',
+    async (code) => {
+      const { tuning } = clock();
+      const failure = await withRetries(tuning, () => Promise.reject(limited(code))).catch(
+        (error: unknown) => error,
+      );
+      expect((failure as RuntimeLimitReachedError).kind).toBe('credit');
+      expect((failure as Error).message).toContain('Top up');
+    },
+  );
+
+  it('classifies the limit as not retryable', () => {
+    expect(classifyFailure(limited('PLAN_DAILY_CHAT_LIMIT_EXCEEDED'))).toEqual({ retry: false });
+  });
+
+  it('still retries a 429 with a model rate-limit code', async () => {
+    const { tuning } = clock();
+    let calls = 0;
+    const failure = await withRetries(tuning, () => {
+      calls += 1;
+      return Promise.reject(new RuntimeHttpError('/x', 429, '', 1_000, 'PROVIDER_RATE_LIMITED'));
+    }).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(RuntimeRateLimitedError);
+    expect(calls).toBe(RATE_LIMIT_MAX_ATTEMPTS);
+  });
+
+  it('still retries a 429 whose body does not parse', async () => {
+    const { tuning } = clock();
+    let calls = 0;
+    const failure = await withRetries(tuning, () => {
+      calls += 1;
+      return Promise.reject(new RuntimeHttpError('/x', 429, '<html>slow down</html>', 1_000));
+    }).catch((error: unknown) => error);
+    expect(failure).toBeInstanceOf(RuntimeRateLimitedError);
+    expect(calls).toBe(RATE_LIMIT_MAX_ATTEMPTS);
   });
 });
