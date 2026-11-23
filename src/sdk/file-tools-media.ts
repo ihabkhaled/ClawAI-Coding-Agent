@@ -1,9 +1,9 @@
 import { existsSync, readFileSync, statSync } from 'node:fs';
 import path from 'node:path';
 
-import { abortableSleep } from '../backend/backend-retry';
 import { TRANSCRIBE_MAX_BYTES } from '../core/document-read-format.constants';
 import { containedPath } from '../core/workspace-containment';
+import { abortableSleep } from '../headless/retry-policy';
 import { RuntimeHttpError } from '../headless/runtime-http-error';
 
 import { optionalInteger, requirePath } from './file-tools-args';
@@ -131,6 +131,7 @@ async function transcribeWhenFree(
     } catch (error) {
       if (!isBusy(error) || attempt >= TRANSCRIBE_BUSY_RETRIES) throw error;
       await abortableSleep(TRANSCRIBE_BUSY_WAIT_MS, signal);
+      signal?.throwIfAborted();
     }
   }
 }
