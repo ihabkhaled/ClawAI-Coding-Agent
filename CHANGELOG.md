@@ -2,7 +2,7 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
-## 1.113.0
+## 1.114.0
 
 - The panel's agent now reads audio and video in your project (mp3, m4a, wav, ogg, flac, aac, webm, mp4, mov, mkv) as a transcript, the way headless and SDK runs already did. Before, the editor answered "no tool turns audio into text". It is the same billed `POST /files/transcribe-text`; the result says "billed to your credit", and files over 15 MB are refused before any call. The `workspace.files` description now tells the model that a read returns a transcript, so it no longer refuses before trying. Live proof: in a real VS Code against a local backend, Gemini 2.5 Flash read a WAV and an MP4 and quoted the spoken sentence from each.
 - A busy backend (HTTP 429 `TRANSCRIBE_READ_BUSY`, answered before any billing) is now waited out: up to 2 more tries, 3 seconds apart, then a message that says nothing was billed. Every other failure is still never retried, because it may follow a billed call. Applies to the editor, the SDK and the CLI.

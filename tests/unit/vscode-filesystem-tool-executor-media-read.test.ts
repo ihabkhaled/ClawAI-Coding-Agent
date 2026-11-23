@@ -128,7 +128,7 @@ const busy = (): BackendRequestError =>
 /**
  * Reading audio or video in the editor.
  *
- * Until 1.113.0 only the headless tool transcribed: the editor's file tool
+ * Until 1.114.0 only the headless tool transcribed: the editor's file tool
  * answered "no tool turns audio into text" for a WAV the backend could read,
  * so a live run in VS Code never got the words.
  */
