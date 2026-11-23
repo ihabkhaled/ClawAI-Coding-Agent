@@ -205,7 +205,7 @@ and can try something else. If the run then fails, it is reported as `blocked` (
 
 Office files: `workspace.file read` on a PDF, DOCX, XLSX, PPTX or RTF in the workspace is extracted by the ClawAI backend (bearer token, path inside the workspace, 5 MB cap checked before any call; a PDF range via `startLine`/`endLine`). It errors clearly on an old or unreachable backend or with no backend configured.
 
-Audio and video: `workspace.file read` on mp3, m4a, wav, ogg, flac, aac, webm, mp4, mov or mkv sends the file to the backend's billed `POST /files/transcribe-text` and returns the transcript only. Files over 15 MB are refused before any call (the backend: audio 12 MB, video up to the shorter of the plan limit and 30 minutes). The result says "billed to your credit"; a 402 stops with a clear message; there is no retry on purpose, so a read cannot bill twice. Live proof against a running backend is pending.
+Audio and video: `workspace.file read` on mp3, m4a, wav, ogg, flac, aac, webm, mp4, mov or mkv sends the file to the backend's billed `POST /files/transcribe-text` and returns the transcript only. Files over 15 MB are refused before any call (the backend: audio 12 MB, video up to the shorter of the plan limit and 30 minutes). The result says "billed to your credit"; a 402 stops with a clear message; there is no retry on purpose, so a read cannot bill twice, except a busy answer (429 `TRANSCRIBE_READ_BUSY`, nothing billed), which is waited out up to 2 more times, 3 seconds apart.
 
 ## Tool patterns
 
