@@ -343,8 +343,10 @@ describe('reading other documents and media from the workspace', () => {
   it.each([
     ['logo.png', /an image file.*Call vision\.describe with \{"path": "logo\.png"/u],
     ['anim.gif', /an image file.*only takes png, jpeg or webp.*attach it/u],
-    ['call.m4a', /an audio file.*listen/u],
-    ['demo.MP4', /a video file.*watch/u],
+    // Formats the backend cannot transcribe keep the attach-it advice; the
+    // transcribable ones are read in vscode-filesystem-tool-executor-media-read.
+    ['call.opus', /an audio file.*listen/u],
+    ['demo.AVI', /a video file.*watch/u],
   ])('says what %s is instead of "not UTF-8 text"', async (file, message) => {
     vi.mocked(vscode.workspace.fs.readFile).mockResolvedValue(new Uint8Array([0xff, 0xd8, 0xff]));
     const port = portAnswering([], 0);

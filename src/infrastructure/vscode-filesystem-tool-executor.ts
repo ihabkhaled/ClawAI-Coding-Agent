@@ -2,8 +2,7 @@ import * as vscode from 'vscode';
 import { z } from 'zod';
 
 import { deliveredArtifactsFromReceipt } from '../core/delivered-artifact';
-import { documentFormatOf, unreadableReadMessage } from '../core/document-read-format';
-import { DOCUMENT_FORMAT_LABELS } from '../core/document-read-format.constants';
+import { unreadableReadMessage } from '../core/document-read-format';
 import { fileTransactionSchema } from '../core/file-transaction';
 import { normalizeTransactionEncoding } from '../core/file-transaction-encoding';
 import {
@@ -12,7 +11,6 @@ import {
   transactionCandidate,
   withTransactionDefaults,
 } from '../core/file-transaction-flat';
-import { fitPdfPages } from '../core/pdf-page-budget';
 import {
   MAX_RUNTIME_JSON_ENTRIES,
   MAX_RUNTIME_JSON_STRING_LENGTH,
@@ -30,6 +28,7 @@ import {
   resolveFileTypeExtensions,
 } from '../core/workspace-search-query';
 
+import { readDocumentOrMedia } from './vscode-filesystem-binary-read';
 import {
   WORKSPACE_SCAN_EXCLUDE_GLOB,
   WORKSPACE_SEARCH_MAX_CANDIDATE_FILES,
@@ -40,7 +39,6 @@ import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-ada
 import type { SearchHit } from './vscode-filesystem-tool-executor.types';
 import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { DeliveredArtifact } from '../core/delivered-artifact';
-import type { DocumentReadFormat } from '../core/document-read-format.types';
 import type { FileTransaction } from '../core/file-transaction';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { FileTransactionService } from '../services/file-transaction-service';
@@ -78,10 +76,6 @@ const rootKey = z.string().min(1).max(100);
 // the ClawAI monorepo is over 200 kB, so i18n was unreachable. The ceiling now
 // matches the contract, and an oversized range is paged instead of failed.
 const MAX_READ_BYTES = MAX_RUNTIME_JSON_STRING_LENGTH;
-// Pages read when a PDF is read with no range. The backend refuses a range
-// wider than 100 pages; twenty is enough to answer most questions about a
-// document and small enough that the text usually fits in one result.
-const PDF_DEFAULT_PAGE_WINDOW = 20;
 const readSchema = z
   .object({
     rootKey,
@@ -238,7 +232,7 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
   // invocation failed before touching the disk.
   description:
     'Bounded workspace discovery, reads, and transactional mutation. rootKey is "workspace-1" ' +
-    'for the first opened folder, then "workspace-2"; most use only "workspace-1". Paths are ' +
+    'for the first folder, "workspace-2" for the next. Paths are ' +
     'relative. List the root with path "". List/glob/search return at most 100 results; narrow ' +
     'truncated results. After one targeted search and read, act; do not rediscover unchanged files. ' +
     'SEARCH matches a literal query by default; pass regex:true for a JavaScript pattern and ' +
@@ -270,8 +264,8 @@ export const workspaceFilesystemToolDefinition: ToolDefinition = {
     'rename/copy add destination; delete needs beforeHash; mkdir takes path only; artifact ' +
     'adds mimeType,sizeBytes,contentHash,provenance,contentBase64. ' +
     'One small mutation per call. For source containing braces, quotes or backslashes, use ' +
-    'contentBase64/beforeBase64/afterBase64 to avoid false unfinished-object detection. Never ' +
-    'send two forms of one field.',
+    'contentBase64/beforeBase64/afterBase64. Never send two forms of one field. ' +
+    'READ returns PDF/Office text and a billed transcript for audio/video.',
   operations: [
     'stat',
     'list',
@@ -343,7 +337,7 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     if (invocation.toolName !== workspaceFilesystemToolDefinition.name)
       throw new Error('Unknown filesystem tool');
     signal?.throwIfAborted();
-    if (invocation.operation === 'read') return this.read(invocation.arguments);
+    if (invocation.operation === 'read') return this.read(invocation.arguments, signal);
     if (invocation.operation === 'stat' || invocation.operation === 'binary-metadata')
       return this.stat(invocation.arguments);
     if (invocation.operation === 'list') return this.list(invocation.arguments);
@@ -389,7 +383,10 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     }
   }
 
-  private async read(candidate: unknown): Promise<RuntimeToolExecutionOutput> {
+  private async read(
+    candidate: unknown,
+    signal?: AbortSignal,
+  ): Promise<RuntimeToolExecutionOutput> {
     const input = readSchema.parse(candidate);
     const operation = {
       kind: 'update' as const,
@@ -408,18 +405,8 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
     if (snapshot.kind === 'directory') {
       throw new Error(`${input.path} is a directory - use the list operation`);
     }
-    // On the extension, not on decoding failing: an uncompressed PDF can be
-    // valid UTF-8, and would otherwise come back as raw PDF source.
-    const documentFormat = documentFormatOf(input.path);
-    if (documentFormat !== undefined) {
-      return this.readDocument(
-        input.path,
-        documentFormat,
-        snapshot.bytes,
-        input.pages,
-        input.maxBytes,
-      );
-    }
+    const binary = await readDocumentOrMedia(this.pdfText, input, snapshot.bytes, signal);
+    if (binary !== undefined) return binary;
     if (snapshot.text === undefined) {
       throw new Error(unreadableReadMessage(input.path));
     }
@@ -458,64 +445,6 @@ export class VscodeFilesystemToolExecutor implements RuntimeToolExecutorPort {
         hash: snapshot.hash,
         totalLines,
         ...(truncated ? { nextStartLine: deliveredEndLine + 1 } : {}),
-      },
-    };
-  }
-
-  /**
-   * A workspace document (PDF, Word, Excel, PowerPoint or RTF), as text.
-   *
-   * The bytes go to the backend's extractor, which keeps nothing: this is a
-   * read, not an upload, so the file never lands in the user's file list.
-   *
-   * Pages are delivered whole and in order until the byte budget is spent,
-   * then `nextPage` says where to resume — the page-shaped twin of the text
-   * read's `nextStartLine`. Cutting a page mid-way would hand the model half a
-   * sentence it cannot tell is half. Only a PDF has pages; the other formats
-   * come back as one, so no range is sent for them.
-   */
-  private async readDocument(
-    path: string,
-    format: DocumentReadFormat,
-    bytes: Uint8Array | undefined,
-    requested: { from: number; to: number } | undefined,
-    maxBytes: number,
-  ): Promise<RuntimeToolExecutionOutput> {
-    if (this.pdfText === undefined) {
-      throw new Error(
-        `${path} is a ${DOCUMENT_FORMAT_LABELS[format]}, and this host has no backend to extract its text`,
-      );
-    }
-    if (bytes === undefined || bytes.byteLength === 0) {
-      throw new Error(`${path} is an empty file`);
-    }
-    const pages =
-      format === 'pdf' ? (requested ?? { from: 1, to: PDF_DEFAULT_PAGE_WINDOW }) : undefined;
-    const extracted = await this.pdfText.extract({
-      filename: path.split('/').pop() ?? path,
-      contentBase64: Buffer.from(bytes).toString('base64'),
-      ...(pages === undefined ? {} : { pages }),
-    });
-
-    const window = fitPdfPages(extracted.pages, extracted.totalPages, pages?.from ?? 1, maxBytes);
-    const nextPage = window.nextPage;
-    return {
-      structured: {
-        path,
-        format,
-        totalPages: extracted.totalPages,
-        pages: window.pages,
-        // A scanned page has no text layer however often it is read. Saying
-        // so stops the model retrying a page that will always come back empty.
-        isScanned: extracted.isScanned,
-        // Kept apart on purpose — see fitPdfPages.
-        truncated: window.truncated,
-        ...(nextPage === undefined
-          ? {}
-          : {
-              nextPage,
-              hint: `Read on with pages {"from":${String(nextPage)},"to":${String(Math.min(nextPage + PDF_DEFAULT_PAGE_WINDOW - 1, extracted.totalPages))}}`,
-            }),
       },
     };
   }

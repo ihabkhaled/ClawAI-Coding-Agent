@@ -202,6 +202,33 @@ describe('the transcription HTTP client', () => {
     expect(fetcher).toHaveBeenCalledTimes(1);
   });
 
+  it('waits out a BUSY answer, which bills nothing, then reads', async () => {
+    vi.useFakeTimers();
+    try {
+      const fetcher = vi
+        .fn<typeof fetch>()
+        .mockResolvedValueOnce(answer(429, { code: 'TRANSCRIBE_READ_BUSY', message: 'busy' }))
+        .mockResolvedValueOnce(
+          answer(200, { text: 'hi', durationSeconds: 3, provider: 'p', truncated: false }),
+        );
+
+      const pending = readWith(fetcher);
+      await vi.advanceTimersByTimeAsync(3_000);
+
+      await expect(pending).resolves.toMatchObject({ text: 'hi' });
+      expect(fetcher).toHaveBeenCalledTimes(2);
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it('never retries a 429 that is not the BUSY code', async () => {
+    const fetcher = vi.fn<typeof fetch>(async () => answer(429, { message: 'slow down' }));
+
+    await expect(readWith(fetcher)).rejects.toThrow(/busy.*Nothing was billed/u);
+    expect(fetcher).toHaveBeenCalledTimes(1);
+  });
+
   it('is wired into httpDocumentText', () => {
     expect(httpDocumentText('http://x', () => 't').transcribe).toBeTypeOf('function');
   });
