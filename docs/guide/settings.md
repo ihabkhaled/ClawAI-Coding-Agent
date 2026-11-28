@@ -14,9 +14,9 @@ per user or per project.
 
 | Setting                      | Default | What it does                                                        |
 | ---------------------------- | ------- | ------------------------------------------------------------------- |
-| `clawAI.backendEnvironment`  | `LOCAL` | Where the API lives: `LOCAL`, `CLOUD` or `CUSTOM`.                  |
+| `clawAI.backendEnvironment`  | `CLOUD` | Where the API lives: `CLOUD`, `LOCAL` or `CUSTOM`.                  |
 | `clawAI.backendCustomUrl`    | empty   | The address used when the backend environment is `CUSTOM`.          |
-| `clawAI.frontendEnvironment` | `LOCAL` | Where the browser sign-in page lives: `LOCAL`, `CLOUD` or `CUSTOM`. |
+| `clawAI.frontendEnvironment` | `CLOUD` | Where the browser sign-in page lives: `CLOUD`, `LOCAL` or `CUSTOM`. |
 | `clawAI.frontendCustomUrl`   | empty   | The address used when the frontend environment is `CUSTOM`.         |
 | `clawAI.requestTimeoutMs`    | `60000` | How long a backend request may take, in milliseconds.               |
 

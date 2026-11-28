@@ -7,6 +7,14 @@ Each entry: area, before, after, why, who decided, date, impact, and the documen
 
 ## Direction changes
 
+### 2026-11-28 - New installs connect to Cloud by default (product)
+
+- **Before:** `clawAI.backendEnvironment` and `clawAI.frontendEnvironment` defaulted to `LOCAL` (`https://claw.local`); the install page said "leave the default to use ClawAI's hosted platform", which was false.
+- **After:** both default to `CLOUD` (`https://claw-ai.co`). Installs that used Local keep it through a one-time migration that writes `LOCAL` explicitly; developers switch to Local in settings.
+- **Why:** a new user should not hit a developer URL; the marketing promise is now true.
+- **Who:** the owner. **Impact:** 1.118.0; the SDK default (`src/sdk/agent-sdk.constants.ts`) is unchanged.
+- **Docs:** `CHANGELOG.md` 1.118.0, `docs/wiki/features/accounts-and-sign-in.md`, `docs/RUNTIME_ONBOARDING.md`, `docs/AUTHENTICATION.md`, `docs/guide/`.
+
 ### 2026-11-28 - Secret-shaped test values are banned (security)
 
 - **Before:** tests wrote fake keys as complete literals (`sk-...`, `ghp_...`, JWTs, PEM headers).
@@ -28,6 +36,15 @@ Each entry: area, before, after, why, who decided, date, impact, and the documen
 - **After:** harness parity with Claude Code, Codex, Cursor and Antigravity; optional primary plus two supporting
   models; Wolverine, a self-healing loop from opt-in failure reports to tested fixes and releases.
 - **Who:** the owner. **Plan:** the ClawAI monorepo's `<monorepo>/docs/implementation/self-healing-coding-agent-plan.md` and ADR-229.
+
+### 2026-11-28 - Owner answers recorded
+
+- **Cost in the panel:** show the money cost of each answer (USD) next to tokens once the backend sends it
+  (parity row F108). Until then, tokens only. Owner, 2026-11-28.
+- **Legacy chat path (V1):** keep it working now; plan its removal once Runtime V2 covers research and every chat
+  case, with a written check list. Owner, 2026-11-28.
+- **Translations:** whether the 12 translations were reviewed by native speakers is unknown to the owner
+  (2026-11-28). Recorded as a risk; native review per language is open.
 
 ## Contradictions found while writing the feature pages (to resolve)
 

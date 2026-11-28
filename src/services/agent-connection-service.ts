@@ -1,6 +1,6 @@
 import { connectionOperationErrorMessage } from '../backend/backend-error-message';
 import { isBackendSessionBoundaryError } from '../backend/backend-errors';
-import { normalizeBackendUrl } from '../core/configuration';
+import { FRONTEND_CLOUD_URL, normalizeBackendUrl } from '../core/configuration';
 
 import { AuthorizationCancelledError } from './browser-authorization-service';
 
@@ -40,9 +40,7 @@ export class AgentConnectionService {
   ) {}
 
   async initialize(): Promise<void> {
-    this.authorization.setFrontendUrl(
-      this.configuration.read().frontendUrl ?? 'https://claw.local',
-    );
+    this.authorization.setFrontendUrl(this.configuration.read().frontendUrl ?? FRONTEND_CLOUD_URL);
     await this.run(async () => {
       await this.sessionVault.clearLegacy();
     });
@@ -98,7 +96,7 @@ export class AgentConnectionService {
     }
     this.replaceBackend(configuration);
     this.authorization.setBackend(this.backend());
-    this.authorization.setFrontendUrl(configuration.frontendUrl ?? 'https://claw.local');
+    this.authorization.setFrontendUrl(configuration.frontendUrl ?? FRONTEND_CLOUD_URL);
     this.chat.setBackend(this.backend());
     this.models.setBackend(this.backend());
     this.state.update({

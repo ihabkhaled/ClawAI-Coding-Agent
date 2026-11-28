@@ -83,7 +83,7 @@ services, then retry."
 1. Check the **Backend** address on the connection screen.
 2. For **Local**, make sure your ClawAI stack is running and `https://claw.local`
    opens in your browser. Your computer must trust its certificate.
-3. For **Cloud** or **Custom**, check your internet connection, VPN or proxy.
+3. For **Cloud** (the default) or **Custom**, check your internet connection, VPN or proxy.
 4. If requests time out, raise `clawAI.requestTimeoutMs`.
 5. Retry, then check **ClawAI: Show Logs** for the error.
 

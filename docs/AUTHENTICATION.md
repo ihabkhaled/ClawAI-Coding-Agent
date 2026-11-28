@@ -4,8 +4,8 @@ The extension delegates login and consent to the configured ClawAI web app. It
 never asks for or receives the account password.
 
 Before authentication, the webview renders only its connection gateway. The
-user independently selects Local, Cloud, or Custom Backend and Frontend
-origins, then starts authorization from the in-extension Connect button. Local
+user independently selects Cloud (the default since 1.118.0), Local, or Custom
+Backend and Frontend origins, then starts authorization from the in-extension Connect button. Local
 resolves both origins to `https://claw.local`; Cloud resolves both to the
 hosted deployment at `https://claw-ai.co`, which serves the API and the web app
 under one publicly trusted certificate. The two lanes are independent: a Cloud

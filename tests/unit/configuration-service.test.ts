@@ -86,12 +86,12 @@ describe('ConfigurationService model selection', () => {
     expect(vscodeConfiguration.updates).toEqual(['backendUrl:https://claw.local']);
   });
 
-  it('uses the local ClawAI origin as the first-run default', () => {
+  it('uses the ClawAI Cloud origin as the first-run default', () => {
     expect(new ConfigurationService().read()).toMatchObject({
-      backendEnvironment: 'LOCAL',
-      backendUrl: 'https://claw.local',
-      frontendEnvironment: 'LOCAL',
-      frontendUrl: 'https://claw.local',
+      backendEnvironment: 'CLOUD',
+      backendUrl: 'https://claw-ai.co',
+      frontendEnvironment: 'CLOUD',
+      frontendUrl: 'https://claw-ai.co',
     });
   });
 
@@ -133,5 +133,45 @@ describe('ConfigurationService model selection', () => {
       'backendCustomUrl:https://api.example.com',
       'frontendCustomUrl:https://app.example.com',
     ]);
+  });
+});
+
+describe('ConfigurationService connection defaults', () => {
+  beforeEach(() => {
+    vscodeConfiguration.values.clear();
+    vi.clearAllMocks();
+  });
+
+  it('falls back to CLOUD when no environment is set', () => {
+    const read = new ConfigurationService().read();
+    expect(read.backendEnvironment).toBe('CLOUD');
+    expect(read.frontendEnvironment).toBe('CLOUD');
+    expect(read.backendUrl).toBe('https://claw-ai.co');
+  });
+
+  it('keeps an explicit LOCAL and maps an invalid value by the legacy URL', () => {
+    vscodeConfiguration.values.set('backendEnvironment', 'LOCAL');
+    expect(new ConfigurationService().read().backendEnvironment).toBe('LOCAL');
+    vscodeConfiguration.values.set('backendEnvironment', 'bogus');
+    vscodeConfiguration.values.set('backendUrl', 'https://claw.local');
+    expect(new ConfigurationService().read().backendEnvironment).toBe('LOCAL');
+  });
+
+  it('reports which settings the user set themselves and writes LOCAL globally', async () => {
+    vscodeConfiguration.configuration.inspect.mockImplementation((key: string) =>
+      key === 'backendEnvironment' ? { globalValue: 'CLOUD' } : {},
+    );
+    const service = new ConfigurationService();
+    expect(service.inspectConnectionDefaults()).toEqual({
+      backendEnvironmentExplicit: true,
+      frontendEnvironmentExplicit: false,
+      legacyBackendUrl: undefined,
+    });
+    await service.writeLocalEnvironment('frontendEnvironment');
+    expect(vscodeConfiguration.configuration.update).toHaveBeenCalledWith(
+      'frontendEnvironment',
+      'LOCAL',
+      1,
+    );
   });
 });

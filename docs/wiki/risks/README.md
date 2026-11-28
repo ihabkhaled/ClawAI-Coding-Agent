@@ -89,3 +89,8 @@ _Unknown - ask the owner and record the answer._ Which of these risks does the o
 - What is left of partly delivered features: [PARTIAL_REMAINDERS](../../parity/PARTIAL_REMAINDERS.md).
 - Decisions that accepted a residual: [Decisions](../decisions/README.md).
 - Feature-level gaps and open questions: each page in [Features](../features/README.md).
+
+## Added 2026-11-28
+
+- **Translations never reviewed by native speakers (unknown).** Likelihood: unknown. Impact: wrong or awkward text in
+  12 languages. Mitigation: native review per language. Owner: _Unknown - ask the owner and record the answer._

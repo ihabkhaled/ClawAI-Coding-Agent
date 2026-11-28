@@ -23,10 +23,11 @@ On a Mac, use `Cmd` where this guide says `Ctrl` (for example `Cmd+Shift+A`,
 
 1. Open the ClawAI chat. Before you are signed in you see a connection screen.
 2. Choose where ClawAI lives. **Backend** and **Frontend** are separate choices:
-   - **Cloud** is the hosted ClawAI service. Pick this for both if you use the
-     hosted service.
-   - **Local** is a ClawAI stack running on your own machine. It is selected
-     when you first see the screen, so change it if you use the hosted service.
+   - **Cloud** is the hosted ClawAI service. It is selected when you first see
+     the screen, so leave it as it is to use the hosted service.
+   - **Local** is a ClawAI stack running on your own machine. Pick this for both
+     if you develop against a local stack. An install that used Local before
+     1.118.0 stays on Local.
    - **Custom** lets you type another ClawAI address, for example your company's.
 3. Choose **Connect to ClawAI**. Your browser opens on the ClawAI sign-in page.
 4. Sign in there and approve VS Code. Return to the editor. The chat opens once

@@ -127,6 +127,14 @@ function normalizeAppUrl(value: string, kind: 'backend' | 'frontend'): string {
   return `${url.origin}${path === '/' ? '' : path}`;
 }
 
+/** The environment a legacy `backendUrl` stands for, used when the environment setting is invalid. */
+export function legacyEnvironment(legacyBackendUrl: string): ConnectionEnvironment {
+  if (legacyBackendUrl === BACKEND_LOCAL_URL) {
+    return 'LOCAL';
+  }
+  return legacyBackendUrl === BACKEND_CLOUD_URL ? 'CLOUD' : 'CUSTOM';
+}
+
 export function resolveConnectionEndpoint(
   kind: 'backend' | 'frontend',
   environment: ConnectionEnvironment,

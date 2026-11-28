@@ -102,9 +102,16 @@ for (const command of commands) {
 
 assert.equal(
   manifest.contributes.configuration.properties['clawAI.backendUrl'].default,
-  'https://claw.local',
-  'first-run backend must default to the local ClawAI app origin',
+  'https://claw-ai.co',
+  'first-run backend must default to the ClawAI Cloud origin',
 );
+for (const setting of ['backendEnvironment', 'frontendEnvironment']) {
+  assert.equal(
+    manifest.contributes.configuration.properties[`clawAI.${setting}`].default,
+    'CLOUD',
+    `${setting} must default to CLOUD (owner decision 2026-11-28)`,
+  );
+}
 assert.doesNotMatch(
   configurationSource,
   /showInputBox/u,
@@ -146,7 +153,7 @@ assert.equal(
   'Packaged Playwright browser registry metadata is missing',
 );
 assert.match(
-  extensionSource,
+  readFileSync(join(root, 'src', 'services', 'register-chat-participant.ts'), 'utf8'),
   /participant\.iconPath = createClawIconPath\(context\.extensionUri\);/u,
   'Chat participant must use the themed claw scratch mark',
 );

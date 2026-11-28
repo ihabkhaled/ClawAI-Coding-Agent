@@ -8,8 +8,9 @@ import {
 import { COMMAND_SANDBOX_MODES } from '../core/command-sandbox.constants';
 import { normalizeAutoCompactionMode } from '../core/compaction-trigger';
 import {
-  BACKEND_LOCAL_URL,
+  BACKEND_CLOUD_URL,
   connectionEnvironmentSchema,
+  legacyEnvironment,
   normalizeBackendUrl,
   normalizeRoutingMode,
   resolveConnectionEndpoint,
@@ -40,6 +41,7 @@ import type { PermissionMode } from '../core/permission-policy.types';
 import type { PluginSignaturePolicy, TrustedPublishers } from '../core/plugin-signature.types';
 import type { SpeedMode } from '../core/speed-mode';
 import type { ViewDensity } from '../core/view-density.types';
+import type { ConnectionSettingFacts } from './connection-default-migration.types';
 
 function normalizePermissionMode(value: unknown): PermissionMode {
   if (
@@ -208,6 +210,32 @@ export class ConfigurationService {
     return inspected?.globalValue !== undefined;
   }
 
+  /** What the one-time default migration needs: which settings the user set themselves. */
+  inspectConnectionDefaults(): ConnectionSettingFacts {
+    const configuration = vscode.workspace.getConfiguration('clawAI');
+    const isSet = (key: string): boolean => {
+      const inspected = configuration.inspect<string>(key);
+      return (
+        inspected?.globalValue !== undefined ||
+        inspected?.workspaceValue !== undefined ||
+        inspected?.workspaceFolderValue !== undefined
+      );
+    };
+    return {
+      backendEnvironmentExplicit: isSet('backendEnvironment'),
+      frontendEnvironmentExplicit: isSet('frontendEnvironment'),
+      legacyBackendUrl: configuration.inspect<string>('backendUrl')?.globalValue,
+    };
+  }
+
+  async writeLocalEnvironment(
+    setting: 'backendEnvironment' | 'frontendEnvironment',
+  ): Promise<void> {
+    await vscode.workspace
+      .getConfiguration('clawAI')
+      .update(setting, 'LOCAL', vscode.ConfigurationTarget.Global);
+  }
+
   async saveBackendUrl(value: string): Promise<string> {
     const normalized = normalizeBackendUrl(value);
     await vscode.workspace
@@ -263,13 +291,13 @@ export class ConfigurationService {
   read(): RuntimeConfiguration {
     const configuration = vscode.workspace.getConfiguration('clawAI');
     const legacyBackendUrl = normalizeBackendUrl(
-      configuration.get<string>('backendUrl') ?? BACKEND_LOCAL_URL,
+      configuration.get<string>('backendUrl') ?? BACKEND_CLOUD_URL,
     );
     const backendEnvironment = connectionEnvironmentSchema
-      .catch(legacyBackendUrl === BACKEND_LOCAL_URL ? 'LOCAL' : 'CUSTOM')
+      .catch(legacyEnvironment(legacyBackendUrl))
       .parse(configuration.get<unknown>('backendEnvironment'));
     const frontendEnvironment = connectionEnvironmentSchema
-      .catch('LOCAL')
+      .catch('CLOUD')
       .parse(configuration.get<unknown>('frontendEnvironment'));
     const backendCustomUrl =
       configuration.get<string>('backendCustomUrl') ??

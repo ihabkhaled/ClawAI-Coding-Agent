@@ -23,6 +23,7 @@ import { VscodeWorkspaceEditAdapter } from './infrastructure/vscode-workspace-ed
 import { AgentCoordinator } from './services/agent-coordinator';
 import { registerComposerReferenceCommands } from './services/composer-reference-commands';
 import { ConfigurationService } from './services/configuration-service';
+import { migrateConnectionDefault } from './services/connection-default-migration';
 import { ContextFreshnessTracker } from './services/context-freshness-tracker';
 import { ClawaiUriHandler } from './services/deep-link-handler';
 import { reportDictationUnavailable } from './services/dictation-fallback-command';
@@ -36,6 +37,7 @@ import {
   claimPendingWindowHandoff,
   openConversationInNewWindow,
 } from './services/open-in-new-window-command';
+import { registerChatParticipant } from './services/register-chat-participant';
 import { registerConnectedCommands } from './services/register-connected-commands';
 import { registerRemoteChannelCommands } from './services/remote-channel-commands';
 import { registerRemoteSessionCommands } from './services/remote-session-commands';
@@ -45,7 +47,6 @@ import { WorkspaceScopeService } from './services/workspace-scope-service';
 import { workspaceSkillCatalog } from './services/workspace-skill-catalog';
 import { ZeroRetentionController } from './services/zero-retention-controller';
 import { AttentionView } from './views/attention-view';
-import { createClawIconPath } from './views/claw-icon-path';
 import { DiffPreviewProvider } from './views/diff-preview-provider';
 import { NotificationController } from './views/notification-controller';
 import { watchSetupCompletion } from './views/setup-context-key';
@@ -148,20 +149,6 @@ function registerCommands(
   );
 }
 
-function registerChatParticipant(
-  context: vscode.ExtensionContext,
-  coordinator: AgentCoordinator,
-): void {
-  const participant = vscode.chat.createChatParticipant(
-    'clawai.coding-agent',
-    async (request, _chatContext, response, token) => {
-      await coordinator.chatParticipant.send(request.prompt, response, token);
-    },
-  );
-  participant.iconPath = createClawIconPath(context.extensionUri);
-  context.subscriptions.push(participant);
-}
-
 /**
  * Where the pair Fast mode replaced is kept.
  *
@@ -232,6 +219,12 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
   const editAdapter = new VscodeWorkspaceEditAdapter(workspaceScope, externalOutputStore);
   const diffPreview = new DiffPreviewProvider();
   const sessionVault = new SessionVault(context.secrets);
+  // Default moved to CLOUD: pin installs that used LOCAL before the first connect.
+  const connectionDefault = migrateConnectionDefault(
+    context.globalState,
+    connectionConfiguration,
+    sessionVault,
+  );
   const approvalMemory = new WorkspaceApprovalMemory(
     context.globalState,
     () => workspaceScope.snapshot().selectedFolderKey,
@@ -520,7 +513,15 @@ export function activate(context: vscode.ExtensionContext): ClawTestApi | undefi
     version: extensionPackage.version,
   });
   registerChatParticipant(context, coordinator);
-  void logActivation(logger, coordinator.initialize());
+  void logActivation(
+    logger,
+    connectionDefault.then(async (decision) => {
+      if (decision.writeBackendLocal || decision.writeFrontendLocal) {
+        await coordinator.configurationChanged();
+      }
+      await coordinator.initialize();
+    }),
+  );
   // Undefined everywhere except under the test runner. See extension-test-api.
   return testApiFor(
     context.extensionMode,

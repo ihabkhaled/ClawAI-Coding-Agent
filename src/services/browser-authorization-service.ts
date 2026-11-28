@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
 import { type BackendClient } from '../backend/backend-client';
-import { joinAppUrl } from '../core/configuration';
+import { FRONTEND_CLOUD_URL, joinAppUrl } from '../core/configuration';
 import { LoopbackAuthorizationServer } from '../core/loopback-authorization';
 import { createVscodeAuthorizationRequest } from '../core/vscode-authorization';
 
@@ -52,7 +52,7 @@ const defaultCallbackFactory: AuthorizationCallbackFactory = {
 export class BrowserAuthorizationService implements vscode.Disposable {
   private attempt: AuthorizationAttempt | null = null;
   private signInPromise: Promise<AuthorizedSession> | null = null;
-  private frontendUrl = 'https://claw.local';
+  private frontendUrl = FRONTEND_CLOUD_URL;
 
   constructor(
     private backend: BackendClient,

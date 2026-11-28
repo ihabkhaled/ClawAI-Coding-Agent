@@ -2,6 +2,11 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.118.0
+
+- **New installs connect to ClawAI Cloud by default.** Owner decision 2026-11-28: the install page promised the hosted platform, and a new user should not land on a developer URL. Before: `clawAI.backendEnvironment` and `clawAI.frontendEnvironment` defaulted to `LOCAL` (`https://claw.local`). After: both default to `CLOUD` (`https://claw-ai.co`); developers switch to Local in settings or on the connection screen.
+- **Existing installs stay where they were.** A one-time migration on activation pins an install to `LOCAL` (written explicitly, globally) when it never set the environment but has a stored local session or a legacy `clawAI.backendUrl` equal to the local URL. A setting the user chose, either value, is never touched; the migration records `clawAI.connectionDefault.migrated.v1` and never runs again. A signed-out install with no stored local session starts on Cloud.
+
 ## 1.117.0
 
 - **The repository now documents itself for every reader.** A living wiki in `docs/wiki/` (25 categories) is mirrored to the GitHub wiki on every push by a new Publish wiki workflow. Thirty-eight feature pages in `docs/wiki/features/` give each area its business why, product why, how it works, decisions, dated history, tests and evidence, gaps and open questions; there is also a full history timeline, a glossary of 116 terms, a risk register, a decision log and an onboarding path.

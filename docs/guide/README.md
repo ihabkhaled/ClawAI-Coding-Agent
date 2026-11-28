@@ -39,8 +39,8 @@ explains what you can do and how, in plain language.
 ## Before you begin
 
 - VS Code 1.98 or newer.
-- A ClawAI account, and a ClawAI backend to connect to: the hosted service or one
-  you run yourself. The extension is the editor side of ClawAI. Models, sign-in,
+- A ClawAI account, and a ClawAI backend to connect to: the hosted service (the
+  default) or one you run yourself. The extension is the editor side of ClawAI. Models, sign-in,
   history, limits and organization rules all come from the backend.
 - A trusted workspace for anything that reads your whole project or changes files.
   In an untrusted workspace you can still chat and ask read-only questions.

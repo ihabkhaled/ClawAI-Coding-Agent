@@ -401,7 +401,7 @@ describe('BrowserAuthorizationService', () => {
       );
       expect(
         (vscodeMocks.openExternal.mock.calls[1]?.[0] as { toString(): string }).toString(),
-      ).toBe('https://claw.local/authorize/vscode?requestId=request-2');
+      ).toBe('https://claw-ai.co/authorize/vscode?requestId=request-2');
       expect(callbackFactory.open).toHaveBeenCalledTimes(2);
     } finally {
       vi.useRealTimers();

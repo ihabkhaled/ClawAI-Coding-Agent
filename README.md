@@ -9,7 +9,7 @@ project, proposes changes, and waits for your OK before it touches a file.
 It connects to your ClawAI account, so you can use many AI models from one
 place: hosted models, or models running on your own machine.
 
-Version 1.117.0 delivers a more capable agent that can plan, edit files, run
+Version 1.118.0 delivers a more capable agent that can plan, edit files, run
 commands, use git, and drive a browser, all with your approval, and it keeps
 working with the classic chat-and-review flow if a newer feature is not
 available on your ClawAI server. The approval choices now mean what they say
@@ -196,8 +196,9 @@ in [docs/FAQ-AGENT-TOOLS.md](docs/FAQ-AGENT-TOOLS.md); all options are in [docs/
 ## System requirements
 
 - VS Code 1.98 or newer.
-- A ClawAI account and a ClawAI server you can reach: **Local**
-  (`https://claw.local`) or **Cloud** (`https://claw-ai.co`), or your own.
+- A ClawAI account. New installs connect to **Cloud** (`https://claw-ai.co`), the
+  hosted platform, by default. Developers can switch to **Local**
+  (`https://claw.local`) or **Custom** in settings or on the connection screen.
 - A trusted workspace to let ClawAI change files. In an untrusted workspace,
   chat and read-only review still work.
 - Optional: Docker, if you want commands to run in a container.
@@ -267,8 +268,8 @@ Secrets such as tokens and API keys are never settings.
 ## FAQ and troubleshooting
 
 **I can't connect.**
-Check the server address on the connection screen. Local is
-`https://claw.local` and Cloud is `https://claw-ai.co`. Non-local servers
+Check the server address on the connection screen. Cloud (the default) is
+`https://claw-ai.co` and Local is `https://claw.local`. Non-local servers
 must use `https://`. Run **ClawAI: Show Logs** for details.
 
 **The browser opens but VS Code stays signed out.**

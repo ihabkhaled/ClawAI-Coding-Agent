@@ -105,8 +105,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
             <legend>${translated('Backend')}</legend>
             <small>${translated('API, authentication, models, and agent runs')}</small>
             <div class="environment-options">
-              <label><input id="backendEnvironmentLocal" type="radio" name="backendEnvironment" value="LOCAL" checked><span><strong>${translated('Local')}</strong><small>${BACKEND_LOCAL_URL}</small></span></label>
-              <label><input id="backendEnvironmentCloud" type="radio" name="backendEnvironment" value="CLOUD"><span><strong>${translated('Cloud')}</strong><small>${BACKEND_CLOUD_URL}</small></span></label>
+              <label><input id="backendEnvironmentLocal" type="radio" name="backendEnvironment" value="LOCAL"><span><strong>${translated('Local')}</strong><small>${BACKEND_LOCAL_URL}</small></span></label>
+              <label><input id="backendEnvironmentCloud" type="radio" name="backendEnvironment" value="CLOUD" checked><span><strong>${translated('Cloud')}</strong><small>${BACKEND_CLOUD_URL}</small></span></label>
               <label><input id="backendEnvironmentCustom" type="radio" name="backendEnvironment" value="CUSTOM"><span><strong>${translated('Custom')}</strong><small>${translated('Use another server')}</small></span></label>
             </div>
             <label class="custom-endpoint" for="backendUrlInput" hidden>${translated('Custom backend URL')}
@@ -117,8 +117,8 @@ export function renderChatMarkup(input: ChatMarkupInput): string {
             <legend>${translated('Frontend')}</legend>
             <small>${translated('Browser authorization and app links')}</small>
             <div class="environment-options">
-              <label><input id="frontendEnvironmentLocal" type="radio" name="frontendEnvironment" value="LOCAL" checked><span><strong>${translated('Local')}</strong><small>${FRONTEND_LOCAL_URL}</small></span></label>
-              <label><input id="frontendEnvironmentCloud" type="radio" name="frontendEnvironment" value="CLOUD"><span><strong>${translated('Cloud')}</strong><small>${FRONTEND_CLOUD_URL}</small></span></label>
+              <label><input id="frontendEnvironmentLocal" type="radio" name="frontendEnvironment" value="LOCAL"><span><strong>${translated('Local')}</strong><small>${FRONTEND_LOCAL_URL}</small></span></label>
+              <label><input id="frontendEnvironmentCloud" type="radio" name="frontendEnvironment" value="CLOUD" checked><span><strong>${translated('Cloud')}</strong><small>${FRONTEND_CLOUD_URL}</small></span></label>
               <label><input id="frontendEnvironmentCustom" type="radio" name="frontendEnvironment" value="CUSTOM"><span><strong>${translated('Custom')}</strong><small>${translated('Use another web app')}</small></span></label>
             </div>
             <label class="custom-endpoint" for="frontendUrlInput" hidden>${translated('Custom frontend URL')}
