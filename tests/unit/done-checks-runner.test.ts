@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { doneChecksPrompt, doneChecksProblem, runDoneChecks } from '../../src/sdk/done-checks';
+import { ALPHA, assemble, DIGITS } from '../helpers/fake-secrets';
 
 import type { DoneCheck } from '../../src/sdk/done-checks.types';
 
@@ -104,7 +105,7 @@ describe('runDoneChecks', () => {
   });
 
   it('redacts secrets in the output', async () => {
-    const secret = 'abcdefghijklmnopqrstuvwxyz0123456789';
+    const secret = assemble(ALPHA, DIGITS);
     const code = `console.log("Authorization: Bearer ${secret}")`;
 
     const report = await runDoneChecks([node('leak', code)], workspace, undefined);

@@ -15,6 +15,7 @@ import {
   KNOWLEDGE_PREAMBLE_MAX_CHARS,
   KNOWLEDGE_PREAMBLE_CLOSE,
 } from '../../src/sdk/knowledge-tool.constants';
+import { ALPHA, fakeOpenAiKey } from '../helpers/fake-secrets';
 
 import { cleanFixtures, fixture, ROOT_CLAUDE } from './knowledge-fixture';
 
@@ -184,10 +185,10 @@ describe('the knowledge preamble', () => {
   it('redacts a secret that sits in an instruction file', () => {
     const out = knowledgePreamble(
       fixture({
-        'CLAUDE.md': '# T\n## Never\n- NEVER paste sk-abcdefghijklmnopqrstuvwx anywhere\n',
+        'CLAUDE.md': `# T\n## Never\n- NEVER paste ${fakeOpenAiKey(ALPHA.slice(0, 24))} anywhere\n`,
       }),
     );
 
-    expect(out).not.toContain('sk-abcdefghijklmnopqrstuvwx');
+    expect(out).not.toContain(fakeOpenAiKey(ALPHA.slice(0, 24)));
   });
 });

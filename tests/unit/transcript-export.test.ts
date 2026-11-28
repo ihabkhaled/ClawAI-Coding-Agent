@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { renderTranscriptExport, transcriptExportFilename } from '../../src/core/transcript-export';
+import { assemble } from '../helpers/fake-secrets';
 
 import type { TranscriptMessage } from '../../src/core/transcript-export';
 
@@ -77,12 +78,12 @@ describe('renderTranscriptExport', () => {
   it('redacts a credential hiding in the title', () => {
     const output = renderTranscriptExport({
       ...base,
-      title: 'debug password=hunter2ACTUAL',
+      title: `debug password=${assemble('hunter2', 'ACTUAL')}`,
       format: 'markdown',
       messages: [message()],
     });
 
-    expect(output).not.toContain('hunter2ACTUAL');
+    expect(output).not.toContain(assemble('hunter2', 'ACTUAL'));
   });
 
   it('names an unknown role rather than guessing it is the assistant', () => {

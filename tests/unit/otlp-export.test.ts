@@ -85,15 +85,16 @@ describe('otlpTracePayload', () => {
   });
 
   it('redacts a secret a span attribute picked up', () => {
+    const LIVE_KEY = ['sk', 'live', '9'].join('-');
     const payload = JSON.stringify(
       otlpTracePayload(
-        [span({ attributes: { command: 'curl -H "Authorization: Bearer sk-live-9" x' } })],
+        [span({ attributes: { command: `curl -H "Authorization: Bearer ${LIVE_KEY}" x` } })],
         'svc',
         '1',
       ),
     );
 
-    expect(payload).not.toContain('sk-live-9');
+    expect(payload).not.toContain(LIVE_KEY);
     expect(payload).toContain('[REDACTED]');
   });
 

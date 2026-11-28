@@ -1,5 +1,7 @@
 import { createServer } from 'node:http';
 
+import { assemble } from '../helpers/fake-secrets';
+
 import type { IncomingMessage, Server, ServerResponse } from 'node:http';
 
 export interface TestSite {
@@ -50,7 +52,9 @@ const PAGES: Readonly<Record<string, string>> = {
   '/popup': page('<button onclick="window.open(\'/second\')">Pop</button>'),
   '/file-link': page('<a id="f" href="file:///etc/hosts">file</a><img src="file:///etc/hosts">'),
   '/private-subresource': page('<img src="http://169.254.169.254/latest/meta-data/">'),
-  '/js-error': page('<script>throw new Error("kaboom token=abcdef1234567890abcdef")</script>'),
+  '/js-error': page(
+    `<script>throw new Error("kaboom token=${assemble('abcdef', '1234567890', 'abcdef')}")</script>`,
+  ),
   '/download': page('<a id="dl" href="/file.bin" download>download</a>'),
 };
 

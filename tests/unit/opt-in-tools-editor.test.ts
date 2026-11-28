@@ -22,6 +22,7 @@ import {
 } from '../../src/infrastructure/vscode-runtime-target-adapter';
 import { describeRuntimeEffect } from '../../src/services/runtime-approval-card';
 import { RuntimePolicyV2Adapter } from '../../src/services/runtime-policy-v2-adapter';
+import { ALPHA, dashed, fakeJwt } from '../helpers/fake-secrets';
 
 import type { PolicyRequest } from '../../src/core/policy-v2';
 import type {
@@ -110,7 +111,7 @@ describe('http.request in the editor', () => {
     server = createServer((request, response) => {
       seen.push(`${request.method ?? ''} ${request.url ?? ''}`);
       response.setHeader('content-type', 'application/json');
-      response.end(JSON.stringify({ ok: true, accessToken: 'tok-1234567890' }));
+      response.end(JSON.stringify({ ok: true, accessToken: dashed('tok', '1234567890') }));
     });
     await new Promise<void>((resolve) => server.listen(0, '127.0.0.1', resolve));
     const address = server.address();
@@ -163,7 +164,7 @@ describe('http.request in the editor', () => {
         save: { tok: 'accessToken' },
       }),
     );
-    expect(JSON.stringify(output.structured)).not.toContain('tok-1234567890');
+    expect(JSON.stringify(output.structured)).not.toContain(dashed('tok', '1234567890'));
     expect(seen).toContain('POST /login');
   });
 
@@ -422,8 +423,7 @@ describe('the approval card', () => {
   it('hides a secret-shaped value inside the script', async () => {
     const card = describeRuntimeEffect(
       await requestFor('workspace.shell', 'run', {
-        script:
-          'curl -H "Authorization: Bearer eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxIn0.abcdefghijk" x',
+        script: `curl -H "Authorization: Bearer ${fakeJwt({ sub: '1' }, ALPHA.slice(0, 11))}" x`,
       }),
     );
     expect(card.sanitizedPreview).not.toContain('eyJhbGci');

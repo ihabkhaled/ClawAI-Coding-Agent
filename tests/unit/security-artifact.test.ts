@@ -3,6 +3,7 @@ import { describe, expect, it, vi } from 'vitest';
 import { prepareArtifact } from '../../src/core/artifact-publication';
 import { redactText } from '../../src/core/redaction';
 import { ArtifactToolExecutor } from '../../src/infrastructure/artifact-tool-executor';
+import { fakePemBegin } from '../helpers/fake-secrets';
 
 import type { ToolInvocation } from '../../src/core/runtime/runtime-tool-contracts';
 
@@ -57,8 +58,8 @@ describe('artifact publication only reads inside the workspace', () => {
 
 describe('artifact secret scrub covers common credential shapes', () => {
   const blocked: Record<string, string> = {
-    'encrypted key': '-----BEGIN ENCRYPTED PRIVATE KEY-----',
-    'pgp key': '-----BEGIN PGP PRIVATE KEY BLOCK-----',
+    'encrypted key': fakePemBegin('ENCRYPTED'),
+    'pgp key': fakePemBegin('PGP', ' BLOCK'),
     'github fine-grained': `github_pat_${'A1b2C3d4E5'.repeat(3)}`,
     'npm token': `npm_${'aB3dE5gH7j'.repeat(4)}`,
     'gitlab token': ['glpat', 'aB3dE5gH7jK9mN1pQ3rS'].join('-'),

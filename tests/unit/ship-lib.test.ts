@@ -9,6 +9,7 @@ import {
   releaseGateProblems,
   secretShapedAdditions,
 } from '../../scripts/ship-lib.mjs';
+import { fakeStripeKey } from '../helpers/fake-secrets';
 
 const allAssets = releaseAssetPaths('1.90.0');
 
@@ -58,7 +59,7 @@ describe('push protection', () => {
     expect(
       secretShapedAdditions(added("t = ['glpat', 'aB3dE5gH7jK9mN1pQ3rS'].join('-');")),
     ).toEqual([]);
-    expect(secretShapedAdditions(added("k = 'sk_live_example';"))).toEqual([]);
+    expect(secretShapedAdditions(added(`k = '${fakeStripeKey('example')}';`))).toEqual([]);
   });
 
   it('ignores removed and context lines', () => {

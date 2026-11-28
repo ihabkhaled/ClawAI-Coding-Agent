@@ -40,6 +40,7 @@ vi.mock('vscode', () => ({
 }));
 
 import { contiguous, VscodeNotebookKernel } from '../../src/infrastructure/vscode-notebook-kernel';
+import { assemble } from '../helpers/fake-secrets';
 
 const subject = () =>
   new VscodeNotebookKernel(() => ({ scheme: 'remote', path: '/root' }) as never);
@@ -68,7 +69,13 @@ describe('VscodeNotebookKernel', () => {
       if (command !== 'notebook.cell.execute') return;
       state.cells[1] = {
         kind: 2,
-        outputs: [{ items: [{ mime: 'text/plain', data: text('token=abcdef123456 done') }] }],
+        outputs: [
+          {
+            items: [
+              { mime: 'text/plain', data: text(`token=${assemble('abcdef', '123456')} done`) },
+            ],
+          },
+        ],
         executionSummary: { executionOrder: 7, success: true, timing: { endTime: 100 } },
       };
     });
@@ -91,7 +98,7 @@ describe('VscodeNotebookKernel', () => {
     expect(result.status).toBe('completed');
     if (result.status === 'unavailable') throw new Error('unexpected');
     expect(result.cells[0]).toMatchObject({ index: 1, executionOrder: 7, success: true });
-    expect(result.cells[0]?.output).not.toContain('abcdef123456');
+    expect(result.cells[0]?.output).not.toContain(assemble('abcdef', '123456'));
   });
 
   it('runs all code cells as one range and skips markdown', async () => {

@@ -1,6 +1,14 @@
 import { describe, expect, it } from 'vitest';
 
 import { findSecretInCommandOutput, findStagedSecret } from '../../src/core/staged-secret-scan';
+import {
+  assemble,
+  fakeAwsKeyId,
+  fakeGithubToken,
+  fakeJwt,
+  fakePemBegin,
+  fakeStripeKey,
+} from '../helpers/fake-secrets';
 
 const added = (...lines: readonly string[]): string =>
   ['diff --git a/x b/x', '--- a/x', '+++ b/x', '@@ -0,0 +1 @@', ...lines].join('\n');
@@ -24,28 +32,38 @@ describe('findStagedSecret', () => {
   });
 
   it.each([
-    ['a private key block', '+-----BEGIN RSA PRIVATE KEY-----'],
-    ['an AWS access key', '+const key = "AKIAIOSFODNN7HXQMPLE";'],
-    ['a GitHub token', '+GITHUB_TOKEN=ghp_A1b2C3d4E5f6G7h8I9j0K1l2M3n4O5p6Q7r8'],
-    ['a Stripe live key', '+const stripe = "sk_live_51H8xKlMnOpQrStUvWxYz";'],
+    ['a private key block', `+${fakePemBegin('RSA')}`],
+    ['an AWS access key', `+const key = "${fakeAwsKeyId(assemble('IOSFODNN', '7HXQMPLE'))}";`],
+    [
+      'a GitHub token',
+      `+GITHUB_TOKEN=${fakeGithubToken(assemble('A1b2C3d4', 'E5f6G7h8', 'I9j0K1l2', 'M3n4O5p6', 'Q7r8'))}`,
+    ],
+    [
+      'a Stripe live key',
+      `+const stripe = "${fakeStripeKey(assemble('51H8xKlM', 'nOpQrStU', 'vWxYz'))}";`,
+    ],
     [
       'a JWT',
-      '+const jwt = "eyJhbGciOiJIUzI1NiJ9.eyJzdWIiOiIxMjM0NTY3ODkwIn0.dBjftJeZ4CVPmB92K27uhbUJU1p1r"',
+      `+const jwt = "${fakeJwt({ sub: '1234567890' }, assemble('dBjftJeZ4CVPmB92', 'K27uhbUJU1p1r'))}"`,
     ],
   ])('blocks %s', (_label, line) => {
     expect(findStagedSecret(added(line))).toBeDefined();
   });
 
   it('blocks a generated credential assigned to a credential name', () => {
-    expect(findStagedSecret(added('+  password: "aB3xK9pQ7mZ2wL5vR8tD",'))).toBe(
-      'aB3xK9pQ7mZ2wL5vR8tD',
-    );
+    expect(
+      findStagedSecret(added(`+  password: "${assemble('aB3xK9pQ', '7mZ2wL5v', 'R8tD')}",`)),
+    ).toBe(assemble('aB3xK9pQ', '7mZ2wL5v', 'R8tD'));
   });
 
   it('ignores a secret that is being removed', () => {
     // Deleting the line is the fix; blocking it strands the repository with
     // the secret still committed.
-    const diff = ['--- a/x', '+++ b/x', '-const key = "AKIAIOSFODNN7HXQMPLE";'].join('\n');
+    const diff = [
+      '--- a/x',
+      '+++ b/x',
+      `-const key = "${fakeAwsKeyId(assemble('IOSFODNN', '7HXQMPLE'))}";`,
+    ].join('\n');
     expect(findStagedSecret(diff)).toBeUndefined();
   });
 
@@ -57,10 +75,10 @@ describe('findStagedSecret', () => {
     // The assignment pattern is global; a shared instance carries lastIndex
     // between lines and silently skips matches.
     const diff = added(
-      '+  password: "aB3xK9pQ7mZ2wL5vR8tD",',
-      '+  password: "zQ7mW2nX9kV4bT6yH3jL",',
+      `+  password: "${assemble('aB3xK9pQ', '7mZ2wL5v', 'R8tD')}",`,
+      `+  password: "${assemble('zQ7mW2nX', '9kV4bT6y', 'H3jL')}",`,
     );
-    expect(findStagedSecret(diff)).toBe('aB3xK9pQ7mZ2wL5vR8tD');
+    expect(findStagedSecret(diff)).toBe(assemble('aB3xK9pQ', '7mZ2wL5v', 'R8tD'));
   });
 });
 
@@ -112,7 +130,7 @@ describe('findSecretInCommandOutput', () => {
   });
 
   it('still finds an unmasked secret', () => {
-    expect(findSecretInCommandOutput(`+-----BEGIN RSA PRIVATE KEY-----${NL}`)).toBeDefined();
+    expect(findSecretInCommandOutput(`+${fakePemBegin('RSA')}${NL}`)).toBeDefined();
   });
 
   it('leaves findStagedSecret alone: text the scrubber masked itself is not a leak', () => {

@@ -13,6 +13,7 @@ import {
   NOTES_READ_MAX_CHARS,
 } from '../../src/sdk/notes-tool.constants';
 import { toolCategory, workspaceToolkit } from '../../src/sdk/workspace-toolkit';
+import { ALPHA, assemble, fakeGithubToken } from '../helpers/fake-secrets';
 
 import type { NoteAddedInfo } from '../../src/sdk/notes-tool.types';
 
@@ -101,18 +102,18 @@ describe('workspace.notes operations', () => {
     const { tool, store, workspace } = fresh(state);
 
     tool.execute('add', {
-      text: 'use Authorization: Bearer abcdef123456789 for the api',
+      text: `use Authorization: Bearer ${assemble('abcdef', '123456')}789 for the api`,
       tag: 'api_key=hunter2',
     });
     tool.execute('add', { text: 'ok' });
-    tool.execute('replace', { id: 2, text: 'GITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwx' });
+    tool.execute('replace', { id: 2, text: `GITHUB_TOKEN=${fakeGithubToken(ALPHA.slice(0, 24))}` });
 
     const kept = JSON.stringify(store.list());
-    expect(kept).not.toContain('abcdef123456789');
+    expect(kept).not.toContain(`${assemble('abcdef', '123456')}789`);
     expect(kept).not.toContain('hunter2');
     expect(kept).not.toContain('ghp_abcdefghijklmnop');
     const file = readFileSync(notesFileFor(state, workspace, 't1'), 'utf8');
-    expect(file).not.toContain('abcdef123456789');
+    expect(file).not.toContain(`${assemble('abcdef', '123456')}789`);
     expect(file).not.toContain('ghp_abcdefghijklmnop');
   });
 

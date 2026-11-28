@@ -1,5 +1,7 @@
 import { expect, test } from '@playwright/test';
 
+import { fakeStripeKey } from '../helpers/fake-secrets';
+
 import { localModel, sendState, type MockBridge } from './fixtures';
 
 import type { Page } from '@playwright/test';
@@ -381,7 +383,7 @@ test('refuses a credential-shaped attachment by name', async ({ page }) => {
   await page.locator('#attachmentInput').setInputFiles({
     name: '.env',
     mimeType: 'text/plain',
-    buffer: Buffer.from('STRIPE_SECRET_KEY=sk_live_example'),
+    buffer: Buffer.from(`STRIPE_SECRET_KEY=${fakeStripeKey('example')}`),
   });
 
   await expect(page.locator('#attachmentStatus')).toHaveText(

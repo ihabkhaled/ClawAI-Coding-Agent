@@ -6,6 +6,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 
 import { WatchLog } from '../../src/sdk/process-watch-log';
 import { WatchLogFile } from '../../src/sdk/process-watch-log-file';
+import { ALPHA, assemble, fakeGithubToken } from '../helpers/fake-secrets';
 
 const created: string[] = [];
 
@@ -122,13 +123,13 @@ describe('WatchLog cursors', () => {
     log.feed(
       0,
       Buffer.from(
-        'Authorization: Bearer abcdef0123456789\nGITHUB_TOKEN=ghp_abcdefghijklmnopqrstuvwxyz0123\nok\n',
+        `Authorization: Bearer ${assemble('abcdef', '0123456789')}\nGITHUB_TOKEN=${fakeGithubToken(assemble(ALPHA, '0123'))}\nok\n`,
       ),
     );
 
     const text = log.read(undefined, 1_000).output;
 
-    expect(text).not.toContain('abcdef0123456789');
+    expect(text).not.toContain(assemble('abcdef', '0123456789'));
     expect(text).not.toContain('ghp_abcdefghij');
     expect(text).toContain('ok');
   });

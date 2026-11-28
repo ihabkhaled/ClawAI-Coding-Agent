@@ -116,6 +116,26 @@ External roots allow create and update only. They cannot provide model context,
 host commands, delete files, or participate in automatic undo. Every external
 final diff requires explicit approval, including in Full Access mode.
 
+## Secret scanning
+
+No secret-shaped text may be committed, not even a fake one: a public scanner
+cannot tell a test value from a real key, and a flagged fake is handled as an
+incident. On 2026-11-28 GitHub secret scanning flagged the fake test value in
+`tests/unit/adv-vision.test.ts` as an "OpenAI API key" (alert #1). A gitleaks
+scan of every commit found 29 secret-shaped values, all fake fixtures in
+`tests/`, none in source, docs or configuration; no real credential was exposed.
+
+- Tests build fake secrets at run time with `tests/helpers/fake-secrets.ts`, so
+  the source text never holds a complete secret shape.
+- `.github/workflows/secret-scan.yml` runs gitleaks (pinned release, checksum
+  verified) over the pushed commits on every push and pull request, and over
+  the whole history weekly and on demand. `.gitleaks.toml` has no allowlist:
+  a finding is fixed in the code.
+- The pre-commit hook runs `gitleaks git --pre-commit --staged` when gitleaks
+  is installed; `npm run ship` also refuses secret-shaped additions in the
+  outgoing diff (`scripts/ship-lib.mjs`, `secretShapedAdditions`).
+- GitHub secret scanning and push protection are on for the repository.
+
 ## Residual risks
 
 Approved generated code can still be incorrect. Users must review diffs and run

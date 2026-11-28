@@ -3,6 +3,8 @@ import { Buffer } from 'node:buffer';
 import { BackendClient } from '../../src/backend/backend-client';
 import { SessionVault, type SecretStoragePort } from '../../src/core/session-vault';
 
+import { assemble, fakeOpenAiKey } from './fake-secrets';
+
 import type { PairingDeviceHint } from '../../src/backend/device-pairing-client';
 
 export const CHAOS_BACKEND_URL = 'https://chaos.claw.example';
@@ -11,7 +13,7 @@ export const CHAOS_TIMEOUT_MS = 60;
 /** Strings that must never reach a user-visible message. */
 export const ACCESS_SECRET = 'chaos-access-token-SECRET';
 export const REFRESH_SECRET = 'chaos-refresh-token-SECRET';
-export const API_KEY_SECRET = 'sk-chaosapikey1234567890abcdef';
+export const API_KEY_SECRET = fakeOpenAiKey(assemble('chaos', 'apikey', '1234567890', 'abcdef'));
 
 export const SECRET_MARKERS: readonly string[] = [ACCESS_SECRET, REFRESH_SECRET, API_KEY_SECRET];
 

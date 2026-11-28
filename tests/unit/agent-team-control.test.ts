@@ -1,5 +1,6 @@
 import { afterEach, describe, expect, it } from 'vitest';
 
+import { ALPHA, assemble, DIGITS, fakeOpenAiKey } from '../helpers/fake-secrets';
 import { cleanTeamFixtures, must, runTeam } from '../helpers/team-fixture';
 import { nap } from '../helpers/team-transport';
 
@@ -7,7 +8,7 @@ import type { AgentEvent } from '../../src/sdk/create-agent.types';
 
 afterEach(cleanTeamFixtures);
 
-const GITHUB_TOKEN = ['ghp', 'abcdefghijklmnopqrstuvwxyz0123456789'].join('_');
+const GITHUB_TOKEN = ['ghp', assemble(ALPHA, DIGITS)].join('_');
 
 const AGENT = 'agent.team';
 
@@ -135,7 +136,7 @@ describe('agent.team: the message bus', () => {
         must(
           await api.call(AGENT, 'spawn', {
             name: 'leaky',
-            task: 'use key sk-abcdefghijklmnopqrstuvwxyz123456',
+            task: `use key ${fakeOpenAiKey(assemble(ALPHA, '123456'))}`,
             tools: ['read'],
           }),
         );
@@ -146,19 +147,19 @@ describe('agent.team: the message bus', () => {
       },
       children: {
         leaky: async (api) => {
-          expect(api.prompt).not.toContain('sk-abcdefghijklmnopqrstuvwxyz123456');
+          expect(api.prompt).not.toContain(fakeOpenAiKey(assemble(ALPHA, '123456')));
           must(
             await api.call(AGENT, 'message', {
               to: 'lead',
               text: `token is ${GITHUB_TOKEN}`,
             }),
           );
-          api.say('the key was sk-abcdefghijklmnopqrstuvwxyz123456');
+          api.say(`the key was ${fakeOpenAiKey(assemble(ALPHA, '123456'))}`);
         },
       },
     });
     expect(received).not.toContain(GITHUB_TOKEN);
-    expect(report).not.toContain('sk-abcdefghijklmnopqrstuvwxyz123456');
+    expect(report).not.toContain(fakeOpenAiKey(assemble(ALPHA, '123456')));
   });
 
   it('limits what one agent may send in a run', async () => {

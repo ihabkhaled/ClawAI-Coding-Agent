@@ -2,6 +2,10 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.115.0
+
+- Security: GitHub flagged a fake test value as an "OpenAI API key". It was never a real key: a scan of every commit found only fake values in tests. Tests now build fake secrets at run time, so no secret-shaped text is stored anywhere. A new Secret scan workflow runs gitleaks on every push and pull request and over the whole history weekly; the pre-commit hook runs it too when gitleaks is installed. No behaviour change in the extension.
+
 ## 1.114.0
 
 - The panel's agent now reads audio and video in your project (mp3, m4a, wav, ogg, flac, aac, webm, mp4, mov, mkv) as a transcript, the way headless and SDK runs already did. Before, the editor answered "no tool turns audio into text". It is the same billed `POST /files/transcribe-text`; the result says "billed to your credit", and files over 15 MB are refused before any call. The `workspace.files` description now tells the model that a read returns a transcript, so it no longer refuses before trying. Live proof: in a real VS Code against a local backend, Gemini 2.5 Flash read a WAV and an MP4 and quoted the spoken sentence from each.

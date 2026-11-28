@@ -9,6 +9,7 @@ import { createPlanTool } from '../../src/sdk/task-plan-tool';
 import { PLAN_MAX_STEPS } from '../../src/sdk/task-plan-tool.constants';
 import { resolveToolAlias } from '../../src/sdk/tool-alias';
 import { toolCategory, workspaceToolkit } from '../../src/sdk/workspace-toolkit';
+import { ALPHA, assemble, fakeOpenAiKey } from '../helpers/fake-secrets';
 
 import type { PlanStepCheck, PlanSummary } from '../../src/sdk/task-plan-tool.types';
 
@@ -116,7 +117,10 @@ describe('task.plan set, list, next', () => {
           steps: [
             {
               title: 'x',
-              check: { executable: 'node', args: ['--token=sk-abcdefghijklmnopqrstuvwxyz123456'] },
+              check: {
+                executable: 'node',
+                args: [`--token=${fakeOpenAiKey(assemble(ALPHA, '123456'))}`],
+              },
             },
           ],
         }),
@@ -291,7 +295,7 @@ describe('task.plan update', () => {
     });
     const attempt = await tool.execute('update', { id: 'a', status: 'done' });
     expect(attempt).toMatchObject({ refused: true });
-    expect(JSON.stringify(attempt)).not.toContain('sk-abcdefghijklmnopqrstuvwxyz123456');
+    expect(JSON.stringify(attempt)).not.toContain(fakeOpenAiKey(assemble(ALPHA, '123456')));
   });
 
   it('two concurrent updates each keep their own result: a passing one is not lost to a failing one', async () => {
