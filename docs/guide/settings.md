@@ -59,7 +59,7 @@ and [Privacy and security](privacy-and-security.md) for what these mean.
 
 ### Tools that stay off until you turn them on
 
-Two tools are off until you switch them on in your own user settings. A project's `.vscode/settings.json` cannot turn them on.
+Two tools are off until you switch them on in your own user settings. A project's `<workspace>/.vscode/settings.json` cannot turn them on.
 
 - **Web requests** (`clawAI.tools.httpAllowHosts`). List the servers the agent may call, for example `localhost:3000` or `*.example.com`. It can then read from them while it works. Anything that changes data on a server (post, put, patch, delete) is always asked about. Private and local addresses work only when you name them.
 - **Shell scripts** (`clawAI.tools.shellEnabled`). Lets the agent use pipes, `&&` and redirects. Every script is shown to you first. A built-in check also refuses scripts that reach outside the workspace, read credentials or download and run code; it is a safety net and not a sandbox, so read what you approve.

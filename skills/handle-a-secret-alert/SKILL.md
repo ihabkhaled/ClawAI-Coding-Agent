@@ -8,7 +8,15 @@ description: Triage and close a secret-scanning finding (GitHub alert, gitleaks 
 Every finding is an incident until proven fake. Order matters: a key that was public is
 compromised even after the history is cleaned.
 
-## Steps
+## When to use
+
+A scanner (GitHub alert, gitleaks, ship refusal) reports a key, token, password or private key in code or history.
+
+## When NOT to use
+
+A routine dependency or code-scanning alert with no credential in it.
+
+## Procedure
 
 1. **Is it real?** Look at the value's shape and where it lives. A fake is built for a test and
    matches no account; anything else, or any doubt, is real.
@@ -34,3 +42,13 @@ compromised even after the history is cleaned.
 ## Reference
 
 The 2026-11-28 incident: `docs/incidents/2026-11-28-fake-openai-key-flagged.md`.
+
+## Failure modes
+
+- Cleaning history before revoking: a public key stays compromised.
+- Adding the value to `.gitleaks.toml` instead of removing it.
+- Scanning a worktree: its `.git` is a file and breaks the mount; use a fresh mirror.
+
+## Definition of done
+
+The value is revoked if real, removed from code, every commit scans clean, the alert is closed with the right reason and an incident record exists in `docs/incidents/`.

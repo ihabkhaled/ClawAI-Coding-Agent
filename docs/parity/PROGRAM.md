@@ -30,12 +30,12 @@ Four separate audits, run independently, each surfaced the same class of defect:
 **a subsystem that exists, is well written, and is never called — while a
 document claims it shipped.**
 
-| Where                                                      | What is dead                                                                                                                                                                    | What claims it works                                     |
-| ---------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
-| `src/core/enterprise-policy.ts`                            | Ed25519 verification, tool/target/model allowlists, retention ceiling, immutable safety rails. Zero importers in `src/`, zero tests.                                            | `CHANGELOG.md:942`, "signed enterprise policy contracts" |
-| `src/core/durable-run-journal.ts:95`                       | `compactedContext`, modelling summary, decisions, open questions and active task ids. Zero producers.                                                                           | `CHANGELOG.md:940`, "context-compaction references"      |
-| `src/services/observability-service.ts:27`                 | `setRemoteExport`. No production caller; spans end in the VS Code output channel.                                                                                               | F108 read as partially built                             |
-| `BE/claw-routing-service/.../workflows/managers/handlers/` | **Thirteen** handlers, all throwing `SCAFFOLD-R3`, added together on 2026-05-24. None registered, none tested, and `IWorkflowHandler` has no implementor outside the directory. | F104 read as partially built                             |
+| Where                                                             | What is dead                                                                                                                                                                    | What claims it works                                     |
+| ----------------------------------------------------------------- | ------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- | -------------------------------------------------------- |
+| `src/core/enterprise-policy.ts`                                   | Ed25519 verification, tool/target/model allowlists, retention ceiling, immutable safety rails. Zero importers in `src/`, zero tests.                                            | `CHANGELOG.md:942`, "signed enterprise policy contracts" |
+| `src/core/durable-run-journal.ts:95`                              | `compactedContext`, modelling summary, decisions, open questions and active task ids. Zero producers.                                                                           | `CHANGELOG.md:940`, "context-compaction references"      |
+| `src/services/observability-service.ts:27`                        | `setRemoteExport`. No production caller; spans end in the VS Code output channel.                                                                                               | F108 read as partially built                             |
+| `<backend>/claw-routing-service/.../workflows/managers/handlers/` | **Thirteen** handlers, all throwing `SCAFFOLD-R3`, added together on 2026-05-24. None registered, none tested, and `IWorkflowHandler` has no implementor outside the directory. | F104 read as partially built                             |
 
 This is exactly what the pack's "present is not wired" rule exists to catch, and
 it is why the audit ran before any code. The remedy is not more features. It is
@@ -268,7 +268,7 @@ project may add denials, never remove the built-in ones.
 F050 was closed by reading rather than building. The audit called the deny set
 "hardcoded and unconfigurable", which is true of `workspace-path-policy.ts`
 itself but not of the product: tools became extendable through the 0.75.0
-policy rules, context collection already honoured `.clawai/ignore`, and
+policy rules, context collection already honoured `<workspace>/.clawai/ignore`, and
 attachments gained the 0.65.0 name screen. A fourth mechanism would have been
 the fork the audit warned about two rows earlier.
 
@@ -338,9 +338,9 @@ than the confirmation dialog the alternative would have required.
 
 ### Batch 17 — the second unblock
 
-| Batch | Version                       | Status                                                     | Evidence                                                                                                                                                                                                                                                         |
-| ----- | ----------------------------- | ---------------------------------------------------------- | ---------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
-| 17    | 0.81.0 + monorepo `cc47c0318` | Code and deterministic gates complete in both repositories | F052: `apps/claw-agent-service/src/modules/fleet/` in the monorepo; `src/core/policy-v2.ts`, `src/backend/organization-policy-client.ts`, `src/services/agent-data-service.ts` here. Tests: 18 in the agent service, 18 in `tests/unit/policy-v2-rules.test.ts`. |
+| Batch | Version                       | Status                                                     | Evidence                                                                                                                                                                                                                                                                    |
+| ----- | ----------------------------- | ---------------------------------------------------------- | --------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------------- |
+| 17    | 0.81.0 + monorepo `cc47c0318` | Code and deterministic gates complete in both repositories | F052: `<monorepo>/apps/claw-agent-service/src/modules/fleet/` in the monorepo; `src/core/policy-v2.ts`, `src/backend/organization-policy-client.ts`, `src/services/agent-data-service.ts` here. Tests: 18 in the agent service, 18 in `tests/unit/policy-v2-rules.test.ts`. |
 
 F052 was BLOCKED because no backend served a policy. It is unblocked by
 building that contract rather than by narrowing the feature: an
@@ -468,8 +468,8 @@ coarse category the executor already gates on, so `definitionName` sits
 alongside `role`, additive. And `global-context-service.ts` stores two free
 Markdown blobs; a preset needs a `name`, a uniqueness constraint, and a
 bounded `systemPrompt` — fields Markdown cannot validate — so it gets its own
-file, `.clawai/agents/agents.json`, following the same opt-in,
-absent-means-empty pattern `policies/policy.json` already established rather
+file, `<workspace>/.clawai/agents/agents.json`, following the same opt-in,
+absent-means-empty pattern `<workspace>/.clawai/policies/policy.json` already established rather
 than inventing a second one.
 
 The design constraint worth keeping: a definition can only ever add
@@ -479,7 +479,7 @@ still declares its own `tools`, `modelPolicy`, `budget`, and `riskCeiling` on
 every fork, unchanged. A definition cannot be used to smuggle a wider grant
 than the task itself already carries, which matters because the file it comes
 from is workspace content — untrusted the same way `rules.md` is, and safe
-for the same reason `policies/policy.json` is: it can only narrow or instruct,
+for the same reason `<workspace>/.clawai/policies/policy.json` is: it can only narrow or instruct,
 never widen.
 
 One implementation correction happened mid-batch: the first wiring pushed
@@ -1344,7 +1344,7 @@ and cannot grow.
 | 46    | 1.7.0   | Code and deterministic gates complete | `skill-definition.ts`, `slash-command.ts`, `skill-catalog-service.ts`. Tests: 45 + 2 e2e. |
 
 Skills existed as files nobody could invoke. A file is now the whole
-interface: drop `review.md` into `.clawai/skills` and `/review` works, which is
+interface: drop `review.md` into `<workspace>/.clawai/skills` and `/review` works, which is
 what makes a command something a repository can ship in a pull request.
 
 **The header is parsed by hand, not by a YAML library.** Skill files are
@@ -1411,7 +1411,7 @@ local gate is the one that decides how many red builds you ship.
 
 The audit named F077 as the gate for this row, on the grounds that both need a
 named, metadata-bearing instruction unit. That was right, and the reuse is
-literal: `.clawai/output-styles/*.md` are read by the parser skills use. A
+literal: `<workspace>/.clawai/output-styles/*.md` are read by the parser skills use. A
 style and a skill are the same kind of thing — a named block of instruction in
 a file — and two readers for one format would drift apart.
 

@@ -172,3 +172,6 @@ export const SHELL_PATTERN_RULES: readonly ShellPatternRule[] = [
     ),
   },
 ];
+
+/** Longest operator `--shell-deny` pattern accepted; a longer source is refused before compiling. */
+export const SHELL_DENY_MAX_SOURCE_LENGTH = 256;

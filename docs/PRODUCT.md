@@ -27,6 +27,6 @@ Code. They also need coding-agent edits that remain reviewable and reversible.
 
 - storing provider API keys in VS Code;
 - implementing a second router, entitlement engine, or conversation database;
-- autonomous terminal, Git commit, push, deployment, or shell execution;
+- autonomous terminal, Git commit, push, deployment, or shell execution without approval. Changed 2026-11-28: these now exist and are allowed only behind an approval or an explicit grant (README, `docs/PERMISSION_MATRIX.md`), because the product grew into a coding agent; they remain a non-goal when unattended and ungated;
 - silently applying generated edits;
 - replacing the full ClawAI web administration experience.

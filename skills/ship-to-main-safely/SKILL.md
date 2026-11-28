@@ -7,7 +7,15 @@ description: Push the coding agent to main only after the local Linux preflight,
 
 Never push to `main` by hand. Use `npm run ship`.
 
-## Steps
+## When to use
+
+Pushing the coding agent to `main`.
+
+## When NOT to use
+
+The change stays local or on a branch that does not target `main`.
+
+## Procedure
 
 1. Commit normally. The repository pre-commit hook automatically prepares the
    next delivery minor and stages the aligned version metadata. Never use
@@ -26,3 +34,13 @@ Never push to `main` by hand. Use `npm run ship`.
 
 If a gate is red, fix it before doing unrelated work. Do not commit generated
 `builds/` release artifacts; CI owns release artifact generation.
+
+## Failure modes
+
+- Calling it done while Release is still running.
+- A red gate left while other work continues.
+- Marketplace publication skipped.
+
+## Definition of done
+
+`npm run ship` finished, both CI and Release workflows are terminal green and nothing generated under `builds/` was committed.

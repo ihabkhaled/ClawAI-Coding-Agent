@@ -209,6 +209,13 @@ describe('shell screen: operator --shell-deny rules', () => {
     return compiled;
   };
 
+  it('refuses a pattern longer than the limit before compiling it', () => {
+    expect(compileDenyRule('a'.repeat(257))).toBe(
+      '--shell-deny pattern is 257 characters; the limit is 256.',
+    );
+    expect(compileDenyRule('a'.repeat(256))).toBeInstanceOf(RegExp);
+  });
+
   it('refuses scripts the operator forbids, case-insensitively, and names the rule', () => {
     const rules = [deny('docker\\s+push'), deny('\\bprod\\b')];
     expect(screenScript('Docker  Push app', posix, rules)?.rule).toBe('operator-deny');

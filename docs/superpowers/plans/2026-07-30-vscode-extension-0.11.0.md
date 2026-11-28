@@ -89,7 +89,7 @@ Vitest 4, Playwright 1.62, esbuild, VSIX packaging.
 - `tests/playwright/webview.e2e.ts-snapshots/*.png`
 - `package.nls.json`, generated `package.nls.*.json`, `l10n/bundle.l10n.*.json`
 - `package.json`, `package-lock.json`, `CHANGELOG.md`, `README.md`
-- `builds/clawai-coding-agent-0.11.0.vsix`
+- `builds/clawai-coding-agent-<version>.vsix`
 
 ---
 
@@ -624,7 +624,7 @@ options)` where `options` contains `concurrencyKey`, `modelLabel`, and
 - Modify: `package-lock.json`
 - Modify: `CHANGELOG.md`
 - Modify: `README.md`
-- Create: `builds/clawai-coding-agent-0.11.0.vsix`
+- Create: `builds/clawai-coding-agent-<version>.vsix`
 
 **Interfaces:**
 
@@ -680,7 +680,7 @@ options)` where `options` contains `concurrencyKey`, `modelLabel`, and
 - [ ] **Step 5: Install and verify the exact VSIX**
 
   ```bash
-  code --install-extension builds/clawai-coding-agent-0.11.0.vsix --force
+  code --install-extension builds/clawai-coding-agent-<version>.vsix --force
   code --list-extensions --show-versions
   ```
 

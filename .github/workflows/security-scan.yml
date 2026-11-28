@@ -1,8 +1,9 @@
-name: Secret scan
+name: Security scan
 
-# gitleaks over the pushed commits on every push and pull request, and over the
-# whole history every week and on demand. A finding fails the run; fix the code
-# (tests build fake secrets with tests/helpers/fake-secrets.ts), never the config.
+# Secrets (gitleaks) and dependencies (npm audit over every dependency, OSV-Scanner)
+# on every push and pull request, plus the whole history every week and on demand.
+# A finding fails the run: fix the code or upgrade, never the config
+# (skills/secure-every-change/SKILL.md, skills/handle-a-secret-alert/SKILL.md).
 on:
   push:
   pull_request:
@@ -70,3 +71,28 @@ jobs:
           args=(git . --config .gitleaks.toml --redact --no-banner --exit-code 1)
           if [ -n "$LOG_OPTS" ]; then args+=(--log-opts "$LOG_OPTS"); fi
           gitleaks "${args[@]}"
+
+  dependencies:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      # Development tools count too: a compromised build or test tool reaches the VSIX.
+      - name: npm audit (all dependencies)
+        run: npm audit --audit-level=moderate
+
+      - name: OSV-Scanner (pinned, checksum verified)
+        shell: bash
+        env:
+          OSV_VERSION: 2.7.1
+          OSV_SHA256: fb7dab19a8bd9bbe5c3189f09d4b7ee1820c9553a23bac202648a56efd2f6ee8
+        run: |
+          set -euo pipefail
+          curl -fsSL -o osv-scanner "https://github.com/google/osv-scanner/releases/download/v${OSV_VERSION}/osv-scanner_linux_amd64"
+          echo "${OSV_SHA256}  osv-scanner" | sha256sum -c -
+          chmod +x osv-scanner
+          ./osv-scanner scan source --lockfile package-lock.json

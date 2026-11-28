@@ -382,6 +382,14 @@ for (const path of [
   '.husky/**',
   '.githooks/**',
   '.vscode-test/**',
+  // The knowledge layer (docs/adr/0009) never ships in the VSIX.
+  '.ai/**',
+  '.claude/**',
+  '.cursor/**',
+  'context/**',
+  'memory/**',
+  'CODEX.md',
+  'GEMINI.md',
 ]) {
   assert.equal(ignore.includes(path), true, `${path} must be excluded`);
 }

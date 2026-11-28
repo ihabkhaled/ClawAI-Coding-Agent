@@ -69,7 +69,7 @@
       user message, uploads with progress, and reaches chat/agent/compare.
 - [ ] Retry an attachment request and confirm the original immutable files are
       reused. Reload the view and confirm attachment bytes were not persisted.
-- [ ] Reject a file over 5 MiB, more than 10 files, and a batch over 10 MiB
+- [ ] Reject a file over 25 MiB, more than 10 files, and a batch over 50 MiB
       before upload.
 - [ ] Submit two prompts, then use Arrow Up and Arrow Down to traverse the local
       prompt history without recalling attachment bytes.

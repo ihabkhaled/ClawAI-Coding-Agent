@@ -2,7 +2,7 @@
 
 `.clawai` is optional, project-owned, and safe to commit when it contains no
 secrets. **ClawAI: Initialize .clawai** creates missing files only.
-`policies/policy.json` and `agents/agents.json` get editor validation and
+`<workspace>/.clawai/policies/policy.json` and `<workspace>/.clawai/agents/agents.json` get editor validation and
 autocomplete from the schemas the extension registers in
 `contributes.jsonValidation`.
 
@@ -39,10 +39,10 @@ autocomplete from the schemas the extension registers in
   file named `review.md` is invocable as `/review`; see below.
 - `prompts/*`: reusable review and planning instructions.
 - `ignore`: one glob per line; blank lines and `#` comments are ignored.
-- `policies/policy.json`: the project permission policy. See below.
-- `agents/agents.json`: named sub-agent presets. See below.
+- `<workspace>/.clawai/policies/policy.json`: the project permission policy. See below.
+- `<workspace>/.clawai/agents/agents.json`: named sub-agent presets. See below.
 
-A subdirectory may carry its own `.clawai/rules.md`, `architecture.md` and
+A subdirectory may carry its own `<workspace>/.clawai/rules.md`, `architecture.md` and
 `memory.md`. Every directory from the workspace root down to the open file is
 searched, root first and nearest last, so guidance closer to the code speaks
 after the repository-wide guidance it narrows.
@@ -93,7 +93,7 @@ The body is prepended to the prompt as an instruction to the model, so it is
 written in the language the prompts are written in — the built-in styles stay
 English for that reason, and only their labels in the picker are translated.
 
-## `policies/policy.json`
+## `<workspace>/.clawai/policies/policy.json`
 
 Every field narrows what the agent may do; none widens it.
 
@@ -140,7 +140,7 @@ input.
 Workspace collection treats all of these files as normal bounded context.
 Project workflows explicitly prepend rules, architecture, and memory.
 
-## `agents/agents.json`
+## `<workspace>/.clawai/agents/agents.json`
 
 Named presets a sub-agent graph can reference by name instead of restating an
 identity on every fork. Each entry adds instructions; none of them can widen
@@ -169,7 +169,7 @@ is instructions, not a grant, so it carries no more authority than any other
 project guidance a sub-agent already reads.
 
 The extension always excludes `.git`, dependency/output directories, `.env`,
-and secret/credential/API-key-like paths. `.clawai/ignore` can only add
+and secret/credential/API-key-like paths. `<workspace>/.clawai/ignore` can only add
 exclusions.
 
 Profile-wide `global-rules.md` and `global-skills.md` are opened with their
@@ -203,7 +203,7 @@ MCP servers the agent may use through the `runtime.mcp` tool (`servers`,
   SecretStorage (ADR 0002).
 - `tools` and `call` are R3: every one asks the user. Project rules can target a
   server with `"tool": "runtime.mcp", "commandGlob": "mcp <server> *"`.
-- `policies/policy.json` may add `mcpServers: { "allow": [...], "deny": [...] }`
+- `<workspace>/.clawai/policies/policy.json` may add `mcpServers: { "allow": [...], "deny": [...] }`
   patterns (`name`, `command`, `url` globs); deny wins, and the organization
   policy's `mcpServers` block applies the same way.
 
@@ -263,8 +263,8 @@ install in the profile's `plugin-provenance.json`, never in the repository.
 A plugin is a folder with `clawai-plugin.json` at its root (a single wrapping
 top-level folder, as GitHub archives produce, is stripped). Plugins install to
 two scopes: `user` (the extension's global storage, `plugins/`) and `workspace`
-(`.clawai/plugins/`). Install state lives in `plugin-state.json` next to the
-user-scope plugins; keep `.clawai/plugins/` in version control only for
+(`<workspace>/.clawai/plugins/`). Install state lives in `plugin-state.json` next to the
+user-scope plugins; keep `<workspace>/.clawai/plugins/` in version control only for
 plugins whose contents you have reviewed.
 
 The manifest is strict (at most 64 KB). It has `name` and `publisher` (`a-z`,
@@ -289,7 +289,7 @@ List marketplaces in `clawAI.pluginMarketplaces`. A git marketplace is written
 200 characters); it is shallow-cloned afresh on every open under the extension's
 `plugin-marketplaces` folder, with prompts off.
 
-## `policies/policy.json` additions since 1.82.0
+## `<workspace>/.clawai/policies/policy.json` additions since 1.82.0
 
 Same narrowing-only rule as above; none of these can allow.
 
@@ -309,13 +309,13 @@ file: `allowedTools`, `maximumRisk`, `deniedEffects`, `requireApproval`, up to
 the repositories, domains and commands the organization trusts. When `trust`
 lists are non-empty, a mutating call in a repository, or a call to a domain or
 command, that no entry matches is refused or asked about
-(`core/organization-trust.ts`). A workspace with no git remote cannot prove it
+(`src/core/organization-trust.ts`). A workspace with no git remote cannot prove it
 is a trusted repository.
 
 ## Other per-workspace state
 
-- `.clawai/mcp.json`, `.clawai/workflows/*.json`, `.clawai/policies/policy.json`
-  and `.clawai/plugins/` are workspace content and are treated as untrusted:
+- `<workspace>/.clawai/mcp.json`, `<workspace>/.clawai/workflows/*.json`, `<workspace>/.clawai/policies/policy.json`
+  and `<workspace>/.clawai/plugins/` are workspace content and are treated as untrusted:
   they may narrow, and they run nothing in an untrusted workspace.
 - Scheduled tasks (`runtime.schedule`) are persisted per workspace in VS Code
   workspace state (`clawAI.scheduledTasks`), not in `.clawai`.

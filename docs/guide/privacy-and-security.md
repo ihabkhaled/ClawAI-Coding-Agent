@@ -47,7 +47,7 @@ file paths or code.
 - **Secret-looking files are never read**, including `.env`, key files and files
   named like credentials (`id_rsa`, `passwords.csv`). They cannot be mentioned or
   attached, and every tool refuses them. You can add more exclusions in
-  `.clawai/ignore`; you cannot remove the built-in ones.
+  `<workspace>/.clawai/ignore`; you cannot remove the built-in ones.
 - **Redaction.** Logs, command output, error messages and reports have tokens,
   passwords, API keys, cookies and `Bearer` values replaced with `[REDACTED]`.
 - **Commands cannot see your tokens.** They inherit only a short list of ordinary

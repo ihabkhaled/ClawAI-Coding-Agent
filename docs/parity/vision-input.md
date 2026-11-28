@@ -20,7 +20,7 @@ Seen live: the run request carries `fileIds` (the SDK prints the id), `POST /cha
 
 Cause: `RuntimeV2RunService.start` creates the user message with `metadata.fileIds`, then `markPublished` calls `messages.updateMetadata(id, {runtimeV2: {...}})`, and `ChatMessagesRepository.updateMetadata` REPLACES the whole `metadata` column. The `fileIds` written a moment earlier are overwritten, so the context assembler (which reads `metadata.fileIds` off the latest user message) finds none.
 
-Exact change, `apps/claw-chat-service/src/modules/chat-messages/services/runtime-v2-run.service.ts`, `markPublished`:
+Exact change, `<monorepo>/apps/claw-chat-service/src/modules/chat-messages/services/runtime-v2-run.service.ts`, `markPublished`:
 
 ```ts
 return this.messages.updateMetadata(acknowledgement.messageId, {
@@ -53,7 +53,7 @@ The model was measured on a page whose button ran off the right edge: gpt-5.4-mi
 
 ### (c) Contract for the browser tool
 
-The browser tool writes the screenshot as a **png inside the workspace** (for example `.claw/screenshots/home.png`; keep secrets out of the name) and returns that workspace-relative path in its result. `vision.describe {path, question}` consumes it. The browser tool does not need to know about vision, and `vision.describe` does not need to know about the browser. When the browser tool is offered, the integrator should offer vision too (`vision: {}` in the config, or `--vision`).
+The browser tool writes the screenshot as a **png inside the workspace** (for example `<workspace>/.claw/screenshots/home.png`; keep secrets out of the name) and returns that workspace-relative path in its result. `vision.describe {path, question}` consumes it. The browser tool does not need to know about vision, and `vision.describe` does not need to know about the browser. When the browser tool is offered, the integrator should offer vision too (`vision: {}` in the config, or `--vision`).
 
 Ask ONE specific question per call ("Does any text overlap? Is the Save button visible?"). A broad question returns a plausible tour of the page and misses the defect.
 

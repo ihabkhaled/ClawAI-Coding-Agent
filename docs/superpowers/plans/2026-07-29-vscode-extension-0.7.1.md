@@ -111,7 +111,7 @@
 **Files:**
 
 - Modify: version, changelog, release docs, locale bundles, and version assertions.
-- Create: `builds/clawai-coding-agent-0.7.1.vsix`
+- Create: `builds/clawai-coding-agent-<version>.vsix`
 
 - [ ] Bump to 0.7.1 and regenerate locales after copy settles.
 - [ ] Run format, check, Playwright, extension-host, runtime audit, and package gates.

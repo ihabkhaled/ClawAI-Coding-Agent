@@ -4,7 +4,7 @@
   affecting anything else, because nothing depends on it to function
 - Date: 2026-09-09
 - Supersedes: nothing. Narrows the blanket absence recorded by
-  `CHANGELOG.md:1470` and asserted by `tests/extension-host/index.cjs`
+  the `CHANGELOG.md` browser sign-in entries (line 701, "secure browser sign-in (0.1)", and line 497) and asserted by `tests/extension-host/activation.cjs`
 
 ## Context
 
@@ -12,7 +12,7 @@ The parity pack asks for a VS Code URI handler (F072) and deep links (F073).
 The audit classified both MISSING. They are not missing; they are absent on
 purpose.
 
-`CHANGELOG.md:1470` records replacing a custom URI callback with a
+`CHANGELOG.md` (line 701, "secure browser sign-in (0.1)"; no entry records the replacement by name) describes replacing a custom URI callback with a
 state-validated one-shot loopback authorization callback, and the extension-host
 test asserts that no `onUri` activation event survives:
 

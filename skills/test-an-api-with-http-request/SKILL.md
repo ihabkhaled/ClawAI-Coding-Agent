@@ -7,7 +7,15 @@ description: Make the agent test your own HTTP API (status codes, validation, au
 
 One tool, one operation (`request`). Reference: `docs/TOOLS.md` (http.request).
 
-## Steps
+## When to use
+
+The agent must test your own HTTP API: status codes, validation, auth, login flows.
+
+## When NOT to use
+
+You need browser behavior (see `test-a-ui-with-the-browser-tool`) or the host cannot be allowlisted.
+
+## Procedure
 
 1. **Name the host.** `--http-allow-host localhost:3000` (host:port, `*.example.com`, or `claw.local`). No host, no tool.
    A rule without a port means 80 and 443 only, so a dev server on 3000 needs the port.
@@ -49,3 +57,7 @@ clawai -p "Test the login API at https://claw.local/api/v1. Find the real login 
 
 A table of case, expected status, actual status, `ok`. The agent's own summary is not evidence; the tool results in the
 stream are (`tool.result` events).
+
+## Definition of done
+
+A table of case, expected status, actual status and `ok` comes from `tool.result` events, not the agent's summary.

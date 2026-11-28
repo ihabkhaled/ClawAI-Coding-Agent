@@ -106,7 +106,7 @@ Steering is accepted with monotonically ordered client sequence and idempotency,
 - Regenerate all locale bundles after strings settle.
 - Run extension format/lint/typecheck/coverage/build/package audit/host/Playwright/npm audit.
 - Run scoped chat-service and agent-service lint/typecheck/test/build plus root knowledge/inventory verification.
-- Build `builds/clawai-coding-agent-0.19.0.vsix`, audit inventory/native/secret constraints, compare two extracted packages, hash, install, activate, and exercise the three safe read-only fixtures.
+- Build `builds/clawai-coding-agent-<version>.vsix`, audit inventory/native/secret constraints, compare two extracted packages, hash, install, activate, and exercise the three safe read-only fixtures.
 - Commit/push, open PRs, require terminal green PR gates, merge, monitor all main/release gates, verify tag/full notes/published asset, and install the published VSIX.
 - Pin the parent submodule to the released `v0.19.0` commit.
 

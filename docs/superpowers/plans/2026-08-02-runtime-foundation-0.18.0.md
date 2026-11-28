@@ -17,7 +17,7 @@
 - Accept syntactically valid future event names as inert events so compatible V2 producers do not break the client; the reducer acts only on known event types.
 - Do not introduce a native executable, PTY dependency, command executor, database migration, or new user-facing text in 0.18.
 - Extension localization remains all 13 shipped locales. Root frontend locale-count wording does not reduce the extension contract.
-- One coherent gated commit and push per repository; the extension release commit includes version `0.18.0` and `builds/clawai-coding-agent-0.18.0.vsix`.
+- One coherent gated commit and push per repository; the extension release commit includes version `0.18.0` and `builds/clawai-coding-agent-<version>.vsix`.
 
 ---
 
@@ -138,7 +138,7 @@ The complete pack is ordered into independently verified checkpoints: 0.18 proto
 **Files:**
 
 - Create: `src/core/runtime/runtime-protocol.constants.ts`
-- Create: `src/core/runtime/runtime-protocol.types.ts`
+- Create: `<historical>/src/core/runtime/runtime-protocol.types.ts`
 - Create: `src/core/runtime/runtime-protocol.schemas.ts`
 - Create: `src/core/runtime/capability-manifest.ts`
 - Test: `tests/unit/runtime-protocol.test.ts`
@@ -197,13 +197,13 @@ The complete pack is ordered into independently verified checkpoints: 0.18 proto
 
 **Files:**
 
-- Create: `apps/claw-agent-service/src/modules/agent/constants/runtime-protocol.constants.ts`
-- Create: `apps/claw-agent-service/src/modules/agent/types/runtime-protocol.types.ts`
-- Create: `apps/claw-agent-service/src/modules/agent/services/runtime-protocol.service.ts`
-- Create: `apps/claw-agent-service/src/modules/agent/controllers/runtime-protocol.controller.ts`
-- Modify: `apps/claw-agent-service/src/modules/agent/agent.module.ts`
-- Test: `apps/claw-agent-service/src/modules/agent/services/__tests__/runtime-protocol.service.spec.ts`
-- Test: `apps/claw-agent-service/src/modules/agent/controllers/__tests__/runtime-protocol.controller.spec.ts`
+- Create: `<monorepo>/apps/claw-agent-service/src/modules/agent/constants/runtime-protocol.constants.ts`
+- Create: `<monorepo>/apps/claw-agent-service/src/modules/agent/types/runtime-protocol.types.ts`
+- Create: `<monorepo>/apps/claw-agent-service/src/modules/agent/services/runtime-protocol.service.ts`
+- Create: `<monorepo>/apps/claw-agent-service/src/modules/agent/controllers/runtime-protocol.controller.ts`
+- Modify: `<monorepo>/apps/claw-agent-service/src/modules/agent/agent.module.ts`
+- Test: `<monorepo>/apps/claw-agent-service/src/modules/agent/services/__tests__/runtime-protocol.service.spec.ts`
+- Test: `<monorepo>/apps/claw-agent-service/src/modules/agent/controllers/__tests__/runtime-protocol.controller.spec.ts`
 
 **Interfaces:**
 
@@ -245,7 +245,7 @@ The complete pack is ordered into independently verified checkpoints: 0.18 proto
 - Modify: `package.json`, `package-lock.json`, `CHANGELOG.md`, `README.md`
 - Modify: `docs/ARCHITECTURE.md`, `docs/API_CONTRACTS.md`, `docs/SECURITY.md`, `docs/TESTING.md`, `docs/ROADMAP.md`, `docs/UAT.md`
 - Create: `docs/releases/0.18.0-delivery-report.md`
-- Create: `builds/clawai-coding-agent-0.18.0.vsix`
+- Create: `builds/clawai-coding-agent-<version>.vsix`
 
 **Interfaces:**
 

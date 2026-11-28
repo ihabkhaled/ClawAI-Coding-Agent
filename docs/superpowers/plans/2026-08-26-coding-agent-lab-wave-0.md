@@ -223,7 +223,7 @@ Expected: FAIL with `ERR_MODULE_NOT_FOUND`.
 
 - [ ] **Step 6: Implement the parity verifier**
 
-Read VSIX `extension/package.json` with `JSZip`. Return structured checks with
+Read VSIX `<historical>/extension/package.json` with `JSZip`. Return structured checks with
 `PASS`, `FAIL`, or `BLOCKED_EXTERNAL`; never parse human output into a blanket
 green result. Require the provenance subject hash and source Git SHA.
 
@@ -337,7 +337,7 @@ git commit -m "fix(release): bind provenance to source commit"
 
 Assert every file under `src/core/runtime/` and the named critical session,
 transport, path, permission, edit, redaction, and webview schema files must appear
-in coverage. Assert adding a new `src/core/runtime/new-boundary.ts` without adding
+in coverage. Assert adding a new `<historical>/src/core/runtime/new-boundary.ts` without adding
 coverage fails with that exact relative path.
 
 - [ ] **Step 2: Run the test and verify failure**
@@ -460,8 +460,8 @@ git commit -m "fix(release): restore documentation and visual truth"
 - Modify: `docs/labs/EXPERIMENT_REGISTRY.md`
 - Modify: `docs/labs/PRODUCTION_READINESS_SCORECARD.md`
 - Modify: `docs/labs/RELEASE_EVIDENCE.md`
-- Create: `builds/clawai-coding-agent-0.64.3.vsix`
-- Create: `builds/clawai-coding-agent-0.64.3.vsix.sha256`
+- Create: `builds/clawai-coding-agent-<version>.vsix`
+- Create: `builds/clawai-coding-agent-<version>.vsix.sha256`
 - Create: `builds/clawai-coding-agent-0.64.3.cdx.json`
 - Create: `builds/clawai-coding-agent-0.64.3.cdx.json.sha256`
 - Create: `builds/clawai-coding-agent-0.64.3.spdx.json`
@@ -529,7 +529,7 @@ Because public release is not yet authorized, remote release state is
 Run:
 
 ```powershell
-code --user-data-dir .clawai-lab/profiles/0.64.3-operator/user-data --extensions-dir .clawai-lab/profiles/0.64.3-operator/extensions --install-extension builds/clawai-coding-agent-0.64.3.vsix --force
+code --user-data-dir .clawai-lab/profiles/0.64.3-operator/user-data --extensions-dir .clawai-lab/profiles/0.64.3-operator/extensions --install-extension builds/clawai-coding-agent-<version>.vsix --force
 code --user-data-dir .clawai-lab/profiles/0.64.3-operator/user-data --extensions-dir .clawai-lab/profiles/0.64.3-operator/extensions --list-extensions --show-versions
 ```
 
@@ -559,7 +559,7 @@ completion or 85 readiness.
 - [ ] **Step 10: Commit the coherent 0.64.3 artifact evidence**
 
 ```bash
-git add -- package.json package-lock.json CHANGELOG.md docs/labs/CURRENT_BASELINE.md docs/labs/EXPERIMENT_REGISTRY.md docs/labs/PRODUCTION_READINESS_SCORECARD.md docs/labs/RELEASE_EVIDENCE.md builds/clawai-coding-agent-0.64.3.vsix builds/clawai-coding-agent-0.64.3.vsix.sha256 builds/clawai-coding-agent-0.64.3.cdx.json builds/clawai-coding-agent-0.64.3.cdx.json.sha256 builds/clawai-coding-agent-0.64.3.spdx.json builds/clawai-coding-agent-0.64.3.spdx.json.sha256 builds/clawai-coding-agent-0.64.3.provenance.json builds/clawai-coding-agent-0.64.3.provenance.json.sha256
+git add -- package.json package-lock.json CHANGELOG.md docs/labs/CURRENT_BASELINE.md docs/labs/EXPERIMENT_REGISTRY.md docs/labs/PRODUCTION_READINESS_SCORECARD.md docs/labs/RELEASE_EVIDENCE.md builds/clawai-coding-agent-<version>.vsix builds/clawai-coding-agent-<version>.vsix.sha256 builds/clawai-coding-agent-0.64.3.cdx.json builds/clawai-coding-agent-0.64.3.cdx.json.sha256 builds/clawai-coding-agent-0.64.3.spdx.json builds/clawai-coding-agent-0.64.3.spdx.json.sha256 builds/clawai-coding-agent-0.64.3.provenance.json builds/clawai-coding-agent-0.64.3.provenance.json.sha256
 git commit -m "chore(release): prepare coding agent 0.64.3"
 ```
 

@@ -34,7 +34,7 @@ Runtime security-critical pure modules require at least 95% statements,
 branches, functions, and lines. Release verification also inspects the VSIX to
 prove 0.18 introduces no executable or native binary.
 
-`npm test` enforces at least 85% lines, statements, functions, and 80% branches
+`npm test` enforces at least 85% lines, statements, functions, and branches (`vitest.config.ts`)
 over the pure backend/security/application modules. VS Code adapters are
 validated in the extension host rather than mocked into misleading unit
 coverage.

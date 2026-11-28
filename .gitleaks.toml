@@ -1,5 +1,5 @@
 # gitleaks configuration (https://github.com/gitleaks/gitleaks). Used by
-# .github/workflows/secret-scan.yml and the pre-commit hook.
+# .github/workflows/security-scan.yml and the pre-commit hook.
 #
 # Test fixtures build fake secrets at run time (tests/helpers/fake-secrets.ts),
 # so the source text never holds a complete secret shape. A finding is fixed in

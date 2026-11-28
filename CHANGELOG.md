@@ -2,6 +2,13 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.117.0
+
+- **The repository now documents itself for every reader.** A living wiki in `docs/wiki/` (25 categories) is mirrored to the GitHub wiki on every push by a new Publish wiki workflow. Thirty-eight feature pages in `docs/wiki/features/` give each area its business why, product why, how it works, decisions, dated history, tests and evidence, gaps and open questions; there is also a full history timeline, a glossary of 116 terms, a risk register, a decision log and an onboarding path.
+- **Akinator is vendored and always on** (`skills/akinator/`, ADR 0009, rules 17 and 18): every change, by any agent or tool, updates the docs, wiki, skills, rules, `context/` and `memory/` in the same commit. Routers for Claude Code, Codex, Gemini, Cursor and Copilot point at the same knowledge.
+- **Security on every change** (rule 14b, `skills/secure-every-change/SKILL.md`): `npm run security:check`, a pre-push hook (npm audit over every dependency, gitleaks), and a Security scan workflow (gitleaks, npm audit, OSV-Scanner). Two code-scanning findings fixed: operator `--shell-deny` patterns are capped at 256 characters, and the Release workflow only runs for this repository's own pushes. `ovsx` is pinned. The live-test docs and helpers no longer carry a default password.
+- Documentation repairs: duplicated pages, wrong coverage and attachment limits, the Cloud server note, the always-allow storage, missing API routes, and hooks in fresh worktrees. No change to the extension's behaviour beyond the shell-deny length cap.
+
 ## 1.116.0
 
 - Security follow-up to 1.115.0: eight more test files and one code comment still held short fake key-shaped values; they are now built at run time too, so the history rewrite leaves today's files unchanged.

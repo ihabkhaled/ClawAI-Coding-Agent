@@ -34,7 +34,7 @@ real credential anywhere in the history. The published VSIX never contains `test
 
 - Tests build fake secrets at run time (`tests/helpers/fake-secrets.ts`); the source text holds
   no complete secret shape.
-- `.github/workflows/secret-scan.yml`: gitleaks (pinned release, checksum verified) on every push
+- `.github/workflows/security-scan.yml`: gitleaks (pinned release, checksum verified) on every push
   and pull request over the pushed commits, and over the whole history weekly and on demand.
   `.gitleaks.toml` allows only idempotency keys (request ids, not credentials).
 - Pre-commit hook: `gitleaks git --pre-commit --staged` when gitleaks is installed.

@@ -34,12 +34,12 @@ passing through that handler, permanently.
    `tools`/`call` invocation (R3). One renewal (refresh, else full authorization)
    per request; a second 401 is final.
 5. **No `Authorization`/`Cookie` headers in configuration** — a token in
-   `.clawai/mcp.json` is a token in a repository.
+   `<workspace>/.clawai/mcp.json` is a token in a repository.
 
 ## Server admission (F054)
 
 `mcpServers: { allow, deny }` patterns (name / command / url `*` globs) from the
-project policy (`.clawai/policies/policy.json`) and the managed organization
+project policy (`<workspace>/.clawai/policies/policy.json`) and the managed organization
 policy (`organizationPolicy.mcpServers`). Deny wins; a non-empty allowlist admits
 only matches; a malformed block reads as deny-everything. Stdio servers need a
 trusted workspace. Refused servers are listed with their reason by

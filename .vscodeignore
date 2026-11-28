@@ -36,3 +36,10 @@ tsconfig.*.json
 vitest.config.ts
 vitest.live.config.ts
 .gitleaks.toml
+.ai/**
+.claude/**
+.cursor/**
+CODEX.md
+GEMINI.md
+context/**
+memory/**

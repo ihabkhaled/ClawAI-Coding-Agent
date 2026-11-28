@@ -78,7 +78,7 @@ Expected: all Signal Desk tests pass.
 - Modify: `package-lock.json`
 - Modify: `CHANGELOG.md`
 - Regenerate: `package.nls.*.json`
-- Create: `builds/clawai-coding-agent-0.11.1.vsix`
+- Create: `builds/clawai-coding-agent-<version>.vsix`
 
 **Interfaces:**
 
@@ -112,7 +112,7 @@ Expected: every command succeeds and the versioned VSIX is generated.
 Run:
 
 ```bash
-code --install-extension builds/clawai-coding-agent-0.11.1.vsix --force
+code --install-extension builds/clawai-coding-agent-<version>.vsix --force
 code --list-extensions --show-versions
 ```
 

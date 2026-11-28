@@ -8,6 +8,16 @@ description: Every main-bound ClawAI Coding Agent change is a delivery release. 
 Every change that reaches `main` ships a new extension release. There is no
 "normal main update" that reuses an already-published version.
 
+## When to use
+
+Any change that will reach `main`.
+
+## When NOT to use
+
+The change never leaves a local experiment or branch.
+
+## Procedure
+
 ## Version rule
 
 - Delivery version: advance the second SemVer component and reset patch to zero.
@@ -51,3 +61,9 @@ the GitHub Release, then publishes the same VSIX to the Visual Studio Marketplac
 
 A main-bound change is done only when CI and Release are green, the GitHub Release
 exists, and the Marketplace publish step succeeds.
+
+## Failure modes
+
+- A reused `v<version>` tag is a hard failure.
+- Bypassing the pre-commit hook; CI re-verifies the bump anyway.
+- Committing generated release files.

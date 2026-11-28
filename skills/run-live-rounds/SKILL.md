@@ -9,7 +9,15 @@ description: Run the live model-by-scenario matrix against a real ClawAI backend
 each model in a fresh workspace and thread. Assertions read the workspace, not the run's
 own report. A failed round is recorded and the matrix continues.
 
-## Steps
+## When to use
+
+Before a release, or after changing agent execution, tools or prompts, to prove which models can code.
+
+## When NOT to use
+
+A unit or fixture check is enough, or no real backend is available (report the lane as not run).
+
+## Procedure
 
 1. Backend up and the dev stack current (it answers 502 while rebuilding; the script waits).
 2. Choose models from the backend route `/connectors/available-models`
@@ -39,3 +47,7 @@ check: `npm run check:live`.
 
 - 502s during a source rebuild are not model failures; rerun once the stack settles.
 - Tool counts and model narration are not completion; only the workspace assertion counts.
+
+## Definition of done
+
+The exact command, result matrix and failures are recorded as evidence, judged by workspace assertions, with no credentials committed.

@@ -11,21 +11,21 @@ Run **ClawAI: Initialize .clawai** to create starter files: `rules.md`,
 and two in `prompts/`. It asks you to confirm, only adds files that are missing, and
 needs a trusted workspace. The other items in the table you create yourself.
 
-| Path                           | What it is for                                                      |
-| ------------------------------ | ------------------------------------------------------------------- |
-| `.clawai/rules.md`             | Rules the agent must follow in this project.                        |
-| `.clawai/architecture.md`      | How the code is organized and which parts may depend on which.      |
-| `.clawai/memory.md`            | Lasting lessons worth remembering (no secrets).                     |
-| `.clawai/context/*.md`         | Facts about your product, API, data and tests.                      |
-| `.clawai/prompts/*.md`         | Reusable review and planning instructions.                          |
-| `.clawai/ignore`               | Files ClawAI must not read: one pattern per line, `#` for comments. |
-| `.clawai/skills/*.md`          | Your slash commands (below).                                        |
-| `.clawai/output-styles/*.md`   | Your response styles (below).                                       |
-| `.clawai/policies/policy.json` | Extra limits for the agent (below).                                 |
-| `.clawai/agents/agents.json`   | Named helper personas for sub-agents.                               |
-| `.clawai/mcp.json`             | Extra tool servers (below).                                         |
-| `.clawai/workflows/*.json`     | Saved workflows and templates (below).                              |
-| `.clawai/plugins/`             | Plugins installed for this project.                                 |
+| Path                                       | What it is for                                                      |
+| ------------------------------------------ | ------------------------------------------------------------------- |
+| `<workspace>/.clawai/rules.md`             | Rules the agent must follow in this project.                        |
+| `<workspace>/.clawai/architecture.md`      | How the code is organized and which parts may depend on which.      |
+| `<workspace>/.clawai/memory.md`            | Lasting lessons worth remembering (no secrets).                     |
+| `<workspace>/.clawai/context/*.md`         | Facts about your product, API, data and tests.                      |
+| `<workspace>/.clawai/prompts/*.md`         | Reusable review and planning instructions.                          |
+| `<workspace>/.clawai/ignore`               | Files ClawAI must not read: one pattern per line, `#` for comments. |
+| `<workspace>/.clawai/skills/*.md`          | Your slash commands (below).                                        |
+| `<workspace>/.clawai/output-styles/*.md`   | Your response styles (below).                                       |
+| `<workspace>/.clawai/policies/policy.json` | Extra limits for the agent (below).                                 |
+| `<workspace>/.clawai/agents/agents.json`   | Named helper personas for sub-agents.                               |
+| `<workspace>/.clawai/mcp.json`             | Extra tool servers (below).                                         |
+| `<workspace>/.clawai/workflows/*.json`     | Saved workflows and templates (below).                              |
+| `<workspace>/.clawai/plugins/`             | Plugins installed for this project.                                 |
 
 Only `rules.md`, `architecture.md` and `memory.md` are read automatically. A subfolder
 can have its own `.clawai` with the same three files, and the ones closest to the
@@ -37,7 +37,7 @@ this VS Code profile and is read first. The full layout is in
 
 ## Skills and slash commands
 
-Every `.md` file in `.clawai/skills/` is a slash command. `review.md` becomes
+Every `.md` file in `<workspace>/.clawai/skills/` is a slash command. `review.md` becomes
 `/review`, typed at the start of a message. Typing `/` shows the list.
 
 ```markdown
@@ -62,7 +62,7 @@ Review $ARGUMENTS for correctness, security and missing tests.
 
 ## Output styles
 
-A file in `.clawai/output-styles/` (for example `house.md`) defines a way answers
+A file in `<workspace>/.clawai/output-styles/` (for example `house.md`) defines a way answers
 are written. Choose one with **ClawAI: Select Output Style** or the `outputStyle`
 setting. Built in: `default`, `concise`, `explanatory` and `learning`.
 
@@ -88,7 +88,7 @@ enough to run code on your machine. Keep hooks you trust in your **user** settin
 
 ## Project policy
 
-`.clawai/policies/policy.json` can only make the agent stricter. Rules can ask or
+`<workspace>/.clawai/policies/policy.json` can only make the agent stricter. Rules can ask or
 deny by tool, path, command or web host, for example `{ "commandGlob": "git push*",
 "outcome": "deny", "reason": "pushes are manual here" }`. It cannot grant more than
 your approval mode allows. The editor checks the file as you type.
@@ -101,7 +101,7 @@ provides.
 
 1. Run **ClawAI: Manage Plugins**, or open the **Plugins** view.
 2. Choose install from a folder, then install for **User** (all projects) or
-   **Workspace** (this project's `.clawai/plugins`).
+   **Workspace** (this project's `<workspace>/.clawai/plugins`).
 3. Make sure it is enabled. A plugin's hooks stay off until you turn them on and confirm the
    exact commands.
 
@@ -116,7 +116,7 @@ the default is `warn`), listing trusted publishers in `clawAI.trustedPluginPubli
 ## MCP servers
 
 MCP is a common way to connect extra tools and data, such as a filesystem, an issue
-tracker or a database, to an AI agent. Describe servers in `.clawai/mcp.json` (this
+tracker or a database, to an AI agent. Describe servers in `<workspace>/.clawai/mcp.json` (this
 project) or the `clawAI.mcpServers` setting (all projects; it wins a name clash).
 Local servers use `command` and `args`; remote ones use an `https` `url` and can sign
 in with OAuth.
@@ -126,7 +126,7 @@ an MCP tool asks for your approval. Your organization can allow or deny servers.
 
 ## Workflows and templates
 
-Files in `.clawai/workflows/` are shared with your team. Run one with **ClawAI: Run
+Files in `<workspace>/.clawai/workflows/` are shared with your team. Run one with **ClawAI: Run
 Saved Workflow**. A template has a `name`, `description`, `instruction`, optional
 `steps` and `acceptanceChecks`, and `"kind": "template"`. You can also ask the agent
 to save a workflow or template; it asks first and will not overwrite unless told to.

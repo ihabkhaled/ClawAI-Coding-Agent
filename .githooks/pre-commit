@@ -5,7 +5,7 @@ node scripts/ensure-release-version.mjs --stage
 node scripts/verify-version-bump.mjs --base origin/main
 
 # Secret scan of the staged change (docs/SECURITY.md, "Secret scanning").
-# CI (.github/workflows/secret-scan.yml) always scans; this catches it earlier.
+# CI (.github/workflows/security-scan.yml) always scans; this catches it earlier.
 if command -v gitleaks >/dev/null 2>&1; then
   gitleaks git --pre-commit --staged --config .gitleaks.toml --redact --no-banner
 else

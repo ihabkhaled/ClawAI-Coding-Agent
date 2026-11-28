@@ -8,7 +8,7 @@ import {
   isProtectedTarget,
   redirectTargets,
 } from './shell-screen-paths';
-import { SHELL_PATTERN_RULES } from './shell-screen.constants';
+import { SHELL_DENY_MAX_SOURCE_LENGTH, SHELL_PATTERN_RULES } from './shell-screen.constants';
 
 import type { ScreenContext, ScreenView, ShellRefusal, ShellScreenRule } from './shell-tool.types';
 
@@ -98,6 +98,12 @@ export function screenContext(
 
 /** An operator's `--shell-deny` source as a case-insensitive pattern, or the problem with it. */
 export function compileDenyRule(source: string): RegExp | string {
+  // The source comes from the operator's own configuration, never from the
+  // model or the workspace. It is still bounded: a long pattern is refused, and
+  // one that backtracks is refused at run time by denyOutcome's time limit.
+  if (source.length > SHELL_DENY_MAX_SOURCE_LENGTH) {
+    return `--shell-deny pattern is ${String(source.length)} characters; the limit is ${String(SHELL_DENY_MAX_SOURCE_LENGTH)}.`;
+  }
   try {
     return new RegExp(source, 'iu');
   } catch (error) {

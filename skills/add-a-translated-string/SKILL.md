@@ -7,7 +7,15 @@ description: Add a user-facing string (runtime or package.nls) with real transla
 
 Locales: ar de es fa fr hi it ja pt ru th zh (English is the source).
 
-## Steps
+## When to use
+
+Any new user-facing text: a runtime `vscode.l10n.t` string or a `package.nls.json` key.
+
+## When NOT to use
+
+The text is never shown to users (logs, tests, code identifiers).
+
+## Procedure
 
 1. **Source string.** Runtime: `vscode.l10n.t('Text {0}', arg)` in `src/`;
    `scripts/generate-locales.mjs` scans `src/` for these calls. Manifest text:
@@ -39,3 +47,7 @@ npx vitest run tests/unit/localization-coverage.test.ts
 - `l10n:verify` = regenerate + `git diff --exit-code`: unstaged generator output fails it.
 - The translation key IS the English text; any edit to the English string orphans its translations.
 - Webview text must arrive through the message channel, not be hardcoded in `media/`.
+
+## Definition of done
+
+Real translations exist for all 12 locales, the generator is wired, `l10n:build` output is staged, and `l10n:verify` and the localization test pass.

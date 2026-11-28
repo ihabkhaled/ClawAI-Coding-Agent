@@ -10,6 +10,16 @@ Router: `AGENTS.md` (gates, blockers) - `docs/RULES.md` (enforced rules) -
 `SECURITY.md`, `PUBLISHING.md`, `adr/`, `parity/` (audit + surface inventory).
 The agent's tools: `docs/TOOLS.md` (generated: `npm run docs:tools`), `docs/HEADLESS.md`, `docs/FAQ-AGENT-TOOLS.md`.
 
+## Akinator runs on every change (no command)
+
+`docs/RULES.md` rule 17: every change runs the full Akinator pass from
+`skills/akinator/SKILL.md` (where each station lands: `context/akinator-station-map.md`).
+Start with `python -I skills/akinator/scripts/akinator_context.py pack --for "<task>"`,
+declare the knowledge delta by path, and land docs, the wiki (`docs/wiki/`), skills,
+rules, `context/` and `memory/` in the same commit as the code. Rule 18: record the
+business, product and technical why, before and after, date, requester and the tests
+actually run. The GitHub wiki is a mirror of `docs/wiki/`; never edit it by hand.
+
 ## Layers (imports point down only; `import/no-cycle` is on)
 
 - `src/extension.ts` composes everything.
@@ -54,7 +64,7 @@ Before every push use `npm run preflight` or `npm run ship`.
 
 ## Skills
 
-`setup-a-fresh-worktree`, `version-every-change`, `verify-coding-agent-readiness`,
+`akinator` (always on), `setup-a-fresh-worktree`, `version-every-change`, `verify-coding-agent-readiness`,
 `add-a-runtime-tool`, `add-a-command-or-view`, `add-a-translated-string`,
 `land-a-release`, `ship-to-main-safely`, `add-a-backend-client-with-fallback`, `run-live-rounds`,
 `deliver-a-flagship-with-the-agent`, `test-a-ui-with-the-browser-tool`, `test-an-api-with-http-request`,
@@ -65,3 +75,25 @@ The repository pre-commit hook prepares the bump automatically and CI verifies
 it. Release artifacts are generated after all CI gates pass, then the triggered
 Release workflow creates the GitHub Release and publishes the exact final VSIX
 to the VS Code Marketplace.
+
+## Core knowledge (identical in every router)
+
+- `context/akinator-station-map.md`
+- `docs/API_CONTRACTS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CI_FAILURES.md`
+- `docs/FAQ-AGENT-TOOLS.md`
+- `docs/HEADLESS.md`
+- `docs/RULES.md`
+- `docs/TOOLS.md`
+- `docs/parity/PROGRAM.md`
+- `docs/wiki/index.md`
+- `skills/akinator/SKILL.md`
+- `skills/handle-a-secret-alert/SKILL.md`
+- `skills/secure-every-change/SKILL.md`
+- `skills/setup-a-fresh-worktree/SKILL.md`
+- `skills/ship-to-main-safely/SKILL.md`
+- `skills/verify-coding-agent-readiness/SKILL.md`
+- `skills/version-every-change/SKILL.md`
+
+The full runbook list is in `skills/` and `AGENTS.md`.

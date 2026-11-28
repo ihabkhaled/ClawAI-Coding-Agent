@@ -9,7 +9,7 @@ project, proposes changes, and waits for your OK before it touches a file.
 It connects to your ClawAI account, so you can use many AI models from one
 place: hosted models, or models running on your own machine.
 
-Version 1.116.0 delivers a more capable agent that can plan, edit files, run
+Version 1.117.0 delivers a more capable agent that can plan, edit files, run
 commands, use git, and drive a browser, all with your approval, and it keeps
 working with the classic chat-and-review flow if a newer feature is not
 available on your ClawAI server. The approval choices now mean what they say
@@ -185,7 +185,15 @@ in [docs/FAQ-AGENT-TOOLS.md](docs/FAQ-AGENT-TOOLS.md); all options are in [docs/
   server not to keep your content, and block uploads and sharing.
 - Nothing is sent to a telemetry service unless you set one up yourself.
 
-## Requirements
+## Documentation and wiki
+
+- **Wiki:** [`docs/wiki/index.md`](docs/wiki/index.md), mirrored to the repository's GitHub wiki. One page per feature
+  area in [`docs/wiki/features/`](docs/wiki/features/README.md): business and product why, how it works, decisions,
+  dated history, tests and evidence.
+- **Engineering:** `docs/ARCHITECTURE.md`, `docs/TOOLS.md`, `docs/HEADLESS.md`, `docs/SECURITY.md`, `docs/adr/`.
+- **For agents:** `AGENTS.md` (router), `CLAUDE.md`, `docs/RULES.md`, `skills/` (Akinator always on), `context/`, `memory/`.
+
+## System requirements
 
 - VS Code 1.98 or newer.
 - A ClawAI account and a ClawAI server you can reach: **Local**

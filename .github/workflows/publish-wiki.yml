@@ -1,0 +1,66 @@
+name: Publish wiki
+
+# docs/wiki/ is the source of the living wiki (docs/adr/0009). This workflow
+# mirrors it to the repository's GitHub wiki; never edit the GitHub wiki by hand.
+on:
+  push:
+    branches:
+      - main
+    paths:
+      - 'docs/wiki/**'
+      - 'scripts/render-wiki.mjs'
+      - 'scripts/wiki-render-lib.mjs'
+      - '.github/workflows/publish-wiki.yml'
+  # Daily, so the wiki fills in by itself once its first page exists (GitHub
+  # creates the wiki repository only then). A no-op run takes seconds.
+  schedule:
+    - cron: '41 3 * * *'
+  workflow_dispatch:
+
+permissions:
+  contents: write
+
+concurrency:
+  group: publish-github-wiki
+  cancel-in-progress: true
+
+jobs:
+  publish:
+    runs-on: ubuntu-latest
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: 22
+
+      - name: Render wiki pages
+        run: node scripts/render-wiki.mjs --out "$RUNNER_TEMP/wiki-rendered" --repo "${{ github.repository }}"
+
+      - name: Publish to the GitHub wiki
+        env:
+          GH_TOKEN: ${{ github.token }}
+          REPOSITORY: ${{ github.repository }}
+        shell: bash
+        run: |
+          set -euo pipefail
+          remote="https://x-access-token:${GH_TOKEN}@github.com/${REPOSITORY}.wiki.git"
+          workdir="$(mktemp -d)"
+          # GitHub creates <repo>.wiki.git only after the first page is saved in
+          # the web UI; no API can do it. Until then, say what to do and pass.
+          if ! git ls-remote "${remote}" >/dev/null 2>&1; then
+            echo "::warning title=GitHub wiki not initialized::Open https://github.com/${REPOSITORY}/wiki, click 'Create the first page', save it, then re-run this workflow."
+            exit 0
+          fi
+          git clone "${remote}" "${workdir}/wiki-repo"
+          rsync -a --delete --exclude='.git/' "$RUNNER_TEMP/wiki-rendered/" "${workdir}/wiki-repo/"
+          cd "${workdir}/wiki-repo"
+          git config user.name "github-actions[bot]"
+          git config user.email "41898282+github-actions[bot]@users.noreply.github.com"
+          git add -A
+          if git diff --cached --quiet; then
+            echo "Wiki is already up to date."
+            exit 0
+          fi
+          git commit -m "docs: sync the wiki from docs/wiki"
+          git push origin HEAD

@@ -3,7 +3,7 @@
 Run one at a time, after `npm run package` in this checkout. Needs a running ClawAI stack.
 
 ```
-NODE_OPTIONS=--use-system-ca CLAW_LIVE_PASSWORD='<removed-default-password>' \
+NODE_OPTIONS=--use-system-ca CLAW_LIVE_PASSWORD="$ADMIN_PASSWORD" \
 CLAW_LIVE_SCENARIO=server-browser CLAW_LIVE_MODELS='kimi k2.7' \
 npx playwright test --config playwright.vscode.config.ts live-session
 ```

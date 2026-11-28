@@ -13,6 +13,7 @@ gets a new ADR that says what it supersedes; the old one keeps its text.
 | [0006](0006-plugin-publisher-signatures.md)                    | Plugin catalog entries carry detached Ed25519 publisher signatures     | accepted, 2026-09-30  |
 | [0007](0007-secure-by-default-plugins-hooks-network.md)        | Plugins, hooks and plugin network access are secure by default         | accepted, in progress |
 | [0008](0008-ship-gate-ci-parity.md)                            | `npm run ship` is the only way to main and its gate mirrors CI         | accepted, 2026-09-30  |
+| [0009](0009-akinator-runs-on-every-change.md)                  | Akinator is vendored and runs on every change, with no command         | accepted, 2026-11-28  |
 
 Write a new ADR when a change fixes a boundary, a protocol, a security
 posture or a deliberate trade-off that a later reader would otherwise undo.

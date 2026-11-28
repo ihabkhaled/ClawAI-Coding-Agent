@@ -9,7 +9,15 @@ description: Write the locked step plan (--plan-file) that makes a run unable to
 and `blocked`, but cannot drop or weaken one. A step with a `check` is done only when the check exits 0. Reference:
 `docs/HEADLESS.md` (Task plan) and `docs/TOOLS.md` (task.plan).
 
-## Steps
+## When to use
+
+You start a multi-step run and know what each stage must prove.
+
+## When NOT to use
+
+A single-step task; a locked plan adds only overhead.
+
+## Procedure
 
 1. One step per stage you can prove: build, gates, API, UI, commit.
 2. Give every step a `check` where a command can prove it. A step with no check is only the model's claim.
@@ -68,3 +76,7 @@ clawai -p "Work the plan step by step. Mark a step done only after its check pas
 - **A blocked step** is not done. Tell the model to mark a truly impossible step `blocked` with a note and report honestly.
 - **A tool failure message ending in whitespace** once made the server answer 422 and end the run; it is trimmed now. If a run
   dies with `receipt does not match canonical output`, check for a regression there.
+
+## Definition of done
+
+The JSON loads without exit 2, every provable step has a trusted `check`, and the run ends with no open step.

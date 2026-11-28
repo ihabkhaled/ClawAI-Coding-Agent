@@ -23,7 +23,7 @@ not invent one: effort is carried by the budget numbers it already has, and the 
 
 ## 2. What the web app can do, and what the extension could
 
-Read from `rules/50-agentic-research-loop-and-narration.md`, `rules/41-web-evidence-truthfulness.md`, `claw-research-service` and
+Read from `<monorepo>/rules/50-agentic-research-loop-and-narration.md`, `<monorepo>/rules/41-web-evidence-truthfulness.md`, `claw-research-service` and
 `claw-chat-service` (read only).
 
 | Ability in the web app                                                                                                               | Where it lives                                                                          | Reachable by an extension token?                                                                                         |

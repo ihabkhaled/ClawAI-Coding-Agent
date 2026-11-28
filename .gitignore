@@ -33,3 +33,9 @@ id_ed25519*
 secrets.json
 credentials.json
 service-account*.json
+# Claude Code session worktrees are local; the project skill, hook and settings in .claude/ are tracked.
+.claude/worktrees/
+.claude/settings.local.json
+
+# Python bytecode from the vendored Akinator tools.
+__pycache__/

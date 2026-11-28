@@ -7,7 +7,15 @@ description: Add a client for a ClawAI backend route that older backends may not
 
 The extension must keep working against a backend that predates the route.
 
-## Steps
+## When to use
+
+The extension calls a ClawAI backend route that older or self-hosted backends may not have yet.
+
+## When NOT to use
+
+The route already exists on every supported backend (use the existing client), or the call is not HTTP (`src/backend/` is the only HTTP layer).
+
+## Procedure
 
 1. Client in `src/backend/<name>-client.ts`; `src/backend/` is the only HTTP layer.
    Use the shared requester (`ResearchRequester` / `Requester`), never a bare `fetch` elsewhere.
@@ -36,3 +44,7 @@ npm run coverage:scope
 
 - Hosted backends require HTTPS; do not relax it for tests.
 - A client with no caller is dormant code (rule 1): wire it before claiming it.
+
+## Definition of done
+
+Client exists with schema validation, a typed route-missing fallback, a localized degraded state, tests for success/404/5xx/schema mismatch/abort, and the route documented in `docs/API_CONTRACTS.md`.

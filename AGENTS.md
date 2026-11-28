@@ -3,6 +3,16 @@
 This repository contains the standalone VS Code extension embedded in the
 ClawAI monorepo as `apps/claw-coding-agent`.
 
+## Akinator, on every change
+
+No command is needed. Every change, by every agent and tool, runs the Akinator pass in
+`skills/akinator/SKILL.md` (`docs/RULES.md` rules 17 and 18): ask, resolve, audit, plan,
+implement, document, skillify, rule, contextify, memoize, index and sync, verify. Homes:
+`context/akinator-station-map.md`. Knowledge lives in `docs/` (engineering), `docs/wiki/`
+(the living wiki, mirrored to the GitHub wiki), `docs/adr/`, `context/`, `memory/` and
+`.ai/BRIEF.md`. Record business, product and technical why, before and after, dates and
+tests actually run; unknowns are `_Unknown - ask the owner and record the answer._`.
+
 ## Before changing code
 
 Read `CLAUDE.md` (layers, never-list, traps), the affected source, its tests, and the relevant document in
@@ -78,3 +88,25 @@ npm run test:host:installed <tmp>/extensions
 ## Pushing to main
 
 Only through `npm run ship` (`skills/ship-to-main-safely/SKILL.md`): it runs the GitHub gates on Linux first and watches CI and Release until green. Twelve red pushes are catalogued in `docs/CI_FAILURES.md`. Never push by hand, never bypass hooks.
+
+## Core knowledge (identical in every router)
+
+- `context/akinator-station-map.md`
+- `docs/API_CONTRACTS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CI_FAILURES.md`
+- `docs/FAQ-AGENT-TOOLS.md`
+- `docs/HEADLESS.md`
+- `docs/RULES.md`
+- `docs/TOOLS.md`
+- `docs/parity/PROGRAM.md`
+- `docs/wiki/index.md`
+- `skills/akinator/SKILL.md`
+- `skills/handle-a-secret-alert/SKILL.md`
+- `skills/secure-every-change/SKILL.md`
+- `skills/setup-a-fresh-worktree/SKILL.md`
+- `skills/ship-to-main-safely/SKILL.md`
+- `skills/verify-coding-agent-readiness/SKILL.md`
+- `skills/version-every-change/SKILL.md`
+
+The full runbook list is in `skills/` and `AGENTS.md`.

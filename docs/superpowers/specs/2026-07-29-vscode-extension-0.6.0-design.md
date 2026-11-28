@@ -91,7 +91,7 @@ appears in Explorer without stealing editor focus.
 2. Selecting a history thread loads its ordered messages and changes the editor title.
 3. Sending a second prompt while the first runs leaves the composer enabled and shows a queued turn.
 4. Streaming produces persistent ordered progress entries with token counters.
-5. A coding request can create `apps/loop.js` without opening the file or a diff.
+5. A coding request can create `<example>/apps/loop.js` without opening the file or a diff.
 6. `Review changes` explicitly opens the relevant diff.
 7. Reloading VS Code preserves authorization, thread history, and session titles.
 8. Format, lint, typecheck, unit/integration/host/Playwright tests, package audit, and VSIX install

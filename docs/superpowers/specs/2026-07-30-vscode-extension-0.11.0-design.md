@@ -207,7 +207,7 @@ user value enters `innerHTML`. CSP remains unchanged.
 - Run `npm run format`, `npm run check`, `npm run test:host`,
   `npm run test:playwright`, `npm run package`, and runtime/package audits.
 - Bump SemVer from `0.10.0` to `0.11.0`, update the changelog and README,
-  produce `builds/clawai-coding-agent-0.11.0.vsix`, and verify the installed
+  produce `builds/clawai-coding-agent-<version>.vsix`, and verify the installed
   artifact.
 
 ## Acceptance criteria

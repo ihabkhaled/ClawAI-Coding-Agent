@@ -107,7 +107,7 @@ macOS, or getting the VS Code Speech extension.
 
 Secret-looking files (`.env`, key files, credential files), your `.git` folder and
 dependency folders are never read, and you cannot mention them. To exclude more,
-list patterns in `.clawai/ignore` (one per line) or in the `clawAI.exclude`
+list patterns in `<workspace>/.clawai/ignore` (one per line) or in the `clawAI.exclude`
 setting. The **Context** view shows what was included, excluded and shortened for
 each request.
 

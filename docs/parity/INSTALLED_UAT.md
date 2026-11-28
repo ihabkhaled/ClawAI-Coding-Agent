@@ -30,7 +30,7 @@ Each row was packaged, installed into its own disposable profile, and passed
 
 | Fact    | Value                                                              |
 | ------- | ------------------------------------------------------------------ |
-| File    | `builds/clawai-coding-agent-0.69.0.vsix`                           |
+| File    | `builds/clawai-coding-agent-<version>.vsix`                        |
 | SHA-256 | `27dcda754bff89f28f63bb6bc4dbc92d19ac52ac7cef6d538f666aff24760a2a` |
 | Size    | 17,340,566 bytes, 126 files                                        |
 | Branch  | `feat/claude-parity-program`                                       |
@@ -46,7 +46,7 @@ developer profile:
 
 ```bash
 code --user-data-dir <tmp>/user-data --extensions-dir <tmp>/extensions \
-     --install-extension builds/clawai-coding-agent-0.69.0.vsix --force
+     --install-extension builds/clawai-coding-agent-<version>.vsix --force
 ```
 
 `--list-extensions --show-versions` reports exactly `clawai.clawai-coding-agent@0.69.0`,

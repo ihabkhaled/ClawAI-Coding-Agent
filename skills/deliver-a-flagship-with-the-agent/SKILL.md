@@ -8,11 +8,19 @@ description: Hand the headless agent a whole feature and get it back planned, bu
 A flagship is many steps. A model asked "are you done?" says yes too early, so YOU define done and the tools enforce it.
 Tool reference: `docs/TOOLS.md`. Flags: `docs/HEADLESS.md`.
 
+## When to use
+
+You run `clawai -p` for a multi-step feature and want proof of completion, not the model's claim.
+
+## When NOT to use
+
+The task is a single small edit; one plain run is cheaper than a plan, checks and continuations.
+
 ## The order
 
 plan -> build -> gates -> browser test -> API test -> commit -> push. Each stage is a plan step with a check you trust.
 
-## Steps
+## Procedure
 
 1. **Write the brief** (`brief.md`): the goal, exact paths and names, the commands that prove it, what NOT to touch.
    The agent cannot see your head. Put the dev-server command and its "ready" line in the brief.
@@ -71,3 +79,7 @@ clawai -p "Deliver the feature described in brief.md. Work the plan step by step
 
 Your `--done-check` commands exit 0, the plan has no open step, `git log origin/main..HEAD` is empty, and you have seen the
 real output. Anything not run is reported as not run.
+
+## Definition of done
+
+Your `--done-check` commands exit 0, no plan step is open, `git log origin/main..HEAD` is empty and you have seen the real output (see Done means below).

@@ -26,7 +26,7 @@
 
 - Create: `docs/superpowers/specs/2026-07-28-vscode-extension-0.2.0-design.md`
 - Create: `docs/superpowers/plans/2026-07-28-vscode-extension-0.2.0.md`
-- Modify: parent `rules/07-commit-rules.md`
+- Modify: parent `<monorepo>/rules/07-commit-rules.md`
 
 **Interfaces:**
 
@@ -252,14 +252,14 @@ the parent pointer, and push the parent branch.
 
 - Create: `src/webview/chat-markup.ts`
 - Create: `src/webview/chat-public-state.ts`
-- Create: `media/chat-state.js`
+- Create: `<historical>/media/chat-state.js`
 - Modify: `src/webview/chat-view-provider.ts`
 - Modify: `media/chat.js`
 - Modify: `media/chat.css`
 - Modify: `src/views/state-tree-provider.ts`
 - Modify: `src/views/status-bar-controller.ts`
 - Test: `tests/unit/chat-public-state.test.ts`
-- Test: `tests/unit/chat-view-provider.test.ts`
+- Test: `<historical>/tests/unit/chat-view-provider.test.ts`
 
 **Interfaces:**
 
@@ -319,7 +319,7 @@ update the parent pointer, and push the parent branch.
 **Files:**
 
 - Create: `playwright.config.ts`
-- Create: `tests/playwright/webview-harness.html`
+- Create: `<historical>/tests/playwright/webview-harness.html`
 - Create: `tests/playwright/webview.e2e.ts`
 - Create: `scripts/serve-webview-fixture.mjs`
 - Modify: `package.json`

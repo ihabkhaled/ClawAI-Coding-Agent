@@ -310,7 +310,7 @@ already exist, runs the complete release gate, packages the VSIX, and publishes
 
 Install the VSIX into an isolated profile, connect using the persisted
 SecretStorage session, accept routine workspace consent once, reload, select an
-installed Ollama model, and request `app/for-loop.js`. Approve the final diff
+installed Ollama model, and request `<example>/app/for-loop.js`. Approve the final diff
 and verify the file content. Select one connected provider model when the
 catalog exposes it and verify a chat response streams. Confirm the toolbar and
 Activity Bar show the three-scratch glyph.

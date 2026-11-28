@@ -1,0 +1,13 @@
+#!/bin/sh
+set -eu
+
+# Security pass before anything leaves the machine (skills/secure-every-change/SKILL.md).
+# Every dependency, development tools included, must have no moderate-or-worse advisory.
+npm audit --audit-level=moderate
+
+# The outgoing commits are secret-scanned when gitleaks is installed; CI always scans.
+if command -v gitleaks >/dev/null 2>&1; then
+  gitleaks git . --config .gitleaks.toml --redact --no-banner --log-opts "origin/main..HEAD"
+else
+  echo "pre-push: gitleaks is not installed; outgoing commits were not secret-scanned here (CI will)." >&2
+fi

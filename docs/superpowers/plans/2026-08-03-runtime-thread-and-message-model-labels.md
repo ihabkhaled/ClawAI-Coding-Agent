@@ -77,7 +77,7 @@ Run: `npx vitest run tests/unit/agent-workflow-service.test.ts`
 - Modify: `src/services/agent-run-service.ts`
 - Test: `tests/unit/prompt-execution-service.test.ts`
 - Test: `tests/unit/agent-run-service.test.ts`
-- Test: `tests/unit/chat-view-provider.test.ts`
+- Test: `<historical>/tests/unit/chat-view-provider.test.ts`
 
 **Interfaces:**
 
@@ -224,7 +224,7 @@ Run: `npm run supply-chain && npm run package`
 
 - [ ] **Step 5: Install and verify the exact VSIX**
 
-Run: `code --install-extension builds/clawai-coding-agent-0.41.0.vsix --force`
+Run: `code --install-extension builds/clawai-coding-agent-<version>.vsix --force`
 
 Run: `code --list-extensions --show-versions`
 

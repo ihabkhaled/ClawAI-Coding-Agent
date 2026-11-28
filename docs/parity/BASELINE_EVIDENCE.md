@@ -34,9 +34,9 @@ not releasable.
 
 `npm ci` fails on Windows in a fresh worktree. The postinstall of
 `@homebridge/node-pty-prebuilt-multiarch` spawns with `EINVAL`, and when that
-postinstall does succeed it writes `build/Release/pty.node` and
-`build/Release/conpty.node`, which breaks `npm run build`: `esbuild.mjs`
-configures no loader for `.node`, and `lib/prebuild-loader.js` statically
+postinstall does succeed it writes `<package>/build/Release/pty.node` and
+`<package>/build/Release/conpty.node`, which breaks `npm run build`: `esbuild.mjs`
+configures no loader for `.node`, and `<package>/lib/prebuild-loader.js` statically
 requires that path once it exists.
 
 Use `npm ci --ignore-scripts`. Runtime PTY on Windows is unaffected because the

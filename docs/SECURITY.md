@@ -63,7 +63,7 @@ apply compares the current before-state with the reviewed one and requires a new
 review after any intervening change.
 
 In Manual mode, approving routine workspace access once stores only a boolean
-grant in VS Code's workspace-scoped state. It covers non-sensitive context
+grant in VS Code's global state (`globalState`, key `clawAI.routineAccessApproval.v2.<selected folder>`, so it is per workspace folder). It covers non-sensitive context
 collection and proposal generation for that workspace across reloads. It does
 not authorize commands, and it never weakens Workspace Trust, secret
 exclusions, path validation, command validation, or atomic apply. Full Access
@@ -127,7 +127,7 @@ scan of every commit found 29 secret-shaped values, all fake fixtures in
 
 - Tests build fake secrets at run time with `tests/helpers/fake-secrets.ts`, so
   the source text never holds a complete secret shape.
-- `.github/workflows/secret-scan.yml` runs gitleaks (pinned release, checksum
+- `.github/workflows/security-scan.yml` runs gitleaks (pinned release, checksum
   verified) over the pushed commits on every push and pull request, and over
   the whole history weekly and on demand. `.gitleaks.toml` has no allowlist:
   a finding is fixed in the code.
@@ -135,6 +135,11 @@ scan of every commit found 29 secret-shaped values, all fake fixtures in
   is installed; `npm run ship` also refuses secret-shaped additions in the
   outgoing diff (`scripts/ship-lib.mjs`, `secretShapedAdditions`).
 - GitHub secret scanning and push protection are on for the repository.
+- Dependencies: `npm audit --audit-level=moderate` over every dependency (development tools
+  included) runs in `.githooks/pre-push` and the Security scan workflow, next to OSV-Scanner
+  (pinned, checksum verified). CodeQL default setup and Dependabot alerts and security updates are
+  on since 2026-11-28. `npm run security:check` runs the local part and lists open GitHub alerts.
+- Every change goes through `skills/secure-every-change/SKILL.md` (`docs/RULES.md` rule 14b).
 
 ## Residual risks
 

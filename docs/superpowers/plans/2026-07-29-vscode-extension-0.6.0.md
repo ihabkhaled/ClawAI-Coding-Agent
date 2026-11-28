@@ -111,7 +111,7 @@ npm run test:integration
 - Modify: `media/chat.css`
 - Test: `tests/unit/chat-service.test.ts`
 - Test: `tests/unit/chat-markup.test.ts`
-- Test: `tests/playwright/chat-view.spec.ts`
+- Test: `<historical>/tests/playwright/chat-view.spec.ts`
 
 **Interfaces:**
 
@@ -137,7 +137,7 @@ npm run test:integration
 - Modify: `src/webview/chat-view-provider.ts`
 - Modify: `media/chat.js`
 - Test: `tests/unit/safe-edit-confirmation.test.ts`
-- Test: `tests/unit/diff-preview-provider.test.ts`
+- Test: `<historical>/tests/unit/diff-preview-provider.test.ts`
 
 **Interfaces:**
 
@@ -160,8 +160,8 @@ npm run test:integration
 - Modify: `.gitignore`
 - Modify: `README.md`
 - Modify: `CHANGELOG.md`
-- Add: `builds/clawai-coding-agent-0.1.0.vsix` through
-  `builds/clawai-coding-agent-0.6.0.vsix`
+- Add: `builds/clawai-coding-agent-<version>.vsix` through
+  `builds/clawai-coding-agent-<version>.vsix`
 - Test: `scripts/package-audit.mjs`
 
 **Interfaces:**
@@ -185,7 +185,7 @@ npm run test:integration
 - Produces: installed 0.6.0 extension, GitHub tag/release, and green parent PR.
 
 - [ ] **Step 1: Run `npm run check`, host tests, and Playwright**
-- [ ] **Step 2: Install `builds/clawai-coding-agent-0.6.0.vsix` with `code --force`**
+- [ ] **Step 2: Install `builds/clawai-coding-agent-<version>.vsix` with `code --force`**
 - [ ] **Step 3: Exercise new tabs, history switching, queue steering, explicit diff review, and a real
       file creation against the configured ClawAI backend**
 - [ ] **Step 4: Commit/push the extension, create `v0.6.0`, and upload the VSIX**

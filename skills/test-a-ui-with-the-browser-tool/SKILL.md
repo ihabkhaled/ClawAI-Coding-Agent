@@ -7,7 +7,15 @@ description: Make the agent open your web app in a real headless browser, click 
 
 `browser.page` is one headless Chromium per run. Reference: `docs/TOOLS.md` (browser.page).
 
-## Steps
+## When to use
+
+The agent must check a web UI from `clawai -p`: clicks, phone and desktop widths, console and network errors.
+
+## When NOT to use
+
+The check is an API (see `test-an-api-with-http-request`) or the UI is the extension webview, which has its own Playwright lane.
+
+## Procedure
 
 1. **Install once:** `npm install playwright-core` and `npx playwright-core install chromium` (or set `CLAW_BROWSER_PATH` to a
    Chrome). Without them the model is told exactly this and the run goes on without a browser.
@@ -52,3 +60,7 @@ clawai -p "Open http://localhost:3000/login. Snapshot it. Type admin@example.tes
 
 The final answer should quote the title, status, the exact error text, the overflow flag per width and each console error. A
 claim without those is not a test.
+
+## Definition of done
+
+The final answer quotes title, status, exact error text, overflow flag per width and each console error.

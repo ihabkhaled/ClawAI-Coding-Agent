@@ -23,8 +23,8 @@ or a fixture browser test with a completed coding task.
   file/command/Git operations, then reports `RUNTIME_STATE_UNAVAILABLE`.
   Screenshots establish the symptom, not its backend root cause.
 - Current main reproduces knowledge freshness/integrity failures: stale
-  `.ai/manifests/api-endpoints.json`, `.ai/manifests/tests.json`,
-  `.ai/BOOTSTRAP.md`, and `.ai/manifests/hashes.json`. Inventory check also fails.
+  `<historical>/.ai/manifests/api-endpoints.json`, `<historical>/.ai/manifests/tests.json`,
+  `<historical>/.ai/BOOTSTRAP.md`, and `<historical>/.ai/manifests/hashes.json`. Inventory check also fails.
 - Existing source already includes stream resumption and backend polling/TTL
   fixes. Verify these before adding more retries or changing storage semantics.
 - Auth callback currently relies on `window.close()` and promises automatic
@@ -117,7 +117,7 @@ Implemented and verified in the source checkout:
 
 1. Run `npm run format`, then `npm run check`, host tests, package and dependency
    audit. Regenerate release outputs after formatting.
-2. Install `builds/clawai-coding-agent-1.47.0.vsix` into a disposable profile
+2. Install `builds/clawai-coding-agent-<version>.vsix` into a disposable profile
    and run installed-host tests. Confirm VS Code reports 1.47.0 rather than the
    currently installed 1.30.0.
 3. Run authenticated live provider/research/crawl scenarios on a disposable

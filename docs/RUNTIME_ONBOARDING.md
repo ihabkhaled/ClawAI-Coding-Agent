@@ -2,7 +2,7 @@
 
 ## Connection and models
 
-Choose Local or Custom separately for the Backend and Frontend. Cloud remains unavailable until a hosted endpoint is finalized. Backend traffic owns authentication, entitlement, routing, provider credentials, inference, compare, judge, and research. The extension never asks for provider secrets.
+Choose Local or Custom separately for the Backend and Frontend. Cloud is selectable and resolves to `https://claw-ai.co`. The default for both the backend and frontend settings is Local (`https://claw.local`, `clawAI.backendEnvironment` and `clawAI.frontendEnvironment`). Backend traffic owns authentication, entitlement, routing, provider credentials, inference, compare, judge, and research. The extension never asks for provider secrets.
 
 Cloud and local models use the same Runtime Protocol V2. Capability truth comes from the selected execution target, not from model-specific UI branches. If Runtime V2 negotiation is unavailable, the extension visibly retains the supported V1 path.
 

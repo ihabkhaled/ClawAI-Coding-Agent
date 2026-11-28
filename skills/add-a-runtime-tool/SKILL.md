@@ -8,7 +8,15 @@ description: Add or extend a runtime (agent) tool in the ClawAI Coding Agent. Us
 A tool is delivered only when the model can call it, policy classifies it, and a
 test proves both (`docs/RULES.md` rule 1).
 
-## Steps
+## When to use
+
+The model needs a new agent tool or a new operation on an existing tool.
+
+## When NOT to use
+
+The change is a VS Code command or setting (see `add-a-command-or-view`), or a backend route only (see `add-a-backend-client-with-fallback`).
+
+## Procedure
 
 1. **Schema.** Add the operation's strict input schema in
    `src/core/runtime/runtime-tool-input-schemas.ts` using `strict({...}, [required])`.
@@ -45,3 +53,7 @@ npm run coverage:scope
 
 - A tool defined but not registered is scaffolding; the model sees a tool that fails.
 - New user-facing strings need all locales (`skills/add-a-translated-string`).
+
+## Definition of done
+
+The model can call the tool, policy classifies it, and tests prove the executor, schema, catalog and classification (`docs/RULES.md` rule 1); `coverage:scope` passes.

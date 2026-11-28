@@ -1,0 +1,39 @@
+---
+description: Akinator runs on every change in this repository, with no command typed.
+alwaysApply: true
+---
+
+Read AGENTS.md first (the router) and CLAUDE.md (engineering policy, never-list).
+
+Akinator runs on EVERY change with no command typed (docs/RULES.md rules 17 and 18): ask,
+resolve, audit, plan, implement, document, skillify, rule, contextify, memoize, index and sync,
+verify. Procedure: skills/akinator/SKILL.md. Homes: context/akinator-station-map.md.
+
+Declare the knowledge delta by path, or write "knowledge delta: none, because <reason>".
+Docs, the wiki (docs/wiki/), skills, rules, context/ and memory/ land in the same commit as the
+code, with the business, product and technical why, before and after, the date and the tests
+actually run. Unknowns are "_Unknown - ask the owner and record the answer._".
+
+Main is reached only through `npm run ship`. Never push by hand, never bypass a hook.
+
+## Core knowledge (identical in every router)
+
+- `context/akinator-station-map.md`
+- `docs/API_CONTRACTS.md`
+- `docs/ARCHITECTURE.md`
+- `docs/CI_FAILURES.md`
+- `docs/FAQ-AGENT-TOOLS.md`
+- `docs/HEADLESS.md`
+- `docs/RULES.md`
+- `docs/TOOLS.md`
+- `docs/parity/PROGRAM.md`
+- `docs/wiki/index.md`
+- `skills/akinator/SKILL.md`
+- `skills/handle-a-secret-alert/SKILL.md`
+- `skills/secure-every-change/SKILL.md`
+- `skills/setup-a-fresh-worktree/SKILL.md`
+- `skills/ship-to-main-safely/SKILL.md`
+- `skills/verify-coding-agent-readiness/SKILL.md`
+- `skills/version-every-change/SKILL.md`
+
+The full runbook list is in `skills/` and `AGENTS.md`.

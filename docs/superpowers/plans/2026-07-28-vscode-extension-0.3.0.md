@@ -192,7 +192,7 @@ Update, gate, commit, and push the parent submodule pointer before Task 3.
 - Modify: `src/webview/chat-view-provider.ts`
 - Modify: `src/core/extension-state.ts`
 - Modify: `src/webview/chat-public-state.ts`
-- Test: `tests/unit/agent-run.test.ts`
+- Test: `<historical>/tests/unit/agent-run.test.ts`
 - Test: `tests/unit/agent-run-service.test.ts`
 - Test: `tests/unit/workflow-service.test.ts`
 - Test: `tests/unit/chat-public-state.test.ts`
@@ -219,7 +219,7 @@ write for loop from 1 to 10 in file .js inside folder app
 ```
 
 Provide a backend stream containing a strict edit plan for
-`app/for-loop.js`. Assert the real run service previews and applies the plan,
+`<example>/app/for-loop.js`. Assert the real run service previews and applies the plan,
 and the resulting content iterates from 1 through 10.
 
 - [ ] **Step 2: Confirm RED**

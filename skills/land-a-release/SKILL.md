@@ -7,6 +7,16 @@ description: Ship every ClawAI Coding Agent main-bound batch as an automatically
 
 Every main-bound change is a release.
 
+## When to use
+
+A coherent main-bound batch is ready to become a delivery release.
+
+## When NOT to use
+
+You only need to build a local VSIX or run a gate; use `ship-to-main-safely` for the push mechanics.
+
+## Procedure
+
 1. Commit the coherent batch normally. The pre-commit hook ensures exactly the
    next delivery minor and aligns package, lockfile, README and CHANGELOG.
 2. Add useful user-facing notes to that `CHANGELOG.md` section and engineering
@@ -23,3 +33,13 @@ Every main-bound change is a release.
 
 Generated release assets are not committed to source control. A version is
 immutable once published; a fix is another delivery minor.
+
+## Failure modes
+
+- Reusing a published tag: a fix is another delivery minor.
+- Pushing main by hand or bypassing hooks.
+- Committing generated release assets.
+
+## Definition of done
+
+CI and Release are green, the GitHub Release exists and the Marketplace publication step succeeded.

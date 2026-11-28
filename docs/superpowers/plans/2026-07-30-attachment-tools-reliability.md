@@ -37,11 +37,11 @@ through a bounded second model turn.
 - Modify: `src/services/chat-service.ts`
 - Modify: `src/backend/backend-client.ts`
 - Modify: `src/services/agent-run-service.ts`
-- Modify: `../claw-chat-service/src/modules/chat-messages/dto/create-message.dto.ts`
-- Modify: `../claw-chat-service/src/modules/chat-messages/types/user-message-metadata.types.ts`
-- Modify: `../claw-chat-service/src/modules/chat-messages/services/chat-messages.service.ts`
+- Modify: `<monorepo>/apps/claw-chat-service/src/modules/chat-messages/dto/create-message.dto.ts`
+- Modify: `<monorepo>/apps/claw-chat-service/src/modules/chat-messages/types/user-message-metadata.types.ts`
+- Modify: `<monorepo>/apps/claw-chat-service/src/modules/chat-messages/services/chat-messages.service.ts`
 - Test: `tests/unit/chat-service.test.ts`
-- Test: `../claw-chat-service/src/modules/chat-messages/__tests__/chat-messages.service.spec.ts`
+- Test: `<monorepo>/apps/claw-chat-service/src/modules/chat-messages/__tests__/chat-messages.service.spec.ts`
 
 **Interfaces:**
 
@@ -86,10 +86,10 @@ Run the commands from Steps 2 and 4; expected PASS.
 
 **Files:**
 
-- Create: `../claw-chat-service/src/modules/chat-messages/utilities/image-generation-prompt.utility.ts`
-- Modify: `../claw-chat-service/src/modules/chat-messages/managers/chat-execution.manager.ts`
+- Create: `<monorepo>/apps/claw-chat-service/src/modules/chat-messages/utilities/image-generation-prompt.utility.ts`
+- Modify: `<monorepo>/apps/claw-chat-service/src/modules/chat-messages/managers/chat-execution.manager.ts`
 - Modify: `../claw-image-service/src/modules/image-generation/dto/generate-image.dto.ts`
-- Test: `../claw-chat-service/src/modules/chat-messages/utilities/__tests__/image-generation-prompt.utility.spec.ts`
+- Test: `<monorepo>/apps/claw-chat-service/src/modules/chat-messages/utilities/__tests__/image-generation-prompt.utility.spec.ts`
 - Test: `../claw-image-service/src/modules/image-generation/dto/__tests__/generate-image.dto.spec.ts`
 
 **Interfaces:**
@@ -119,9 +119,9 @@ Expected: all new image boundary tests pass.
 
 **Files:**
 
-- Modify: `../claw-chat-service/src/modules/chat-messages/controllers/chat-stream.controller.ts`
+- Modify: `<monorepo>/apps/claw-chat-service/src/modules/chat-messages/controllers/chat-stream.controller.ts`
 - Modify: `src/services/chat-service.ts`
-- Test: `../claw-chat-service/src/modules/chat-messages/__tests__/chat-stream.controller.spec.ts`
+- Test: `<monorepo>/apps/claw-chat-service/src/modules/chat-messages/__tests__/chat-stream.controller.spec.ts`
 - Test: `tests/integration/backend-response-bounds.test.ts`
 
 **Interfaces:**
@@ -150,7 +150,7 @@ Expected: slow stream stays active; truly silent transport still times out.
 
 **Files:**
 
-- Create: `src/webview/icon-markup.ts`
+- Create: `<historical>/src/webview/icon-markup.ts`
 - Modify: `src/core/chat-attachment.ts`
 - Modify: `src/webview/chat-markup.ts`
 - Modify: `media/chat.js`
@@ -158,7 +158,7 @@ Expected: slow stream stays active; truly silent transport still times out.
 - Modify: all `package.nls*.json`
 - Test: `tests/unit/chat-attachment.test.ts`
 - Test: `tests/unit/chat-markup.test.ts`
-- Test: `tests/browser/chat-attachments.spec.ts`
+- Test: `<historical>/tests/browser/chat-attachments.spec.ts`
 
 **Interfaces:**
 
@@ -190,13 +190,13 @@ Expected: PASS.
 
 **Files:**
 
-- Create: `src/core/workspace-command-policy.ts`
+- Create: `<historical>/src/core/workspace-command-policy.ts`
 - Create: `src/infrastructure/bounded-command-runner.ts`
 - Modify: `src/core/edit-plan.ts`
 - Modify: `src/infrastructure/vscode-workspace-edit-adapter.ts`
 - Modify: `src/services/agent-run-service.types.ts`
-- Test: `tests/unit/workspace-command-policy.test.ts`
-- Test: `tests/integration/bounded-command-runner.test.ts`
+- Test: `<historical>/tests/unit/workspace-command-policy.test.ts`
+- Test: `<historical>/tests/integration/bounded-command-runner.test.ts`
 
 **Interfaces:**
 
@@ -240,7 +240,7 @@ Expected: all policy/execution tests pass.
 - Modify: `media/chat.css`
 - Test: `tests/unit/agent-run-service.test.ts`
 - Test: `tests/unit/tool-result-prompt.test.ts`
-- Test: `tests/browser/chat-tool-calls.spec.ts`
+- Test: `<historical>/tests/browser/chat-tool-calls.spec.ts`
 
 **Interfaces:**
 
@@ -273,7 +273,7 @@ steps.
 - Modify: `package.json`
 - Modify: `package-lock.json`
 - Modify: `CHANGELOG.md`
-- Create: `builds/clawai-coding-agent-0.10.0.vsix`
+- Create: `builds/clawai-coding-agent-<version>.vsix`
 - Modify: parent submodule pointer and generated artifacts
 
 - [ ] **Step 1: Set version 0.10.0 and changelog**

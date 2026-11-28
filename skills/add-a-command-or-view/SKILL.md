@@ -5,7 +5,15 @@ description: Contribute a new VS Code command, view, or setting in the ClawAI Co
 
 # Add a command, view or setting
 
-## Steps
+## When to use
+
+`package.json` `contributes` changes: a new command, view, menu, keybinding or setting.
+
+## When NOT to use
+
+The change adds only runtime logic with no manifest entry (see `add-a-runtime-tool`), or only a string (see `add-a-translated-string`).
+
+## Procedure
 
 1. **Manifest.** `package.json` `contributes.commands` (id `clawAI.<name>`,
    `title: "%command.<name>%"`, `category: "ClawAI"`), plus `menus`,
@@ -39,3 +47,7 @@ npm run package:audit
 - `inventory:verify` fails if a manifest entry has no row; regenerate, do not hand-edit.
 - Existing rows keep Status/Evidence; new rows start NOT RUN. Record real evidence only.
 - `l10n:verify` diffs against git: stage the regenerated files.
+
+## Definition of done
+
+Manifest, NLS keys, registration, count tests and `inventory:surface` all agree, and `package:audit` plus the three named unit tests pass.

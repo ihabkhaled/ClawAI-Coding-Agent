@@ -14,7 +14,7 @@ import type { z } from 'zod';
 /** The live lane talks to a real stack. Nothing here runs in the default suite. */
 export const LIVE_BASE = process.env.CLAW_LIVE_BACKEND_URL ?? 'https://claw.local/api/v1';
 export const LIVE_EMAIL = process.env.CLAW_LIVE_EMAIL ?? 'admin@claw.local';
-export const LIVE_PASSWORD = process.env.CLAW_LIVE_PASSWORD ?? '<removed-default-password>';
+export const LIVE_PASSWORD = process.env.CLAW_LIVE_PASSWORD ?? '';
 export const LIVE_PROVIDER = process.env.CLAW_LIVE_PROVIDER ?? 'GEMINI';
 export const LIVE_MODEL = process.env.CLAW_LIVE_MODEL ?? 'models/gemini-2.5-flash-lite';
 

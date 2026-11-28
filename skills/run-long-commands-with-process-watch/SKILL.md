@@ -9,7 +9,15 @@ description: Make the agent start a dev server, a slow push hook or a watch-mode
 (process.watch). Grant: `--allow-tools command` (same allowlist as `workspace.command`: `node`, `npm`, `npx`, plus
 `--allow-command`).
 
-## Steps
+## When to use
+
+A command outlives one tool call: a dev server, a slow push hook or a watch-mode test run.
+
+## When NOT to use
+
+The command ends on its own and you need its result now; use `workspace.command` or `code.gates`.
+
+## Procedure
 
 1. Tell the model the exact start command and the line that means "ready" ("listening", "ready in").
 2. It calls `start {name, executable, arguments}`; the result is `{name, pid, nextCursor: 0}` at once.
@@ -48,3 +56,7 @@ or pick another name`.
 ## Not for
 
 A job you need the result of right now and that ends: use `workspace.command` or `code.gates`.
+
+## Definition of done
+
+The process was stopped (or the run ended), the awaited line was seen, and only new output was read by cursor.
