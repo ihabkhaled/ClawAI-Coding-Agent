@@ -8,6 +8,7 @@ import {
   subdirectoryOf,
 } from '../../src/sdk/agent-team-args';
 import { carveBudget, narrowGrant } from '../../src/sdk/agent-team-narrow';
+import { ALPHA, assemble, fakeOpenAiKey } from '../helpers/fake-secrets';
 
 import type { ParentGrant } from '../../src/sdk/agent-team-narrow';
 import type { SpawnRequest } from '../../src/sdk/agent-team-tool.types';
@@ -201,7 +202,7 @@ describe('spawn arguments', () => {
   it('redacts a secret in the task and normalizes the folder', () => {
     const parsed = parseSpawn({
       ...ok,
-      task: 'key <fake-secret-removed>',
+      task: `key ${fakeOpenAiKey(assemble(ALPHA, '123456'))}`,
       workspaceSubdir: './a\\b/',
     });
     expect('request' in parsed && parsed.request.task).not.toContain('abcdefghijklmnopqrstuvwxyz');

@@ -8,6 +8,7 @@ import { createAgent } from '../../src/sdk/create-agent';
 import { permissionsForMode } from '../../src/sdk/permission-modes';
 import { PLAN_CHECK_TAIL_CHARS } from '../../src/sdk/task-plan-tool.constants';
 import { workspaceToolkit } from '../../src/sdk/workspace-toolkit';
+import { ALPHA, assemble, fakeOpenAiKey } from '../helpers/fake-secrets';
 import { COMPLETED, scriptedRuns } from '../helpers/scripted-runs';
 
 import type { AgentPermissionMode } from '../../src/sdk/permission-modes.types';
@@ -164,7 +165,7 @@ describe('abuse: a check is not a way around the command rules', () => {
             operation: 'set',
             invocation: {
               arguments: {
-                steps: [{ id: 'a', title: 'use key <fake-secret-removed>' }],
+                steps: [{ id: 'a', title: `use key ${fakeOpenAiKey(assemble(ALPHA, '123456'))}` }],
               },
             },
           },

@@ -2,6 +2,8 @@ import { mkdirSync, mkdtempSync, rmSync, writeFileSync } from 'node:fs';
 import { tmpdir } from 'node:os';
 import path from 'node:path';
 
+import { ALPHA, fakeOpenAiKey } from '../helpers/fake-secrets';
+
 const created: string[] = [];
 
 /** Removes every fixture a test made. */
@@ -67,7 +69,7 @@ export function acmeRepository(): string {
     'apps/acme-billing-service/CLAUDE.md': '# billing-service\n\nOwns the invoices.\n',
     'src/index.ts': 'export const secretCode = 1;\n',
     'package.json': '{"name":"acme"}\n',
-    '.env': 'API_KEY=<fake-secret-removed>\n',
+    '.env': `API_KEY=${fakeOpenAiKey(ALPHA.slice(0, 24))}\n`,
     'node_modules/pkg/README.md': '# pkg readme must not be indexed\n',
     'dist/notes.md': '# dist notes must not be indexed\n',
     'ignored/private.md': '# ignored dir must not be indexed\n',

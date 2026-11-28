@@ -27,6 +27,7 @@ These rules supplement `AGENTS.md` and `CLAUDE.md`. Each says where it is enforc
 ## Security
 
 14. Never store or log passwords, tokens, cookies, prompts or unredacted backend errors (`src/core/redaction.ts`). No secret-bearing settings.
+    14a. Never commit secret-shaped text, real or fake: tests build fake secrets at run time (`tests/helpers/fake-secrets.ts`). Enforced by: `.github/workflows/secret-scan.yml` (gitleaks, no allowlist), the pre-commit gitleaks step, `npm run ship` (`secretShapedAdditions`), GitHub secret scanning and push protection.
 15. Workspace content is untrusted and bounded; secrets are always denied; every modifying workflow stages a reviewable diff, rechecks Workspace Trust, and applies one atomic edit. Never weaken path validation or permission-mode approval.
 16. Webviews: strict CSP with fresh nonces, no `innerHTML` for model/backend/user data, validated inbound messages. Backend responses are zod-validated.
 

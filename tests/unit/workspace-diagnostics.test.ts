@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { selectDiagnostics } from '../../src/core/workspace-diagnostics';
+import { fakeStripeKey } from '../helpers/fake-secrets';
 
 import type { WorkspaceDiagnostic } from '../../src/core/workspace-diagnostics';
 
@@ -114,7 +115,10 @@ describe('selectDiagnostics', () => {
   it('drops diagnostics on credential-shaped files', () => {
     const selection = selectDiagnostics(
       [
-        diagnostic({ path: '.env', message: 'Unexpected token in STRIPE_KEY=<fake-secret-removed>' }),
+        diagnostic({
+          path: '.env',
+          message: `Unexpected token in STRIPE_KEY=${fakeStripeKey('x')}`,
+        }),
         diagnostic({ path: 'config/passwords.csv' }),
         diagnostic({ path: 'src/password-reset.controller.ts' }),
       ],

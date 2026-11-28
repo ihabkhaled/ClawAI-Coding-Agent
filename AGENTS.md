@@ -14,7 +14,8 @@ In a worktree or clone that has no `node_modules`, apply
 and the obvious repair breaks `npm run build`.
 
 Runbooks: `skills/add-a-runtime-tool`, `add-a-command-or-view`, `add-a-translated-string`,
-`add-a-backend-client-with-fallback`, `run-live-rounds`, `land-a-release`.
+`add-a-backend-client-with-fallback`, `run-live-rounds`, `land-a-release`,
+`handle-a-secret-alert` (any secret-scanning finding: revoke first, then clean).
 
 Using the agent's own tools (headless CLI and SDK) is documented once, here: `docs/TOOLS.md` (every tool, generated from the
 code: run `npm run docs:tools` after changing a tool definition, its category or the permission code), `docs/HEADLESS.md`

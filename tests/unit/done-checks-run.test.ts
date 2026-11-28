@@ -5,6 +5,7 @@ import path from 'node:path';
 import { afterEach, beforeEach, describe, expect, it } from 'vitest';
 
 import { createAgent } from '../../src/sdk/create-agent';
+import { ALPHA, assemble, DIGITS } from '../helpers/fake-secrets';
 import { BUDGET_FAILED, COMPLETED, scriptedRuns } from '../helpers/scripted-runs';
 
 import type { HeadlessStreamEvent } from '../../src/headless/headless-session.types';
@@ -215,7 +216,7 @@ describe('completion checks in the SDK', () => {
   });
 
   it('redacts secrets in the continuation prompt', async () => {
-    const <fake-secret-removed>;
+    const secret = assemble(ALPHA, DIGITS);
     const { runtime, result } = await run(
       [[COMPLETED], [COMPLETED]],
       {

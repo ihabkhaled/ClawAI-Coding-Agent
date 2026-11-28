@@ -10,6 +10,7 @@ import {
   toolCategory,
   workspaceToolkit,
 } from '../../src/sdk/workspace-toolkit';
+import { fakeGithubToken } from '../helpers/fake-secrets';
 
 import {
   callGates,
@@ -172,7 +173,7 @@ describe('code.gates under hostile conditions', () => {
   });
 
   it('redacts a secret a failing program prints, in findings and in the tail', async () => {
-    const secret = '<fake-secret-removed>';
+    const secret = fakeGithubToken('A'.repeat(32));
     const root = scripted(
       `console.log('src/a.ts(1,1): error TS1: leaked ${secret}');console.log('GITHUB_TOKEN=${secret}');process.exit(1)`,
     );

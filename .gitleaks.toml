@@ -1,0 +1,16 @@
+# gitleaks configuration (https://github.com/gitleaks/gitleaks). Used by
+# .github/workflows/secret-scan.yml and the pre-commit hook.
+#
+# Test fixtures build fake secrets at run time (tests/helpers/fake-secrets.ts),
+# so the source text never holds a complete secret shape. A finding is fixed in
+# the code. The one allowlist entry below is for values that are not secrets at
+# all; never widen it to silence a real finding.
+title = "ClawAI Coding Agent secret scan"
+
+[extend]
+useDefault = true
+
+[allowlist]
+description = "Idempotency keys in tests are request ids, not credentials (gitleaks generic-api-key matches the word 'Key')."
+regexTarget = "line"
+regexes = ['''idempotencyKey:\s*'(?:idem|idempotency|invocation-key)-[0-9]{4,8}'[,]?\s*$''']

@@ -1,6 +1,7 @@
 import { describe, expect, it } from 'vitest';
 
 import { redactText, redactValue } from '../../src/core/redaction';
+import { ALPHA, assemble, DIGITS, fakeGithubToken } from '../helpers/fake-secrets';
 
 describe('redaction', () => {
   it('redacts nested secret-bearing keys without mutating the input', () => {
@@ -48,14 +49,16 @@ describe('redaction', () => {
 
 describe('redactText environment-variable shapes', () => {
   it('redacts a token whose name is prefixed, which is how shells write them', () => {
-    const redacted = redactText('GITHUB_TOKEN=<fake-secret-removed>');
+    const redacted = redactText(`GITHUB_TOKEN=${fakeGithubToken(assemble(ALPHA, DIGITS))}`);
 
-    expect(redacted).not.toContain('<fake-secret-removed>');
+    expect(redacted).not.toContain(fakeGithubToken(assemble(ALPHA, DIGITS)));
   });
 
   it('redacts a prefixed secret and key too', () => {
     expect(redactText('AWS_SECRET_ACCESS_KEY=wJalrXUtnFEMI')).not.toContain('wJalrXUtnFEMI');
-    expect(redactText('<fake-secret-removed>)).not.toContain('abc123def456');
+    expect(redactText(`MY_API_KEY=${assemble('abc123', 'def456')}`)).not.toContain(
+      assemble('abc123', 'def456'),
+    );
   });
 
   it('keeps the variable name, so the reader knows what was hidden', () => {

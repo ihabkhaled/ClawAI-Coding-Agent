@@ -5,6 +5,7 @@ import {
   terminalReferenceBlock,
   trimTerminalOutput,
 } from '../../src/core/terminal-reference';
+import { ALPHA, assemble, DIGITS, fakeGithubToken } from '../helpers/fake-secrets';
 
 describe('trimTerminalOutput', () => {
   it('keeps short output whole', () => {
@@ -72,9 +73,9 @@ describe('terminalReferenceBlock', () => {
   it('redacts secrets, because a terminal is where tokens end up', () => {
     const block = terminalReferenceBlock({
       terminalName: 'bash',
-      output: 'export GITHUB_TOKEN=<fake-secret-removed>',
+      output: `export GITHUB_TOKEN=${fakeGithubToken(assemble(ALPHA, DIGITS))}`,
     });
 
-    expect(block).not.toContain('<fake-secret-removed>');
+    expect(block).not.toContain(fakeGithubToken(assemble(ALPHA, DIGITS)));
   });
 });
