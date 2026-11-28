@@ -540,14 +540,22 @@ def host_of(url: str) -> str:
     return m.group(1).lower() if m else ""
 
 
+def _on_domain(host: str, domain: str) -> bool:
+    """True when host is the domain or one of its subdomains (never a substring match)."""
+    return host == domain or host.endswith("." + domain)
+
+
 def provider_of(host: str) -> str:
-    if "github" in host:
+    # ClawAI Coding Agent divergence: match by domain suffix, not substring
+    # (code scanning py/incomplete-url-substring-sanitization, 2026-11-28).
+    host = host.lower().rstrip(".")
+    if _on_domain(host, "github.com"):
         return "github"
-    if "gitlab" in host:
+    if _on_domain(host, "gitlab.com"):
         return "gitlab"
-    if "bitbucket" in host:
+    if _on_domain(host, "bitbucket.org"):
         return "bitbucket"
-    if "dev.azure.com" in host or "visualstudio.com" in host or "azure" in host:
+    if _on_domain(host, "dev.azure.com") or _on_domain(host, "visualstudio.com"):
         return "azure"
     return "other" if host else "unknown"
 

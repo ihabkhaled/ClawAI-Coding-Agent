@@ -174,6 +174,8 @@ exception: say so in one line, do it, record `knowledge delta: none, because ...
 - Example paths in references are the monorepo's or invented illustrations; this
   repository's real homes are in `context/akinator-station-map.md`.
 - `akinator_version.py` is read-only (versions come from the pre-commit hook).
+- `extract_operations.py` `provider_of` matches hosts by domain suffix, not substring (code scanning, 2026-11-28).
+- The tools skip `.vscode-test`, `.clawai-lab`, `.claude`, `coverage`, `test-results`, `playwright-report`, `builds`.
 - The plugin's `.claude-plugin`, hooks and agents are not vendored; the routers
   (`CLAUDE.md`, `AGENTS.md`, `CODEX.md`, `GEMINI.md`, `.cursor/rules/akinator.mdc`,
   `.github/copilot-instructions.md`) and the project skill pointer carry the
