@@ -20,6 +20,7 @@ import {
 } from './runtime-event-reducer-budget';
 import { runtimeProtocolFallback, type RuntimeProtocolSelection } from './runtime-negotiation';
 import { admitRuntimeRunCollection, selectActiveRuntimeRun } from './runtime-run-collection';
+import { RUNTIME_TERMINAL_STATUS_BY_EVENT } from './runtime-terminal-events.constants';
 import { runBudgetSchema, toolInvocationSchema, type RunBudget } from './runtime-tool-contracts';
 
 import type { CapabilityManifest } from './capability-manifest';
@@ -164,12 +165,8 @@ const budgetUsageSchema = z
 const budgetPayloadSchema = z
   .object({ limits: runBudgetSchema, usage: budgetUsageSchema })
   .strict();
-const terminalStatuses: Readonly<Record<string, RuntimeRunStatus>> = {
-  'run.blocked': 'blocked',
-  'run.cancelled': 'cancelled',
-  'run.completed': 'completed',
-  'run.failed': 'failed',
-};
+const terminalStatuses: Readonly<Record<string, RuntimeRunStatus>> =
+  RUNTIME_TERMINAL_STATUS_BY_EVENT;
 
 /**
  * Whether this event type means the run reached an end state of its own.

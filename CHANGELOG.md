@@ -2,6 +2,11 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.121.0
+
+- A run that is blocked (a tool the policy denies) now stops in the editor at once and shows why. Before, the editor kept waiting for the stream and ended about 20 minutes later with "The run stopped responding". The editor, the reducer and headless mode now read one list of events that end a run.
+- Internal: a tested state table for a run's twelve states (not connected to anything yet), the end rules and idle window locked by tests, and a stale comment fixed in the repeated-call guard (the window is 40 calls, not a dozen).
+
 ## 1.120.0
 
 - Security: the vendored Akinator operations extractor named a repository's hosting provider by substring (`"github" in host`), so `evilgithub.com` read as GitHub. It now matches by domain or subdomain only (code scanning `py/incomplete-url-substring-sanitization`). It labels documentation only; no access decision used it. The `--shell-deny` regex alert is dismissed as by design: operator-supplied, length-capped, time-limited.

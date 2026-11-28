@@ -79,3 +79,5 @@ Retries and recovery:
 - _Unknown - ask the owner and record the answer._ Should compaction default to `automatic`?
 - _Unknown - ask the owner and record the answer._ Who sets the default fallback models for a plan?
 - _Unknown - ask the owner and record the answer._ Are the idle (10 min) and repeat (3 and 8) thresholds tuned from field data?
+- 2026-11-28 (1.121.0): a blocked run no longer waits out the idle windows; the follow loop ends on
+  un.blocked like the other end events ( ests/unit/runtime-event-stream-terminal.test.ts). Repeat guard window is 40 calls (comment corrected).

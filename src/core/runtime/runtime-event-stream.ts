@@ -1,11 +1,12 @@
 import { parseRuntimeEvent, type RuntimeEvent } from './runtime-protocol.schemas';
 import { asStreamTransportFailure } from './runtime-stream-resume';
 import { TRANSIENT_RUNTIME_STATE_CODES } from './runtime-stream-resume.constants';
+import { RUNTIME_TERMINAL_EVENT_TYPES } from './runtime-terminal-events.constants';
 
 import type { RuntimeDispatchState } from './runtime-event-stream.types';
 
 export function isTerminalRuntimeEvent(event: RuntimeEvent): boolean {
-  return ['run.completed', 'run.failed', 'run.cancelled'].includes(event.type);
+  return RUNTIME_TERMINAL_EVENT_TYPES.some((type) => type === event.type);
 }
 
 function errorFrom(value: unknown): Error {

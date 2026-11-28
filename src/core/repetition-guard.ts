@@ -135,7 +135,7 @@ function withReadingNote(state: GuardState, result: unknown): unknown {
  * Watches the calls a run makes and breaks a loop before it eats the budget.
  *
  * A call is a repeat when the same tool, operation and arguments were made in
- * the last dozen calls and nothing changed in the workspace since. The second
+ * the last 40 calls (REPEAT_WINDOW) and nothing changed in the workspace since. The second
  * runs; the third is answered with a note and, for a read, the start of what it
  * returned before; the fifth is told to stop reading; the eighth ends the run
  * as stuck. Separately, a long unbroken run of reads gets a nudge to begin.

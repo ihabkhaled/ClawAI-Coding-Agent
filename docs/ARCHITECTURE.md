@@ -262,3 +262,13 @@ Notes that are not obvious from the tree:
   `remote-command-policy` (read-only allowlist, shell operators refused) with
   local approval; runner prompt jobs go through `runner-prompt-policy`
   (categories read/git/write/command, refusal exit code 126).
+
+## Run lifecycle: how a run ends
+
+A run ends on exactly four events, listed once in src/core/runtime/runtime-terminal-events.constants.ts:
+un.completed,
+un.failed,
+un.cancelled,
+un.blocked. The stream follow loop, the reducer, isRuntimeRunEnded and headless mode all read that list. Reasoning, status, narration and text events never end a run; they only keep the idle window open (heartbeats do not). Idle window: 10 minutes, one re-attach, then RUNTIME_STREAM_IDLE; a pending tool call holds it open.
+
+src/core/runtime/runtime-run-state.ts holds a pure transition table for twelve states (CREATED, PLANNING, RUNNING, WAITING_TOOL, WAITING_APPROVAL, RECOVERING, VERIFYING, PAUSED, COMPLETED, FAILED, CANCELLED, BUDGET_EXHAUSTED; the last four are terminal). It is not connected to admission yet; the reducer's five statuses map onto it (blocked to FAILED, budget failure code to BUDGET_EXHAUSTED).

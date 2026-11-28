@@ -54,6 +54,7 @@ Before every push use `npm run preflight` or `npm run ship`.
 ## Known traps
 
 - `coverage:scope` reads git-TRACKED files: `git add` a new file before running it.
+- A new file under `src/core/runtime/` must also be listed in `vitest.config.ts` coverage `include`, or `coverage:scope` fails the Linux gate (1.121.0, 2026-11-28).
 - `l10n:verify` diffs against git: regenerate (`l10n:build`) and stage, else it fails.
 - `package:audit` counts a command only if its id is in a file calling `registerCommand`.
 - Adding a command/view/setting/tool bumps count tests (`tests/unit/contributed-commands.test.ts`, `tests/unit/surface-inventory.test.ts` row count) and needs `npm run inventory:surface`.

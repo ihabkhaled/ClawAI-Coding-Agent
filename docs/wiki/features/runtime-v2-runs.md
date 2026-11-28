@@ -43,6 +43,10 @@
 - The repeated-call guard refuses before it stops, so the model gets a chance to change course (1.102.0).
 - The journal, not the in-memory session registry, is the durable record, because the registry is lost on restart (F048).
 - Rolling back to a previous VSIX is supported; journals are not copied between profiles (`../../MIGRATION_0.40.md`).
+- One terminal-event list (src/core/runtime/runtime-terminal-events.constants.ts: completed, failed, cancelled, blocked) is read by the follow loop, the reducer, isRuntimeRunEnded and headless. Why: the loop's own copy lacked
+  un.blocked, so a denied tool left the editor waiting about 20 minutes, then failing with RUNTIME_STREAM_IDLE. Before: 3 lists, 1 disagreed. After: 1 list. Reasoning, status, narration and text events never end a run (tested). Requested by: owner (Wolverine B2, 2026-11-28). Alternative rejected: leave the loop to end on the local blocked event only, because the loop reads the backend stream. Backend: whether the backend itself emits
+  un.blocked or closes the stream after a denial is _Unknown - ask the owner and record the answer._
+- A pure run-state table (src/core/runtime/runtime-run-state.ts, 12 states, 4 terminal) exists but is not wired into admission (Wolverine B2 step 4). Reducer mapping: running to RUNNING, completed to COMPLETED, cancelled to CANCELLED, failed to FAILED (BUDGET_EXHAUSTED when the code is RUNTIME_BUDGET_EXHAUSTED), blocked to FAILED (the reason stays with the caller).
 
 ## History
 
@@ -83,3 +87,4 @@
 - GAP: Where is the journal retention and deletion policy for users?
 - GAP: Who owns the decision to retire V1 once V2 is complete?
 - GAP: Is the 600000 ms idle limit a product requirement or a tuning value?
+- 2026-11-28 (1.121.0): a blocked run ends the follow at once (one shared terminal list); run-state table added, not wired; end rules and idle window locked by tests ( ests/unit/runtime-event-stream-terminal.test.ts, 20 tests; ests/unit/runtime-run-state.test.ts). The new blocked tests fail on the old list (3 failed, verified) and pass now.
