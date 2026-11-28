@@ -20,10 +20,10 @@ import { ProjectPolicyService } from './project-policy-service';
 import { registerPluginTree } from './register-plugin-tree';
 import { workspacePluginStore } from './workspace-plugins';
 
-import type { PluginCommandDependencies } from './plugin-commands.types';
-import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { TrustedPublishers } from '../core/plugin-signature.types';
 import type { PluginNetworkOptions } from '../infrastructure/plugin-network-guard.types';
+import type { PluginCommandDependencies } from './plugin-commands.types';
+import type { WorkspaceScopeService } from './workspace-scope-service';
 
 /**
  * The marketplace allowlist from the project policy.

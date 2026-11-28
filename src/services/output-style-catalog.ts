@@ -1,7 +1,7 @@
 import { parseSkillFile } from '../core/skill-definition';
 
-import type { SkillSourcePort } from './skill-catalog.types';
 import type { OutputStyleDefinition } from '../core/output-style.types';
+import type { SkillSourcePort } from './skill-catalog.types';
 
 /**
  * Response styles a workspace or profile defines, as `.md` files.

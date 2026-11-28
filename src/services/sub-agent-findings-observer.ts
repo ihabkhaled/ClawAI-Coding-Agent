@@ -1,6 +1,6 @@
+import type { SubAgentOutcome, SubAgentTaskStatus } from '../core/multi-agent-dag';
 import type { FindingsService } from './findings-service';
 import type { SubAgentCoordinatorObserver } from './sub-agent-coordinator-service';
-import type { SubAgentOutcome, SubAgentTaskStatus } from '../core/multi-agent-dag';
 
 /**
  * Forwards sub-agent events on, and files what a reviewer found.

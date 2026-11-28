@@ -1,3 +1,10 @@
+import type { EffortMode } from '../core/effort-mode';
+import type { HeadlessExitCode, HeadlessOutcome } from '../core/headless-outcome.types';
+import type { StuckInfo } from '../core/repetition-guard.types';
+import type { ResearchMode } from '../core/research-mode';
+import type { SpeedMode } from '../core/speed-mode';
+import type { WebResearchPort } from '../core/web-research.types';
+import type { RetryTuning } from '../headless/retry-policy.types';
 import type { AgentContextConfig } from './agent-context.types';
 import type {
   AgentBudgetProfile,
@@ -14,13 +21,6 @@ import type { RunBudgetKind } from './run-budget.types';
 import type { PlanStepInput } from './task-plan-tool.types';
 import type { AgentVisionOptions } from './vision-tool.types';
 import type { AgentPermissions } from './workspace-toolkit.types';
-import type { EffortMode } from '../core/effort-mode';
-import type { HeadlessExitCode, HeadlessOutcome } from '../core/headless-outcome.types';
-import type { StuckInfo } from '../core/repetition-guard.types';
-import type { ResearchMode } from '../core/research-mode';
-import type { SpeedMode } from '../core/speed-mode';
-import type { WebResearchPort } from '../core/web-research.types';
-import type { RetryTuning } from '../headless/retry-policy.types';
 
 /** A token already issued, or credentials to exchange for one. */
 export type AgentAuth =

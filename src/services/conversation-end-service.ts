@@ -1,8 +1,8 @@
-import type { RunJournalService } from './run-journal-service';
 import type { ConversationEndInput, PendingInterruptions } from '../core/conversation-end';
 import type { ExtensionState } from '../core/extension-state';
 import type { RunGoal } from '../core/run-goal.types';
 import type { ConversationEndPort } from '../infrastructure/end-conversation-tool-executor';
+import type { RunJournalService } from './run-journal-service';
 
 interface ConversationEndCollaborators {
   readonly state: ExtensionState;

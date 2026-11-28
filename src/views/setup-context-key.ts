@@ -25,5 +25,5 @@ export function watchSetupCompletion(state: ExtensionState): vscode.Disposable {
   };
   publish();
   const unsubscribe = state.subscribe(publish);
-  return { dispose: unsubscribe };
+  return new vscode.Disposable(unsubscribe);
 }

@@ -5,9 +5,9 @@ import { canonicalJson, sha256 } from '../headless/headless-transport';
 import { resolveToolAlias } from './tool-alias';
 import { guardToolResult } from './tool-result-guard';
 
-import type { AgentToolCall, AgentToolkit, ToolAttempt } from './agent-sdk.types';
 import type { ToolRequestPayload } from '../headless/headless-main.types';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
+import type { AgentToolCall, AgentToolkit, ToolAttempt } from './agent-sdk.types';
 
 /**
  * Turns one tool request into the result the backend will accept.

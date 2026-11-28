@@ -2,8 +2,8 @@ import { z } from 'zod';
 
 import { visibleThreads } from './thread-list';
 
-import type { GroupedThreads, ThreadGroupAssignments } from './thread-group.types';
 import type { ChatThread } from '../backend/contracts';
+import type { GroupedThreads, ThreadGroupAssignments } from './thread-group.types';
 
 /** A group name is a label a person typed, not an identifier. */
 export const threadGroupNameSchema = z.string().trim().min(1).max(60);

@@ -9,13 +9,6 @@ import { browserToolDefinition } from '../infrastructure/browser-tool-executor';
 import { describeRuntimeEffect } from './runtime-approval-card';
 import { TargetAwareToolRouter } from './target-aware-tool-router';
 
-import type { ConfigurationService, RuntimeConfiguration } from './configuration-service';
-import type { ExecutionTargetRegistry } from './execution-target-registry';
-import type { GitAgentService } from './git-agent-service';
-import type { RuntimeRunService } from './runtime-run-service';
-import type { RuntimeStudioInput } from './runtime-studio.types';
-import type { RuntimeToolRouter } from './runtime-tool-router';
-import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { ApprovalBroker } from '../core/approval-broker';
 import type { BrowserScope } from '../core/browser-operation';
 import type { ExtensionState } from '../core/extension-state';
@@ -23,6 +16,13 @@ import type { PolicyRequest } from '../core/policy-v2';
 import type { CapabilityManifest } from '../core/runtime/capability-manifest';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
+import type { ConfigurationService, RuntimeConfiguration } from './configuration-service';
+import type { ExecutionTargetRegistry } from './execution-target-registry';
+import type { GitAgentService } from './git-agent-service';
+import type { RuntimeRunService } from './runtime-run-service';
+import type { RuntimeStudioInput } from './runtime-studio.types';
+import type { RuntimeToolRouter } from './runtime-tool-router';
+import type { WorkspaceScopeService } from './workspace-scope-service';
 
 /**
  * `notify` tells the run that asked for this effect that it is now waiting on a

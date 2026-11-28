@@ -6,9 +6,9 @@ import { PLUGIN_VIEW_ID } from '../views/plugin-tree-provider.constants';
 import { uninstallPlugin } from './plugin-commands';
 import { pluginFailureMessage } from './plugin-failure-message';
 
-import type { PluginCommandDependencies } from './plugin-commands.types';
 import type { InstalledPlugin } from '../core/plugin-manifest.types';
 import type { PluginTreeNode } from '../views/plugin-tree-provider.types';
+import type { PluginCommandDependencies } from './plugin-commands.types';
 
 /**
  * The Plugins view and its row actions: enable, disable, uninstall, refresh.

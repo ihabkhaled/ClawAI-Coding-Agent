@@ -1,6 +1,6 @@
-import type { HeadlessOutputFormat } from './headless-args.types';
 import type { ContextMode } from '../core/context-mode';
 import type { AgentToolCategory } from '../sdk/workspace-toolkit.types';
+import type { HeadlessOutputFormat } from './headless-args.types';
 
 export const HEADLESS_OUTPUT_FORMATS: readonly HeadlessOutputFormat[] = [
   'text',

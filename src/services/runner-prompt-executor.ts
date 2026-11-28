@@ -9,9 +9,9 @@ import {
 } from '../core/runner-prompt-policy.constants';
 import { createAgent } from '../sdk/create-agent';
 
+import type { RemoteCommandResult } from '../backend/agent-remote-client';
 import type { RemotePromptJob } from './remote-command-loop.types';
 import type { RunnerPromptExecutorPorts } from './runner-prompt-executor.types';
-import type { RemoteCommandResult } from '../backend/agent-remote-client';
 
 /**
  * F099: runs one PROMPT job on this runner through the headless SDK.

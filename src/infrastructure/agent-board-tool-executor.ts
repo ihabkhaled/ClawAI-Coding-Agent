@@ -4,12 +4,12 @@ import { notesForReader, postNote } from '../core/agent-board';
 import { MAX_NOTE_LENGTH } from '../core/agent-board.constants';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { AgentBoardPort } from './agent-board-tool-executor.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { AgentBoardPort } from './agent-board-tool-executor.types';
 
 const postSchema = z.object({
   kind: z.enum(['finding', 'claim', 'warning', 'done']),

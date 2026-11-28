@@ -2,6 +2,12 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.116.0
+
+- Security follow-up to 1.115.0: eight more test files and one code comment still held short fake key-shaped values; they are now built at run time too, so the history rewrite leaves today's files unchanged.
+- All 23 open dependency advisories are fixed (development tools only; none ships in the extension): vitest and its coverage plugin 5.1.2, typescript-eslint 8.74, eslint-plugin-import-x 4.18, the rest through `npm audit fix`, and `@vscode/vsce` pinned to patched `glob` and `minimatch` through `overrides`. `npm audit` reports 0 vulnerabilities.
+- The newer lint rules found 38 real issues, now fixed with no behaviour change: zod `error` instead of the deprecated `message`, DNS `order: 'verbatim'`, real `vscode.Disposable` objects instead of look-alike objects, a real `ViewColumn` value for the panel placement, and Playwright waits that actually wait. Import order follows eslint-plugin-import-x 4.18.
+
 ## 1.115.0
 
 - Security: GitHub flagged a fake test value as an "OpenAI API key". It was never a real key: a scan of every commit found only fake values in tests. Tests now build fake secrets at run time, so no secret-shaped text is stored anywhere. A new Secret scan workflow runs gitleaks on every push and pull request and over the whole history weekly; the pre-commit hook runs it too when gitleaks is installed. No behaviour change in the extension.

@@ -5,6 +5,8 @@ import {
 } from './runtime/runtime-event-reducer';
 import { parseRuntimeEvent } from './runtime/runtime-protocol.schemas';
 
+import type { OrganizationPolicy } from '../backend/contracts';
+import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contracts';
 import type { AgentMode } from './agent-mode.types';
 import type { AgentRunSnapshot } from './agent-run';
 import type { AgentTask } from './agent-tasks';
@@ -25,8 +27,6 @@ import type { SpeedMode } from './speed-mode';
 import type { UserQuestion } from './user-question';
 import type { ViewDensity } from './view-density.types';
 import type { WorkspaceScopeSnapshot } from './workspace-scope.types';
-import type { OrganizationPolicy } from '../backend/contracts';
-import type { AuthUser, ChatThread, Entitlements, Usage } from '../backend/contracts';
 
 export type BackendStatus = 'connected' | 'disconnected' | 'error' | 'loading';
 

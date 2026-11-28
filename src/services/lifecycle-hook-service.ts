@@ -1,7 +1,7 @@
 import { HOOK_TIMEOUT_MS, decideFromHook, hooksForEvent } from '../core/lifecycle-hook';
 
-import type { LifecycleHookDependencies } from './lifecycle-hook.types';
 import type { HookDecision, HookEvent, LifecycleHook } from '../core/lifecycle-hook.types';
+import type { LifecycleHookDependencies } from './lifecycle-hook.types';
 
 /** Nothing ran, so nothing was refused. */
 const ALLOWED: HookDecision = { blocked: false, reason: 'passed' };

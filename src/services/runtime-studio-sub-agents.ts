@@ -12,10 +12,10 @@ import { SubAgentFindingsObserver } from './sub-agent-findings-observer';
 import { SubAgentWorktreeService } from './sub-agent-worktree-service';
 import { pluginAgents, workspacePluginStore } from './workspace-plugins';
 
-import type { FindingsService } from './findings-service';
-import type { RuntimeSubAgentDependencies } from './runtime-sub-agent-executor';
 import type { OutputLogger } from '../infrastructure/output-logger';
 import type { RuntimeRootRegistry } from '../infrastructure/vscode-sub-agent-worktree-adapter';
+import type { FindingsService } from './findings-service';
+import type { RuntimeSubAgentDependencies } from './runtime-sub-agent-executor';
 
 export interface SubAgentAssembly {
   readonly coordinator: SubAgentCoordinatorService;

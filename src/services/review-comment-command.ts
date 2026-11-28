@@ -3,9 +3,9 @@ import * as vscode from 'vscode';
 import { reviewActionClient } from '../backend/review-action-client';
 import { parseReviewTarget, planReviewComment } from '../core/review-target';
 
-import type { IntegrationDependencies } from './integration-commands.types';
 import type { ReviewConnector, WorkspaceAction } from '../backend/integration-contracts';
 import type { ReviewTarget, ReviewTargetRefusal } from '../core/review-target.types';
+import type { IntegrationDependencies } from './integration-commands.types';
 
 function targetRefusal(refusal: ReviewTargetRefusal): string {
   if (refusal === 'not-https') return vscode.l10n.t('Only https:// review links are accepted.');

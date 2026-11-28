@@ -12,11 +12,11 @@ import { PullRequestMonitorService } from './pull-request-monitor-service';
 import { PullRequestService } from './pull-request-service';
 import { pullRequestActionApproval, pullRequestApproval } from './runtime-studio-approvals';
 
+import type { ApprovalBroker } from '../core/approval-broker';
+import type { ReviewToolPorts } from '../infrastructure/review-tool-executor.types';
 import type { PullRequestFilesPort, PullRequestGitPort } from './pull-request-service.types';
 import type { RuntimeStudioPullRequests } from './runtime-studio-pull-requests.types';
 import type { RuntimeToolRegistration } from './runtime-tool-router';
-import type { ApprovalBroker } from '../core/approval-broker';
-import type { ReviewToolPorts } from '../infrastructure/review-tool-executor.types';
 
 /**
  * The pull request lane: the service that opens one, the monitor that watches

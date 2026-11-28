@@ -9,13 +9,13 @@ import {
   SHELL_SETTING,
 } from './opt-in-tools.constants';
 
-import type { OptInToolSettings } from './opt-in-tools.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { ShellTool } from '../sdk/shell-tool.types';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { OptInToolSettings } from './opt-in-tools.types';
 
 export const shellScriptToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

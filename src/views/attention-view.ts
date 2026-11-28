@@ -2,8 +2,8 @@ import * as vscode from 'vscode';
 
 import { agentAttentionQueue, attentionBadgeCount } from '../core/agent-attention';
 
-import type { StateTreeProvider } from './state-tree-provider';
 import type { ExtensionState } from '../core/extension-state';
+import type { StateTreeProvider } from './state-tree-provider';
 
 /**
  * The attention list, plus the badge that makes it worth having.

@@ -16,11 +16,11 @@ import { webToolkit } from './web-toolkit';
 import { workspaceToolkit } from './workspace-toolkit';
 import { AGENT_DEFAULT_TOOL_CATEGORIES } from './workspace-toolkit.constants';
 
+import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { AgentToolkit } from './agent-sdk.types';
 import type { AgentTeam } from './agent-team-tool.types';
 import type { AgentConfig } from './create-agent.types';
 import type { AgentPermissions, WorkspaceMemory } from './workspace-toolkit.types';
-import type { PdfTextPort } from '../backend/pdf-text-client';
 
 /**
  * What a configured agent may do: the workspace tools, the MCP servers when

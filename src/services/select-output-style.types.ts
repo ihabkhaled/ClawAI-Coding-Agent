@@ -1,5 +1,5 @@
-import type { OutputStyleCatalog } from './output-style-catalog';
 import type { OutputStyle } from '../core/output-style.types';
+import type { OutputStyleCatalog } from './output-style-catalog';
 
 /** What choosing an output style needs to reach. */
 export interface OutputStyleSelection {

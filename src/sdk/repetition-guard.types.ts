@@ -1,5 +1,5 @@
-import type { AgentToolkit } from './agent-sdk.types';
 import type { StuckInfo } from '../core/repetition-guard.types';
+import type { AgentToolkit } from './agent-sdk.types';
 
 export interface RepetitionGuard {
   /** The toolkit with every call watched. */

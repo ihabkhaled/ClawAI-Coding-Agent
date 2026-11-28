@@ -1,7 +1,7 @@
 import { threadGroupAssignmentsSchema } from '../core/thread-group';
 
-import type { WorkspaceMemento } from './thread-group-store.types';
 import type { ThreadGroupAssignments } from '../core/thread-group.types';
+import type { WorkspaceMemento } from './thread-group-store.types';
 
 /** Where the assignments live. Workspace-scoped: a group is about this project. */
 export const THREAD_GROUPS_KEY = 'clawAI.threadGroups';

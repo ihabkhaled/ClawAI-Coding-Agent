@@ -6,14 +6,14 @@ import { realPath } from './command-sandbox-host-probe';
 import { awaitOrYield } from './command-yield';
 import { sandboxBackgroundLaunch } from './sandboxed-background-launch';
 
-import type { CommandSandboxPort } from './command-launch-plan.types';
-import type { BackgroundCommandPort } from './structured-command-tool-executor.types';
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { CommandSandboxPort } from './command-launch-plan.types';
+import type { BackgroundCommandPort } from './structured-command-tool-executor.types';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 
 export const structuredCommandToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

@@ -27,7 +27,7 @@ async function approvalShowing(window: Page): Promise<boolean> {
       if (
         await child
           .locator('#approvalApprove')
-          .isVisible({ timeout: 300 })
+          .isVisible()
           .catch(() => false)
       ) {
         return true;

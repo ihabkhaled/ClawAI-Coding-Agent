@@ -3,6 +3,12 @@ import { describe, expect, it, vi } from 'vitest';
 const executeCommand = vi.hoisted(() => vi.fn());
 
 vi.mock('vscode', () => ({
+  Disposable: class Disposable {
+    constructor(private readonly callOnDispose: () => void) {}
+    dispose(): void {
+      this.callOnDispose();
+    }
+  },
   commands: { executeCommand },
   l10n: { t: (message: string) => message },
 }));

@@ -11,11 +11,11 @@ import { redactText } from '../core/redaction';
 import { failureDetail, readChecks, readPullRequest, runGh } from './pr-tool-gh';
 import { PR_MAX_NUMBER, PR_TOOL_NAME } from './pr-tool.constants';
 
-import type { GhRunner, PrTool, PrToolContext } from './pr-tool.types';
 import type {
   PullRequestMergeMethod,
   PullRequestReviewEvent,
 } from '../core/pull-request-actions.types';
+import type { GhRunner, PrTool, PrToolContext } from './pr-tool.types';
 
 type Result = Record<string, unknown>;
 type Args = Readonly<Record<string, unknown>>;

@@ -12,7 +12,7 @@ import type {
 
 /** The system resolver, every answer kept so none can be skipped over. */
 export const systemResolver: HttpResolver = async (host) => {
-  const answers = await dns.promises.lookup(host, { all: true, verbatim: true });
+  const answers = await dns.promises.lookup(host, { all: true, order: 'verbatim' });
   return answers.flatMap((answer) =>
     answer.family === 4 || answer.family === 6
       ? [{ address: answer.address, family: answer.family }]

@@ -1,8 +1,8 @@
+import type { HeadlessOutcome } from '../core/headless-outcome.types';
 import type { AgentToolkit } from './agent-sdk.types';
 import type { Agent, AgentConfig, AgentEvent } from './create-agent.types';
 import type { DoneCheck } from './done-checks.types';
 import type { AgentToolCategory } from './workspace-toolkit.types';
-import type { HeadlessOutcome } from '../core/headless-outcome.types';
 
 /** The operations of the `agent.team` tool. */
 export type TeamOperation = 'spawn' | 'message' | 'inbox' | 'wait' | 'status' | 'result' | 'cancel';

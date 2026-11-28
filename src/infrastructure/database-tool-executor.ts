@@ -2,7 +2,6 @@ import * as vscode from 'vscode';
 
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { DatabaseProfileVault } from '../services/database-profile-vault';
 import type { DatabaseWorkbenchService } from '../services/database-workbench-service';
@@ -10,6 +9,7 @@ import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 
 export const databaseToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

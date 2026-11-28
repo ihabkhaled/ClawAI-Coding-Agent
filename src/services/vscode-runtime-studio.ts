@@ -117,14 +117,6 @@ import { recoverVscodeRuntime } from './vscode-runtime-recovery';
 import { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 import { workspaceLifecycleHooks } from './workspace-lifecycle-hooks';
 
-import type { ExternalOutputGrantStore } from './agent-coordinator.types';
-import type { BackendToolPorts } from './backend-tool-ports';
-import type { ConfigurationService } from './configuration-service';
-import type { RuntimeRunService } from './runtime-run-service';
-import type { RuntimeStudioPullRequests } from './runtime-studio-pull-requests.types';
-import type { RuntimeStudioInput } from './runtime-studio.types';
-import type { TargetAwareToolRouter } from './target-aware-tool-router';
-import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { BackendClient } from '../backend/backend-client';
 import type { RUNTIME_EFFECT_APPROVAL_KIND } from '../core/approval-broker';
 import type { ApprovalBroker } from '../core/approval-broker';
@@ -133,6 +125,14 @@ import type { CapabilityManifest } from '../core/runtime/capability-manifest';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { AdvisorPort } from '../infrastructure/advisor-tool-executor.types';
 import type { OutputLogger } from '../infrastructure/output-logger';
+import type { ExternalOutputGrantStore } from './agent-coordinator.types';
+import type { BackendToolPorts } from './backend-tool-ports';
+import type { ConfigurationService } from './configuration-service';
+import type { RuntimeRunService } from './runtime-run-service';
+import type { RuntimeStudioPullRequests } from './runtime-studio-pull-requests.types';
+import type { RuntimeStudioInput } from './runtime-studio.types';
+import type { TargetAwareToolRouter } from './target-aware-tool-router';
+import type { WorkspaceScopeService } from './workspace-scope-service';
 
 export class VscodeRuntimeStudio implements vscode.Disposable {
   readonly files: VscodeFileTransactionAdapter;

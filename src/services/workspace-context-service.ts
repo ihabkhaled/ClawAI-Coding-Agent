@@ -24,9 +24,9 @@ import { isSensitiveWorkspacePath } from '../core/workspace-path-policy';
 
 import { WorkspaceScopeService } from './workspace-scope-service';
 
+import type { WorkspaceScopeSnapshot } from '../core/workspace-scope.types';
 import type { RuntimeConfiguration } from './configuration-service';
 import type { GlobalContextPort } from './global-context-service';
-import type { WorkspaceScopeSnapshot } from '../core/workspace-scope.types';
 
 const CLAWAI_IGNORE_PATH = '.clawai/ignore';
 const FILE_SCAN_MULTIPLIER = 10;

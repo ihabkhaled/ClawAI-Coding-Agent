@@ -1,6 +1,6 @@
+import type { PreviewEdits } from '../core/preview-edits';
 import type { EditConfirmation, EditPreview } from './safe-edit-service';
 import type { SessionControlPort } from './session-control.types';
-import type { PreviewEdits } from '../core/preview-edits';
 
 export interface DiffPreviewPort {
   stage(previews: EditPreview[]): string;

@@ -10,8 +10,8 @@ import {
 } from './remote-session-commands.constants';
 import { offerFollowUp } from './session-followup';
 
-import type { CloudWatchPolicy, RemoteSessionDependencies } from './remote-session-commands.types';
 import type { CloudTask, RunnerRepo, RunnerSession } from '../backend/remote-session-contracts';
+import type { CloudWatchPolicy, RemoteSessionDependencies } from './remote-session-commands.types';
 
 async function pickRunner(request: RemoteRequester): Promise<RunnerSession | undefined> {
   const runners = await remoteSessionClient.connectedRunners(request);

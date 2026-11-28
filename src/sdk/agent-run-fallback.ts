@@ -6,9 +6,9 @@ import {
   resolvedFallbacks,
 } from './model-fallback';
 
+import type { HeadlessRunReport } from '../headless/headless-session.types';
 import type { AgentRunOptions, AgentRunResult } from './agent-sdk.types';
 import type { ResolvedModel } from './model-fallback';
-import type { HeadlessRunReport } from '../headless/headless-session.types';
 
 /** What an attempt shares with the loop, so a thrown error still says which model was on. */
 export interface AttemptProgress {

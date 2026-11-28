@@ -4,12 +4,12 @@ import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-sche
 import { findingsFromSarif, sarifLogSchema } from '../core/sarif';
 import { MAX_SARIF_BYTES } from '../core/sarif.constants';
 
-import type { SarifImportPort } from './sarif-import-tool-executor.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { SarifImportPort } from './sarif-import-tool-executor.types';
 
 const importSchema = z.object({ path: z.string().trim().min(1).max(1_000) });
 

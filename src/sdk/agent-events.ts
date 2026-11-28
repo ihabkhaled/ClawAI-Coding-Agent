@@ -1,5 +1,5 @@
-import type { AgentEvent } from './create-agent.types';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
+import type { AgentEvent } from './create-agent.types';
 
 /**
  * A raw runtime event, as the SDK's typed event.

@@ -7,12 +7,12 @@ import { SseDecoder } from '../core/sse-decoder';
 import { normalizeStreamEvent } from './chat-service';
 import { LANE_CONTENT_EVENTS } from './compare-stream-collector.constants';
 
+import type { ChatMessage, ParallelResponse } from '../backend/contracts';
 import type {
   CompareRunInput,
   CompareStreamBackend,
   CompareStreamRequest,
 } from './compare-stream-collector.types';
-import type { ChatMessage, ParallelResponse } from '../backend/contracts';
 
 type LaneResult = ParallelResponse['responses'][number];
 

@@ -5,9 +5,12 @@ import {
   MAX_INHERITED_BYTES,
   MAX_INHERITED_FINDINGS,
 } from '../../src/core/sub-agent-inheritance.constants';
+import { dashed } from '../helpers/fake-secrets';
 
 import type { Finding } from '../../src/core/findings';
 import type { ParentRunContext } from '../../src/core/sub-agent-inheritance.types';
+
+const LEAKED = dashed('sk', 'live', 'abcdef123456');
 
 function finding(title: string): Finding {
   return {
@@ -90,10 +93,10 @@ describe('buildInheritedContext', () => {
   it('redacts a secret the parent read out of a file', () => {
     const context = buildInheritedContext(
       'summary',
-      parent({ decisions: ['Use Authorization: Bearer <fake-secret-removed> for the call'] }),
+      parent({ decisions: [`Use Authorization: Bearer ${LEAKED} for the call`] }),
     );
 
-    expect(context).not.toContain('<fake-secret-removed>');
+    expect(context).not.toContain(LEAKED);
     expect(context).toContain('[REDACTED]');
   });
 

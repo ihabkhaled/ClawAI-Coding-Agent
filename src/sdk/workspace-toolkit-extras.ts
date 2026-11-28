@@ -11,6 +11,7 @@ import { createShellTool } from './shell-tool';
 import { createPlanStore } from './task-plan-store';
 import { createPlanTool } from './task-plan-tool';
 
+import type { ToolLimits } from '../headless/headless-main.types';
 import type { ShellTool } from './shell-tool.types';
 import type { PlanToolDeps } from './task-plan-tool.types';
 import type { WorkspaceToolExtras } from './workspace-tool-extras.types';
@@ -19,7 +20,6 @@ import type {
   AgentToolCategory,
   WorkspaceMemory,
 } from './workspace-toolkit.types';
-import type { ToolLimits } from '../headless/headless-main.types';
 
 /**
  * What the plan tool may do with a check the model wrote: only with the

@@ -1,7 +1,7 @@
 import { parseSkillFile } from '../core/skill-definition';
 
-import type { SkillSourcePort } from './skill-catalog.types';
 import type { SkillDefinition } from '../core/skill-definition.types';
+import type { SkillSourcePort } from './skill-catalog.types';
 
 /**
  * The skills a workspace offers as commands.

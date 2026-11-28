@@ -7,12 +7,12 @@ import {
   MCP_TOOL_NAME,
 } from '../core/mcp/mcp.constants';
 
-import type { McpToolPort } from './mcp-tool-executor.types';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { McpToolPort } from './mcp-tool-executor.types';
 
 export { mcpToolDefinition } from '../core/mcp/mcp-tool-definition';
 

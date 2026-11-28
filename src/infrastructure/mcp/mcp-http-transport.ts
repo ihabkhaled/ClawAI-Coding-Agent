@@ -8,8 +8,8 @@ import {
 } from '../../core/mcp/json-rpc';
 import { MCP_MAX_MESSAGE_BYTES } from '../../core/mcp/mcp.constants';
 
-import type { McpFetch, McpHttpEndpoint, McpTokenProvider } from './mcp-transport.types';
 import type { McpTransport } from '../../core/mcp/mcp.types';
+import type { McpFetch, McpHttpEndpoint, McpTokenProvider } from './mcp-transport.types';
 
 export class McpUnauthorizedError extends Error {
   constructor() {

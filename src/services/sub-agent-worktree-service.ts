@@ -1,5 +1,5 @@
-import type { SubAgentWorkspacePort } from './sub-agent-coordinator-service';
 import type { SubAgentOutcome, SubAgentTask } from '../core/multi-agent-dag';
+import type { SubAgentWorkspacePort } from './sub-agent-coordinator-service';
 
 export interface SubAgentWorktreePort {
   prepare(task: SubAgentTask, signal: AbortSignal): Promise<void>;

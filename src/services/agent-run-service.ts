@@ -16,6 +16,8 @@ import {
   parseWorkflowEditPlan,
 } from './workflow-service';
 
+import type { CollectedContext } from '../core/context-collector';
+import type { EditPlan } from '../core/edit-plan';
 import type {
   AgentRunCallbacks,
   AgentRunChatPort,
@@ -26,8 +28,6 @@ import type {
   AgentRunSessionPort,
   CommandExecutionResult,
 } from './agent-run-service.types';
-import type { CollectedContext } from '../core/context-collector';
-import type { EditPlan } from '../core/edit-plan';
 
 interface CommandExecutionOutcome {
   commandError?: string;

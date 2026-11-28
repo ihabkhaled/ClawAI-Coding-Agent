@@ -21,16 +21,16 @@ import {
 } from './remote-control-commands.constants';
 import { runnerPromptExecutor } from './runner-prompt-executor';
 
+import type { BackendClient } from '../backend/backend-client';
+import type { RunnerApprovalPolicy } from '../core/runner-prompt-policy.types';
+import type { OutputLogger } from '../infrastructure/output-logger';
+import type { AgentApprovalRequest } from '../sdk/workspace-toolkit.types';
 import type { DevicePairingOutcome } from './device-pairing-flow.types';
 import type {
   RemoteCommandApproval,
   RemoteCommandSource,
   RemoteLoopState,
 } from './remote-command-loop.types';
-import type { BackendClient } from '../backend/backend-client';
-import type { RunnerApprovalPolicy } from '../core/runner-prompt-policy.types';
-import type { OutputLogger } from '../infrastructure/output-logger';
-import type { AgentApprovalRequest } from '../sdk/workspace-toolkit.types';
 
 interface RemoteControlDependencies {
   readonly backend: () => BackendClient;
@@ -97,7 +97,7 @@ export function registerRemoteControlCommands(
   };
 
   return [
-    { dispose: stop },
+    new vscode.Disposable(stop),
     vscode.commands.registerCommand('clawAI.remoteControl.start', async () => {
       const started = await begin(
         (host) => agentRemoteClient.registerSession(deps.backend().remoteRequest, host),

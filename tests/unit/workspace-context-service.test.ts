@@ -29,6 +29,12 @@ const realpathEnvironment = vi.hoisted(() => ({
   paths: new Map<string, string>(),
 }));
 
+/** A stand-in for a `vscode.Uri`: the mocked module cannot build a real one. */
+function fakeUri(path: string): vscode.Uri {
+  const uri = { fsPath: path, path, scheme: 'file', toString: () => `file://${path}` };
+  return uri as unknown as vscode.Uri;
+}
+
 vi.mock('node:fs/promises', () => ({
   realpath: vi.fn(async (value: string) => {
     if (realpathEnvironment.errors.has(value)) {
@@ -224,21 +230,9 @@ describe('WorkspaceContextService smart context', () => {
 
   it('never reads sensitive workspace paths into memory', async () => {
     vi.mocked(vscode.workspace.findFiles).mockResolvedValueOnce([
-      {
-        fsPath: '/workspace/src/app.ts',
-        path: '/workspace/src/app.ts',
-        toString: () => 'file:///workspace/src/app.ts',
-      } as vscode.Uri,
-      {
-        fsPath: '/workspace/.ssh/id_ed25519',
-        path: '/workspace/.ssh/id_ed25519',
-        toString: () => 'file:///workspace/.ssh/id_ed25519',
-      } as vscode.Uri,
-      {
-        fsPath: '/workspace/config/private-key.pem',
-        path: '/workspace/config/private-key.pem',
-        toString: () => 'file:///workspace/config/private-key.pem',
-      } as vscode.Uri,
+      fakeUri('/workspace/src/app.ts'),
+      fakeUri('/workspace/.ssh/id_ed25519'),
+      fakeUri('/workspace/config/private-key.pem'),
     ]);
     vi.mocked(vscode.workspace.fs.stat).mockResolvedValue({
       ctime: 0,
@@ -291,12 +285,7 @@ describe('WorkspaceContextService smart context', () => {
   });
 
   it('rejects a scanned workspace file whose real path escapes the selected workspace', async () => {
-    const linkedFile = {
-      fsPath: '/workspace/src/helpful-notes.txt',
-      path: '/workspace/src/helpful-notes.txt',
-      scheme: 'file',
-      toString: () => 'file:///workspace/src/helpful-notes.txt',
-    } as vscode.Uri;
+    const linkedFile = fakeUri('/workspace/src/helpful-notes.txt');
     vi.mocked(vscode.workspace.findFiles).mockResolvedValueOnce([linkedFile]);
     vi.mocked(vscode.workspace.fs.stat).mockResolvedValue({
       ctime: 0,
@@ -331,30 +320,10 @@ describe('WorkspaceContextService smart context', () => {
   });
 
   it('does not read root-level directories excluded by recursive glob patterns', async () => {
-    const excludedNodeModules = {
-      fsPath: '/workspace/node_modules/pkg/index.js',
-      path: '/workspace/node_modules/pkg/index.js',
-      scheme: 'file',
-      toString: () => 'file:///workspace/node_modules/pkg/index.js',
-    } as vscode.Uri;
-    const excludedDist = {
-      fsPath: '/workspace/dist/bundle.js',
-      path: '/workspace/dist/bundle.js',
-      scheme: 'file',
-      toString: () => 'file:///workspace/dist/bundle.js',
-    } as vscode.Uri;
-    const includedSource = {
-      fsPath: '/workspace/src/app.ts',
-      path: '/workspace/src/app.ts',
-      scheme: 'file',
-      toString: () => 'file:///workspace/src/app.ts',
-    } as vscode.Uri;
-    const binarySource = {
-      fsPath: '/workspace/src/data.bin',
-      path: '/workspace/src/data.bin',
-      scheme: 'file',
-      toString: () => 'file:///workspace/src/data.bin',
-    } as vscode.Uri;
+    const excludedNodeModules = fakeUri('/workspace/node_modules/pkg/index.js');
+    const excludedDist = fakeUri('/workspace/dist/bundle.js');
+    const includedSource = fakeUri('/workspace/src/app.ts');
+    const binarySource = fakeUri('/workspace/src/data.bin');
     vi.mocked(vscode.workspace.findFiles).mockResolvedValueOnce([
       excludedNodeModules,
       excludedDist,
@@ -395,12 +364,7 @@ describe('WorkspaceContextService smart context', () => {
   it('bounds aggregate file reads before loading near-limit candidates into memory', async () => {
     const discoveredFiles = Array.from({ length: 20 }, (_, index) => {
       const path = `/workspace/src/file-${index.toString()}.ts`;
-      return {
-        fsPath: path,
-        path,
-        scheme: 'file',
-        toString: () => `file://${path}`,
-      } as vscode.Uri;
+      return fakeUri(path);
     });
     vi.mocked(vscode.workspace.findFiles).mockResolvedValueOnce(discoveredFiles);
     vi.mocked(vscode.workspace.fs.stat).mockResolvedValue({

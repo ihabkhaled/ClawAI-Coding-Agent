@@ -11,6 +11,9 @@ import { MAX_FAILURE_RUNS } from '../core/pull-request.constants';
 
 import { runPullRequestCommand } from './pull-request-command';
 
+import type { CommandResult } from '../core/command-spec';
+import type { GitReceipt } from '../core/git-operation';
+import type { PullRequestCheckSummary } from '../core/pull-request.types';
 import type {
   PullRequestDependencies,
   PullRequestDraftResult,
@@ -18,9 +21,6 @@ import type {
   PullRequestPublishResult,
   PullRequestRequest,
 } from './pull-request-service.types';
-import type { CommandResult } from '../core/command-spec';
-import type { GitReceipt } from '../core/git-operation';
-import type { PullRequestCheckSummary } from '../core/pull-request.types';
 
 /** A ref git will not read as an option, and that names nothing outside refs. */
 const plainRef = /^(?!-)[A-Za-z0-9._/-]{1,200}$/u;

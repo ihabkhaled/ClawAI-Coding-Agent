@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
-import type { RunJournalService } from './run-journal-service';
 import type { RunJournalSearch, RunJournalSummary } from '../core/run-journal-search';
+import type { RunJournalService } from './run-journal-service';
 
 interface SearchDependencies {
   readonly journals: RunJournalService;

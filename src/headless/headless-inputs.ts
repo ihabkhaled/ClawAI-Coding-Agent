@@ -14,11 +14,11 @@ import {
 } from './headless-inputs.constants';
 import { parsePlanFile } from './headless-plan-file';
 
-import type { HeadlessInvocation } from './headless-args.types';
-import type { HeadlessInputs } from './headless-inputs.types';
 import type { DoneCheck } from '../sdk/done-checks.types';
 import type { AgentMcpOptions } from '../sdk/mcp-toolkit.types';
 import type { PlanStepInput } from '../sdk/task-plan-tool.types';
+import type { HeadlessInvocation } from './headless-args.types';
+import type { HeadlessInputs } from './headless-inputs.types';
 
 async function readBounded(file: string, limit: number): Promise<string> {
   if ((await stat(file)).size > limit)

@@ -10,8 +10,8 @@ import {
 } from './plugin-tree-provider.constants';
 import { recordTreeProbe } from './tree-probe';
 
-import type { PluginListing, PluginTreeNode } from './plugin-tree-provider.types';
 import type { InstalledPlugin, InvalidPlugin } from '../core/plugin-manifest.types';
+import type { PluginListing, PluginTreeNode } from './plugin-tree-provider.types';
 
 function pluginIcon(plugin: InstalledPlugin): string {
   if (plugin.needsApproval) return 'shield';

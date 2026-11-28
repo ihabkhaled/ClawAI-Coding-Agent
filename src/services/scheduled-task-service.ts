@@ -8,12 +8,12 @@ import {
   restoreTasks,
 } from '../core/scheduled-task';
 
+import type { SchedulePlan, ScheduleRequest, ScheduledTask } from '../core/scheduled-task.types';
 import type {
   ScheduledTaskRunner,
   ScheduleStorePort,
   TimerPort,
 } from './scheduled-task-service.types';
-import type { SchedulePlan, ScheduleRequest, ScheduledTask } from '../core/scheduled-task.types';
 
 /**
  * Timed and recurring tasks for this workspace.

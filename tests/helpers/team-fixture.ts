@@ -8,8 +8,8 @@ import { createAgent } from '../../src/sdk/create-agent';
 
 import { teamTransport } from './team-transport';
 
-import type { Script, ScriptApi } from './team-transport';
 import type { AgentConfig, AgentEvent, AgentResult } from '../../src/sdk/create-agent.types';
+import type { Script, ScriptApi } from './team-transport';
 
 const created: string[] = [];
 

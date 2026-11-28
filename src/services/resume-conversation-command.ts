@@ -11,9 +11,9 @@ import {
   RESUME_WEB_THREAD_LIMIT,
 } from './remote-session-commands.constants';
 
-import type { RemoteSessionDependencies } from './remote-session-commands.types';
 import type { ChatThread } from '../backend/contracts';
 import type { ThreadSurface } from '../core/thread-source.types';
+import type { RemoteSessionDependencies } from './remote-session-commands.types';
 
 interface ThreadPick extends vscode.QuickPickItem {
   readonly thread: ChatThread;

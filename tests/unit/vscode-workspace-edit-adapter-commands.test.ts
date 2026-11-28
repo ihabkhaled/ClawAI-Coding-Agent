@@ -205,7 +205,7 @@ describe('VscodeWorkspaceEditAdapter workspace scope', () => {
     const adapter = new VscodeWorkspaceEditAdapter({
       selectedFolder: () => ({ uri: vscode.Uri.file('/workspace/web') }),
     });
-    const execution = { task: {} as vscode.Task, terminate: vi.fn() };
+    const execution = { task: {} as unknown as vscode.Task, terminate: vi.fn() };
     vi.mocked(vscode.tasks.executeTask).mockResolvedValueOnce(execution);
 
     const running = adapter.execute(
@@ -262,7 +262,7 @@ describe('VscodeWorkspaceEditAdapter workspace scope', () => {
     const adapter = new VscodeWorkspaceEditAdapter({
       selectedFolder: () => ({ uri: virtualUri }),
     });
-    const execution = { task: {} as vscode.Task, terminate: vi.fn() };
+    const execution = { task: {} as unknown as vscode.Task, terminate: vi.fn() };
     vi.mocked(vscode.tasks.executeTask).mockResolvedValueOnce(execution);
 
     const running = adapter.execute(

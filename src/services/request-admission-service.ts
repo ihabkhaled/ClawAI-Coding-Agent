@@ -1,10 +1,10 @@
 import * as vscode from 'vscode';
 
+import type { AccountEpoch } from '../core/account-epoch';
+import type { ExternalOutputGrantStore } from '../core/external-output-grants';
 import type { RequestAdmission } from './agent-coordinator.types';
 import type { SessionControlService } from './session-control-service';
 import type { WorkspaceContextService } from './workspace-context-service';
-import type { AccountEpoch } from '../core/account-epoch';
-import type { ExternalOutputGrantStore } from '../core/external-output-grants';
 
 export class RequestAdmissionService {
   constructor(

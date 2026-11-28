@@ -66,14 +66,14 @@ import { type WorkflowKind } from './workflow-service';
 import { workspaceCheckpoints } from './workspace-checkpoints';
 import { workspaceCatalogs } from './workspace-skill-catalog';
 
+import type { ExtensionState } from '../core/extension-state';
+import type { SessionVault } from '../core/session-vault';
+import type { WorkspaceApprovalMemory } from '../core/workspace-approval-memory';
 import type { CheckpointDependencies } from './checkpoint-command.types';
 import type { OutputStyleCatalog } from './output-style-catalog';
 import type { SkillCatalogService } from './skill-catalog-service';
 import type { WorkspaceContextService } from './workspace-context-service';
 import type { WorkspaceScopeService } from './workspace-scope-service';
-import type { ExtensionState } from '../core/extension-state';
-import type { SessionVault } from '../core/session-vault';
-import type { WorkspaceApprovalMemory } from '../core/workspace-approval-memory';
 
 export class AgentCoordinator implements vscode.Disposable {
   readonly browserAuthorization: BrowserAuthorizationService;

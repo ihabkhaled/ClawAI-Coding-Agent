@@ -1,6 +1,6 @@
-import type { RuntimeConfiguration } from './configuration-service';
 import type { CompactionOffer } from '../core/compaction-trigger-offers.types';
 import type { ExtensionSnapshot } from '../core/extension-state';
+import type { RuntimeConfiguration } from './configuration-service';
 
 /** What resolving the panel's own reports needs to reach. */
 export interface PanelReportCollaborators {

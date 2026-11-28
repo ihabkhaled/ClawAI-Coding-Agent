@@ -1,5 +1,5 @@
-import type { RunBudgetTrip } from './run-budget.types';
 import type { HeadlessOutcome } from '../core/headless-outcome.types';
+import type { RunBudgetTrip } from './run-budget.types';
 
 /**
  * The tool-call allowance a run finished by spending in full.

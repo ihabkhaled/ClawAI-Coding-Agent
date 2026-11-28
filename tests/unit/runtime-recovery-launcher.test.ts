@@ -26,7 +26,7 @@ function deferred<T>() {
 function launcher(connected: boolean, recover: ReturnType<typeof vi.fn>) {
   const error = vi.fn();
   const instance = new RuntimeRecoveryLauncher(
-    { snapshot: { connected } } as ExtensionState,
+    { snapshot: { connected } } as unknown as ExtensionState,
     { recover } as Pick<VscodeRuntimeStudio, 'recover'> as VscodeRuntimeStudio,
     { error } as Pick<OutputLogger, 'error'> as OutputLogger,
     () => null as ChatViewProvider | null,

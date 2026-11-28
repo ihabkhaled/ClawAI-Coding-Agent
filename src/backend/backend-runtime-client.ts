@@ -12,9 +12,9 @@ import {
   type RuntimeDeferredLoadAck,
 } from './runtime-deferred-tools.contracts';
 
-import type { BackendRetryClass } from './backend-retry.types';
 import type { RuntimeProtocolWireDescriptor } from '../core/runtime/runtime-negotiation';
 import type { ToolDefinition, ToolResult } from '../core/runtime/runtime-tool-contracts';
+import type { BackendRetryClass } from './backend-retry.types';
 import type { z } from 'zod';
 
 type Request = <T>(

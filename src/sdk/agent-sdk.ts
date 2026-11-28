@@ -19,6 +19,7 @@ import { reportUndeliveredImages, uploadPromptImages } from './prompt-images';
 import { openThread } from './thread-memory';
 import { describeTools } from './tool-alias';
 
+import type { HeadlessStreamEvent } from '../headless/headless-session.types';
 import type { AttemptInput, AttemptOutcome } from './agent-run-fallback';
 import type {
   AgentRunOptions,
@@ -28,7 +29,6 @@ import type {
 } from './agent-sdk.types';
 import type { DeferredLoaderRef } from './deferred-toolkit';
 import type { ResolvedModel } from './model-fallback';
-import type { HeadlessStreamEvent } from '../headless/headless-session.types';
 
 /**
  * Runs one agent task against the runtime, with no editor and no host.

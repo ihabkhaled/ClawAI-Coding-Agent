@@ -1,6 +1,6 @@
-import type { BackgroundCommandPort } from './structured-command-tool-executor.types';
 import type { CommandSandboxReport } from '../core/command-sandbox.types';
 import type { ProcessIdentityReceipt } from '../services/process-supervisor-service';
+import type { BackgroundCommandPort } from './structured-command-tool-executor.types';
 
 /** Everything the yield wait needs once the command is already running. */
 export interface CommandYieldRequest {

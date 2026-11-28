@@ -1,9 +1,9 @@
 import { resolveModelSelection } from '../core/model-catalog';
 
-import type { RunAgentInput } from './agent-coordinator.types';
-import type { RuntimeConfiguration } from './configuration-service';
 import type { BackendClient } from '../backend/backend-client';
 import type { ModelCatalogEntry } from '../core/model-catalog';
+import type { RunAgentInput } from './agent-coordinator.types';
+import type { RuntimeConfiguration } from './configuration-service';
 
 /**
  * Asks the conversation's own model to summarize it.

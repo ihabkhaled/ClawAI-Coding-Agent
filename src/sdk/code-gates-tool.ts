@@ -24,9 +24,9 @@ import {
 import { systemCommandRuntime } from './command-tool';
 import { clampedInteger } from './command-tool-request';
 
+import type { ToolLimits } from '../headless/headless-main.types';
 import type { GateName, GateResult } from './code-gates.types';
 import type { CommandRuntime } from './command-tool.types';
-import type { ToolLimits } from '../headless/headless-main.types';
 
 type ToolArguments = Readonly<Record<string, unknown>>;
 

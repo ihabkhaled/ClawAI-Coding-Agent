@@ -1,8 +1,8 @@
 import { checkContextFreshness } from './context-freshness-service';
 
-import type { ContextFreshnessPort } from './context-freshness-service.types';
 import type { ContextFreshness } from '../core/context-freshness.types';
 import type { ExtensionState } from '../core/extension-state';
+import type { ContextFreshnessPort } from './context-freshness-service.types';
 
 /**
  * Keeps the context view honest about ranges that have moved on.

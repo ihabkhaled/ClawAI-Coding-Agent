@@ -4,9 +4,9 @@ import { AGENT_SDK_DEFAULTS } from '../sdk/agent-sdk.constants';
 
 import { HeadlessTransport } from './headless-transport';
 
+import type { AgentAuth } from '../sdk/create-agent.types';
 import type { HeadlessEnvironment, HeadlessIo, HeadlessListModels } from './headless-args.types';
 import type { HeadlessConnectorModel } from './headless-transport.types';
-import type { AgentAuth } from '../sdk/create-agent.types';
 
 /** One line per model: `provider/modelKey`, its display name, and whether it can call tools. */
 export function modelLines(models: readonly HeadlessConnectorModel[]): string {

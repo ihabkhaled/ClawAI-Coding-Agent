@@ -1,5 +1,3 @@
-import type { LifecycleHookPort } from './lifecycle-hook.types';
-import type { RuntimeToolExecutorPort, RuntimeToolPolicyPort } from './runtime-tool-dispatcher';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type {
   RunBudget,
@@ -7,6 +5,8 @@ import type {
   ToolInvocation,
   ToolResult,
 } from '../core/runtime/runtime-tool-contracts';
+import type { LifecycleHookPort } from './lifecycle-hook.types';
+import type { RuntimeToolExecutorPort, RuntimeToolPolicyPort } from './runtime-tool-dispatcher';
 
 export interface RuntimeRunStart {
   readonly budget: RunBudget;

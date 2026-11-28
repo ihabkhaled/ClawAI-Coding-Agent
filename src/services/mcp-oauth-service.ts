@@ -13,9 +13,9 @@ import {
 import { MCP_OAUTH_TIMEOUT_MS } from '../core/mcp/mcp.constants';
 import { createVscodeAuthorizationRequest } from '../core/vscode-authorization';
 
-import type { McpOAuthDependencies } from './mcp-oauth-service.types';
 import type { McpHttpServerConfig, McpOAuthConfig, McpTokenSet } from '../core/mcp/mcp.types';
 import type { McpTokenProvider } from '../infrastructure/mcp/mcp-transport.types';
+import type { McpOAuthDependencies } from './mcp-oauth-service.types';
 
 const EXCHANGE_TIMEOUT_MS = 30_000;
 

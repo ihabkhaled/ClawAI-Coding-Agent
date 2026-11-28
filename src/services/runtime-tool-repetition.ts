@@ -2,9 +2,9 @@ import { createRepetitionWatch } from '../core/repetition-guard';
 import { runtimeJsonObjectSchema } from '../core/runtime/runtime-json-value';
 import { runtimeRepetitionClass, RuntimeStuckError } from '../core/runtime/runtime-repetition';
 
-import type { RuntimeRepeatOutcome } from './runtime-tool-repetition.types';
 import type { StuckInfo } from '../core/repetition-guard.types';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { RuntimeRepeatOutcome } from './runtime-tool-repetition.types';
 
 /**
  * One run's identical tool calls. The third identical call with nothing

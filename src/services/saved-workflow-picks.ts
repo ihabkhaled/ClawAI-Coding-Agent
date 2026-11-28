@@ -1,6 +1,6 @@
-import type { SavedWorkflowPick } from './saved-workflow-picks.types';
 import type { SavedWorkflow } from '../core/saved-workflow';
 import type { WorkflowTemplate } from '../core/workflow-template';
+import type { SavedWorkflowPick } from './saved-workflow-picks.types';
 
 /**
  * Saved graphs and user-defined templates in one picker. The icon, not a word,

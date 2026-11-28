@@ -2,8 +2,8 @@ import { checkpointSchema, retainCheckpoints } from '../core/checkpoint';
 import { zeroRetentionPosture } from '../core/zero-retention-posture';
 import { retentionAwareKeyValue } from '../core/zero-retention-storage';
 
-import type { CheckpointStoragePort } from './checkpoint-store.types';
 import type { Checkpoint } from '../core/checkpoint.types';
+import type { CheckpointStoragePort } from './checkpoint-store.types';
 
 /** Where the index of checkpoints lives. Workspace-scoped: so are the files. */
 export const CHECKPOINTS_KEY = 'clawAI.checkpoints';

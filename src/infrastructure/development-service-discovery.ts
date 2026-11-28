@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 import { z } from 'zod';
 
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ServiceDefinition } from '../core/development-service';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 
 export interface DiscoveredDevelopmentService {
   readonly source: string;

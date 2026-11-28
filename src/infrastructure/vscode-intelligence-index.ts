@@ -18,8 +18,8 @@ import {
   WORKSPACE_SCAN_MAX_RESULTS,
 } from './workspace-scan.constants';
 
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { IntelligenceIndexPort } from '../services/workspace-intelligence-service';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 
 interface ParsedIntelligenceFile {
   readonly hash: string;

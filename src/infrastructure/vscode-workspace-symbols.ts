@@ -1,8 +1,8 @@
 import * as vscode from 'vscode';
 
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { SymbolQueryKind, WorkspaceLocation } from '../core/workspace-symbols';
 import type { SymbolQuery, WorkspaceSymbolsPort } from '../services/workspace-intelligence-service';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 
 const providerCommands: Readonly<Record<SymbolQueryKind, string>> = {
   definition: 'vscode.executeDefinitionProvider',

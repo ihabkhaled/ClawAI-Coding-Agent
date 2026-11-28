@@ -1,6 +1,7 @@
 import { composeCheckFixPrompt, nextPollDelay } from '../core/pull-request';
 import { PULL_REQUEST_MONITOR_POLICY } from '../core/pull-request.constants';
 
+import type { PullRequestCheckSummary, WatchedPullRequest } from '../core/pull-request.types';
 import type {
   PullRequestFixStarter,
   PullRequestMonitorDependencies,
@@ -8,7 +9,6 @@ import type {
   PullRequestWatchEnd,
   PullRequestWatchState,
 } from './pull-request-monitor-service.types';
-import type { PullRequestCheckSummary, WatchedPullRequest } from '../core/pull-request.types';
 
 /**
  * Watches the checks on pull requests this agent opened, and offers a fix run

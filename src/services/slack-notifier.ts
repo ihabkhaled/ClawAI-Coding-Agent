@@ -7,9 +7,9 @@ import {
 } from '../core/slack-notification.constants';
 import { notificationReasonForStateChange } from '../core/user-notification';
 
-import type { SlackNotifierOptions, SlackPostOutcome } from './slack-notifier.types';
 import type { ExtensionSnapshot, ExtensionState } from '../core/extension-state';
 import type { NotifiableState } from '../core/user-notification';
+import type { SlackNotifierOptions, SlackPostOutcome } from './slack-notifier.types';
 
 function notifiable(snapshot: ExtensionSnapshot): NotifiableState {
   return {

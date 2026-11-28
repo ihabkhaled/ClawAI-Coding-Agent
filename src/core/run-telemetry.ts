@@ -1,6 +1,6 @@
+import type { ObservabilitySpan } from '../services/observability-service';
 import type { PendingToolCall, RunUsage } from './run-telemetry.types';
 import type { RuntimeEvent } from './runtime/runtime-protocol.schemas';
-import type { ObservabilitySpan } from '../services/observability-service';
 
 const FAILED_TOOL_STATUSES = new Set(['failed', 'denied', 'cancelled', 'timed-out']);
 

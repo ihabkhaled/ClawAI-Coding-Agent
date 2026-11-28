@@ -12,13 +12,13 @@ import {
   HTTP_SETTING,
 } from './opt-in-tools.constants';
 
-import type { OptInToolSettings } from './opt-in-tools.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { HttpTool } from '../sdk/http-tool.types';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { OptInToolSettings } from './opt-in-tools.types';
 
 export const httpRequestToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

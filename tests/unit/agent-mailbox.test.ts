@@ -20,9 +20,12 @@ import {
   AgentMailboxToolExecutor,
   agentMailboxToolDefinition,
 } from '../../src/infrastructure/agent-mailbox-tool-executor';
+import { dashed } from '../helpers/fake-secrets';
 
 import type { AgentMailbox } from '../../src/core/agent-mailbox.types';
 import type { ToolInvocation } from '../../src/core/runtime/runtime-tool-contracts';
+
+const FAKE_KEY = dashed('sk', 'live', '9');
 
 function live(...addresses: string[]): AgentMailbox {
   return addresses.reduce(registerAddress, EMPTY_MAILBOX);
@@ -99,8 +102,8 @@ describe('agent mailbox core', () => {
   });
 
   it('redacts a secret and truncates long text', () => {
-    const secret = delivered(live('a', 'b'), 'a', 'b', 'Authorization: Bearer sk-live-9');
-    expect(inboxFor(secret, 'b')[0]?.text).not.toContain('sk-live-9');
+    const secret = delivered(live('a', 'b'), 'a', 'b', `Authorization: Bearer ${FAKE_KEY}`);
+    expect(inboxFor(secret, 'b')[0]?.text).not.toContain(FAKE_KEY);
     const long = delivered(live('a', 'b'), 'a', 'b', 'x'.repeat(MAX_MESSAGE_LENGTH + 50));
     expect(inboxFor(long, 'b')[0]?.text).toHaveLength(MAX_MESSAGE_LENGTH);
   });

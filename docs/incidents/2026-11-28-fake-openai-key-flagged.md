@@ -46,6 +46,14 @@ real credential anywhere in the history. The published VSIX never contains `test
 - `docs/RULES.md` rule 14a and `docs/SECURITY.md` ("Secret scanning"); runbook
   `skills/handle-a-secret-alert/SKILL.md`.
 
+## Follow-up (1.116.0)
+
+Before the rewrite, a dry run on a copy of the history showed it would still change four of
+today's files: 1.115.0 had missed short fake values (`sk-live-...` style, a sample token in a
+comment). 1.116.0 builds those at run time too, so the rewrite leaves the current tree
+byte-identical. The same release fixed all 23 open dependency advisories (development tools
+only).
+
 ## History rewrite (owner decision, 2026-11-28)
 
 The owner chose to remove every fake secret-shaped value from the whole history even though

@@ -7,8 +7,8 @@ import {
   STUCK_FAILURE_CODE,
 } from './runtime-repetition.constants';
 
-import type { RuntimeRepetitionVerdictClass } from './runtime-repetition.types';
 import type { StuckInfo } from '../repetition-guard.types';
+import type { RuntimeRepetitionVerdictClass } from './runtime-repetition.types';
 
 /**
  * A look is an operation classified as a read; anything else, including an

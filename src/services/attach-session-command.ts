@@ -12,7 +12,6 @@ import { complianceLabel } from './runner-compliance-label';
 import { offerFollowUp, stopSession } from './session-followup';
 import { workspaceRepositoryRef } from './workspace-repository-ref';
 
-import type { RemoteSessionDependencies } from './remote-session-commands.types';
 import type {
   CloudTask,
   RunnerPolicyView,
@@ -20,6 +19,7 @@ import type {
   RunnerSession,
 } from '../backend/remote-session-contracts';
 import type { BackoffPolicy } from '../core/session-handoff.types';
+import type { RemoteSessionDependencies } from './remote-session-commands.types';
 
 const OUTPUT_TAIL = 2_000;
 

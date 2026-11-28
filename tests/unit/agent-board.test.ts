@@ -6,9 +6,12 @@ import {
   AgentBoardToolExecutor,
   agentBoardToolDefinition,
 } from '../../src/infrastructure/agent-board-tool-executor';
+import { dashed } from '../helpers/fake-secrets';
 
 import type { AgentBoard } from '../../src/core/agent-board.types';
 import type { ToolInvocation } from '../../src/core/runtime/runtime-tool-contracts';
+
+const FAKE_KEY = dashed('sk', 'live', '9');
 
 function invocation(operation: string, args: Record<string, unknown>): ToolInvocation {
   return { toolName: agentBoardToolDefinition.name, operation, arguments: args } as ToolInvocation;
@@ -35,12 +38,12 @@ describe('postNote', () => {
       EMPTY_BOARD,
       'a',
       'warning',
-      'config has Authorization: Bearer sk-live-9',
+      `config has Authorization: Bearer ${FAKE_KEY}`,
     );
 
     expect(result.posted).toBe(true);
     if (result.posted) {
-      expect(result.board.notes[0]?.text).not.toContain('sk-live-9');
+      expect(result.board.notes[0]?.text).not.toContain(FAKE_KEY);
     }
   });
 

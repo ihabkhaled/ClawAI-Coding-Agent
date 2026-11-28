@@ -8,9 +8,9 @@ import {
   toggledRoutineStatus,
 } from '../core/routine';
 
-import type { IntegrationDependencies } from './integration-commands.types';
 import type { Routine } from '../backend/integration-contracts';
 import type { RoutineRefusal } from '../core/routine.types';
+import type { IntegrationDependencies } from './integration-commands.types';
 
 function refusalMessage(refusal: RoutineRefusal): string {
   switch (refusal) {

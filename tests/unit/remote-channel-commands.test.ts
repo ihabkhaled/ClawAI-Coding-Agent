@@ -20,6 +20,12 @@ const host = vi.hoisted(() => {
 });
 
 vi.mock('vscode', () => ({
+  Disposable: class Disposable {
+    constructor(private readonly callOnDispose: () => void) {}
+    dispose(): void {
+      this.callOnDispose();
+    }
+  },
   l10n: {
     t: (message: string, ...args: string[]) =>
       message.replace(/\{(\d)\}/gu, (_m, index: string) => args[Number(index)] ?? ''),

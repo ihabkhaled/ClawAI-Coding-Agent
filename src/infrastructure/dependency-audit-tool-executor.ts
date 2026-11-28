@@ -8,13 +8,13 @@ import {
 import { DEPENDENCY_SCANNERS } from '../core/dependency-audit.constants';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { DependencyAuditPort } from './dependency-audit-tool-executor.types';
 import type { DependencyAuditCommand, DependencyScanner } from '../core/dependency-audit.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { DependencyAuditPort } from './dependency-audit-tool-executor.types';
 
 export const dependencyAuditToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

@@ -3,8 +3,8 @@ import { WorkspaceMutationGate } from '../core/workspace-mutation-gate';
 
 import { assertSmallPatchIsNonDestructive, parseSmallPatchPolicy } from './small-patch-safety';
 
-import type { SessionControlPort } from './session-control.types';
 import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
+import type { SessionControlPort } from './session-control.types';
 
 export interface EditPreview {
   path: string;

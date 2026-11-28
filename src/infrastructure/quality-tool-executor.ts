@@ -14,13 +14,13 @@ import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-sche
 
 import { runCommandSpec } from './bounded-command-runner';
 
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { FindingsService } from '../services/findings-service';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 
 export const qualityToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

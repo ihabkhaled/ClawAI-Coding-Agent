@@ -15,11 +15,11 @@ import { redactText } from '../core/redaction';
 import { BROWSER_LIVE_PAGES } from './browser-live-pages.constants';
 import { PAGE_ACTION_HANDLERS } from './playwright-page-actions.constants';
 
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type {
   BrowserDriverPort,
   BrowserDriverResult,
 } from '../services/browser-controller-service';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { Browser, BrowserContext, Locator, Page } from 'playwright-core';
 
 type AriaRole = Parameters<Page['getByRole']>[0];

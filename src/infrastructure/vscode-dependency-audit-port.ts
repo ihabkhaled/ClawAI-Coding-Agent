@@ -11,14 +11,14 @@ import { isSafeRelativeWorkspacePath } from '../core/workspace-path-policy';
 
 import { resolveExecutable, runCommandSpec } from './bounded-command-runner';
 
+import type { DependencyAuditCommand } from '../core/dependency-audit.types';
+import type { Finding } from '../core/findings';
+import type { FindingsService } from '../services/findings-service';
 import type {
   DependencyAuditOutput,
   DependencyAuditPort,
 } from './dependency-audit-tool-executor.types';
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
-import type { DependencyAuditCommand } from '../core/dependency-audit.types';
-import type { Finding } from '../core/findings';
-import type { FindingsService } from '../services/findings-service';
 
 const ROOT_KEY = 'workspace-1';
 

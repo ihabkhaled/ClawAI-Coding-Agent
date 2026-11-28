@@ -2,7 +2,6 @@ import { mergeMcpConfigs, parseMcpConfig } from '../core/mcp/mcp-config';
 import { admitMcpServers, readMcpServerPolicy } from '../core/mcp/mcp-server-policy';
 import { redactText } from '../core/redaction';
 
-import type { McpRegistryDependencies, McpServerReport } from './mcp-server-registry.types';
 import type {
   McpAdmission,
   McpConfigLoad,
@@ -11,6 +10,7 @@ import type {
   McpSession,
   McpToolSummary,
 } from '../core/mcp/mcp.types';
+import type { McpRegistryDependencies, McpServerReport } from './mcp-server-registry.types';
 
 interface CachedConnection {
   readonly fingerprint: string;

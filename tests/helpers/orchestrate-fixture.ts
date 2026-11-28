@@ -9,9 +9,9 @@ import { orchestrate } from '../../src/sdk/orchestrate';
 import { childName, scratch } from './team-fixture';
 import { teamTransport } from './team-transport';
 
-import type { Script, ScriptApi } from './team-transport';
 import type { OrchestrateOutcome } from '../../src/sdk/orchestrate';
 import type { OrchestrateEvent, OrchestrateOptions } from '../../src/sdk/orchestrate.types';
+import type { Script, ScriptApi } from './team-transport';
 
 export { cleanTeamFixtures, makeDir, must, readIn, scratch } from './team-fixture';
 

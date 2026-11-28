@@ -2,10 +2,10 @@ import * as vscode from 'vscode';
 
 import { resolveModelSelection } from '../core/model-catalog';
 
-import type { RuntimeConfiguration } from './configuration-service';
-import type { WorkflowKind } from './workflow-service';
 import type { ParallelResponse } from '../backend/contracts';
 import type { ModelCatalogEntry } from '../core/model-catalog';
+import type { RuntimeConfiguration } from './configuration-service';
+import type { WorkflowKind } from './workflow-service';
 
 export interface ComparePromptResult {
   content: string;

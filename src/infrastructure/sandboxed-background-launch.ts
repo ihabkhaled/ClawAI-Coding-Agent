@@ -2,8 +2,8 @@ import { resolveExecutable, type BackgroundLaunchPlan } from './bounded-command-
 import { planCommandLaunch } from './command-launch-plan';
 import { realPath } from './command-sandbox-host-probe';
 
-import type { CommandSandboxBinding, SandboxedBackgroundLaunch } from './command-launch-plan.types';
 import type { CommandSpec } from '../core/command-spec';
+import type { CommandSandboxBinding, SandboxedBackgroundLaunch } from './command-launch-plan.types';
 
 /**
  * The background launch, confined the same way a foreground one would be.

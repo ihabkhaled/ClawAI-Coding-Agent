@@ -396,7 +396,7 @@ describe('VscodeWorkspaceEditAdapter workspace scope', () => {
       selectedFolder: () => ({ uri: vscode.Uri.file('/workspace/web') }),
     });
     let finishLaunch: ((execution: vscode.TaskExecution) => void) | undefined;
-    const execution = { task: {} as vscode.Task, terminate: vi.fn() };
+    const execution = { task: {} as unknown as vscode.Task, terminate: vi.fn() };
     vi.mocked(vscode.tasks.executeTask).mockReturnValueOnce(
       new Promise((resolve) => {
         finishLaunch = resolve;

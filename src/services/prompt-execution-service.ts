@@ -15,6 +15,10 @@ import { generationConcurrencyKey } from './generation-scheduler';
 import { buildAnalysisPrompt } from './workflow-service';
 import { refuseCompareUnderZeroRetention } from './zero-retention-compare-guard';
 
+import type { BackendClient } from '../backend/backend-client';
+import type { CollectedContext } from '../core/context-collector';
+import type { ExtensionState } from '../core/extension-state';
+import type { ChatViewProvider } from '../webview/chat-view-provider';
 import type { ChatPromptInput, CompareInput, RequestAdmission } from './agent-coordinator.types';
 import type { AttachmentRequestService } from './attachment-request-service';
 import type { ChatService } from './chat-service';
@@ -23,10 +27,6 @@ import type { ConversationSessionService } from './conversation-session-service'
 import type { GenerationScheduler } from './generation-scheduler';
 import type { SessionControlPort } from './session-control.types';
 import type { WorkflowKind } from './workflow-service';
-import type { BackendClient } from '../backend/backend-client';
-import type { CollectedContext } from '../core/context-collector';
-import type { ExtensionState } from '../core/extension-state';
-import type { ChatViewProvider } from '../webview/chat-view-provider';
 
 interface PromptExecutionDependencies {
   activateThread(threadId: string, requestId: string): void;

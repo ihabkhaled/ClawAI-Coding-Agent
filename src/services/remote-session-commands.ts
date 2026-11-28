@@ -5,9 +5,9 @@ import { startCloudSession } from './cloud-session-command';
 import { withFailureNotice } from './command-failure-notice';
 import { resumeConversation } from './resume-conversation-command';
 
-import type { RemoteSessionDependencies } from './remote-session-commands.types';
 import type { BackendClient } from '../backend/backend-client';
 import type { ExtensionState } from '../core/extension-state';
+import type { RemoteSessionDependencies } from './remote-session-commands.types';
 
 /**
  * Registers the commands for work that started outside this window: resuming

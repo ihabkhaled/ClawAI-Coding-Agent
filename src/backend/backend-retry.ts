@@ -13,12 +13,12 @@ import {
   START_SAFE_STATUSES,
 } from './backend-retry.constants';
 
+import type { RetryVerdict } from '../core/retry-classifier.types';
 import type {
   BackendRetryClass,
   BackendRetryRequest,
   BackendRetryTuning,
 } from './backend-retry.types';
-import type { RetryVerdict } from '../core/retry-classifier.types';
 
 /** Waits `ms`, or less when `signal` aborts; the caller checks the signal. */
 export function abortableSleep(ms: number, signal?: AbortSignal): Promise<void> {

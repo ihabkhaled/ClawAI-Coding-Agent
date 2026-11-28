@@ -36,6 +36,7 @@ import { subAgentToolDefinition } from './sub-agent-tool-executor';
 import { toolSearchToolDefinition } from './tool-search-tool-executor';
 import { workspaceFilesystemToolDefinition } from './vscode-filesystem-tool-executor';
 
+import type { ToolDefinition } from '../core/runtime/runtime-tool-contracts';
 import type {
   ExtensionHostDescriptor,
   RuntimeArchitecture,
@@ -204,6 +205,19 @@ export function describeRuntimeTarget(probe: RuntimeHostProbe): ExecutionTarget 
   };
 }
 
+/** The manifest lists what a tool can do, not its prose or argument schema. */
+function manifestTool(
+  definition: Pick<ToolDefinition, 'name' | 'version' | 'operations' | 'riskClasses' | 'targetIds'>,
+): CapabilityManifest['tools'][number] {
+  return {
+    name: definition.name,
+    version: definition.version,
+    operations: definition.operations,
+    riskClasses: definition.riskClasses,
+    targetIds: definition.targetIds,
+  };
+}
+
 export function buildRuntimeCapabilityManifest(
   probe: RuntimeHostProbe,
   identity: RuntimeManifestIdentity,
@@ -232,14 +246,7 @@ export function buildRuntimeCapabilityManifest(
   if (probe.workspaceTrusted && target.workspaceRoots.length > 0) {
     const localDefinitions = localToolDefinitions(probe);
     target.capabilities.push(...localDefinitions.map(({ name }) => name));
-    tools.push(
-      ...localDefinitions.map(({ description, inputSchema, schemaVersion, ...definition }) => {
-        void description;
-        void inputSchema;
-        void schemaVersion;
-        return definition;
-      }),
-    );
+    tools.push(...localDefinitions.map(manifestTool));
     const specializedTargets = [
       ...(probe.prerequisites.container
         ? [
@@ -276,11 +283,7 @@ export function buildRuntimeCapabilityManifest(
         label: specialized.label,
         capabilities: [specialized.definition.name],
       });
-      const { description, inputSchema, schemaVersion, ...definition } = specialized.definition;
-      void description;
-      void inputSchema;
-      void schemaVersion;
-      tools.push(definition);
+      tools.push(manifestTool(specialized.definition));
     }
   }
 

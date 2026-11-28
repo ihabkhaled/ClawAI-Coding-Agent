@@ -7,8 +7,8 @@ import { failurePayloadCode } from '../sdk/runtime-failure';
 
 import { fallbackReasonFor, isFallbackText } from './runtime-studio-fallback-notice';
 
-import type { ModelFallbackReason, RuntimeStudioInput } from './runtime-studio.types';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
+import type { ModelFallbackReason, RuntimeStudioInput } from './runtime-studio.types';
 
 /** The part of the execution dependencies the fallback reads and replaces. */
 interface FallbackDependencies {

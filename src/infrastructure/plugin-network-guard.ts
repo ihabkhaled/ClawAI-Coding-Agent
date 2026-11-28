@@ -8,7 +8,7 @@ import type { HostLookup, PluginNetworkOptions } from './plugin-network-guard.ty
 
 /** Every address the system resolver returns for the host, not just the first. */
 export const systemHostLookup: HostLookup = async (host) =>
-  (await lookup(host, { all: true, verbatim: true })).map((entry) => entry.address);
+  (await lookup(host, { all: true, order: 'verbatim' })).map((entry) => entry.address);
 
 /**
  * Refuses a URL whose host is, or resolves to, a private, loopback, link-local

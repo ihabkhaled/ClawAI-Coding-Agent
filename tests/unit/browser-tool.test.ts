@@ -6,11 +6,12 @@ import { afterAll, beforeAll, describe, expect, it, vi } from 'vitest';
 
 import { loadPlaywright } from '../../src/sdk/browser-session';
 import { createBrowserTool } from '../../src/sdk/browser-tool';
+import { assemble } from '../helpers/fake-secrets';
 
 import { startTestSite } from './browser-tool.helpers';
 
-import type { TestSite } from './browser-tool.helpers';
 import type { BrowserTool } from '../../src/sdk/browser-tool.types';
+import type { TestSite } from './browser-tool.helpers';
 
 async function canLaunch(): Promise<boolean> {
   try {
@@ -145,7 +146,7 @@ real('browser.page against a real page', () => {
     const logs = await call(tool, 'console');
     const text = JSON.stringify(logs);
     expect(text).toContain('kaboom');
-    expect(text).not.toContain('<fake-secret-removed>');
+    expect(text).not.toContain(assemble('abcdef', '1234567890', 'abcdef'));
   });
 
   it('shows what a field holds after typing, but never what a password field holds', async () => {

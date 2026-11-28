@@ -1,12 +1,12 @@
 import { isEmptyProviderResponse } from './agent-run-guards';
 
+import type { CollectedContext } from '../core/context-collector';
 import type {
   AgentRunCallbacks,
   AgentRunChatPort,
   AgentRunInput,
   AgentRunSessionPort,
 } from './agent-run-service.types';
-import type { CollectedContext } from '../core/context-collector';
 
 export async function sendWithEmptyProviderRetry<T>(
   send: () => Promise<T>,

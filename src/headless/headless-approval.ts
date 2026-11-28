@@ -1,7 +1,7 @@
 import { redactText } from '../core/redaction';
 
-import type { HeadlessIo } from './headless-args.types';
 import type { AgentApprovalRequest } from '../sdk/workspace-toolkit.types';
+import type { HeadlessIo } from './headless-args.types';
 
 const ARGUMENT_PREVIEW_CHARS = 200;
 

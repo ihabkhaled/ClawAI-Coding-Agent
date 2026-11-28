@@ -6,9 +6,9 @@ import { outcomeOf } from '../core/session-handoff';
 
 import { handOffToThread } from './session-handoff';
 
-import type { RemoteSessionDependencies } from './remote-session-commands.types';
 import type { CloudTask } from '../backend/remote-session-contracts';
 import type { RepositoryRef } from '../core/repository-ref.types';
+import type { RemoteSessionDependencies } from './remote-session-commands.types';
 
 /** Stops a command that has not finished. A backend without the route is told so. */
 export async function stopSession(

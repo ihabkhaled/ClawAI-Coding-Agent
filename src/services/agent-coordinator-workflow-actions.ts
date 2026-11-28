@@ -3,11 +3,11 @@ import { randomUUID } from 'node:crypto';
 import { promptQuestion, promptWorkflowRequest } from './agent-coordinator-prompts';
 import { generationConcurrencyKey, type GenerationScheduler } from './generation-scheduler';
 
+import type { ContextMode } from '../core/context-mode';
 import type { ChatPromptInput, RequestAdmission } from './agent-coordinator.types';
 import type { AgentWorkflowService } from './agent-workflow-service';
 import type { PromptExecutionService } from './prompt-execution-service';
 import type { WorkflowKind } from './workflow-service';
-import type { ContextMode } from '../core/context-mode';
 
 export class AgentCoordinatorWorkflowActions {
   constructor(

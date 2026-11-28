@@ -12,9 +12,9 @@ import { McpServerRegistry } from './mcp-server-registry';
 import { ProjectPolicyService } from './project-policy-service';
 import { pluginMcpConfig, workspacePluginStore } from './workspace-plugins';
 
+import type { ExtensionState } from '../core/extension-state';
 import type { RuntimeToolRegistration } from './runtime-tool-router';
 import type { WorkspaceScopeService } from './workspace-scope-service';
-import type { ExtensionState } from '../core/extension-state';
 
 function workspaceRoot(scope: WorkspaceScopeService): vscode.Uri | undefined {
   try {

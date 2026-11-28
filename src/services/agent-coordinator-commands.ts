@@ -22,6 +22,9 @@ import { askSideQuestion } from './side-question-command';
 import { archiveChat, browseArchivedChats, renameChat } from './thread-organization-command';
 import { exportTranscript } from './transcript-export-command';
 
+import type { BackendClient } from '../backend/backend-client';
+import type { ExtensionState } from '../core/extension-state';
+import type { ChatViewProvider } from '../webview/chat-view-provider';
 import type { AgentConnectionService } from './agent-connection-service';
 import type { CheckpointDependencies } from './checkpoint-command.types';
 import type { ClawaiInitializer } from './clawai-initializer';
@@ -35,9 +38,6 @@ import type { SafeEditService } from './safe-edit-service';
 import type { SessionControlService } from './session-control-service';
 import type { SideQuestionThread } from './side-question-thread';
 import type { ThreadOrganizationDependencies } from './thread-organization.types';
-import type { BackendClient } from '../backend/backend-client';
-import type { ExtensionState } from '../core/extension-state';
-import type { ChatViewProvider } from '../webview/chat-view-provider';
 
 export interface CoordinatorCommands {
   refreshModels(): Promise<void>;

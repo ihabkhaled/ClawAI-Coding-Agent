@@ -10,8 +10,8 @@ import {
   HEADLESS_MAX_TOOL_CALLS,
 } from './headless-args.constants';
 
-import type { HeadlessInvocation, HeadlessParse } from './headless-args.types';
 import type { AgentBudgetProfile } from '../sdk/agent-sdk.types';
+import type { HeadlessInvocation, HeadlessParse } from './headless-args.types';
 
 type Values = ReadonlyMap<string, readonly string[]>;
 type Budgets = Partial<

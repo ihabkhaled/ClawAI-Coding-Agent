@@ -20,8 +20,8 @@ import { terminateProcess } from '../process-terminator';
 
 import { McpPendingRequests } from './mcp-pending-requests';
 
-import type { McpStdioLaunch } from './mcp-transport.types';
 import type { McpTransport } from '../../core/mcp/mcp.types';
+import type { McpStdioLaunch } from './mcp-transport.types';
 import type { ChildProcess } from 'node:child_process';
 
 /**

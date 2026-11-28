@@ -10,8 +10,8 @@ import {
 } from './agent-sdk.constants';
 import { failurePayloadCode, runtimeFailureReason } from './runtime-failure';
 
-import type { AgentModelChoice } from './agent-sdk.types';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
+import type { AgentModelChoice } from './agent-sdk.types';
 
 /** A provider and model with nothing left to default. */
 export interface ResolvedModel {

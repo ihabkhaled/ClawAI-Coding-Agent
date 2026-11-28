@@ -1,10 +1,10 @@
 import { compareContextFreshness, contentDigest, staleInclusions } from '../core/context-freshness';
 
+import type { ContextInclusion } from '../core/context-collector';
 import type {
   ContextFreshnessPort,
   ContextFreshnessResult,
 } from './context-freshness-service.types';
-import type { ContextInclusion } from '../core/context-collector';
 
 function inclusionKey(inclusion: ContextInclusion): string {
   return inclusion.startLine === undefined

@@ -8,8 +8,8 @@ import {
 } from '../infrastructure/shell-script-tool-executor';
 import { liveOptInToolSettings } from '../infrastructure/vscode-opt-in-tool-settings';
 
-import type { RuntimeToolRegistration } from './runtime-tool-router';
 import type { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
+import type { RuntimeToolRegistration } from './runtime-tool-router';
 
 /**
  * The tools that stay off until the user switches them on in settings.

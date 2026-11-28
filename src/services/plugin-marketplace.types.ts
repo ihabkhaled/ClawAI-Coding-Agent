@@ -1,5 +1,3 @@
-import type { PluginStore } from './plugin-store';
-import type { PluginFileSystemPort } from './plugin-store.types';
 import type { PluginBundleFile } from '../core/plugin-manifest.types';
 import type {
   GitMarketplaceLocation,
@@ -8,6 +6,8 @@ import type {
   ReadableMarketplaceLocation,
 } from '../core/plugin-marketplace.types';
 import type { PluginSignatureSettings, SignatureVerdict } from '../core/plugin-signature.types';
+import type { PluginStore } from './plugin-store';
+import type { PluginFileSystemPort } from './plugin-store.types';
 
 /** What installing from a marketplace needs to reach. */
 export interface PluginMarketplaceDependencies {

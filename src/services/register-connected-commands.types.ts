@@ -1,7 +1,7 @@
-import type { WorkspaceScopeService } from './workspace-scope-service';
 import type { BackendClient } from '../backend/backend-client';
 import type { ExtensionState } from '../core/extension-state';
 import type { OutputLogger } from '../infrastructure/output-logger';
+import type { WorkspaceScopeService } from './workspace-scope-service';
 import type * as vscode from 'vscode';
 
 /** What `registerConnectedCommands` needs from `activate`. */

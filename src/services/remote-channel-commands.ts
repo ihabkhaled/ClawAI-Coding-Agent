@@ -10,10 +10,10 @@ import { channelMessageBlock, safeChannelUrl, singleLine } from '../core/channel
 
 import { ChannelInboxWatcher } from './channel-inbox-watcher';
 
-import type { RemoteChannelDependencies } from './remote-channel-commands.types';
 import type { BackendClient } from '../backend/backend-client';
 import type { ChannelMessage } from '../backend/channel.types';
 import type { ExtensionState } from '../core/extension-state';
+import type { RemoteChannelDependencies } from './remote-channel-commands.types';
 
 function surface(dependencies: RemoteChannelDependencies, message: ChannelMessage): void {
   const sendToChat = vscode.l10n.t('Send to Chat');
@@ -150,11 +150,9 @@ export function registerRemoteChannelCommands(
   });
   if (dependencies.enabled()) watcher.start();
   return [
-    {
-      dispose: () => {
-        watcher.dispose();
-      },
-    },
+    new vscode.Disposable(() => {
+      watcher.dispose();
+    }),
     vscode.commands.registerCommand('clawAI.runRemoteJob', () => runRemoteJob(dependencies)),
     vscode.commands.registerCommand('clawAI.showChannelWebhook', () =>
       showWebhook(dependencies, watcher),

@@ -19,11 +19,11 @@ import {
 import { assertScopedCall } from './write-scope';
 import { captureWriteGuard, enforceGuard } from './write-scope-guard';
 
+import type { ToolLimits } from '../headless/headless-main.types';
 import type { AgentToolCall } from './agent-sdk.types';
 import type { CommandTool } from './command-tool.types';
 import type { NotesTool } from './notes-tool.types';
 import type { WorkspaceToolExtras } from './workspace-tool-extras.types';
-import type { ToolLimits } from '../headless/headless-main.types';
 
 /**
  * Runs one workspace tool call on this machine, inside `limits.workspace`.

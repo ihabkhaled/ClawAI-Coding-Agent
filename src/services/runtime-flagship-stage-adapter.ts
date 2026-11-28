@@ -10,8 +10,6 @@ import { subAgentGraphSchema } from '../core/multi-agent-dag';
 import { FLAGSHIP_STAGE_ROLES, FLAGSHIP_STAGE_TOOLS } from './runtime-flagship-stage.constants';
 import { affectedReplanTaskIds } from './runtime-recovery-policy';
 
-import type { FlagshipStagePort } from './flagship-delivery-service';
-import type { IntegrationReceipt } from './integration-coordinator-service';
 import type {
   FlagshipRequest,
   FlagshipSnapshot,
@@ -21,6 +19,8 @@ import type {
 import type { ResolvedFlagshipStage } from '../core/flagship-stage';
 import type { SubAgentGraph, SubAgentOutcome, SubAgentTask } from '../core/multi-agent-dag';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { FlagshipStagePort } from './flagship-delivery-service';
+import type { IntegrationReceipt } from './integration-coordinator-service';
 
 export interface FlagshipSubAgentPort {
   execute(
@@ -58,10 +58,9 @@ export class CoordinatedFlagshipSubAgentPort implements FlagshipSubAgentPort {
 
   async execute(
     task: SubAgentTask,
-    steering: () => readonly string[],
+    _steering: () => readonly string[],
     signal: AbortSignal,
   ): Promise<SubAgentOutcome> {
-    void steering;
     const outcomes = await this.coordinator.run(
       {
         graphId: `flagship-graph-${task.taskId}`.slice(0, 200),

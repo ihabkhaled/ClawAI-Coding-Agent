@@ -12,7 +12,6 @@ import {
 import { marketplaceCatalogSchema } from '../core/plugin-marketplace.schema';
 import { signatureOutcome, verifyEntrySignature } from '../core/plugin-signature';
 
-import type { OpenedMarketplace, PluginMarketplaceDependencies } from './plugin-marketplace.types';
 import type { PluginBundleFile, PluginScope } from '../core/plugin-manifest.types';
 import type {
   MarketplaceEntry,
@@ -21,6 +20,7 @@ import type {
   ReadableMarketplaceLocation,
 } from '../core/plugin-marketplace.types';
 import type { SignatureVerdict } from '../core/plugin-signature.types';
+import type { OpenedMarketplace, PluginMarketplaceDependencies } from './plugin-marketplace.types';
 
 const decoder = new TextDecoder('utf-8', { fatal: false });
 

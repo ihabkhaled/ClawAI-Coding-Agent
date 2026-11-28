@@ -14,8 +14,6 @@ import { isContainedRelativePath } from '../core/plugin-path';
 import { PLUGIN_PROVENANCE_FILE } from '../core/plugin-signature.constants';
 import { pluginProvenanceSchema } from '../core/plugin-signature.schema';
 
-import type { PluginFileSystemPort, PluginProvenance, PluginRoots } from './plugin-store.types';
-import type { SkillFile } from './skill-catalog.types';
 import type {
   InstalledPlugin,
   InvalidPlugin,
@@ -25,6 +23,8 @@ import type {
   PluginState,
   PluginSwitches,
 } from '../core/plugin-manifest.types';
+import type { PluginFileSystemPort, PluginProvenance, PluginRoots } from './plugin-store.types';
+import type { SkillFile } from './skill-catalog.types';
 
 /** Markdown files larger than this are not an instruction, and are skipped. */
 const MAX_MARKDOWN_BYTES = 128 * 1024;

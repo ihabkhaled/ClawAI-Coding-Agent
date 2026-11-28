@@ -1,6 +1,6 @@
-import type { OutputLogger } from './output-logger';
 import type { EvidenceBundle } from '../core/evidence-bundle';
 import type { ObservabilitySinkPort, ObservabilitySpan } from '../services/observability-service';
+import type { OutputLogger } from './output-logger';
 
 export class VscodeObservabilitySink implements ObservabilitySinkPort {
   constructor(private readonly logger: OutputLogger) {}

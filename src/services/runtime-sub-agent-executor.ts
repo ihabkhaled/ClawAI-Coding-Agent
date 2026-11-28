@@ -22,14 +22,6 @@ import {
 
 import { RuntimeRunService } from './runtime-run-service';
 
-import type { RuntimeEventStreamService } from './runtime-event-stream-service';
-import type {
-  RuntimeToolExecutionOutput,
-  RuntimeToolExecutorPort,
-  RuntimeToolPolicyDecision,
-  RuntimeToolPolicyPort,
-} from './runtime-tool-dispatcher';
-import type { SubAgentExecutionPort } from './sub-agent-coordinator-service';
 import type { BackendClient } from '../backend/backend-client';
 import type { AgentBoard } from '../core/agent-board.types';
 import type { AgentMailbox } from '../core/agent-mailbox.types';
@@ -39,6 +31,14 @@ import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-too
 import type { SubAgentDefinition } from '../core/sub-agent-definitions';
 import type { ParentRunContext } from '../core/sub-agent-inheritance.types';
 import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
+import type { RuntimeEventStreamService } from './runtime-event-stream-service';
+import type {
+  RuntimeToolExecutionOutput,
+  RuntimeToolExecutorPort,
+  RuntimeToolPolicyDecision,
+  RuntimeToolPolicyPort,
+} from './runtime-tool-dispatcher';
+import type { SubAgentExecutionPort } from './sub-agent-coordinator-service';
 
 export interface RuntimeSubAgentDependencies {
   readonly backend: () => BackendClient;

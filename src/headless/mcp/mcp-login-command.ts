@@ -10,9 +10,9 @@ import { mcpOf } from '../headless-inputs';
 import { createMcpOAuth, tokenFileFor } from './mcp-login-service';
 import { fileTokenStore } from './mcp-token-file';
 
-import type { HeadlessLogin, McpLoginContext } from './mcp-login.types';
 import type { McpHttpServerConfig } from '../../core/mcp/mcp.types';
 import type { HeadlessEnvironment, HeadlessIo } from '../headless-args.types';
+import type { HeadlessLogin, McpLoginContext } from './mcp-login.types';
 
 /** The named server as a server that can sign in, or the sentence saying why it cannot. */
 async function loginServer(login: HeadlessLogin): Promise<McpHttpServerConfig | string> {

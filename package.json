@@ -2,7 +2,7 @@
   "name": "clawai-coding-agent",
   "displayName": "%extension.displayName%",
   "description": "%extension.description%",
-  "version": "1.115.0",
+  "version": "1.116.0",
   "publisher": "clawai",
   "license": "MIT",
   "icon": "resources/icon.png",
@@ -1212,16 +1212,22 @@
     "@types/cross-spawn": "^6.0.6",
     "@types/node": "^24.0.0",
     "@types/vscode": "^1.98.0",
-    "@vitest/coverage-v8": "5.0.1",
+    "@vitest/coverage-v8": "5.1.2",
     "@vscode/test-electron": "^3.1.0",
     "@vscode/vsce": "^3.9.2",
     "esbuild": "^0.28.1",
     "eslint": "^9.39.4",
-    "eslint-plugin-import-x": "^4.17.1",
+    "eslint-plugin-import-x": "^4.18.1",
     "eslint-plugin-security": "^4.0.1",
     "prettier": "^3.9.6",
     "typescript": "6.0.3",
-    "typescript-eslint": "^8.65.0",
-    "vitest": "5.0.1"
+    "typescript-eslint": "^8.74.0",
+    "vitest": "5.1.2"
+  },
+  "overrides": {
+    "@vscode/vsce": {
+      "glob": "^14.0.6",
+      "minimatch": "^11.0.9"
+    }
   }
 }

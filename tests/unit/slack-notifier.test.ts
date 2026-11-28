@@ -12,8 +12,11 @@ import { ExtensionState } from '../../src/core/extension-state';
 import { isSlackWebhookUrl, slackMessageBody } from '../../src/core/slack-notification';
 import { SLACK_WEBHOOK_SECRET_KEY } from '../../src/core/slack-notification.constants';
 import { SlackNotifier } from '../../src/services/slack-notifier';
+import { dashed } from '../helpers/fake-secrets';
 
 import type { ExtensionSnapshot } from '../../src/core/extension-state';
+
+const FAKE_KEY = dashed('sk', 'live', '123');
 
 const WEBHOOK = 'https://hooks.slack.com/services/T000/B000/secretpart';
 
@@ -59,9 +62,9 @@ describe('isSlackWebhookUrl', () => {
   });
 
   it('redacts and bounds the message body', () => {
-    const body = slackMessageBody(`failed token=sk-live-123 ${'x'.repeat(600)}`);
+    const body = slackMessageBody(`failed token=${FAKE_KEY} ${'x'.repeat(600)}`);
 
-    expect(body.text).not.toContain('sk-live-123');
+    expect(body.text).not.toContain(FAKE_KEY);
     expect(body.text.length).toBeLessThanOrEqual(400);
   });
 });

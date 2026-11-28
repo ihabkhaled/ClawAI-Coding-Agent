@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 
-import type { BrowserNavigationApprovalPort } from './browser-controller-service';
-import type { DatabaseProfileMetadata } from './database-profile-vault';
 import type { ApprovalBroker } from '../core/approval-broker';
 import type { DatabaseStatementClass } from '../core/database-statement-policy';
+import type { BrowserNavigationApprovalPort } from './browser-controller-service';
+import type { DatabaseProfileMetadata } from './database-profile-vault';
 
 /**
  * The approval dialogs the runtime studio's side-effecting services show.

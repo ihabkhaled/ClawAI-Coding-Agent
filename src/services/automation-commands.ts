@@ -5,10 +5,10 @@ import { workflowTemplateRunPrompt } from '../core/workflow-template';
 
 import { savedWorkflowPicks } from './saved-workflow-picks';
 
-import type { ScheduledTaskService } from './scheduled-task-service';
 import type { SavedWorkflow } from '../core/saved-workflow';
 import type { ScheduledTask } from '../core/scheduled-task.types';
 import type { WorkflowTemplate } from '../core/workflow-template';
+import type { ScheduledTaskService } from './scheduled-task-service';
 
 export interface AutomationDependencies {
   readonly schedules: () => ScheduledTaskService;

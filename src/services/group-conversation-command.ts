@@ -6,8 +6,8 @@ import {
   threadGroupNameSchema,
 } from '../core/thread-group';
 
-import type { GroupChoice, GroupConversationDependencies } from './group-conversation.types';
 import type { ChatThread } from '../backend/contracts';
+import type { GroupChoice, GroupConversationDependencies } from './group-conversation.types';
 
 function threadLabel(thread: ChatThread): string {
   const title = thread.title?.trim();

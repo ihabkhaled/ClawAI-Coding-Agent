@@ -162,7 +162,7 @@ export const chatAttachmentSchema = z
       .max(255)
       .refine(isSafeFilename)
       .refine((value) => !isSecretBearingFilename(value), {
-        message: 'This file looks like it holds a secret and cannot be attached.',
+        error: 'This file looks like it holds a secret and cannot be attached.',
       }),
     mimeType: z
       .string()
@@ -170,7 +170,7 @@ export const chatAttachmentSchema = z
       .min(1)
       .max(100)
       .refine((value) => ALLOWED_ATTACHMENT_MIME_TYPES.has(value), {
-        message: 'This file type is not supported.',
+        error: 'This file type is not supported.',
       }),
     sizeBytes: z.number().int().positive().max(MAX_ATTACHMENT_BYTES),
   })

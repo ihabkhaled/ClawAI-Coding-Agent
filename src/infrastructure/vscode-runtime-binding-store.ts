@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import type { RuntimeBindingStorePort } from './backend-runtime-transport';
 import type { RuntimeCommandBinding } from '../backend/backend-client.types';
+import type { RuntimeBindingStorePort } from './backend-runtime-transport';
 export interface RuntimeBindingMemento {
   get(key: string): unknown;
   update(key: string, value: unknown): Thenable<void>;

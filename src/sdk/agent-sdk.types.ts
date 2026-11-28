@@ -1,8 +1,8 @@
-import type { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
-import type { VisionImage } from './vision-tool.types';
 import type { HeadlessOutcome } from '../core/headless-outcome.types';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
 import type { HeadlessRunRequest } from '../headless/headless-transport.types';
+import type { AGENT_SDK_DEFAULTS } from './agent-sdk.constants';
+import type { VisionImage } from './vision-tool.types';
 
 /** `off`: the thread ignores personal memories. `account-default`: left as the account has it. */
 export type AgentMemoryMode = 'off' | 'account-default';

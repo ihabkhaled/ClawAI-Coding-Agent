@@ -1,16 +1,3 @@
-import type { AgentTaskService } from './agent-task-service';
-import type { DevelopmentServiceManager } from './development-service-manager';
-import type { ElevationBrokerService } from './elevation-broker-service';
-import type { EvidenceBundleService } from './evidence-bundle-service';
-import type { FileTransactionService } from './file-transaction-service';
-import type { FindingsService } from './findings-service';
-import type { FlagshipDeliveryService } from './flagship-delivery-service';
-import type { IntegrationCoordinatorService } from './integration-coordinator-service';
-import type { ProcessSupervisorService } from './process-supervisor-service';
-import type { RunJournalService } from './run-journal-service';
-import type { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
-import type { WebResearchPort } from './web-research.types';
-import type { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 import type { ArtifactPublisherPort } from '../backend/artifact-client';
 import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { RemoteJobPort } from '../backend/remote-job.types';
@@ -27,6 +14,19 @@ import type { RunGoalPort } from '../infrastructure/goal-tool-executor.types';
 import type { SchedulePort } from '../infrastructure/schedule-tool-executor.types';
 import type { VscodeFileTransactionAdapter } from '../infrastructure/vscode-file-transaction-adapter';
 import type { DeliveredArtifactSink } from '../infrastructure/vscode-filesystem-tool-executor';
+import type { AgentTaskService } from './agent-task-service';
+import type { DevelopmentServiceManager } from './development-service-manager';
+import type { ElevationBrokerService } from './elevation-broker-service';
+import type { EvidenceBundleService } from './evidence-bundle-service';
+import type { FileTransactionService } from './file-transaction-service';
+import type { FindingsService } from './findings-service';
+import type { FlagshipDeliveryService } from './flagship-delivery-service';
+import type { IntegrationCoordinatorService } from './integration-coordinator-service';
+import type { ProcessSupervisorService } from './process-supervisor-service';
+import type { RunJournalService } from './run-journal-service';
+import type { SubAgentCoordinatorService } from './sub-agent-coordinator-service';
+import type { WebResearchPort } from './web-research.types';
+import type { WorkspaceIntelligenceService } from './workspace-intelligence-service';
 
 export interface RuntimeStudioAdvancedTools {
   readonly evidence: EvidenceBundleService;

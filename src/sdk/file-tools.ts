@@ -17,8 +17,8 @@ import { listFiles, statFileTool } from './file-tools-read';
 import { globFiles, searchFiles } from './file-tools-search';
 import { FILE_UPDATE_MAX_BYTES } from './file-tools.constants';
 
-import type { FileToolArguments } from './file-tools.types';
 import type { PdfTextPort } from '../backend/pdf-text-client';
+import type { FileToolArguments } from './file-tools.types';
 
 export { requirePath } from './file-tools-args';
 

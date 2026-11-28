@@ -30,18 +30,18 @@ export type {
   RuntimeRunTransportPort,
 } from './runtime-run-service.types';
 
-import type { RuntimeRunRecovery } from './runtime-run-recovery';
-import type {
-  RuntimeRunServiceDependencies,
-  RuntimeRunStart,
-  RuntimeRunStartReceipt,
-} from './runtime-run-service.types';
 import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
 import type {
   Continuation,
   ToolInvocation,
   ToolResult,
 } from '../core/runtime/runtime-tool-contracts';
+import type { RuntimeRunRecovery } from './runtime-run-recovery';
+import type {
+  RuntimeRunServiceDependencies,
+  RuntimeRunStart,
+  RuntimeRunStartReceipt,
+} from './runtime-run-service.types';
 
 interface ActiveRuntimeRun {
   readonly controller: AbortController;

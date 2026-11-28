@@ -6,8 +6,8 @@ import {
   SERVER_BUDGET_EXHAUSTED_TEXT,
 } from './server-budget.constants';
 
-import type { AgentToolkit } from './agent-sdk.types';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
+import type { AgentToolkit } from './agent-sdk.types';
 
 /** A `run.failed` event whose reason is the server budget running out. */
 export function isServerBudgetEvent(event: HeadlessStreamEvent): boolean {

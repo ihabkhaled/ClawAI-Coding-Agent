@@ -1,7 +1,7 @@
 import * as vscode from 'vscode';
 
-import type { UserNotificationPort } from './notify-user-tool-executor';
 import type { UserNotificationInput } from '../core/user-notification';
+import type { UserNotificationPort } from './notify-user-tool-executor';
 
 /**
  * Delivers a notification through VS Code's own notification surface.

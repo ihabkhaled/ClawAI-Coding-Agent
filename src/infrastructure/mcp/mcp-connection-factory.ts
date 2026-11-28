@@ -4,9 +4,9 @@ import { McpClient } from './mcp-client';
 import { McpHttpTransport } from './mcp-http-transport';
 import { McpStdioTransport } from './mcp-stdio-transport';
 
+import type { McpServerConfig, McpStdioServerConfig } from '../../core/mcp/mcp.types';
 import type { McpConnectionDependencies } from './mcp-connection-factory.types';
 import type { McpTokenProvider } from './mcp-transport.types';
-import type { McpServerConfig, McpStdioServerConfig } from '../../core/mcp/mcp.types';
 
 const anonymous: McpTokenProvider = {
   current: () => Promise.resolve(undefined),

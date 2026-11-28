@@ -39,6 +39,8 @@ import { describeTools } from './tool-alias';
 import { spentToolAllowance } from './tool-allowance';
 import { toolsProfileProblem } from './tools-profile';
 
+import type { HeadlessOutcome } from '../core/headless-outcome.types';
+import type { StuckInfo } from '../core/repetition-guard.types';
 import type { AgentBudgetField, AgentRunResult } from './agent-sdk.types';
 import type { AgentTeam } from './agent-team-tool.types';
 import type {
@@ -52,8 +54,6 @@ import type { NotesStore } from './notes-tool.types';
 import type { RunBudgetTrip } from './run-budget.types';
 import type { PlanStore } from './task-plan-tool.types';
 import type { VisionImage } from './vision-tool.types';
-import type { HeadlessOutcome } from '../core/headless-outcome.types';
-import type { StuckInfo } from '../core/repetition-guard.types';
 
 /** What one agent remembers between runs: its thread, its tool list, and images not yet sent. */
 interface AgentSession {

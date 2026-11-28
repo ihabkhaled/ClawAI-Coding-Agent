@@ -1,11 +1,11 @@
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { GitToolPort } from './git-tool-executor.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { GitToolPort } from './git-tool-executor.types';
 
 export const gitToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

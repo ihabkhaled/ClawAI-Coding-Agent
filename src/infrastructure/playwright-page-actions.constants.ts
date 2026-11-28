@@ -11,8 +11,8 @@ import {
   uploadAction,
 } from './playwright-page-actions';
 
-import type { PageActionHandler } from './playwright-page-actions.types';
 import type { BrowserOperation } from '../core/browser-operation';
+import type { PageActionHandler } from './playwright-page-actions.types';
 
 /** The page actions the Playwright driver performs, keyed by operation name. */
 export const PAGE_ACTION_HANDLERS: Partial<

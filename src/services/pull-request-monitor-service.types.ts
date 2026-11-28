@@ -1,6 +1,6 @@
+import type { PullRequestCheckSummary, WatchedPullRequest } from '../core/pull-request.types';
 import type { PullRequestFailureReport } from './pull-request-service.types';
 import type { TimerPort } from './scheduled-task-service.types';
-import type { PullRequestCheckSummary, WatchedPullRequest } from '../core/pull-request.types';
 
 export interface PullRequestChecksPort {
   checks(rootKey: string, number: number, signal?: AbortSignal): Promise<PullRequestCheckSummary>;

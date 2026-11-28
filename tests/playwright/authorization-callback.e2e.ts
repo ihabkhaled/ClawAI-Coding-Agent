@@ -38,12 +38,12 @@ test('script-opened callback popup closes when requested', async ({ page }) => {
     await popup.waitForLoadState();
     const closed = popup.waitForEvent('close');
     // The click is what closes the page, so Playwright's usual post-click wait
-    // has nothing left to inspect and reports the target as gone. `noWaitAfter`
-    // says that is expected; the close event is the assertion that matters, and
-    // a click that lands as the page disappears is a pass, not an error.
+    // has nothing left to inspect and reports the target as gone. The close event
+    // is the assertion that matters, and a click that lands as the page
+    // disappears is a pass, not an error.
     await popup
       .getByRole('button', { name: 'Close this tab' })
-      .click({ noWaitAfter: true })
+      .click()
       .catch(() => undefined);
     await closed;
     expect(popup.isClosed()).toBe(true);

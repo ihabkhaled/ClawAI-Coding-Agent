@@ -3,13 +3,13 @@ import { z } from 'zod';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 import { hasUncommittedChanges, planSessionWorktree } from '../core/session-worktree';
 
-import type { GitToolPort } from './git-tool-executor.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { SessionWorktree } from '../core/session-worktree.types';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { GitToolPort } from './git-tool-executor.types';
 
 const BASE_ROOT_KEY = 'workspace-1';
 

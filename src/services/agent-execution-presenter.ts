@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 
-import type { AgentRunService } from './agent-run-service';
-import type { AgentRunInput, AgentRunResult } from './agent-run-service.types';
 import type { ExtensionState } from '../core/extension-state';
 import type { ChatViewProvider } from '../webview/chat-view-provider';
+import type { AgentRunService } from './agent-run-service';
+import type { AgentRunInput, AgentRunResult } from './agent-run-service.types';
 
 function editResultContent(result: AgentRunResult): string {
   const summary =

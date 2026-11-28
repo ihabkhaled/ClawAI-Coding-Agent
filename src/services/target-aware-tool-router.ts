@@ -1,9 +1,9 @@
+import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { ExecutionTargetRegistry } from './execution-target-registry';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from './runtime-tool-dispatcher';
-import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 
 export class TargetAwareToolRouter implements RuntimeToolExecutorPort {
   constructor(

@@ -5,8 +5,8 @@ import {
   OTLP_TIMEOUT_MS,
 } from '../core/otlp-export.constants';
 
-import type { OutputLogger } from './output-logger';
 import type { OtlpEndpoint } from '../core/otlp-export.types';
+import type { OutputLogger } from './output-logger';
 
 function wait(milliseconds: number): Promise<void> {
   return new Promise((resolve) => {

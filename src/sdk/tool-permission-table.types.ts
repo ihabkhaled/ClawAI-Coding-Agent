@@ -1,7 +1,7 @@
-import type { AgentPermissionMode } from './permission-modes.types';
-import type { AgentToolCategory } from './workspace-toolkit.types';
 import type { PermissionMode } from '../core/permission-policy.types';
 import type { OperationClassification } from '../core/runtime/runtime-operation-classification';
+import type { AgentPermissionMode } from './permission-modes.types';
+import type { AgentToolCategory } from './workspace-toolkit.types';
 
 /** What a mode does with one call: run it, put it to the approver, or never offer it. */
 export type ToolDecision = 'allow' | 'ask' | 'deny';

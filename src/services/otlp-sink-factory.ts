@@ -3,10 +3,10 @@ import { OtlpObservabilitySink } from '../infrastructure/otlp-observability-sink
 
 import { startTelemetryHeaders } from './telemetry-headers-command';
 
+import type { OutputLogger } from '../infrastructure/output-logger';
 import type { RuntimeConfiguration } from './configuration-service';
 import type { ObservabilitySinkPort } from './observability-service';
 import type { TelemetryHeaderContext } from './telemetry-header-store.types';
-import type { OutputLogger } from '../infrastructure/output-logger';
 
 /**
  * The remote span sink, when the workspace has asked for one.

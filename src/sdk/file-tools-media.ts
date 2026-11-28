@@ -19,10 +19,10 @@ import {
   TRANSCRIBE_BUSY_WAIT_MS,
 } from './media-transcribe.constants';
 
-import type { FileToolArguments } from './file-tools.types';
-import type { MediaTranscribeInput, MediaTranscript } from './media-transcribe.types';
 import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { TranscribableMediaKind } from '../core/document-read-format.types';
+import type { FileToolArguments } from './file-tools.types';
+import type { MediaTranscribeInput, MediaTranscript } from './media-transcribe.types';
 
 /** What a transcription read returns: the words, and what it cost in plain language. */
 export interface FileTranscriptResult {

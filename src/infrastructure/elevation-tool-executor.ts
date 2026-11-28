@@ -6,7 +6,6 @@ import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-sche
 
 import { runCommandSpec } from './bounded-command-runner';
 
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ElevationRecipe } from '../core/elevation-contract';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
@@ -17,6 +16,7 @@ import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 
 const inputSchema = z.object({ recipe: z.unknown() }).strict();
 

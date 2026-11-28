@@ -7,13 +7,13 @@ import {
   newestAnchor,
 } from '../core/conversation-rewind';
 
-import type { ConversationRewindDependencies } from './conversation-rewind-command.types';
 import type { Checkpoint } from '../core/checkpoint.types';
 import type {
   ConversationAnchor,
   RewindRequest,
   RewindScope,
 } from '../core/conversation-rewind.types';
+import type { ConversationRewindDependencies } from './conversation-rewind-command.types';
 
 function resolveThread(
   dependencies: ConversationRewindDependencies,

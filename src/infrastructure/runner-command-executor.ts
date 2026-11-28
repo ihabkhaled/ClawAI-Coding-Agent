@@ -5,8 +5,8 @@ import {
   RUNNER_COMMAND_TARGET_ID,
 } from './runner-command-executor.constants';
 
-import type { CommandSandboxPort } from './command-launch-plan.types';
 import type { RemoteCommandLoopPorts } from '../services/remote-command-loop.types';
+import type { CommandSandboxPort } from './command-launch-plan.types';
 
 /**
  * Runs a command queued for this machine, confined the way the person asked.

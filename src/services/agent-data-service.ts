@@ -1,8 +1,8 @@
-import type { ConfigurationService } from './configuration-service';
-import type { ModelService } from './model-service';
 import type { BackendClient } from '../backend/backend-client';
 import type { AccountEpoch } from '../core/account-epoch';
 import type { ExtensionState } from '../core/extension-state';
+import type { ConfigurationService } from './configuration-service';
+import type { ModelService } from './model-service';
 
 function beginRefresh(epoch?: AccountEpoch): number | undefined {
   epoch?.invalidate();

@@ -7,14 +7,14 @@ import { isBackendSessionBoundaryError } from '../backend/backend-errors';
 
 import { currentModelSelection, modelSelectionLabel } from './agent-coordinator-prompts';
 
+import type { ExtensionState } from '../core/extension-state';
+import type { OutputLogger } from '../infrastructure/output-logger';
 import type { RequestAdmission } from './agent-coordinator.types';
 import type { ChatService } from './chat-service';
 import type { ConfigurationService } from './configuration-service';
 import type { GenerationScheduler } from './generation-scheduler';
 import type { RequestAdmissionService } from './request-admission-service';
 import type { WorkspaceContextService } from './workspace-context-service';
-import type { ExtensionState } from '../core/extension-state';
-import type { OutputLogger } from '../infrastructure/output-logger';
 
 function linkedSignal(primary: AbortSignal, boundary: AbortSignal) {
   const controller = new AbortController();

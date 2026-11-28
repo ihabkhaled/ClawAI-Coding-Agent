@@ -2,9 +2,9 @@ import { shellDenyProblem } from '../sdk/shell-tool';
 
 import { splitPatterns } from './headless-args-extras';
 
-import type { HeadlessInvocation } from './headless-args.types';
 import type { AgentPermissionMode } from '../sdk/permission-modes.types';
 import type { AgentToolCategory } from '../sdk/workspace-toolkit.types';
+import type { HeadlessInvocation } from './headless-args.types';
 
 type Values = ReadonlyMap<string, readonly string[]>;
 

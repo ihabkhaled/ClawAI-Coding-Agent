@@ -10,9 +10,9 @@ import {
 } from './repetition-guard.constants';
 import { SHELL_TOOL_NAME } from './shell-tool.constants';
 
+import type { RepetitionCallKind, RepetitionGuardOptions } from '../core/repetition-guard.types';
 import type { AgentToolCall, AgentToolkit } from './agent-sdk.types';
 import type { RepetitionGuard } from './repetition-guard.types';
-import type { RepetitionCallKind, RepetitionGuardOptions } from '../core/repetition-guard.types';
 
 export { repetitionKey, repetitionTarget } from '../core/repetition-guard';
 

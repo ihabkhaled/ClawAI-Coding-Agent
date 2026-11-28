@@ -5,12 +5,12 @@ import { marketplaceAllowed } from '../core/plugin-marketplace';
 import { pluginFailureMessage } from './plugin-failure-message';
 import { verdictLabel } from './plugin-labels';
 
+import type { PluginScope } from '../core/plugin-manifest.types';
 import type {
   MarketplaceEntryItem,
   MarketplacePickItem,
   PluginCommandDependencies,
 } from './plugin-commands.types';
-import type { PluginScope } from '../core/plugin-manifest.types';
 
 /** Asks for a scope; the workspace is offered only when a folder is open. */
 export async function pickScope(

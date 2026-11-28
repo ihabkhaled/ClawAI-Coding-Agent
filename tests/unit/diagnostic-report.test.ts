@@ -7,6 +7,9 @@ import {
   type DiagnosticReportInput,
 } from '../../src/core/diagnostic-report';
 import { sandboxGuarantees } from '../../src/core/sandbox-capability';
+import { dashed } from '../helpers/fake-secrets';
+
+const FAKE_KEY = dashed('sk', 'live', '1234567890');
 
 const input: DiagnosticReportInput = {
   extensionVersion: '0.89.0',
@@ -62,10 +65,10 @@ describe('buildDiagnosticReport', () => {
   it('redacts a credential that reached the last error', () => {
     const report = buildDiagnosticReport({
       ...input,
-      lastError: 'Request failed: authorization: Bearer sk-live-1234567890',
+      lastError: `Request failed: authorization: Bearer ${FAKE_KEY}`,
     });
 
-    expect(report).not.toContain('sk-live-1234567890');
+    expect(report).not.toContain(FAKE_KEY);
     expect(report).toContain('[REDACTED]');
   });
 

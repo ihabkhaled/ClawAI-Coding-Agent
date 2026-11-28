@@ -2,9 +2,9 @@ import { WebResearchOperations, webResearchToolDefinition } from '../core/web-re
 
 import { WEB_RESEARCH_MODE_OPERATIONS } from './web-toolkit.constants';
 
-import type { AgentToolkit } from './agent-sdk.types';
 import type { ResearchMode } from '../core/research-mode';
 import type { WebResearchPort } from '../core/web-research.types';
+import type { AgentToolkit } from './agent-sdk.types';
 
 /**
  * The web tool, offered only as far as the research mode allows.

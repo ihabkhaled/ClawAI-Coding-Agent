@@ -4,16 +4,16 @@ import { normalizeBackendUrl } from '../core/configuration';
 
 import { AuthorizationCancelledError } from './browser-authorization-service';
 
-import type { BrowserAuthorizationService } from './browser-authorization-service';
-import type { ChatService } from './chat-service';
-import type { ConfigurationService, RuntimeConfiguration } from './configuration-service';
-import type { ModelService } from './model-service';
-import type { RuntimeProtocolService } from './runtime-protocol-service';
 import type { BackendClient } from '../backend/backend-client';
 import type { ExtensionState } from '../core/extension-state';
 import type { SessionVault } from '../core/session-vault';
 import type { OutputLogger } from '../infrastructure/output-logger';
 import type { ChatViewProvider } from '../webview/chat-view-provider';
+import type { BrowserAuthorizationService } from './browser-authorization-service';
+import type { ChatService } from './chat-service';
+import type { ConfigurationService, RuntimeConfiguration } from './configuration-service';
+import type { ModelService } from './model-service';
+import type { RuntimeProtocolService } from './runtime-protocol-service';
 
 export class AgentConnectionService {
   private committingBackendUrl: string | null = null;

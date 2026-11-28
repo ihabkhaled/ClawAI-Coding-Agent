@@ -1,7 +1,7 @@
-import type { PluginMarketplaceService } from './plugin-marketplace-service';
-import type { PluginStore } from './plugin-store';
 import type { InstalledPlugin } from '../core/plugin-manifest.types';
 import type { MarketplaceEntry } from '../core/plugin-marketplace.types';
+import type { PluginMarketplaceService } from './plugin-marketplace-service';
+import type { PluginStore } from './plugin-store';
 import type * as vscode from 'vscode';
 
 /** What the plugin commands need to reach. */

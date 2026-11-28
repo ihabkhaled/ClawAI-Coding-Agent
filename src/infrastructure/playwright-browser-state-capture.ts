@@ -1,7 +1,7 @@
 import { MAX_BROWSER_PAGE_READ_CHARS } from '../core/browser-reference.constants';
 
-import type { LiveBrowserPage } from './browser-live-pages.types';
 import type { BrowserPageCapture } from '../core/browser-reference.types';
+import type { LiveBrowserPage } from './browser-live-pages.types';
 
 /**
  * Reads what the user is looking at in the agent's browser page.

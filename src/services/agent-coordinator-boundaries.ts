@@ -8,10 +8,6 @@ import {
   resetAccountScopedState,
 } from './agent-coordinator-runtime';
 
-import type { AttachmentRequestService } from './attachment-request-service';
-import type { ConversationSessionService } from './conversation-session-service';
-import type { GenerationScheduler } from './generation-scheduler';
-import type { VscodeRuntimeStudio } from './vscode-runtime-studio';
 import type { BackendClient } from '../backend/backend-client';
 import type { AccountEpoch } from '../core/account-epoch';
 import type { ApprovalBroker } from '../core/approval-broker';
@@ -19,6 +15,10 @@ import type { ExtensionState } from '../core/extension-state';
 import type { GenerationThreadRegistry } from '../core/generation-thread-registry';
 import type { OutputLogger } from '../infrastructure/output-logger';
 import type { ChatViewProvider } from '../webview/chat-view-provider';
+import type { AttachmentRequestService } from './attachment-request-service';
+import type { ConversationSessionService } from './conversation-session-service';
+import type { GenerationScheduler } from './generation-scheduler';
+import type { VscodeRuntimeStudio } from './vscode-runtime-studio';
 
 export class AgentCoordinatorBoundaries {
   constructor(

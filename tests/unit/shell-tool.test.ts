@@ -8,6 +8,7 @@ import { afterEach, describe, expect, it } from 'vitest';
 import { systemCommandRuntime } from '../../src/sdk/command-tool';
 import { availableShells, findDefaultShell, findShell } from '../../src/sdk/shell-detect';
 import { createShellTool } from '../../src/sdk/shell-tool';
+import { dashed } from '../helpers/fake-secrets';
 
 import { cleanUpWorkspaces, eventually, isAlive, workspace } from './sdk-command-tool.helpers';
 
@@ -132,7 +133,7 @@ describe.runIf(has('bash'))('workspace.shell in bash', () => {
       ...runtime,
       environment: {
         ...process.env,
-        ANTHROPIC_API_KEY: '<fake-secret-removed>',
+        ANTHROPIC_API_KEY: dashed('sk', 'live', 'should', 'not', 'leak', '0123456789'),
         MY_SERVICE_TOKEN: 'tok-should-not-leak',
         CLAW_PASSWORD: 'pw-should-not-leak',
       },

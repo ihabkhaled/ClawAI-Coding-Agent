@@ -16,16 +16,16 @@ import {
 } from '../core/pull-request-actions.constants';
 
 import type {
-  PullRequestActionsDependencies,
-  PullRequestViewResult,
-} from './pull-request-actions-service.types';
-import type {
   PullRequestMergeMethod,
   PullRequestMergeResult,
   PullRequestReviewEvent,
   PullRequestReviewResult,
   PullRequestView,
 } from '../core/pull-request-actions.types';
+import type {
+  PullRequestActionsDependencies,
+  PullRequestViewResult,
+} from './pull-request-actions-service.types';
 
 const GH_MISSING =
   'The GitHub CLI (gh) is not installed or not signed in. Run `gh auth login`, then try again.';

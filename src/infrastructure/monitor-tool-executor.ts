@@ -7,12 +7,12 @@ import {
 import { MAX_MONITOR_MS } from '../core/monitor-condition.constants';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { MonitorPort } from './monitor-tool-executor.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { MonitorPort } from './monitor-tool-executor.types';
 
 export const monitorToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

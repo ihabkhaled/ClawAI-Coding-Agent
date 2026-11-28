@@ -9,6 +9,7 @@ import { readRuntimeEvents } from './runtime-event-stream';
 import { RuntimeHttpError } from './runtime-http-error';
 import { TokenSession } from './token-session';
 
+import type { VisionImage } from '../sdk/vision-tool.types';
 import type { HeadlessStreamEvent } from './headless-session.types';
 import type {
   HeadlessConnectorModel,
@@ -17,7 +18,6 @@ import type {
 } from './headless-transport.types';
 import type { RetryContext } from './retry-policy.types';
 import type { SessionTokens } from './token-session.types';
-import type { VisionImage } from '../sdk/vision-tool.types';
 
 export function sha256(text: string): string {
   return `sha256:${createHash('sha256').update(text).digest('hex')}`;

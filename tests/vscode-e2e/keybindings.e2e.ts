@@ -55,7 +55,8 @@ async function pressAndObserve(key: string): Promise<string> {
 
   const picker = await session.window
     .locator('.quick-input-widget')
-    .isVisible({ timeout: 2_000 })
+    .waitFor({ state: 'visible', timeout: 2_000 })
+    .then(() => true)
     .catch(() => false);
   if (picker) {
     await session.window.keyboard.press('Escape');

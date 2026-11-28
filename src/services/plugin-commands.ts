@@ -4,12 +4,12 @@ import { pluginFailureMessage } from './plugin-failure-message';
 import { contributionSummary, pluginStateDescription, scopeLabel } from './plugin-labels';
 import { browsePluginMarketplaces, pickScope } from './plugin-marketplace-commands';
 
+import type { InstalledPlugin } from '../core/plugin-manifest.types';
 import type {
   PluginActionItem,
   PluginCommandDependencies,
   PluginPickItem,
 } from './plugin-commands.types';
-import type { InstalledPlugin } from '../core/plugin-manifest.types';
 
 function pluginItem(plugin: InstalledPlugin): PluginPickItem {
   return {

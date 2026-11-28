@@ -19,6 +19,7 @@ import {
 import { createWriteScope } from './write-scope';
 import { scopeCommandTool } from './write-scope-audit';
 
+import type { JobSecretEnvironment } from '../core/job-secrets.types';
 import type { AgentToolCall, AgentToolkit } from './agent-sdk.types';
 import type { CommandTool } from './command-tool.types';
 import type { ShellTool } from './shell-tool.types';
@@ -28,7 +29,6 @@ import type {
   AgentToolCategory,
   WorkspaceMemory,
 } from './workspace-toolkit.types';
-import type { JobSecretEnvironment } from '../core/job-secrets.types';
 
 /**
  * The built-in toolkit: files, a bounded command, and read-only git, all

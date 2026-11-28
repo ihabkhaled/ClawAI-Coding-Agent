@@ -1,8 +1,8 @@
 import { describeHeadlessOutcome } from '../core/headless-outcome';
 import { redactText } from '../core/redaction';
 
-import type { HeadlessIo, HeadlessOutputFormat } from './headless-args.types';
 import type { AgentEvent, AgentResult } from '../sdk/create-agent.types';
+import type { HeadlessIo, HeadlessOutputFormat } from './headless-args.types';
 
 const CONTINUE_WHY: Readonly<
   Record<Extract<AgentEvent, { type: 'run.continued' }>['reason'], string>

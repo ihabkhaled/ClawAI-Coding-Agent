@@ -2,12 +2,12 @@ import { outcomeFromTerminalEvent } from '../core/headless-outcome';
 
 import { HEADLESS_TERMINAL_EVENTS } from './headless-session.constants';
 
+import type { HeadlessOutcome } from '../core/headless-outcome.types';
 import type {
   HeadlessRunReport,
   HeadlessSessionPorts,
   HeadlessStreamEvent,
 } from './headless-session.types';
-import type { HeadlessOutcome } from '../core/headless-outcome.types';
 
 /**
  * Drives one non-interactive run to its end.

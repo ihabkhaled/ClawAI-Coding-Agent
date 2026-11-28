@@ -60,6 +60,9 @@ import {
 } from './thread-client';
 import { retentionRequestHeaders } from './zero-retention-guard';
 
+import type { ChatAttachment } from '../core/chat-attachment';
+import type { ThreadRewindResult } from '../core/conversation-rewind.types';
+import type { ToolResult } from '../core/runtime/runtime-tool-contracts';
 import type {
   BackendClientOptions,
   CompareRequest,
@@ -70,9 +73,6 @@ import type {
   RuntimeStartRequest,
 } from './backend-client.types';
 import type { BackendRetryRequest, BackendRetryTuning } from './backend-retry.types';
-import type { ChatAttachment } from '../core/chat-attachment';
-import type { ThreadRewindResult } from '../core/conversation-rewind.types';
-import type { ToolResult } from '../core/runtime/runtime-tool-contracts';
 export {
   BackendRequestError,
   BackendSessionChangedError,

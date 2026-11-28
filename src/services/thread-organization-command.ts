@@ -3,8 +3,8 @@ import * as vscode from 'vscode';
 import { archivedThreads } from '../core/thread-list';
 import { isThreadRename, normalizeThreadTitle } from '../core/thread-title';
 
-import type { ThreadOrganizationDependencies } from './thread-organization.types';
 import type { ChatThread } from '../backend/contracts';
+import type { ThreadOrganizationDependencies } from './thread-organization.types';
 
 /** How a thread reads in a picker: its name, or the fact it has none. */
 function label(thread: ChatThread): string {

@@ -11,8 +11,8 @@ import {
 import { runCommandSpec } from './bounded-command-runner';
 import { assertPublicUrl } from './plugin-network-guard';
 
-import type { PluginNetworkOptions } from './plugin-network-guard.types';
 import type { GitMarketplaceLocation } from '../core/plugin-marketplace.types';
+import type { PluginNetworkOptions } from './plugin-network-guard.types';
 
 /**
  * Clones a git marketplace, shallowly and afresh, under `base`.

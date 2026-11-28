@@ -3,8 +3,8 @@ import { ConfigurationService } from '../services/configuration-service';
 
 import { probeCommandSandboxHost, realPath } from './command-sandbox-host-probe';
 
-import type { CommandSandboxBinding, CommandSandboxPort } from './command-launch-plan.types';
 import type { CommandSandboxHost } from '../core/command-sandbox.types';
+import type { CommandSandboxBinding, CommandSandboxPort } from './command-launch-plan.types';
 
 export class VscodeCommandSandbox implements CommandSandboxPort {
   private host: CommandSandboxHost | undefined;

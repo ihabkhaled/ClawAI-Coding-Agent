@@ -18,8 +18,8 @@ import {
   PROCESS_WATCH_WAIT_OUTPUT_CHARS,
 } from './process-watch-tool.constants';
 
-import type { LinePattern, WatchRequest } from './process-watch-tool.types';
 import type { ToolLimits } from '../headless/headless-main.types';
+import type { LinePattern, WatchRequest } from './process-watch-tool.types';
 
 type ToolArguments = Readonly<Record<string, unknown>>;
 

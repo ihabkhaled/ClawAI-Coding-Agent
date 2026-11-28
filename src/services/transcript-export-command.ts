@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 
 import { TRANSCRIPT_EXPORT_FORMATS } from '../core/transcript-export';
 
-import type { ConversationSessionService } from './conversation-session-service';
 import type { ExtensionState } from '../core/extension-state';
 import type { TranscriptExportFormat } from '../core/transcript-export';
+import type { ConversationSessionService } from './conversation-session-service';
 
 interface ExportDependencies {
   readonly conversations: ConversationSessionService;

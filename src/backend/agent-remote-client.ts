@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import type { RemoteRequester } from './remote-session-client';
 import type { RunnerApprovalPolicy } from '../core/runner-prompt-policy.types';
+import type { RemoteRequester } from './remote-session-client';
 
 /**
  * The seam `BackendClient.agentKeyRequest` provides: agent-runtime routes that

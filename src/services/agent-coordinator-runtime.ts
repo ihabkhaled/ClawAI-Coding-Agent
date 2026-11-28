@@ -8,11 +8,11 @@ import {
   RUNTIME_GENERATION_CONCURRENCY_KEY,
 } from './generation-scheduler';
 
-import type { RuntimeConfiguration } from './configuration-service';
-import type { ConfigurationService } from './configuration-service';
 import type { ExtensionState } from '../core/extension-state';
 import type { SessionVault } from '../core/session-vault';
 import type { OutputLogger } from '../infrastructure/output-logger';
+import type { ConfigurationService } from './configuration-service';
+import type { RuntimeConfiguration } from './configuration-service';
 
 export function createBackendClient(
   configuration: RuntimeConfiguration,

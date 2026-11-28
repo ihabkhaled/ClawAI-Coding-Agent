@@ -1,11 +1,11 @@
 import { planRuntimeStartupRecovery } from './runtime-startup-recovery';
 import { recoverRuntimeStudio } from './runtime-studio-execution';
 
+import type { CapabilityManifest } from '../core/runtime/capability-manifest';
+import type { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-binding-store';
 import type { RunJournalService } from './run-journal-service';
 import type { RuntimeStudioExecutionDependencies } from './runtime-studio-execution';
 import type { RuntimeStudioInput } from './runtime-studio.types';
-import type { CapabilityManifest } from '../core/runtime/capability-manifest';
-import type { VscodeRuntimeBindingStore } from '../infrastructure/vscode-runtime-binding-store';
 
 interface RecoveryLogger {
   warn(message: string, details?: unknown): void;

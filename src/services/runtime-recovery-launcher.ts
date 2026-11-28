@@ -2,10 +2,10 @@ import { randomUUID } from 'node:crypto';
 
 import { RuntimeUiProjector } from './runtime-ui-projection';
 
-import type { VscodeRuntimeStudio } from './vscode-runtime-studio';
 import type { ExtensionState } from '../core/extension-state';
 import type { OutputLogger } from '../infrastructure/output-logger';
 import type { ChatViewProvider } from '../webview/chat-view-provider';
+import type { VscodeRuntimeStudio } from './vscode-runtime-studio';
 
 export class RuntimeRecoveryLauncher {
   private controller: AbortController | undefined;

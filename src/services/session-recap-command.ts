@@ -2,9 +2,9 @@ import * as vscode from 'vscode';
 
 import { summarizeRun } from '../core/session-recap';
 
+import type { RecapNextAction, SessionRecap } from '../core/session-recap';
 import type { FindingsService } from './findings-service';
 import type { RunJournalService } from './run-journal-service';
-import type { RecapNextAction, SessionRecap } from '../core/session-recap';
 
 interface RecapDependencies {
   readonly journals: RunJournalService;

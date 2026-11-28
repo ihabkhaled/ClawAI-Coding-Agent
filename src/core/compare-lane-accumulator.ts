@@ -5,12 +5,12 @@ import {
   COMPARE_STAGE_PHASES,
 } from './compare-lane-accumulator.constants';
 
+import type { ParallelResponse } from '../backend/contracts';
 import type {
   CompareLanePhase,
   CompareLaneState,
   CompareLiveChange,
 } from './compare-lane-accumulator.types';
-import type { ParallelResponse } from '../backend/contracts';
 
 interface LiveLane {
   elapsedMs: number | null;

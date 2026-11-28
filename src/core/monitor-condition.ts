@@ -12,7 +12,7 @@ export const monitorConditionSchema = z
     timeoutMs: z.number().int().min(1_000).max(MAX_MONITOR_MS).default(60_000),
   })
   .refine((value) => value.kind !== 'matches' || value.pattern !== undefined, {
-    message: 'a matches condition needs a pattern',
+    error: 'a matches condition needs a pattern',
   });
 
 /**
@@ -65,7 +65,7 @@ export function isConditionMet(
 export function assertMonitorPattern(pattern: string | undefined): void {
   if (pattern === undefined) return;
   try {
-    void new RegExp(pattern, 'u');
+    new RegExp(pattern, 'u');
   } catch {
     throw new Error('monitor pattern is not a valid regular expression');
   }

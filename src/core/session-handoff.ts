@@ -2,8 +2,8 @@ import { isCloudTaskFinished } from './cloud-session-command';
 import { redactText } from './redaction';
 import { HANDOFF_OUTPUT_TAIL_CHARACTERS, STOPPED_TASK_STATUSES } from './session-handoff.constants';
 
-import type { BoundedPollOptions, HandoffInput, SessionOutcome } from './session-handoff.types';
 import type { CloudTask } from '../backend/remote-session-contracts';
+import type { BoundedPollOptions, HandoffInput, SessionOutcome } from './session-handoff.types';
 
 export function outcomeOf(task: CloudTask): SessionOutcome {
   if (!isCloudTaskFinished(task.status)) return 'running';

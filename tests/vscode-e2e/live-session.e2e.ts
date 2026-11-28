@@ -288,7 +288,11 @@ async function configure(chat: Frame): Promise<void> {
   });
   await chat.locator('#permissionMode').selectOption(APPROVAL, { timeout: 15_000 });
   const approve = chat.locator('button', { hasText: /^Approve$/u }).first();
-  if (await approve.isVisible({ timeout: 4_000 }).catch(() => false)) {
+  const approveShown = await approve
+    .waitFor({ state: 'visible', timeout: 4_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (approveShown) {
     await approve.click({ timeout: 5_000 }).catch(() => undefined);
   }
   await chat.locator('#effortMode').selectOption(EFFORT, { timeout: 15_000 });
@@ -330,7 +334,7 @@ async function approveAnywhere(): Promise<boolean> {
     if (!frame.url().includes('vscode-webview')) continue;
     for (const child of frame.childFrames()) {
       const button = child.locator('#approvalApprove');
-      if (await button.isVisible({ timeout: 300 }).catch(() => false)) {
+      if (await button.isVisible().catch(() => false)) {
         await recordCard(child);
         await button.click({ timeout: 5_000 }).catch(() => undefined);
         return true;

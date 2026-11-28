@@ -12,12 +12,12 @@ import {
   MIN_INTERVAL_MINUTES,
 } from '../core/scheduled-task.constants';
 
-import type { SchedulePort } from './schedule-tool-executor.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { SchedulePort } from './schedule-tool-executor.types';
 
 const createSchema = z.object({
   prompt: z.string().trim().min(1).max(MAX_SCHEDULED_PROMPT_LENGTH),

@@ -7,7 +7,7 @@ import type { BrowserEgressDecision, BrowserResolver } from './browser-egress.ty
 
 /** The system resolver; every answer is kept so none can be skipped over. */
 export const systemBrowserResolver: BrowserResolver = async (host) => {
-  const answers = await dns.promises.lookup(host, { all: true, verbatim: true });
+  const answers = await dns.promises.lookup(host, { all: true, order: 'verbatim' });
   return answers.map((answer) => answer.address);
 };
 

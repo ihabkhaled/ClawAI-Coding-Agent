@@ -11,6 +11,7 @@ import { writeEvent, writeResult } from './headless-output';
 import { fileSessionStore } from './headless-session-store';
 import { runMcpLogin } from './mcp/mcp-login-command';
 
+import type { RuntimeTransportPort } from '../sdk/agent-sdk.types';
 import type {
   HeadlessEnvironment,
   HeadlessInvocation,
@@ -19,7 +20,6 @@ import type {
 } from './headless-args.types';
 import type { HeadlessSessionStore } from './headless-session-store.types';
 import type { McpLoginContext } from './mcp/mcp-login.types';
-import type { RuntimeTransportPort } from '../sdk/agent-sdk.types';
 
 interface HeadlessContext {
   readonly cwd: string;

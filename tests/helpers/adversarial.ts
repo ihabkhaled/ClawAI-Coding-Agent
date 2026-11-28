@@ -3,8 +3,8 @@ import path from 'node:path';
 
 import { runTeam, scratch } from './team-fixture';
 
-import type { CallOutcome, ScriptApi } from './team-transport';
 import type { AgentConfig } from '../../src/sdk/create-agent.types';
+import type { CallOutcome, ScriptApi } from './team-transport';
 
 /** What a call gave back as one string: the tool's text on success, the error otherwise. */
 export function textOf(outcome: CallOutcome): string {

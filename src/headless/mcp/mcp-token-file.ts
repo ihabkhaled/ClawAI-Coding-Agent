@@ -12,8 +12,8 @@ import {
   MCP_TOKEN_FILE_VERSION,
 } from './mcp-login.constants';
 
-import type { McpTokenFileFs } from './mcp-login.types';
 import type { McpSecretStore } from '../../services/mcp-oauth-service.types';
+import type { McpTokenFileFs } from './mcp-login.types';
 
 const fileSchema = z.object({
   version: z.literal(MCP_TOKEN_FILE_VERSION),

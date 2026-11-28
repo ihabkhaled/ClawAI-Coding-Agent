@@ -3,12 +3,12 @@ import * as vscode from 'vscode';
 import { mergeCollectedContext } from '../core/context-collector';
 import { EMPTY_CONTEXT } from '../core/empty-context';
 
-import type { RuntimeConfiguration } from './configuration-service';
-import type { SessionControlPort } from './session-control.types';
-import type { WorkspaceContextService } from './workspace-context-service';
 import type { CollectedContext } from '../core/context-collector';
 import type { ContextMode } from '../core/context-mode';
 import type { ExtensionState } from '../core/extension-state';
+import type { RuntimeConfiguration } from './configuration-service';
+import type { SessionControlPort } from './session-control.types';
+import type { WorkspaceContextService } from './workspace-context-service';
 
 export async function collectAgentContext(
   context: WorkspaceContextService,

@@ -1,7 +1,3 @@
-import type { ChatResult, ChatSendInput } from './chat-service';
-import type { RuntimeConfiguration } from './configuration-service';
-import type { SafeEditResult } from './safe-edit-service';
-import type { WorkflowKind } from './workflow-service';
 import type { AgentRunSnapshot } from '../core/agent-run';
 import type { CollectedContext } from '../core/context-collector';
 import type { ContextMode } from '../core/context-mode';
@@ -11,6 +7,10 @@ import type { ResolvedModelSelection } from '../core/model-catalog';
 import type { PermissionOperation } from '../core/permission-policy.types';
 import type { ResearchMode } from '../core/research-mode';
 import type { TokenReceipt } from '../core/token-telemetry';
+import type { ChatResult, ChatSendInput } from './chat-service';
+import type { RuntimeConfiguration } from './configuration-service';
+import type { SafeEditResult } from './safe-edit-service';
+import type { WorkflowKind } from './workflow-service';
 
 export interface AgentRunContextPort {
   resolve(mode: ContextMode): Exclude<ContextMode, 'smart'>;

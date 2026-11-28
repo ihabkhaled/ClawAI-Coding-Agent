@@ -9,13 +9,13 @@ import {
   REMOTE_REFUSED_EXIT_CODE,
 } from './remote-command-loop.constants';
 
+import type { RemoteCommand, RemoteCommandResult } from '../backend/agent-remote-client';
+import type { JobSecretEnvironment } from '../core/job-secrets.types';
 import type {
   RemoteCommandLoopOptions,
   RemoteCommandLoopPorts,
   RemoteLoopState,
 } from './remote-command-loop.types';
-import type { RemoteCommand, RemoteCommandResult } from '../backend/agent-remote-client';
-import type { JobSecretEnvironment } from '../core/job-secrets.types';
 
 /**
  * F096 remote control and F100 runner: take commands queued for this machine,

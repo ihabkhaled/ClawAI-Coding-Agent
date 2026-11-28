@@ -5,13 +5,13 @@ import { MAIN_ADDRESS, MAX_MESSAGE_LENGTH } from '../core/agent-mailbox.constant
 import { WINDOW_ADDRESS_PREFIX } from '../core/cross-window-mailbox.constants';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { AgentMailboxPort, WindowMailView } from './agent-mailbox-tool-executor.types';
 import type { CrossWindowMailboxPort } from '../core/cross-window-mailbox.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { AgentMailboxPort, WindowMailView } from './agent-mailbox-tool-executor.types';
 
 const sendSchema = z.object({
   to: z.string().trim().min(1).max(200),

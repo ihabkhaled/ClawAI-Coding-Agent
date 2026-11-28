@@ -1,9 +1,9 @@
+import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { RuntimePolicyV2Adapter } from './runtime-policy-v2-adapter';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from './runtime-tool-dispatcher';
-import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 
 export interface RuntimeToolRegistration {
   readonly definition: ToolDefinition;

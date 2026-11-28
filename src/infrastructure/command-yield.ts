@@ -1,9 +1,9 @@
+import type { RuntimeToolExecutionOutput } from '../services/runtime-tool-dispatcher';
 import type {
   BoundedOutput,
   CommandYieldOutcome,
   CommandYieldRequest,
 } from './command-yield.types';
-import type { RuntimeToolExecutionOutput } from '../services/runtime-tool-dispatcher';
 
 /**
  * Keep the last `limitBytes` of a log. The tail is what a model needs from a

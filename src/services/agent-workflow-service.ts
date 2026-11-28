@@ -1,5 +1,8 @@
 import { currentModelSelection, modelSelectionLabel } from './agent-coordinator-prompts';
 
+import type { ChatAttachment } from '../core/chat-attachment';
+import type { ExtensionState } from '../core/extension-state';
+import type { ModelCatalogEntry, ResolvedModelSelection } from '../core/model-catalog';
 import type { AgentWorkflowInput, RequestAdmission } from './agent-coordinator.types';
 import type { AgentExecutionPresenter } from './agent-execution-presenter';
 import type { AttachmentLease, AttachmentRequestService } from './attachment-request-service';
@@ -7,9 +10,6 @@ import type { ChatService } from './chat-service';
 import type { ConfigurationService, RuntimeConfiguration } from './configuration-service';
 import type { ConversationSessionService } from './conversation-session-service';
 import type { SessionControlPort } from './session-control.types';
-import type { ChatAttachment } from '../core/chat-attachment';
-import type { ExtensionState } from '../core/extension-state';
-import type { ModelCatalogEntry, ResolvedModelSelection } from '../core/model-catalog';
 
 interface AgentWorkflowDependencies {
   assertAdmission(admission: RequestAdmission): void;

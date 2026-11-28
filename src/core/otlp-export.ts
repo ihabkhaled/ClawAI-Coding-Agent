@@ -2,8 +2,8 @@ import { createHash } from 'node:crypto';
 
 import { redactText } from './redaction';
 
-import type { OtlpEndpoint, OtlpTracePayload } from './otlp-export.types';
 import type { ObservabilitySpan } from '../services/observability-service';
+import type { OtlpEndpoint, OtlpTracePayload } from './otlp-export.types';
 
 const MAX_ATTRIBUTE_LENGTH = 1_000;
 const MAX_ATTRIBUTES_PER_SPAN = 40;

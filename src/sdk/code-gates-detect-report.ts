@@ -11,8 +11,8 @@ import {
 } from './code-gates-detect';
 import { changedFiles } from './code-gates-scope';
 
-import type { GateProject } from './code-gates.types';
 import type { ToolLimits } from '../headless/headless-main.types';
+import type { GateProject } from './code-gates.types';
 
 /** A project as the model sees it: what it is, and the command behind each gate. */
 function shown(project: GateProject): Record<string, unknown> {

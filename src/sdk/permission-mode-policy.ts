@@ -13,9 +13,9 @@ import {
   HEADLESS_POLICY_TOOL_NAMES,
 } from './permission-mode-policy.constants';
 
+import type { OperationClassification } from '../core/runtime/runtime-operation-classification';
 import type { AgentPermissionMode } from './permission-modes.types';
 import type { AgentApprovalRequest } from './workspace-toolkit.types';
-import type { OperationClassification } from '../core/runtime/runtime-operation-classification';
 
 /** What the editor's policy says about one call: run it, ask first, or refuse. */
 export type AgentPolicyOutcome = 'allow' | 'ask' | 'deny';

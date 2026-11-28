@@ -3,7 +3,6 @@ import { z } from 'zod';
 import { planQualityExecution } from '../core/quality-graph';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { QualityToolExecutor } from './quality-tool-executor';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { GitAgentService } from '../services/git-agent-service';
 import type {
@@ -15,6 +14,7 @@ import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { QualityToolExecutor } from './quality-tool-executor';
 
 const toolInputSchema = z.object({ request: z.unknown() }).strict();
 const qualityResultSchema = z

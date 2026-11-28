@@ -3,12 +3,12 @@ import {
   DEVICE_PAIRING_MAX_BACKOFF_MS,
 } from './device-pairing-flow.constants';
 
+import type { PairingPoll } from '../backend/device-pairing-client';
 import type {
   DevicePairingLimits,
   DevicePairingOutcome,
   DevicePairingPorts,
 } from './device-pairing-flow.types';
-import type { PairingPoll } from '../backend/device-pairing-client';
 
 /**
  * F097: pair this editor as a device approved from another screen, usually a

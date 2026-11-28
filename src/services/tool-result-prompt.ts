@@ -1,5 +1,5 @@
-import type { CommandExecutionResult } from './agent-run-service.types';
 import type { EditPlan, WorkspaceCommand } from '../core/edit-plan';
+import type { CommandExecutionResult } from './agent-run-service.types';
 
 export function isDiagnosticToolPlan(plan: EditPlan): boolean {
   return (

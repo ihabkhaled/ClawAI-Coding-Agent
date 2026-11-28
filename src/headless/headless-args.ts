@@ -13,14 +13,14 @@ import {
   HEADLESS_VALUE_FLAGS,
 } from './headless-args.constants';
 
+import type { AgentAuth } from '../sdk/create-agent.types';
+import type { AgentToolCategory } from '../sdk/workspace-toolkit.types';
 import type {
   HeadlessEnvironment,
   HeadlessInvocation,
   HeadlessOutputFormat,
   HeadlessParse,
 } from './headless-args.types';
-import type { AgentAuth } from '../sdk/create-agent.types';
-import type { AgentToolCategory } from '../sdk/workspace-toolkit.types';
 
 /**
  * Reads an invocation, and names the mistake rather than guessing.

@@ -1,4 +1,3 @@
-import type { HeadlessLogin } from './mcp/mcp-login.types';
 import type { EffortMode } from '../core/effort-mode';
 import type { FallbackModel } from '../core/fallback-model-list';
 import type { ResearchMode } from '../core/research-mode';
@@ -9,6 +8,7 @@ import type { GateName } from '../sdk/code-gates.types';
 import type { DoneCheck } from '../sdk/done-checks.types';
 import type { AgentPermissionMode } from '../sdk/permission-modes.types';
 import type { AgentToolCategory } from '../sdk/workspace-toolkit.types';
+import type { HeadlessLogin } from './mcp/mcp-login.types';
 
 export type HeadlessOutputFormat = 'text' | 'json' | 'stream-json';
 

@@ -1,10 +1,10 @@
+import type { OperationClassification } from '../core/runtime/runtime-operation-classification';
 import type {
   EditorModeNames,
   ToolDecisions,
   ToolPermissionRow,
 } from './tool-permission-table.types';
 import type { AgentToolCategory } from './workspace-toolkit.types';
-import type { OperationClassification } from '../core/runtime/runtime-operation-classification';
 
 /** The SDK's permission modes and the editor's Approval dropdown values they correspond to. */
 export const EDITOR_MODE_NAMES: EditorModeNames = {

@@ -1,8 +1,8 @@
+import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { GatesTool } from './code-gates-tool';
 import type { HttpTool } from './http-tool.types';
 import type { ShellTool } from './shell-tool.types';
 import type { PlanTool } from './task-plan-tool.types';
-import type { PdfTextPort } from '../backend/pdf-text-client';
 
 /**
  * The optional tools `executeWorkspaceTool` can run besides files, commands,

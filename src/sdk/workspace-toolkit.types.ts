@@ -1,9 +1,9 @@
+import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { AgentToolCall } from './agent-sdk.types';
 import type { NoteAddedInfo, NotesStore } from './notes-tool.types';
 import type { ShellOptions } from './shell-tool.types';
 import type { PlanStore, PlanSummary } from './task-plan-tool.types';
 import type { WriteScopeListener } from './write-scope.types';
-import type { PdfTextPort } from '../backend/pdf-text-client';
 
 /** The kinds of work a run can be granted, one flag each; `git-write` is commit, push and the other git operations that change something; `mcp` is the configured MCP servers; `http` is GET and HEAD to the allowed hosts, `http-write` is POST, PUT, PATCH and DELETE; `browser` is the headless browser page tool; `shell` is `workspace.shell`, which also needs its own switch; `agents` is `agent.team`, whose children can never hold more than the parent. */
 export type AgentToolCategory =

@@ -5,9 +5,9 @@ import { VscodeHookRunner } from '../infrastructure/vscode-hook-runner';
 import { LifecycleHookService } from './lifecycle-hook-service';
 import { pluginHooks, workspacePluginStore } from './workspace-plugins';
 
+import type { OutputLogger } from '../infrastructure/output-logger';
 import type { ConfigurationService } from './configuration-service';
 import type { WorkspaceScopeService } from './workspace-scope-service';
-import type { OutputLogger } from '../infrastructure/output-logger';
 
 /**
  * Lifecycle hooks bound to the folder the agent is pointed at.

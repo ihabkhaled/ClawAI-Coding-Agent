@@ -35,8 +35,6 @@ import {
   WORKSPACE_SEARCH_MAX_SCANNED_BYTES,
 } from './workspace-scan.constants';
 
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
-import type { SearchHit } from './vscode-filesystem-tool-executor.types';
 import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { DeliveredArtifact } from '../core/delivered-artifact';
 import type { FileTransaction } from '../core/file-transaction';
@@ -46,6 +44,8 @@ import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
+import type { SearchHit } from './vscode-filesystem-tool-executor.types';
 
 // The refine used to fail with zod's bare "Invalid input", which reached the
 // model as its whole explanation. A model holding a perfectly valid path was

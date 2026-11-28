@@ -4,6 +4,10 @@ import { executableToolDefinitions } from '../core/runtime/runtime-executable-to
 
 import { panelKnowledgePreamble } from './runtime-studio-knowledge';
 
+import type { ExtensionState } from '../core/extension-state';
+import type { CapabilityManifest } from '../core/runtime/capability-manifest';
+import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 import type { ExternalOutputGrantStore } from './agent-coordinator.types';
 import type { ConfigurationService } from './configuration-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
@@ -18,10 +22,6 @@ import type { RuntimeStudioInput } from './runtime-studio.types';
 import type { RuntimeToolRouter } from './runtime-tool-router';
 import type { TargetAwareToolRouter } from './target-aware-tool-router';
 import type { WorkspaceScopeService } from './workspace-scope-service';
-import type { ExtensionState } from '../core/extension-state';
-import type { CapabilityManifest } from '../core/runtime/capability-manifest';
-import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
-import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
 export interface VscodeRuntimeExecutionHost {
   readonly epochs: ToolInvocation['epochs'];

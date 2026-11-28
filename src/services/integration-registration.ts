@@ -7,9 +7,9 @@ import { configureSlackNotifications } from './slack-settings-command';
 import { TelemetryHeaderStore } from './telemetry-header-store';
 import { setTelemetryHeaders } from './telemetry-headers-command';
 
-import type { IntegrationDependencies } from './integration-commands.types';
 import type { BackendClient } from '../backend/backend-client';
 import type { ExtensionState } from '../core/extension-state';
+import type { IntegrationDependencies } from './integration-commands.types';
 
 /**
  * Product integrations: cloud routines, GitHub/GitLab review comments and the

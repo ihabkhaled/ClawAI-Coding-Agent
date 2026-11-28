@@ -17,8 +17,8 @@ import {
   COMMAND_MAX_WAIT_MS,
 } from './command-tool.constants';
 
-import type { CommandTool, CommandRuntime } from './command-tool.types';
 import type { ToolLimits } from '../headless/headless-main.types';
+import type { CommandTool, CommandRuntime } from './command-tool.types';
 
 type ToolArguments = Readonly<Record<string, unknown>>;
 

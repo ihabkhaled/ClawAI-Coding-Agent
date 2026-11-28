@@ -2,13 +2,13 @@ import { z } from 'zod';
 
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { DevelopmentServiceDiscovery } from './development-service-discovery';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { DevelopmentServiceManager } from '../services/development-service-manager';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { DevelopmentServiceDiscovery } from './development-service-discovery';
 
 export const developmentServiceToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

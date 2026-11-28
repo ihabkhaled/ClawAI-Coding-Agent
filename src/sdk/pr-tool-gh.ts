@@ -9,10 +9,10 @@ import { redactText } from '../core/redaction';
 import { runGitProcess } from './git-tools-run';
 import { PR_DETAIL_CHARS, PR_GH_ENVIRONMENT, PR_GH_TIMEOUT_MS } from './pr-tool.constants';
 
-import type { GitRunResult } from './git-tools.types';
-import type { GhRunner } from './pr-tool.types';
 import type { PullRequestView } from '../core/pull-request-actions.types';
 import type { PullRequestCheckSummary } from '../core/pull-request.types';
+import type { GitRunResult } from './git-tools.types';
+import type { GhRunner } from './pr-tool.types';
 
 /** The real runner: `gh`, no shell, a minimal environment, bounded output, killed on timeout or abort. */
 export const runGh: GhRunner = (args, cwd, signal) =>

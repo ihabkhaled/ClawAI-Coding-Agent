@@ -5,13 +5,13 @@ import { renderEvidenceMarkdown, verifyEvidenceBundle } from '../core/evidence-b
 import { contentHash } from '../core/file-transaction';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type { EvidenceBundleService } from '../services/evidence-bundle-service';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 
 export const evidenceToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

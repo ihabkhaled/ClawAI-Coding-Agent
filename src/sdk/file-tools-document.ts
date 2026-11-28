@@ -19,10 +19,10 @@ import {
   FILE_READ_MIN_CHARS,
 } from './file-tools.constants';
 
-import type { FileTranscriptResult } from './file-tools-media';
-import type { FileBinaryResult, FileReadResult, FileToolArguments } from './file-tools.types';
 import type { PdfTextPort } from '../backend/pdf-text-client';
 import type { DocumentReadFormat } from '../core/document-read-format.types';
+import type { FileTranscriptResult } from './file-tools-media';
+import type { FileBinaryResult, FileReadResult, FileToolArguments } from './file-tools.types';
 
 const PAGE_LIMIT = 1_000_000;
 

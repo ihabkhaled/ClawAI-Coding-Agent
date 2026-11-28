@@ -5,8 +5,8 @@ import { contextModeForCommand } from '../core/command-context';
 import { pickCompareInput } from './agent-coordinator-prompts';
 import { refuseCompareCommand } from './zero-retention-compare-guard';
 
-import type { CompareInput, RequestAdmission } from './agent-coordinator.types';
 import type { ExtensionState } from '../core/extension-state';
+import type { CompareInput, RequestAdmission } from './agent-coordinator.types';
 
 /**
  * Asks which models to compare, then runs the comparison.

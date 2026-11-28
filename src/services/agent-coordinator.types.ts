@@ -1,9 +1,9 @@
-import type { SessionControlPort } from './session-control.types';
-import type { WorkflowKind } from './workflow-service';
 import type { ChatAttachment } from '../core/chat-attachment';
 import type { ContextMode } from '../core/context-mode';
 import type { ExternalOutputGrant, ExternalOutputGrantStore } from '../core/external-output-grants';
 import type { ResearchMode } from '../core/research-mode';
+import type { SessionControlPort } from './session-control.types';
+import type { WorkflowKind } from './workflow-service';
 
 export interface RequestAdmission {
   readonly boundaryEpoch: number;

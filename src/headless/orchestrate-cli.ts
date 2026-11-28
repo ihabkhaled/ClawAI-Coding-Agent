@@ -12,12 +12,12 @@ import { parseOrchestrateArgs } from './orchestrate-args';
 import { ORCHESTRATE_PLAN_MAX_BYTES, ORCHESTRATE_USAGE } from './orchestrate-cli.constants';
 import { orchestrateEventLine } from './orchestrate-output';
 
-import type { HeadlessEnvironment, HeadlessIo } from './headless-args.types';
-import type { OrchestrateInvocation } from './orchestrate-args';
 import type { RuntimeTransportPort } from '../sdk/agent-sdk.types';
 import type { AgentFactory } from '../sdk/agent-team-tool.types';
 import type { OrchestrateOutcome } from '../sdk/orchestrate';
 import type { OrchestrateCeiling, OrchestrateOptions } from '../sdk/orchestrate.types';
+import type { HeadlessEnvironment, HeadlessIo } from './headless-args.types';
+import type { OrchestrateInvocation } from './orchestrate-args';
 
 /** What the process (or a test) supplies. */
 export interface OrchestrateContext {

@@ -15,14 +15,14 @@ import { isSensitiveWorkspacePath, normalizeWorkspacePath } from '../core/worksp
 import { nodeContextFileSystem } from './agent-context-files';
 import { AGENT_CONTEXT_SCAN_MULTIPLIER } from './agent-context.constants';
 
+import type { ContextCandidate, ContextReceipt } from '../core/context-collector';
+import type { ContextMode } from '../core/context-mode';
+import type { SpeedMode } from '../core/speed-mode';
 import type {
   AgentContextConfig,
   AgentContextFileSystem,
   AgentContextResult,
 } from './agent-context.types';
-import type { ContextCandidate, ContextReceipt } from '../core/context-collector';
-import type { ContextMode } from '../core/context-mode';
-import type { SpeedMode } from '../core/speed-mode';
 
 type Resolved = Exclude<ContextMode, 'smart'>;
 type Exclusions = ContextReceipt['excluded'];

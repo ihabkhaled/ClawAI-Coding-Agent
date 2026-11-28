@@ -101,7 +101,7 @@ function looksGenerated(value: string): boolean {
   // alphanumeric, so rejecting `^[A-Za-z_$][\w$]*$` waved through every secret
   // without punctuation in it. Identifiers are separated from credentials by
   // entropy instead — `requestToken` reads as words and scores below the
-  // threshold, `<fake-secret-removed>` does not.
+  // threshold, a random 20-character mixed-case token does not.
   if (/^[a-z0-9]+(?:[-_.][a-z0-9]+)+$/u.test(value)) return false;
   if (/^[A-Z0-9]+(?:_[A-Z0-9]+)+$/u.test(value)) return false;
   return entropyBits(value) >= STAGED_SECRET_MIN_ENTROPY_BITS;

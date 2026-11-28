@@ -14,8 +14,8 @@ import { toolsFlags } from './headless-args-tools';
 import { visionFlags } from './headless-args-vision';
 import { parseDoneCheckFlags } from './headless-done-checks';
 
-import type { HeadlessInvocation } from './headless-args.types';
 import type { AgentPermissionMode } from '../sdk/permission-modes.types';
+import type { HeadlessInvocation } from './headless-args.types';
 
 type Values = ReadonlyMap<string, readonly string[]>;
 type Flags = ReadonlySet<string>;

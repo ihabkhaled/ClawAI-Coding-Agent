@@ -83,11 +83,10 @@ function spanWith(text: string): ObservabilitySpan {
 
 function captureLogger(): { logger: OutputLogger; lines: string[] } {
   const lines: string[] = [];
-  const channel: Pick<vscode.OutputChannel, 'appendLine' | 'show' | 'dispose'> = {
+  const channel: Pick<vscode.OutputChannel, 'appendLine' | 'dispose'> = {
     appendLine: (line: string) => {
       lines.push(line);
     },
-    show: () => undefined,
     dispose: () => undefined,
   };
   return { logger: new OutputLogger(channel as vscode.OutputChannel), lines };

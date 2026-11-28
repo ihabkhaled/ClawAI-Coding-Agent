@@ -16,9 +16,9 @@ import { planCommandLaunch } from './command-launch-plan';
 import { prepareGitSpawn } from './hardened-git';
 import { terminateProcess } from './process-terminator';
 
+import type { CommandExecutionResult } from '../services/agent-run-service.types';
 import type { CommandSandboxBinding } from './command-launch-plan.types';
 import type { ProcessTerminationHandle } from './process-terminator.types';
-import type { CommandExecutionResult } from '../services/agent-run-service.types';
 import type { ChildProcess, ChildProcessWithoutNullStreams } from 'node:child_process';
 
 // cross-spawn's type declarations always return the general `ChildProcess`

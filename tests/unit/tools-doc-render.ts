@@ -20,10 +20,10 @@ import { toolCategory } from '../../src/sdk/workspace-toolkit';
 import { CORE_TOOL_NOTES } from './tools-doc-notes-core';
 import { TEST_TOOL_NOTES } from './tools-doc-notes-test';
 
-import type { ToolNote } from './tools-doc.types';
 import type { AgentConfig } from '../../src/sdk/create-agent.types';
 import type { AgentPermissionMode } from '../../src/sdk/permission-modes.types';
 import type { AgentToolCategory } from '../../src/sdk/workspace-toolkit.types';
+import type { ToolNote } from './tools-doc.types';
 
 /** What the model is sent for one tool. */
 export interface RealDefinition {

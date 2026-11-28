@@ -9,11 +9,11 @@ import { otlpMetricsPayload, otlpMetricsUrl } from '../core/otlp-metrics';
 
 import { postOtlp } from './otlp-post';
 
-import type { OutputLogger } from './output-logger';
 import type { EvidenceBundle } from '../core/evidence-bundle';
 import type { OtlpEndpoint } from '../core/otlp-export.types';
 import type { RunUsage } from '../core/run-telemetry.types';
 import type { ObservabilitySinkPort, ObservabilitySpan } from '../services/observability-service';
+import type { OutputLogger } from './output-logger';
 
 /**
  * Sends spans to an OTLP collector, in batches, and never at the cost of a run.

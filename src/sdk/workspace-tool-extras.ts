@@ -1,6 +1,6 @@
+import type { ToolLimits } from '../headless/headless-main.types';
 import type { AgentToolCall } from './agent-sdk.types';
 import type { WorkspaceToolExtras } from './workspace-tool-extras.types';
-import type { ToolLimits } from '../headless/headless-main.types';
 
 /** What an optional tool answered; absent when the call is not for one of them. */
 export interface ExtraToolRun {

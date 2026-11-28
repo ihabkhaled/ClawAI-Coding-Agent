@@ -5,14 +5,6 @@ import { outputStylePreamble } from '../core/output-style';
 import { decidePermission } from '../core/permission-policy';
 import { composePrompt } from '../core/prompt-composition';
 
-import type {
-  SessionApprovalMemoryPort,
-  SessionApprovalPort,
-  SessionConfigurationPort,
-  SessionControlPort,
-  SessionPolicySnapshot,
-  SessionStatePort,
-} from './session-control.types';
 import type { AgentMode } from '../core/agent-mode.types';
 import type { EffortMode } from '../core/effort-mode';
 import type {
@@ -22,6 +14,14 @@ import type {
 } from '../core/permission-policy.types';
 import type { SpeedMode } from '../core/speed-mode';
 import type { ViewDensity } from '../core/view-density.types';
+import type {
+  SessionApprovalMemoryPort,
+  SessionApprovalPort,
+  SessionConfigurationPort,
+  SessionControlPort,
+  SessionPolicySnapshot,
+  SessionStatePort,
+} from './session-control.types';
 
 function approvalMessage(operation: PermissionOperation): string {
   if (operation === 'externalFinalDiff') {

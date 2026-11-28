@@ -37,7 +37,9 @@ export function showPairingPanel(url: string): vscode.Disposable {
       void vscode.window.showInformationMessage(vscode.l10n.t('Link copied.'));
     }
   });
-  return panel;
+  return new vscode.Disposable(() => {
+    panel.dispose();
+  });
 }
 
 function isCopyMessage(message: unknown): boolean {

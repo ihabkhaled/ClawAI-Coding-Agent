@@ -1,12 +1,12 @@
 import { advisorInputSchema, buildAdvicePrompt, pickAdvisor, recordAdvice } from '../core/advisor';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { AdvisorPort } from './advisor-tool-executor.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { AdvisorPort } from './advisor-tool-executor.types';
 
 export const advisorToolDefinition: ToolDefinition = {
   schemaVersion: '2.0',

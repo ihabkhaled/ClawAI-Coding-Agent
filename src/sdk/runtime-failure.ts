@@ -1,8 +1,8 @@
 import { FAILURE_REASON_FIELDS, FAILURE_REASON_MAX_CHARS } from './runtime-failure.constants';
 import { UNKNOWN_TOOL_PATTERN } from './tool-alias.constants';
 
-import type { AgentResult } from './create-agent.types';
 import type { HeadlessStreamEvent } from '../headless/headless-session.types';
+import type { AgentResult } from './create-agent.types';
 
 function textOf(value: unknown): string | undefined {
   if (typeof value === 'string' && value.length > 0) return value;

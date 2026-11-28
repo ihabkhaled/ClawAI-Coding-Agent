@@ -12,9 +12,9 @@ import {
   ORCHESTRATE_VALUE_FLAGS,
 } from './orchestrate-cli.constants';
 
-import type { HeadlessEnvironment, HeadlessOutputFormat } from './headless-args.types';
 import type { AgentPermissionMode } from '../sdk/permission-modes.types';
 import type { AgentToolCategory } from '../sdk/workspace-toolkit.types';
+import type { HeadlessEnvironment, HeadlessOutputFormat } from './headless-args.types';
 
 /** What `clawai orchestrate` was asked, decided before anything is read or started. */
 export interface OrchestrateInvocation {

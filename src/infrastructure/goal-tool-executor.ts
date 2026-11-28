@@ -8,12 +8,12 @@ import {
 } from '../core/run-goal.constants';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { RunGoalPort } from './goal-tool-executor.types';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { RunGoalPort } from './goal-tool-executor.types';
 
 const declareSchema = z.object({
   statement: z.string().trim().min(1).max(MAX_GOAL_STATEMENT_LENGTH),

@@ -1,9 +1,9 @@
 import * as vscode from 'vscode';
 
-import type { SarifImportPort } from './sarif-import-tool-executor.types';
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { Finding } from '../core/findings';
 import type { FindingsService } from '../services/findings-service';
+import type { SarifImportPort } from './sarif-import-tool-executor.types';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 
 /**
  * Reads a scanner's report from the workspace and records what it found.

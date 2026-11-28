@@ -5,9 +5,9 @@ import { buildHandoffSummary } from '../core/session-handoff';
 
 import { HANDOFF_THREAD_CHOICES } from './session-handoff.constants';
 
-import type { RemoteSessionDependencies } from './remote-session-commands.types';
 import type { CloudTask } from '../backend/remote-session-contracts';
 import type { RepositoryRef } from '../core/repository-ref.types';
+import type { RemoteSessionDependencies } from './remote-session-commands.types';
 
 interface ThreadChoice extends vscode.QuickPickItem {
   readonly threadId: string | undefined;

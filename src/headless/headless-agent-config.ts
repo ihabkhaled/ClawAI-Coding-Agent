@@ -1,10 +1,10 @@
 import { approvalFrom } from './headless-approval';
 import { withMcpTokens } from './mcp/mcp-login-service';
 
-import type { HeadlessEnvironment, HeadlessInvocation, HeadlessIo } from './headless-args.types';
-import type { HeadlessInputs } from './headless-inputs.types';
 import type { RuntimeTransportPort } from '../sdk/agent-sdk.types';
 import type { AgentAuth, AgentConfig } from '../sdk/create-agent.types';
+import type { HeadlessEnvironment, HeadlessInvocation, HeadlessIo } from './headless-args.types';
+import type { HeadlessInputs } from './headless-inputs.types';
 
 /** What one invocation asks of the SDK: identity, grants, files already read, MCP tokens. */
 export function agentConfigFor(input: {

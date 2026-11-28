@@ -6,10 +6,10 @@ import { applyTerminalInput, EMPTY_LINE } from '../core/terminal-line-editor';
 import { toTerminalSafeText } from '../core/terminal-output';
 import { describeRunChange, isRunFinished } from '../core/terminal-run-report';
 
-import type { AgentTerminalPort, AgentTerminalStatePort } from './agent-terminal.types';
 import type { AgentRunPhase, AgentRunSnapshot } from '../core/agent-run';
 import type { TerminalLineState } from '../core/terminal-line-editor.types';
 import type { TerminalRunLine } from '../core/terminal-run-report.types';
+import type { AgentTerminalPort, AgentTerminalStatePort } from './agent-terminal.types';
 
 const PROMPT = '\r\nclawai> ';
 /**

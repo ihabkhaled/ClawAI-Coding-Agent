@@ -1,8 +1,8 @@
 import { contributionFolders } from '../core/plugin-manifest';
 
+import type { PluginMarkdownContribution, PluginScope } from '../core/plugin-manifest.types';
 import type { PluginStore } from './plugin-store';
 import type { SkillFile, SkillSourcePort } from './skill-catalog.types';
-import type { PluginMarkdownContribution, PluginScope } from '../core/plugin-manifest.types';
 
 /**
  * A skill source with enabled plugins' Markdown folded in.

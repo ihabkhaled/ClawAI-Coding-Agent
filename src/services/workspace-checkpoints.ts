@@ -4,10 +4,10 @@ import { VscodeNotebookReader } from '../infrastructure/vscode-notebook-reader';
 
 import { CheckpointStore } from './checkpoint-store';
 
+import type { Checkpoint, CheckpointFile } from '../core/checkpoint.types';
 import type { CheckpointDependencies } from './checkpoint-command.types';
 import type { CheckpointStoragePort } from './checkpoint-store.types';
 import type { FileTransactionService } from './file-transaction-service';
-import type { Checkpoint, CheckpointFile } from '../core/checkpoint.types';
 import type { Uri } from 'vscode';
 
 /**

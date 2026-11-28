@@ -1,6 +1,6 @@
+import type { ToolLimits } from '../headless/headless-main.types';
 import type { AgentToolCall } from './agent-sdk.types';
 import type { CommandRuntime } from './command-tool.types';
-import type { ToolLimits } from '../headless/headless-main.types';
 import type { ChildProcess } from 'node:child_process';
 
 /** What one read of a process log reports. */

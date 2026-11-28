@@ -1,9 +1,9 @@
+import type { HeadlessOutcome } from '../core/headless-outcome.types';
 import type { AgentFactory } from './agent-team-tool.types';
 import type { AgentConfig } from './create-agent.types';
 import type { DoneCheck } from './done-checks.types';
 import type { orchestratePlanSchema } from './orchestrate-plan.schema';
 import type { AgentToolCategory } from './workspace-toolkit.types';
-import type { HeadlessOutcome } from '../core/headless-outcome.types';
 import type { z } from 'zod';
 
 /** A plan after the schema has filled its defaults. */

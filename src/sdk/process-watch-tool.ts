@@ -17,12 +17,12 @@ import {
   waitTimeout,
 } from './process-watch-request';
 
+import type { ToolLimits } from '../headless/headless-main.types';
 import type {
   ProcessWatchOptions,
   ProcessWatchTool,
   WatchRequest,
 } from './process-watch-tool.types';
-import type { ToolLimits } from '../headless/headless-main.types';
 
 type ToolArguments = Readonly<Record<string, unknown>>;
 

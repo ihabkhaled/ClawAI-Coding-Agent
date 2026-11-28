@@ -6,7 +6,6 @@ import { z } from 'zod';
 
 import { resolveExecutable } from './bounded-command-runner';
 
-import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type { ServiceDefinition, ServiceInstance } from '../core/development-service';
 import type { ContainerEngineService } from '../services/container-engine-service';
 import type {
@@ -19,6 +18,7 @@ import type {
 } from '../services/development-service-manager';
 import type { ProcessSupervisorService } from '../services/process-supervisor-service';
 import type { ServerReadinessService } from '../services/server-readiness-service';
+import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 
 const processReceiptSchema = z.looseObject({
   sessionId: z.string().min(8),

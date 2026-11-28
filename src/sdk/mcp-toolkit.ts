@@ -12,11 +12,11 @@ import { McpServerRegistry } from '../services/mcp-server-registry';
 
 import { isApproved } from './permission-modes';
 
+import type { McpServerConfig, McpSession } from '../core/mcp/mcp.types';
+import type { McpTokenProvider } from '../infrastructure/mcp/mcp-transport.types';
 import type { AgentToolCall, AgentToolkit } from './agent-sdk.types';
 import type { AgentMcpOptions } from './mcp-toolkit.types';
 import type { AgentPermissions } from './workspace-toolkit.types';
-import type { McpServerConfig, McpSession } from '../core/mcp/mcp.types';
-import type { McpTokenProvider } from '../infrastructure/mcp/mcp-transport.types';
 
 const SDK_MCP_CLIENT_VERSION = 'sdk';
 

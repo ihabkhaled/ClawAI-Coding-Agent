@@ -5,10 +5,10 @@ import { AGENT_RESEARCH_FLAG_VALUES } from '../sdk/web-toolkit.constants';
 
 import { HEADLESS_CONTEXT_MODES } from './headless-args.constants';
 
-import type { HeadlessInvocation } from './headless-args.types';
 import type { ContextMode } from '../core/context-mode';
 import type { EffortMode } from '../core/effort-mode';
 import type { SpeedMode } from '../core/speed-mode';
+import type { HeadlessInvocation } from './headless-args.types';
 
 type Values = ReadonlyMap<string, readonly string[]>;
 type Controls = Partial<Pick<HeadlessInvocation, 'effort' | 'speed' | 'context' | 'research'>>;

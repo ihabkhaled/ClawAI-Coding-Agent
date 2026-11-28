@@ -1,8 +1,8 @@
 import { decideSessionUnread, sessionActivity, sessionTabTitle } from '../core/chat-session-status';
 
+import type { ExtensionSnapshot } from '../core/extension-state';
 import type { ChatSessionRegistry } from './chat-session-registry';
 import type { SessionRun, SessionTab } from './chat-session-sync.types';
-import type { ExtensionSnapshot } from '../core/extension-state';
 
 /** The runs each open session owns, so a tab can be told what its own work is doing. */
 function groupRunsBySession(

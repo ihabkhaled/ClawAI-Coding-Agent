@@ -3,9 +3,9 @@ import path from 'node:path';
 
 import { redactValue } from '../core/redaction';
 
-import type { OutputLogger } from './output-logger';
 import type { SubAgentOutcome, SubAgentTaskStatus } from '../core/multi-agent-dag';
 import type { SubAgentCoordinatorObserver } from '../services/sub-agent-coordinator-service';
+import type { OutputLogger } from './output-logger';
 import type * as vscode from 'vscode';
 
 export class VscodeSubAgentDiagnosticsSink implements SubAgentCoordinatorObserver {

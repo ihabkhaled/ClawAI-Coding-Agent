@@ -1,5 +1,5 @@
-import type { ChatSessionTarget } from './chat-session-registry';
 import type { AgentRunPhase } from '../core/agent-run';
+import type { ChatSessionTarget } from './chat-session-registry';
 
 /**
  * The part of a webview panel a tab's state actually needs.

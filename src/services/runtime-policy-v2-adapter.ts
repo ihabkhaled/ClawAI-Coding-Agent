@@ -19,11 +19,11 @@ import {
   UNCLASSIFIED_OPERATION,
 } from '../core/runtime/runtime-operation-classification';
 
-import type { RuntimeToolPolicyDecision, RuntimeToolPolicyPort } from './runtime-tool-dispatcher';
 import type { PermissionMode } from '../core/permission-policy.types';
 import type { ProjectPolicy } from '../core/policy-v2';
 import type { OperationClassification } from '../core/runtime/runtime-operation-classification';
 import type { ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { RuntimeToolPolicyDecision, RuntimeToolPolicyPort } from './runtime-tool-dispatcher';
 
 interface RuntimePolicyContext {
   readonly accountId: () => string;

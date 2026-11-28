@@ -2,9 +2,9 @@ import { createHash } from 'node:crypto';
 
 import * as vscode from 'vscode';
 
+import type { MonitorObservation } from '../core/monitor-condition.types';
 import type { MonitorPort } from './monitor-tool-executor.types';
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
-import type { MonitorObservation } from '../core/monitor-condition.types';
 
 const MAX_OBSERVED_BYTES = 1_048_576;
 

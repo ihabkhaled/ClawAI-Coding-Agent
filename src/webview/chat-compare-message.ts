@@ -9,8 +9,8 @@ import {
   COMPARE_MESSAGE_ERROR_MAX,
 } from './chat-compare-message.constants';
 
-import type { CompareLiveMessage } from './chat-compare-message.types';
 import type { CompareLiveChange } from '../core/compare-lane-accumulator.types';
+import type { CompareLiveMessage } from './chat-compare-message.types';
 
 const name = z.string().max(COMPARE_VERDICT_MAX_NAME);
 const tokens = z.number().int().min(0).nullable();

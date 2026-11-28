@@ -3,13 +3,13 @@ import * as vscode from 'vscode';
 import { savedWorkflowSchema, workflowFileName } from '../core/saved-workflow';
 import { workflowTemplateSchema } from '../core/workflow-template';
 
+import type { SavedWorkflow } from '../core/saved-workflow';
+import type { WorkflowTemplate } from '../core/workflow-template';
 import type { VscodeFileTransactionAdapter } from './vscode-file-transaction-adapter';
 import type {
   WorkflowStorePort,
   WorkflowTemplateWriteOutcome,
 } from './workflow-store-tool-executor.types';
-import type { SavedWorkflow } from '../core/saved-workflow';
-import type { WorkflowTemplate } from '../core/workflow-template';
 import type { ZodType } from 'zod';
 
 const WORKFLOW_DIRECTORY = 'workflows';

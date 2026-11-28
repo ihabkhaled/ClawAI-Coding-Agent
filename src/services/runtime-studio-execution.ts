@@ -14,6 +14,13 @@ import { executeWithModelFallback } from './runtime-studio-fallback';
 import { endIdleRun, type RuntimeStudioOutcome } from './runtime-studio-idle-failure';
 import { withKnowledge } from './runtime-studio-knowledge';
 
+import type { RuntimeCommandBinding } from '../backend/backend-client.types';
+import type { DurableRunJournal } from '../core/durable-run-journal';
+import type { ExtensionState } from '../core/extension-state';
+import type { CapabilityManifest } from '../core/runtime/capability-manifest';
+import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
+import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
+import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 import type { RuntimeConfiguration } from './configuration-service';
 import type { FlagshipDeliveryService } from './flagship-delivery-service';
 import type { LifecycleHookPort } from './lifecycle-hook.types';
@@ -24,13 +31,6 @@ import type { RuntimePolicyV2Adapter } from './runtime-policy-v2-adapter';
 import type { RuntimeStudioInput } from './runtime-studio.types';
 import type { RuntimeToolRouter } from './runtime-tool-router';
 import type { TargetAwareToolRouter } from './target-aware-tool-router';
-import type { RuntimeCommandBinding } from '../backend/backend-client.types';
-import type { DurableRunJournal } from '../core/durable-run-journal';
-import type { ExtensionState } from '../core/extension-state';
-import type { CapabilityManifest } from '../core/runtime/capability-manifest';
-import type { RuntimeEvent } from '../core/runtime/runtime-protocol.schemas';
-import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
-import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
 export interface RuntimeStudioExecutionDependencies {
   readonly input: RuntimeStudioInput;

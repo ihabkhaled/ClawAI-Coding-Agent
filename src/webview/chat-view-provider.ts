@@ -30,14 +30,14 @@ import { runPromptAdmissionFlow } from './prompt-admission-flow';
 import { requestScope } from './request-scope';
 import { runSetupAction } from './setup-action';
 
-import type { CompactionOfferMessage } from './chat-compaction-offer.types';
-import type { PlacementMemory } from './chat-placement.types';
-import type { ChatViewActions } from './chat-view-actions';
 import type { ChatMessage } from '../backend/contracts';
 import type { BrowserScreenshotAttachment } from '../core/browser-reference.types';
 import type { ClosedSession } from '../core/closed-session-stack.types';
 import type { CompareLiveChange } from '../core/compare-lane-accumulator.types';
 import type { ExtensionState } from '../core/extension-state';
+import type { CompactionOfferMessage } from './chat-compaction-offer.types';
+import type { PlacementMemory } from './chat-placement.types';
+import type { ChatViewActions } from './chat-view-actions';
 
 const SIDEBAR_SESSION_ID = 'sidebar';
 
@@ -259,7 +259,14 @@ export class ChatViewProvider implements vscode.WebviewViewProvider, vscode.Disp
   /** The remembered column while it still exists, otherwise the active one. */
   private placementColumn(): vscode.ViewColumn {
     const columns = vscode.window.tabGroups.all.map((group) => group.viewColumn);
-    return resolvePlacementColumn(this.placement?.get(), columns) ?? vscode.ViewColumn.Active;
+    const remembered = resolvePlacementColumn(this.placement?.get(), columns);
+    const { One, Two, Three, Four, Five, Six, Seven, Eight, Nine, Active } = vscode.ViewColumn;
+    // Only a concrete column can be remembered, so map the number to its enum member.
+    return (
+      [One, Two, Three, Four, Five, Six, Seven, Eight, Nine].find(
+        (column) => column === remembered,
+      ) ?? Active
+    );
   }
 
   private async createEditorSession(

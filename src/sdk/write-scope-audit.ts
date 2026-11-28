@@ -4,9 +4,9 @@ import { dirtyEntries, revertEntries } from './write-scope-git';
 import { captureWriteGuard, enforceGuard } from './write-scope-guard';
 import { WRITE_SCOPE_MAX_REPORTED, WRITE_SCOPE_NOTE_CHARS } from './write-scope.constants';
 
+import type { ToolLimits } from '../headless/headless-main.types';
 import type { CommandTool } from './command-tool.types';
 import type { DirtyEntry, RevertReport, WriteScope, WriteScopeGuard } from './write-scope.types';
-import type { ToolLimits } from '../headless/headless-main.types';
 
 type ToolResult = Record<string, unknown>;
 

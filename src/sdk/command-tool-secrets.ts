@@ -2,8 +2,8 @@ import { redactJobSecretsDeep } from '../core/job-secrets';
 
 import { systemCommandRuntime } from './command-tool';
 
-import type { CommandRuntime, CommandTool } from './command-tool.types';
 import type { JobSecretEnvironment } from '../core/job-secrets.types';
+import type { CommandRuntime, CommandTool } from './command-tool.types';
 
 /**
  * The runtime a routine's command tool spawns under: this machine, plus the

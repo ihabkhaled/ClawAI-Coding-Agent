@@ -1,7 +1,7 @@
 import { z } from 'zod';
 
-import type { ResearchRequester } from './research-client';
 import type { MediaTranscribePort } from '../sdk/media-transcribe.types';
+import type { ResearchRequester } from './research-client';
 
 /**
  * What `POST /files/extract-text` returns.

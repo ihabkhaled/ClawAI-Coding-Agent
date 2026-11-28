@@ -9,7 +9,6 @@ import {
 import { findingsBlockRelease } from '../core/findings';
 import { runtimeToolInputSchemas } from '../core/runtime/runtime-tool-input-schemas';
 
-import type { ReviewToolPorts } from './review-tool-executor.types';
 import type { ReviewDimension } from '../core/code-review.types';
 import type { SubAgentOutcome } from '../core/multi-agent-dag';
 import type { ToolDefinition, ToolInvocation } from '../core/runtime/runtime-tool-contracts';
@@ -17,6 +16,7 @@ import type {
   RuntimeToolExecutionOutput,
   RuntimeToolExecutorPort,
 } from '../services/runtime-tool-dispatcher';
+import type { ReviewToolPorts } from './review-tool-executor.types';
 
 const reviewSchema = z
   .object({

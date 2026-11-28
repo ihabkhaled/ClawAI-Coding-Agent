@@ -23,14 +23,14 @@ import {
 import { parseToolInvocation } from '../core/runtime/runtime-tool-contracts';
 import { SseDecoder } from '../core/sse-decoder';
 
+import type { RuntimeDispatchState } from '../core/runtime/runtime-event-stream.types';
+import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 import type {
   RuntimeStreamIdleOptions,
   RuntimeStreamObserver,
   RuntimeStreamProgress,
   RuntimeStreamRuntimePort,
 } from './runtime-event-stream-service.types';
-import type { RuntimeDispatchState } from '../core/runtime/runtime-event-stream.types';
-import type { BackendRuntimeTransport } from '../infrastructure/backend-runtime-transport';
 
 export type {
   RuntimeStreamObserver,
