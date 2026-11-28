@@ -7,7 +7,10 @@
  * get a run that ends.
  */
 export const AGENT_SDK_DEFAULTS = {
-  backendUrl: 'https://claw.local/api/v1',
+  // ClawAI Cloud since 1.119.0 (owner decision 2026-11-28, same as the editor's default);
+  // developers pass --backend-url / CLAW_BACKEND_URL for a local stack. The live test lanes
+  // keep their own local default (CLAW_LIVE_BACKEND_URL).
+  backendUrl: 'https://claw-ai.co/api/v1',
   // Ollama's connector rather than a metered provider. A default that needs a
   // paid balance turns "run the check" into "top up an account first", and the
   // lane that proves the agent codes should not be the one nobody can run.

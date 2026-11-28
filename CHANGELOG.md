@@ -2,6 +2,11 @@
 
 What changed in each release of ClawAI Coding Agent, newest first. The full engineering log is in [docs/releases/DETAILED_CHANGELOG.md](docs/releases/DETAILED_CHANGELOG.md).
 
+## 1.119.0
+
+- The SDK and the `clawai` CLI now default to ClawAI Cloud (`https://claw-ai.co/api/v1`), like the editor since 1.118.0 (owner decision 2026-11-28). Pass `--backend-url` or `CLAW_BACKEND_URL` for a local stack. The live test lanes keep their own local default.
+- The repository history was rewritten once more on 2026-11-28 to remove a retired default password from old live-test docs and helpers; the code stopped carrying it in 1.117.0.
+
 ## 1.118.0
 
 - **New installs connect to ClawAI Cloud by default.** Owner decision 2026-11-28: the install page promised the hosted platform, and a new user should not land on a developer URL. Before: `clawAI.backendEnvironment` and `clawAI.frontendEnvironment` defaulted to `LOCAL` (`https://claw.local`). After: both default to `CLOUD` (`https://claw-ai.co`); developers switch to Local in settings or on the connection screen.

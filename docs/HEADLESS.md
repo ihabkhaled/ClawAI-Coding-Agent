@@ -29,7 +29,7 @@ signs in again and continues. Without `CLAW_REFRESH_TOKEN` a static token is use
 a run longer than its life ends with exit 3.
 
 Other environment: `CLAW_MODEL`, `CLAW_PROVIDER`, `CLAW_BACKEND_URL` (default
-`https://claw.local/api/v1`), `CLAW_STATE_DIR` (default `~/.clawai`, see `--continue`).
+`https://claw-ai.co/api/v1`, ClawAI Cloud, since 1.119.0; set `https://claw.local/api/v1` for a local stack), `CLAW_STATE_DIR` (default `~/.clawai`, see `--continue`).
 
 ## Flags
 

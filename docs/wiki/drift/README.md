@@ -37,6 +37,13 @@ Each entry: area, before, after, why, who decided, date, impact, and the documen
   models; Wolverine, a self-healing loop from opt-in failure reports to tested fixes and releases.
 - **Who:** the owner. **Plan:** the ClawAI monorepo's `<monorepo>/docs/implementation/self-healing-coding-agent-plan.md` and ADR-229.
 
+### 2026-11-28 - The SDK and CLI follow the editor to Cloud; no monorepo history rewrite
+
+- **SDK/CLI default server:** `https://claw.local/api/v1` before, `https://claw-ai.co/api/v1` after (1.119.0). Owner.
+- **Default admin password:** removed from both repositories' code; this repository's history rewritten again; the
+  ClawAI monorepo history is NOT rewritten, because two public forks already hold it. The password is treated as
+  burned and rotated wherever it was used. Owner, 2026-11-28.
+
 ### 2026-11-28 - Owner answers recorded
 
 - **Cost in the panel:** show the money cost of each answer (USD) next to tokens once the backend sends it

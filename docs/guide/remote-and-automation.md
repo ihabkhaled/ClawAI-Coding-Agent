@@ -24,7 +24,7 @@ The runner file is `dist/headless.mjs` in the extension's install folder. If a
 - **Credential:** set `CLAW_TOKEN`, or `CLAW_EMAIL` and `CLAW_PASSWORD`. It is
   never printed. It does not reuse your VS Code sign-in.
 - **Backend address:** `--backend-url`, or `CLAW_BACKEND_URL`. The default is
-  `https://claw.local/api/v1`; for hosted ClawAI use `https://claw-ai.co/api/v1`.
+  `https://claw-ai.co/api/v1` (ClawAI Cloud) since 1.119.0; for a local stack use `https://claw.local/api/v1`.
 - **Safe by default:** only reading and Git information are allowed. Add abilities
   with `--allow-tools read,write,command,git`, and name each program a command may
   use, for example `--allow-command npm`.
